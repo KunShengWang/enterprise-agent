@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: enterprise-agent
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+enterprise-agent:
+  mock-mode: true
+  max-model-calls-per-run: 8
+  max-tool-calls-per-run: 6
+  default-system-prompt: >
+    You are an enterprise knowledge-base and support-ticket agent.
+    Follow the orchestrated execution flow and do not bypass guardrails.
