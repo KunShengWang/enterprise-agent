@@ -1,0 +1,111 @@
+package com.agent.platform.llm;
+
+import com.agent.platform.prompt.PromptRequest;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+@ConditionalOnProperty(prefix = "enterprise-agent", name = "mock-mode", havingValue = "false", matchIfMissing = true)
+public class SpringAiLlmService implements LlmService {
+
+    private static final String MISSING_CHAT_MODEL_MESSAGE = """
+            未找到真实 ChatModel Bean，无法调用真实模型。
+            请检查：
+            1. IDEA 是否已经重新加载 Maven，确保 spring-ai-starter-model-deepseek 进入运行时 classpath；
+            2. Run Configuration 是否配置了环境变量 DEEPSEEK_API_KEY；
+            3. application.yaml 是否包含 spring.ai.model.chat=deepseek；
+            4. enterprise-agent.mock-mode 是否为 false。
+            """.strip();
+
+    private final ObjectProvider<ChatModel> chatModelProvider;
+
+    public SpringAiLlmService(ObjectProvider<ChatModel> chatModelProvider) {
+        this.chatModelProvider = chatModelProvider;
+    }
+
+    @Override
+    public String complete(PromptRequest promptRequest) {
+        ChatResponse response;
+        try {
+            response = requireChatModel().call(toSpringPrompt(promptRequest));
+        }
+        catch (RuntimeException exception) {
+            throw toLlmCallException(exception);
+        }
+        if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
+            return "";
+        }
+        return response.getResult().getOutput().getText();
+    }
+
+    @Override
+    public Flux<String> stream(PromptRequest promptRequest) {
+        ChatModel chatModel = requireChatModel();
+        return chatModel.stream(toSpringPrompt(promptRequest))
+                .map(response -> {
+                    if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
+                        return "";
+                    }
+                    return response.getResult().getOutput().getText();
+                })
+                .filter(text -> text != null && !text.isBlank())
+                .onErrorMap(this::toLlmCallException);
+    }
+
+    private ChatModel requireChatModel() {
+        ChatModel chatModel = chatModelProvider.getIfAvailable();
+        if (chatModel == null) {
+            throw new LlmCallException(
+                    "MODEL_NOT_CONFIGURED",
+                    "模型服务未完成配置，请检查 DeepSeek API Key、Spring AI 依赖和模型配置。",
+                    new IllegalStateException(MISSING_CHAT_MODEL_MESSAGE)
+            );
+        }
+        return chatModel;
+    }
+
+    private LlmCallException toLlmCallException(Throwable exception) {
+        if (exception instanceof LlmCallException llmCallException) {
+            return llmCallException;
+        }
+        return new LlmCallException(
+                "MODEL_CALL_FAILED",
+                "模型服务调用失败，请稍后重试或检查模型服务网络与配置。",
+                exception
+        );
+    }
+
+    private Prompt toSpringPrompt(PromptRequest promptRequest) {
+        List<org.springframework.ai.chat.messages.Message> messages = new ArrayList<>();
+        if (promptRequest.systemPrompt() != null && !promptRequest.systemPrompt().isBlank()) {
+            messages.add(new SystemMessage(promptRequest.systemPrompt()));
+        }
+        messages.add(new UserMessage(buildUserContent(promptRequest)));
+        return new Prompt(messages);
+    }
+
+    private String buildUserContent(PromptRequest promptRequest) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(promptRequest.userPrompt() == null ? "" : promptRequest.userPrompt());
+        if (!promptRequest.contextBlocks().isEmpty()) {
+            builder.append("\n\n可参考上下文：\n");
+            for (int index = 0; index < promptRequest.contextBlocks().size(); index++) {
+                builder.append(index + 1)
+                        .append(". ")
+                        .append(promptRequest.contextBlocks().get(index))
+                        .append('\n');
+            }
+        }
+        return builder.toString();
+    }
+}

@@ -13,9 +13,9 @@ public class RuleBasedQueryRewriteService implements QueryRewriteService {
         if (question.isBlank()) {
             return "";
         }
-        if (!question.endsWith("？") && !question.endsWith("?")) {
-            return question + "？";
+        if (question.endsWith("？") || question.endsWith("?") || question.endsWith("。") || question.endsWith("！") || question.endsWith("!")) {
+            return question;
         }
-        return question;
+        return question + "？";
     }
 }

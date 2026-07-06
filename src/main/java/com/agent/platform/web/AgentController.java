@@ -5,6 +5,9 @@ import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.agent.AgentResponse;
 import com.agent.platform.common.ApiResponse;
 import com.agent.platform.config.AgentProperties;
+import com.agent.platform.memory.MemoryService;
+import com.agent.platform.router.IntentRoute;
+import com.agent.platform.router.IntentRouter;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.Map;
 import java.util.stream.Stream;
@@ -22,36 +26,78 @@ import java.util.stream.Stream;
 @RequestMapping("/api/agent")
 public class AgentController {
 
+    private static final String DEFAULT_CONVERSATION_ID = "default-conversation";
+
     private final AgentExecutor agentExecutor;
 
     private final AgentProperties agentProperties;
 
-    public AgentController(AgentExecutor agentExecutor, AgentProperties agentProperties) {
+    private final IntentRouter intentRouter;
+
+    private final MemoryService memoryService;
+
+    public AgentController(AgentExecutor agentExecutor,
+                           AgentProperties agentProperties,
+                           IntentRouter intentRouter,
+                           MemoryService memoryService) {
         this.agentExecutor = agentExecutor;
         this.agentProperties = agentProperties;
+        this.intentRouter = intentRouter;
+        this.memoryService = memoryService;
     }
 
     @GetMapping("/health")
     public ApiResponse<Map<String, Object>> health() {
         return ApiResponse.success(Map.of(
                 "name", "enterprise-agent",
-                "stage", "V0",
+                "stage", "V1.3",
                 "mockMode", agentProperties.isMockMode()
         ));
     }
 
-    @PostMapping("/runs")
-    public Mono<ApiResponse<AgentResponse>> run(@Valid @RequestBody AgentRequest request) {
-        return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.execute(request)));
+    @PostMapping("/routes/preview")
+    public Mono<ApiResponse<Map<String, Object>>> previewRoute(@Valid @RequestBody AgentRequest request) {
+        return Mono.fromSupplier(() -> {
+                    String conversationId = normalizeConversationId(request.conversationId());
+                    IntentRoute route = intentRouter.route(request, memoryService.load(conversationId));
+                    return ApiResponse.success(Map.of(
+                            "conversationId", conversationId,
+                            "type", route.type().name(),
+                            "reason", route.reason(),
+                            "slots", route.slots()
+                    ));
+                })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
+    @PostMapping("/runs")
+    public Mono<ApiResponse<AgentResponse>> run(@Valid @RequestBody AgentRequest request) {
+        return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.execute(request)))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    /**
+     * WebFlux 接收到请求
+     * -> 切到 boundedElastic 工作线程
+     * -> 执行同步 AgentExecutor
+     * -> 内部调用 chatModel.call()
+     * -> 返回结果
+     */
     @PostMapping(value = "/runs/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> stream(@Valid @RequestBody AgentRequest request) {
         return Mono.fromSupplier(() -> agentExecutor.execute(request))
-                // 把 stream 转为 Flux
-                .flatMapMany(response -> Flux.fromStream(Stream.concat(// 把两个流首尾拼接
+                .subscribeOn(Schedulers.boundedElastic())
+                // 把完整执行结果拆成 SSE 片段，方便前端观察步骤和最终回答。
+                .flatMapMany(response -> Flux.fromStream(Stream.concat(
                         response.steps().stream().map(step -> "step: " + step.name() + " [" + step.status() + "] " + step.summary()),
                         Stream.of("answer: " + response.answer(), "traceId: " + response.trace().traceId())
                 )));
+    }
+
+    private String normalizeConversationId(String conversationId) {
+        if (conversationId == null || conversationId.isBlank()) {
+            return DEFAULT_CONVERSATION_ID;
+        }
+        return conversationId.trim();
     }
 }

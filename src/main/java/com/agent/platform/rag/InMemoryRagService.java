@@ -63,7 +63,7 @@ public class InMemoryRagService implements RagService {
         String normalizedQuery = query.toLowerCase(Locale.ROOT);
         String text = (document.title() + " " + document.content()).toLowerCase(Locale.ROOT);
         double score = 0;
-        for (String token : List.of("rag", "检索", "退款", "审批", "发布", "应急", "故障", "知识库", "流程")) {
+        for (String token : List.of("rag", "检索", "退款", "审批", "发布", "应急", "故障", "知识库", "流程", "复核", "回滚")) {
             if (normalizedQuery.contains(token) && text.contains(token)) {
                 score += 1;
             }

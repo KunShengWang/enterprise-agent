@@ -1,6 +1,7 @@
 package com.agent.platform.llm;
 
 import com.agent.platform.prompt.PromptRequest;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -8,6 +9,7 @@ import java.time.Duration;
 import java.util.stream.Collectors;
 
 @Service
+@ConditionalOnProperty(prefix = "enterprise-agent", name = "mock-mode", havingValue = "true")
 public class MockLlmService implements LlmService {
 
     @Override
@@ -25,7 +27,7 @@ public class MockLlmService implements LlmService {
     @Override
     public Flux<String> stream(PromptRequest promptRequest) {
         String answer = complete(promptRequest);
-        return Flux.fromArray(answer.split("(?<=。|，|：)"))
+        return Flux.fromArray(answer.split("(?<=[。！？])"))
                 .delayElements(Duration.ofMillis(30));
     }
 

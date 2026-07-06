@@ -17,7 +17,7 @@
 Spring AI 负责：
 
 ```text
-ChatClient / ChatModel
+ChatModel / ChatClient
 流式输出
 Tool Calling 基础能力
 VectorStore
@@ -46,13 +46,12 @@ EvalRunner
   -> Trace 开始
   -> 加载 Memory
   -> 输入 Guardrail
-  -> 意图识别 / 路由
   -> Skill 选择
+  -> 意图识别 / 路由
   -> Query Rewrite
   -> RAG / Tool / MCP / Clarify
   -> Prompt 组装
-  -> LLM 调用
-  -> SSE 流式输出
+  -> 真实 LLM 调用
   -> 输出 Guardrail
   -> 保存会话
   -> Trace / Eval / AgentOps
@@ -60,13 +59,13 @@ EvalRunner
 
 ## 当前阶段
 
-当前处于 V1：单 Agent 核心闭环。
+当前处于 V1.3：单 Agent 核心闭环加固 + Spring AI DeepSeek 真实模型调用。
 
 已包含：
 
 ```text
 Spring Boot 项目
-基础 WebFlux 入口
+WebFlux 入口
 统一响应结构
 全局异常处理
 Agent 核心接口
@@ -77,15 +76,38 @@ Trace 基础模型
 规则 QueryRewrite
 内存 RAG
 本地工单工具
-模拟人工审批
+本地人工审批策略
 PromptAssembler
-Mock LLM
+Spring AI DeepSeek LLM 适配层
+模型异常安全处理
+RAG / Tool / LLM 耗时记录
+路由预览接口
 Trace / Eval 记录
 ```
 
-## 路线文档
+说明：`MockLlmService` 还保留在代码里，但只在显式配置 `enterprise-agent.mock-mode=true` 时启用，用于离线测试；默认运行不再走模拟模型。
 
-[自研 Agent 项目执行路线](docs/self-agent-roadmap.md)
+## API Key
+
+当前必须申请：
+
+```text
+DeepSeek API Key
+```
+
+启动前配置环境变量：
+
+```powershell
+$env:DEEPSEEK_API_KEY="你的 DeepSeek API Key"
+```
+
+可选模型配置：
+
+```powershell
+$env:DEEPSEEK_CHAT_MODEL="deepseek-chat"
+```
+
+更多说明见 [API Key 配置说明](docs/api-keys.md)。
 
 ## 本地启动
 
@@ -99,7 +121,20 @@ mvn spring-boot:run
 GET http://localhost:8080/api/agent/health
 ```
 
-V1 普通调用：
+路由预览，不调用 LLM：
+
+```text
+POST http://localhost:8080/api/agent/routes/preview
+Content-Type: application/json
+
+{
+  "conversationId": "demo-conversation",
+  "userId": "u1001",
+  "question": "你好？"
+}
+```
+
+普通调用：
 
 ```text
 POST http://localhost:8080/api/agent/runs
@@ -112,7 +147,7 @@ Content-Type: application/json
 }
 ```
 
-V1 流式调用：
+流式调用：
 
 ```text
 POST http://localhost:8080/api/agent/runs/stream
@@ -125,7 +160,7 @@ Content-Type: application/json
 }
 ```
 
-## V1 可测试问题
+## 可测试问题
 
 ```text
 查询工单 T1001 的状态
@@ -143,4 +178,17 @@ Tool Calling
 RAG
 高风险工具 + 模拟人工确认
 输入 Guardrail 拦截
+真实 LLM 总结输出
 ```
+
+## 路线文档
+
+[自研 Agent 项目执行路线](docs/self-agent-roadmap.md)
+
+[V1 单 Agent 核心闭环](docs/v1-single-agent-flow.md)
+
+[V1.1 Spring AI LLM 适配层](docs/v1-1-spring-ai-llm.md)
+
+[V1.2 真实模型接入](docs/v1-2-real-model.md)
+
+[V1.3 地基加固](docs/v1-3-foundation-hardening.md)

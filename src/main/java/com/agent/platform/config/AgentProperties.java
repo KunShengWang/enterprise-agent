@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "enterprise-agent")
 public class AgentProperties {
 
-    private boolean mockMode = true;
+    private boolean mockMode = false;
 
     private int maxModelCallsPerRun = 8;
 

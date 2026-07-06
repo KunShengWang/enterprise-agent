@@ -1,6 +1,6 @@
 package com.agent.platform.agent;
 
-import com.agent.platform.approval.MockApprovalService;
+import com.agent.platform.approval.LocalApprovalService;
 import com.agent.platform.eval.InMemoryEvalEventRecorder;
 import com.agent.platform.guardrail.DefaultGuardrailService;
 import com.agent.platform.llm.MockLlmService;
@@ -65,7 +65,7 @@ class V1AgentExecutorTests {
                 new InMemoryRagService(),
                 new LocalToolRegistry(),
                 new LocalToolExecutor(),
-                new MockApprovalService(),
+                new LocalApprovalService(),
                 new DefaultPromptAssembler(),
                 new MockLlmService(),
                 new InMemoryEvalEventRecorder()

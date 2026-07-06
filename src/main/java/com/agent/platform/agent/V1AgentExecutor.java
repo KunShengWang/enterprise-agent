@@ -8,6 +8,7 @@ import com.agent.platform.eval.EvalEventRecorder;
 import com.agent.platform.guardrail.GuardrailAction;
 import com.agent.platform.guardrail.GuardrailDecision;
 import com.agent.platform.guardrail.GuardrailService;
+import com.agent.platform.llm.LlmCallException;
 import com.agent.platform.llm.LlmService;
 import com.agent.platform.memory.ConversationMemory;
 import com.agent.platform.memory.MemoryMessage;
@@ -132,7 +133,7 @@ public class V1AgentExecutor implements AgentExecutor {
             IntentRoute route = intentRouter.route(request, memory);
             addStep(trace, steps, "intent.route", route.type().name(), route.reason());
             if (route.type() == IntentType.CLARIFY) {
-                String answer = "你的问题还不够明确。请补充工单编号、故障现象，或说明你想查询哪类知识库资料。";
+                String answer = "你的问题还不够明确。请补充工单编号、故障现象，或者说明你想查询哪类知识库资料。";
                 memoryService.append(conversationId, new MemoryMessage("assistant", answer, Instant.now()));
                 return finish(request, conversationId, AgentRunStatus.NEEDS_CLARIFICATION, answer, steps, trace, usedTools, usedRag, false);
             }
@@ -144,10 +145,11 @@ public class V1AgentExecutor implements AgentExecutor {
             List<ToolCallResult> toolResults = new ArrayList<>();
 
             if (route.type() == IntentType.RAG) {
+                long ragStartNanos = System.nanoTime();
                 ragResult = ragService.retrieve(rewrittenQuery, 3);
                 usedRag = !ragResult.documents().isEmpty();
                 addStep(trace, steps, "rag.retrieve", ragResult.enoughEvidence() ? "HIT" : "MISS",
-                        "documents=" + ragResult.documents().size());
+                        "documents=" + ragResult.documents().size() + ", durationMs=" + elapsedMs(ragStartNanos));
             }
             else if (route.type() == IntentType.TOOL) {
                 ToolExecutionOutcome outcome = executeToolBranch(request, conversationId, route, trace, steps);
@@ -165,8 +167,18 @@ public class V1AgentExecutor implements AgentExecutor {
             PromptRequest prompt = promptAssembler.assemble(request, memory, ragResult, toolResults);
             addStep(trace, steps, "prompt.assemble", "COMPLETED", "contextBlocks=" + prompt.contextBlocks().size());
 
-            String answer = llmService.complete(prompt);
-            addStep(trace, steps, "llm.call", "MOCKED", "mock llm generated answer");
+            String answer;
+            long llmStartNanos = System.nanoTime();
+            try {
+                answer = llmService.complete(prompt);
+                addStep(trace, steps, "llm.call", "COMPLETED",
+                        "real llm generated answer, durationMs=" + elapsedMs(llmStartNanos));
+            }
+            catch (LlmCallException exception) {
+                addStep(trace, steps, "llm.call", "FAILED",
+                        "errorType=" + exception.errorType() + ", durationMs=" + elapsedMs(llmStartNanos));
+                return finish(request, conversationId, AgentRunStatus.FAILED, exception.safeMessage(), steps, trace, usedTools, usedRag, blockedByGuardrail);
+            }
 
             GuardrailDecision outputDecision = guardrailService.checkOutput(answer);
             addStep(trace, steps, "guardrail.output", outputDecision.action().name(), outputDecision.reason());
@@ -184,8 +196,8 @@ public class V1AgentExecutor implements AgentExecutor {
             return finish(request, conversationId, AgentRunStatus.COMPLETED, answer, steps, trace, usedTools, usedRag, blockedByGuardrail);
         }
         catch (RuntimeException exception) {
-            addStep(trace, steps, "agent.error", "FAILED", exception.getMessage());
-            return finish(request, conversationId, AgentRunStatus.FAILED, "Agent 执行失败：" + exception.getMessage(), steps, trace, usedTools, usedRag, blockedByGuardrail);
+            addStep(trace, steps, "agent.error", "FAILED", "errorType=" + exception.getClass().getSimpleName());
+            return finish(request, conversationId, AgentRunStatus.FAILED, "Agent 执行失败，请稍后重试或根据 traceId 排查。", steps, trace, usedTools, usedRag, blockedByGuardrail);
         }
     }
 
@@ -223,8 +235,11 @@ public class V1AgentExecutor implements AgentExecutor {
             }
         }
 
+        long toolStartNanos = System.nanoTime();
         ToolCallResult result = toolExecutor.execute(toolCall);
-        addStep(trace, steps, "tool.execute", result.success() ? "COMPLETED" : "FAILED", result.success() ? result.content() : result.errorMessage());
+        String detail = result.success() ? result.content() : result.errorMessage();
+        addStep(trace, steps, "tool.execute", result.success() ? "COMPLETED" : "FAILED",
+                detail + ", durationMs=" + elapsedMs(toolStartNanos));
         return ToolExecutionOutcome.completed(List.of(toolCall.toolName()), List.of(result));
     }
 
@@ -232,7 +247,7 @@ public class V1AgentExecutor implements AgentExecutor {
         return switch (toolName) {
             case "ticket_create" -> new ToolCallRequest(toolName, UUID.randomUUID().toString(), Map.of(
                     "title", request.question(),
-                    "priority", request.question().contains("紧急") ? "P1" : "P2"
+                    "priority", isUrgent(request.question()) ? "P1" : "P2"
             ));
             case "ticket_priority_update" -> new ToolCallRequest(toolName, UUID.randomUUID().toString(), Map.of(
                     "ticketId", extractTicketId(request.question()),
@@ -242,6 +257,11 @@ public class V1AgentExecutor implements AgentExecutor {
                     "ticketId", extractTicketId(request.question())
             ));
         };
+    }
+
+    private boolean isUrgent(String question) {
+        String text = question == null ? "" : question;
+        return text.contains("紧急") || text.contains("高优先级") || text.contains("P1") || text.contains("P0");
     }
 
     private String extractTicketId(String question) {
@@ -300,6 +320,10 @@ public class V1AgentExecutor implements AgentExecutor {
             return DEFAULT_CONVERSATION_ID;
         }
         return conversationId.trim();
+    }
+
+    private long elapsedMs(long startNanos) {
+        return (System.nanoTime() - startNanos) / 1_000_000;
     }
 
     private record ToolExecutionOutcome(

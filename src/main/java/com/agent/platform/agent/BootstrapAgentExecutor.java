@@ -29,7 +29,7 @@ public class BootstrapAgentExecutor implements AgentExecutor {
         addStep(trace, steps, "guardrail.input", "SKIPPED", "V0 skeleton has no guardrail implementation yet");
         addStep(trace, steps, "intent.route", "READY", "IntentRouter extension point is ready");
         addStep(trace, steps, "rag.or.tool", "READY", "RAG and ToolExecutor extension points are ready");
-        addStep(trace, steps, "llm.call", "MOCKED", "Real Spring AI model call will be added in V1");
+        addStep(trace, steps, "llm.call", "READY", "Real Spring AI model call is handled by V1AgentExecutor");
         addStep(trace, steps, "eval.record", "READY", "EvalRunner extension point is ready");
 
         TraceSummary summary = traceRecorder.finish(trace);

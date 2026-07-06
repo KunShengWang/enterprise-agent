@@ -452,6 +452,9 @@ Guardrails/HITL、Trace/Eval/AgentOps 和 Multi-Agent 协作。
 1. 创建 enterprise-agent 项目骨架。已完成。
 2. 写 README 和基础包结构。已完成。
 3. 实现 V1 主链路的核心接口。已完成。
-4. 使用模拟 LLM / 模拟 RAG / 模拟工具先跑通流程。已完成。
-5. 再逐步替换为 Spring AI、真实模型、真实向量库和 MCP 工具。
+4. 使用轻量 RAG / 本地工具先跑通流程。已完成。
+5. 增加 Spring AI LLM 适配层。已完成。
+6. 默认切换为 DeepSeek 真实模型。已完成。
+7. V1.3 地基加固：模型异常、耗时记录、路由预览和 WebFlux 线程切换。已完成。
+8. 后续逐步替换为真实向量库、真实文档管道和 MCP 工具。
 ```

@@ -2,23 +2,26 @@
 
 ## V1 学什么
 
-V1 的目标不是接入真实大模型，而是先把 Agent 的完整执行流程写清楚。
+V1 的目标是把 Agent 的完整执行流程写清楚，不是把所有外部基础设施一次性做完。
 
-当前实现使用：
+当前主链路已经包含：
 
 ```text
-内存 Memory
-规则 Guardrail
-规则 IntentRouter
-规则 QueryRewrite
+短期 Memory
+输入 Guardrail
+SkillSelector
+IntentRouter
+QueryRewrite
 内存 RAG
 本地工单工具
-模拟人工审批
-Mock LLM
-内存 Trace / Eval 记录
+本地人工审批策略
+PromptAssembler
+真实 LLM 调用
+输出 Guardrail
+Trace / Eval 记录
 ```
 
-这些实现后续都可以替换成真实能力，但主执行链路不需要推翻。
+注意：RAG、工具、审批现在还是轻量实现；LLM 已经默认接真实模型。
 
 ## 主入口
 
@@ -71,13 +74,13 @@ src/main/java/com/agent/platform/agent/V1AgentExecutor.java
 RAG 检索流程是什么？
 ```
 
-代码：
+核心类：
 
 ```text
 RuleBasedIntentRouter
 InMemoryRagService
 DefaultPromptAssembler
-MockLlmService
+SpringAiLlmService
 ```
 
 学习点：
@@ -87,7 +90,7 @@ MockLlmService
 再做问题改写
 再从知识库召回资料
 再把资料拼进 Prompt
-最后由 LLM 生成回答
+最后由真实 LLM 生成回答
 ```
 
 ### 2. Tool Calling 分支
@@ -99,14 +102,14 @@ MockLlmService
 创建一个登录失败的故障工单
 ```
 
-代码：
+核心类：
 
 ```text
 RuleBasedIntentRouter
 LocalToolRegistry
 LocalToolExecutor
 DefaultPromptAssembler
-MockLlmService
+SpringAiLlmService
 ```
 
 学习点：
@@ -128,11 +131,11 @@ MockLlmService
 升级工单 T1001 的优先级到 P1
 ```
 
-代码：
+核心类：
 
 ```text
 DefaultGuardrailService
-MockApprovalService
+LocalApprovalService
 V1AgentExecutor.executeToolBranch()
 ```
 
@@ -144,20 +147,9 @@ V1AgentExecutor.executeToolBranch()
 输出阶段可以做敏感信息脱敏
 ```
 
-## V1 和 V0 的区别
-
-```text
-V0
-  只有接口和骨架，很多步骤是 SKIPPED / MOCKED。
-
-V1
-  每个核心步骤都有一个最小实现，请求能真实经过完整链路。
-```
-
 ## V1 还没有做什么
 
 ```text
-还没有真实 LLM
 还没有真实向量库
 还没有真实文档上传和切分
 还没有 MCP Server
@@ -179,7 +171,7 @@ V1
 5. InMemoryRagService
 6. LocalToolRegistry / LocalToolExecutor
 7. DefaultPromptAssembler
-8. MockLlmService
+8. SpringAiLlmService
 9. InMemoryTraceRecorder
 10. InMemoryEvalEventRecorder
 ```
@@ -190,5 +182,5 @@ V1
 Agent 的每一步由谁负责
 每一步输入是什么
 每一步输出是什么
-为什么这个步骤不能全部交给 LLM
+为什么不能把这些步骤全部交给 LLM
 ```

@@ -1,6 +1,15 @@
 spring:
   application:
     name: enterprise-agent
+  ai:
+    model:
+      chat: deepseek
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY}
+      chat:
+        model: ${DEEPSEEK_CHAT_MODEL:deepseek-chat}
+        temperature: 0.2
+        max-tokens: 1200
 
 server:
   port: 8080
@@ -12,9 +21,12 @@ management:
         include: health,info
 
 enterprise-agent:
-  mock-mode: true
+  mock-mode: false
   max-model-calls-per-run: 8
   max-tool-calls-per-run: 6
   default-system-prompt: >
     You are an enterprise knowledge-base and support-ticket agent.
     Follow the orchestrated execution flow and do not bypass guardrails.
+llm:
+  http-log:
+    enabled: true
