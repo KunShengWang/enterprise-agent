@@ -449,9 +449,9 @@ Guardrails/HITL、Trace/Eval/AgentOps 和 Multi-Agent 协作。
 ## 当前执行顺序
 
 ```text
-1. 创建 enterprise-agent 项目骨架
-2. 写 README 和基础包结构
-3. 实现 V1 主链路的核心接口
-4. 使用模拟 LLM / 模拟 RAG / 模拟工具先跑通流程
-5. 再逐步替换为 Spring AI、真实模型、真实向量库和 MCP 工具
+1. 创建 enterprise-agent 项目骨架。已完成。
+2. 写 README 和基础包结构。已完成。
+3. 实现 V1 主链路的核心接口。已完成。
+4. 使用模拟 LLM / 模拟 RAG / 模拟工具先跑通流程。已完成。
+5. 再逐步替换为 Spring AI、真实模型、真实向量库和 MCP 工具。
 ```

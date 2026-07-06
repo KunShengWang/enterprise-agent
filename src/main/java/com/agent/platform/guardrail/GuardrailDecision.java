@@ -14,4 +14,12 @@ public record GuardrailDecision(
     public static GuardrailDecision block(GuardrailStage stage, String reason) {
         return new GuardrailDecision(stage, GuardrailAction.BLOCK, reason, null);
     }
+
+    public static GuardrailDecision requireApproval(GuardrailStage stage, String reason) {
+        return new GuardrailDecision(stage, GuardrailAction.REQUIRE_APPROVAL, reason, null);
+    }
+
+    public static GuardrailDecision redact(GuardrailStage stage, String reason, String safeContent) {
+        return new GuardrailDecision(stage, GuardrailAction.REDACT, reason, safeContent);
+    }
 }
