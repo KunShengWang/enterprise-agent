@@ -8,6 +8,8 @@ import com.agent.platform.config.AgentProperties;
 import com.agent.platform.memory.MemoryService;
 import com.agent.platform.router.IntentRoute;
 import com.agent.platform.router.IntentRouter;
+import com.agent.platform.stream.AgentStreamEvent;
+import com.agent.platform.stream.StreamingAgentExecutor;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,14 +38,18 @@ public class AgentController {
 
     private final MemoryService memoryService;
 
+    private final StreamingAgentExecutor streamingAgentExecutor;
+
     public AgentController(AgentExecutor agentExecutor,
                            AgentProperties agentProperties,
                            IntentRouter intentRouter,
-                           MemoryService memoryService) {
+                           MemoryService memoryService,
+                           StreamingAgentExecutor streamingAgentExecutor) {
         this.agentExecutor = agentExecutor;
         this.agentProperties = agentProperties;
         this.intentRouter = intentRouter;
         this.memoryService = memoryService;
+        this.streamingAgentExecutor = streamingAgentExecutor;
     }
 
     @GetMapping("/health")
@@ -92,6 +98,11 @@ public class AgentController {
                         response.steps().stream().map(step -> "step: " + step.name() + " [" + step.status() + "] " + step.summary()),
                         Stream.of("answer: " + response.answer(), "traceId: " + response.trace().traceId())
                 )));
+    }
+
+    @PostMapping(value = "/runs/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<AgentStreamEvent> streamEvents(@Valid @RequestBody AgentRequest request) {
+        return streamingAgentExecutor.stream(request);
     }
 
     private String normalizeConversationId(String conversationId) {

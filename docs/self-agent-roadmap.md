@@ -472,5 +472,6 @@ Guardrails/HITL、Trace/Eval/AgentOps 和 Multi-Agent 协作。
 21. V4.3 Workflow 状态机：显式节点、分支转移、执行计划、checkpoint、retryable/resumable 标记和 Workflow 查询接口。已完成。
 22. V4.4 Skills：Skill 注册表、描述检索、工具绑定、默认任务能力和 Skills 查询管理接口。已完成。
 23. V4.5 Multi-Agent：Planner、RAG Worker、Tool Worker、Reviewer 角色协作、结果聚合和独立 Multi-Agent 调用接口。已完成。
-24. 后续增强更完整的性能压测报告。
+24. V4.6 Streaming Agent：新增结构化 SSE 事件流，输出 run、memory、guardrail、route、rag/tool、prompt、llm.token 和 final 事件。已完成。
+25. 后续增强更完整的性能压测报告。
 ```
