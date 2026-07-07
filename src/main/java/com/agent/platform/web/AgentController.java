@@ -50,7 +50,7 @@ public class AgentController {
     public ApiResponse<Map<String, Object>> health() {
         return ApiResponse.success(Map.of(
                 "name", "enterprise-agent",
-                "stage", "V1.3",
+                "stage", "V2.0",
                 "mockMode", agentProperties.isMockMode()
         ));
     }

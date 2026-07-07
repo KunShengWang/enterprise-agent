@@ -2,12 +2,14 @@
 
 ## 当前必需
 
-V1.2 默认走真实模型，不再默认使用模拟 LLM。
+当前默认走真实 ChatModel 和真实 Embedding，不再默认使用模拟 LLM 或模拟向量。
 
-当前需要申请：
+当前需要准备：
 
 ```text
 DeepSeek API Key
+Embedding API Key
+PostgreSQL + pgvector
 ```
 
 项目使用 Spring AI 2.0.0 的 DeepSeek starter，对应配置：
@@ -34,14 +36,36 @@ $env:DEEPSEEK_CHAT_MODEL="deepseek-chat"
 
 如果没有配置 `DEEPSEEK_API_KEY`，项目不应该走 mock 回答；你需要先配置真实 API Key。
 
-## 后续可能需要
+## RAG Embedding
 
-V2 做真实 RAG 时，需要再补：
+V2.0 的 Embedding 调用使用 OpenAI-compatible `/embeddings` 协议。配置：
 
-```text
-Embedding 模型 API Key
-PostgreSQL + pgvector 或其他向量数据库
+```powershell
+$env:EMBEDDING_API_KEY="你的 Embedding API Key"
+$env:EMBEDDING_BASE_URL="https://open.bigmodel.cn/api/paas/v4"
+$env:EMBEDDING_MODEL="embedding-3"
+$env:EMBEDDING_DIMENSION="1024"
 ```
+
+如果你使用兼容 OpenAI embedding 协议的其他服务，只要修改 `EMBEDDING_BASE_URL`、`EMBEDDING_MODEL` 和 `EMBEDDING_DIMENSION`。
+
+## RAG PostgreSQL
+
+```powershell
+$env:RAG_POSTGRES_URL="jdbc:postgresql://localhost:5432/enterprise_agent"
+$env:RAG_POSTGRES_USERNAME="postgres"
+$env:RAG_POSTGRES_PASSWORD="postgres"
+```
+
+数据库需要安装 pgvector 扩展。项目会在 ingest/search 时尝试执行：
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+如果数据库用户没有扩展权限，可以先用管理员账号执行 [rag-pgvector-schema.sql](rag-pgvector-schema.sql)。
+
+## 后续可能需要
 
 后续如果做联网搜索工具，可能需要：
 

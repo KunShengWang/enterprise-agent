@@ -37,6 +37,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -149,7 +150,12 @@ public class V1AgentExecutor implements AgentExecutor {
                 ragResult = ragService.retrieve(rewrittenQuery, 3);
                 usedRag = !ragResult.documents().isEmpty();
                 addStep(trace, steps, "rag.retrieve", ragResult.enoughEvidence() ? "HIT" : "MISS",
-                        "documents=" + ragResult.documents().size() + ", durationMs=" + elapsedMs(ragStartNanos));
+                        "mode=" + ragResult.retrievalMode()
+                                + ", documents=" + ragResult.documents().size()
+                                + ", topK=" + ragResult.effectiveTopK()
+                                + ", minSimilarity=" + ragResult.minSimilarity()
+                                + ", durationMs=" + elapsedMs(ragStartNanos)
+                                + ", hits=" + ragHitSummary(ragResult));
             }
             else if (route.type() == IntentType.TOOL) {
                 ToolExecutionOutcome outcome = executeToolBranch(request, conversationId, route, trace, steps);
@@ -324,6 +330,21 @@ public class V1AgentExecutor implements AgentExecutor {
 
     private long elapsedMs(long startNanos) {
         return (System.nanoTime() - startNanos) / 1_000_000;
+    }
+
+    private String ragHitSummary(RagResult ragResult) {
+        if (ragResult.documents().isEmpty()) {
+            return "[]";
+        }
+        return ragResult.documents().stream()
+                .map(document -> {
+                    Object source = document.metadata().getOrDefault("source", document.title());
+                    Object chunkIndex = document.metadata().getOrDefault("chunkIndex", "unknown");
+                    Object rank = document.metadata().getOrDefault("rank", "unknown");
+                    return "#" + rank + " " + source + "[" + chunkIndex + "] score=" + String.format(Locale.ROOT, "%.4f", document.score());
+                })
+                .toList()
+                .toString();
     }
 
     private record ToolExecutionOutcome(

@@ -25,7 +25,7 @@ public class DefaultPromptAssembler implements PromptAssembler {
         }
         if (ragResult != null) {
             for (RetrievedDocument document : ragResult.documents()) {
-                contextBlocks.add("RAG[" + document.documentId() + "] " + document.title() + ": " + document.content());
+                contextBlocks.add(formatRagBlock(document));
             }
         }
         if (toolResults != null) {
@@ -40,9 +40,23 @@ public class DefaultPromptAssembler implements PromptAssembler {
                 对普通问候、闲聊、概念解释，可以自然回答。
                 对涉及工单状态、审批结论、系统数据的业务问题，必须优先依据检索资料、工具结果和会话记忆回答。
                 如果业务资料不足，要明确说明资料不足，不能编造工单状态、审批结论或系统数据。
-                回答使用简洁中文；涉及工单操作时，要说明依据来自工具结果。
+                回答使用简洁中文；涉及知识库问答时，优先引用 RAG 资料中的 source 和 chunkIndex。
+                涉及工单操作时，要说明依据来自工具结果。
                 """.strip();
         String userPrompt = "用户问题：" + request.question();
         return new PromptRequest(systemPrompt, userPrompt, contextBlocks, Map.of("conversationId", request.conversationId()));
+    }
+
+    private String formatRagBlock(RetrievedDocument document) {
+        Map<String, Object> metadata = document.metadata();
+        Object source = metadata.getOrDefault("source", document.title());
+        Object chunkIndex = metadata.getOrDefault("chunkIndex", "unknown");
+        Object rank = metadata.getOrDefault("rank", "unknown");
+        return "RAG[rank=" + rank
+                + ", id=" + document.documentId()
+                + ", source=" + source
+                + ", chunkIndex=" + chunkIndex
+                + ", score=" + document.score()
+                + "] " + document.content();
     }
 }

@@ -456,5 +456,14 @@ Guardrails/HITL、Trace/Eval/AgentOps 和 Multi-Agent 协作。
 5. 增加 Spring AI LLM 适配层。已完成。
 6. 默认切换为 DeepSeek 真实模型。已完成。
 7. V1.3 地基加固：模型异常、耗时记录、路由预览和 WebFlux 线程切换。已完成。
-8. 后续逐步替换为真实向量库、真实文档管道和 MCP 工具。
+8. V2.0 PostgreSQL + pgvector RAG：文档加载、切分、Embedding、入库和 TopK 检索。已完成。
+9. V2.1 RAG 可观测优化：检索参数、命中 chunk、相似度、来源、耗时和知识库统计。已完成。
+10. V2.2 RAG 入库幂等优化：source 级删除重建、事务化保存、入库分段耗时和按 source 删除接口。已完成。
+11. V2.3 Hybrid Retrieval：向量检索 + 关键词检索 + 融合排序，并记录 vectorScore / keywordScore / finalScore。已完成。
+12. V2.4 RAG Eval：默认/自定义评估集、sourceHitRate、keywordHitRate、averageScore 和逐用例报告。已完成。
+13. V2.5 RAG Rerank：召回候选后二次排序，并记录 originalScore、rerankScore、queryCoverage 和 sourceMatch。已完成。
+14. V2.6 RAG AgentOps：RAG 运行记录、近 N 次命中率、平均耗时、平均召回数量和按模式统计。已完成。
+15. V2.7 pgvector 性能入口：支持手动创建 HNSW / IVFFlat 向量索引。已完成。
+16. V2.8 RAG 运行报告持久化：将近 N 次 RAG run 导出为 Markdown 报告。已完成。
+17. 后续增强 MCP 工具和更完整的性能压测报告。
 ```

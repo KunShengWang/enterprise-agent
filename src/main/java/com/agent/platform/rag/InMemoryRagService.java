@@ -1,14 +1,24 @@
 package com.agent.platform.rag;
 
 import org.springframework.stereotype.Service;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 @Service
+@ConditionalOnProperty(prefix = "enterprise-agent.rag", name = "mode", havingValue = "memory")
 public class InMemoryRagService implements RagService {
+
+    private final RagRunRecorder ragRunRecorder;
+
+    public InMemoryRagService(RagRunRecorder ragRunRecorder) {
+        this.ragRunRecorder = ragRunRecorder;
+    }
 
     private final List<RetrievedDocument> documents = List.of(
             new RetrievedDocument(
@@ -46,17 +56,34 @@ public class InMemoryRagService implements RagService {
         if (query == null || query.isBlank()) {
             return RagResult.empty(query);
         }
+        long startNanos = System.nanoTime();
+        int effectiveTopK = Math.max(1, topK);
         List<RetrievedDocument> matched = documents.stream()
                 .map(document -> withScore(document, score(query, document)))
                 .filter(document -> document.score() > 0)
                 .sorted(Comparator.comparingDouble(RetrievedDocument::score).reversed())
-                .limit(Math.max(1, topK))
+                .limit(effectiveTopK)
                 .toList();
-        return new RagResult(query, matched, !matched.isEmpty());
+        RagResult result = new RagResult(query, rankDocuments(matched), !matched.isEmpty(), topK, effectiveTopK, 0, elapsedMs(startNanos), "memory");
+        ragRunRecorder.record(result);
+        return result;
     }
 
     private RetrievedDocument withScore(RetrievedDocument document, double score) {
         return new RetrievedDocument(document.documentId(), document.title(), document.content(), score, document.metadata());
+    }
+
+    private List<RetrievedDocument> rankDocuments(List<RetrievedDocument> matched) {
+        List<RetrievedDocument> ranked = new ArrayList<>();
+        for (int index = 0; index < matched.size(); index++) {
+            RetrievedDocument document = matched.get(index);
+            Map<String, Object> metadata = new HashMap<>(document.metadata());
+            metadata.put("rank", index + 1);
+            metadata.put("similarity", document.score());
+            metadata.put("retrievalMode", "memory");
+            ranked.add(new RetrievedDocument(document.documentId(), document.title(), document.content(), document.score(), metadata));
+        }
+        return ranked;
     }
 
     private double score(String query, RetrievedDocument document) {
@@ -69,5 +96,9 @@ public class InMemoryRagService implements RagService {
             }
         }
         return score;
+    }
+
+    private long elapsedMs(long startNanos) {
+        return (System.nanoTime() - startNanos) / 1_000_000;
     }
 }
