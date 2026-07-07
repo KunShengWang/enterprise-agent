@@ -36,6 +36,11 @@ import com.agent.platform.trace.TraceRecorder;
 import com.agent.platform.trace.TraceSpanKind;
 import com.agent.platform.trace.TraceSpanStatus;
 import com.agent.platform.trace.TraceSummary;
+import com.agent.platform.workflow.WorkflowCheckpoint;
+import com.agent.platform.workflow.WorkflowExecutionPlan;
+import com.agent.platform.workflow.WorkflowPlanner;
+import com.agent.platform.workflow.WorkflowRecorder;
+import com.agent.platform.workflow.WorkflowRunStatus;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
@@ -89,6 +94,10 @@ public class V1AgentExecutor implements AgentExecutor {
 
     private final EvalEventRecorder evalEventRecorder;
 
+    private final WorkflowPlanner workflowPlanner;
+
+    private final WorkflowRecorder workflowRecorder;
+
     public V1AgentExecutor(AgentProperties agentProperties,
                            TraceRecorder traceRecorder,
                            MemoryService memoryService,
@@ -103,7 +112,9 @@ public class V1AgentExecutor implements AgentExecutor {
                            ApprovalService approvalService,
                            PromptAssembler promptAssembler,
                            LlmService llmService,
-                           EvalEventRecorder evalEventRecorder) {
+                           EvalEventRecorder evalEventRecorder,
+                           WorkflowPlanner workflowPlanner,
+                           WorkflowRecorder workflowRecorder) {
         this.agentProperties = agentProperties;
         this.traceRecorder = traceRecorder;
         this.memoryService = memoryService;
@@ -119,6 +130,8 @@ public class V1AgentExecutor implements AgentExecutor {
         this.promptAssembler = promptAssembler;
         this.llmService = llmService;
         this.evalEventRecorder = evalEventRecorder;
+        this.workflowPlanner = workflowPlanner;
+        this.workflowRecorder = workflowRecorder;
     }
 
     @Override
@@ -156,6 +169,10 @@ public class V1AgentExecutor implements AgentExecutor {
 
             IntentRoute route = intentRouter.route(request, memory);
             addStep(trace, steps, "intent.route", route.type().name(), route.reason());
+            WorkflowExecutionPlan workflowPlan = workflowPlanner.plan(trace.traceId(), conversationId, route);
+            workflowRecorder.start(workflowPlan);
+            addStep(trace, steps, "workflow.plan", "COMPLETED",
+                    "route=" + route.type().name() + ", nodes=" + workflowPlan.nodes().size() + ", resumable=" + workflowPlan.resumable());
             if (route.type() == IntentType.CLARIFY) {
                 String answer = "你的问题还不够明确。请补充工单编号、故障现象，或者说明你想查询哪类知识库资料。";
                 memoryService.append(conversationId, request.userId(), new MemoryMessage("assistant", answer, Instant.now()));
@@ -336,6 +353,7 @@ public class V1AgentExecutor implements AgentExecutor {
                                  boolean blockedByGuardrail) {
         traceRecorder.markStatus(trace, status.name(), status == AgentRunStatus.FAILED || status == AgentRunStatus.BLOCKED ? answer : "");
         TraceSummary traceSummary = traceRecorder.finish(trace);
+        workflowRecorder.finish(trace.traceId(), toWorkflowStatus(status), status == AgentRunStatus.FAILED || status == AgentRunStatus.BLOCKED ? answer : "");
         evalEventRecorder.record(new AgentRunEvalEvent(
                 traceSummary.traceId(),
                 conversationId,
@@ -367,6 +385,14 @@ public class V1AgentExecutor implements AgentExecutor {
                 "FAILED".equalsIgnoreCase(status) ? summary : "",
                 Map.of("stepStatus", status)
         );
+        workflowRecorder.checkpoint(trace.traceId(), new WorkflowCheckpoint(
+                workflowPlanner.mapStepName(name),
+                status,
+                summary,
+                workflowPlanner.retryable(workflowPlanner.mapStepName(name)),
+                workflowPlanner.resumable(workflowPlanner.mapStepName(name)),
+                Instant.now()
+        ));
     }
 
     private void addStepAfterFinish(List<AgentStep> steps, String name, String status, String summary) {
@@ -423,6 +449,15 @@ public class V1AgentExecutor implements AgentExecutor {
                 default -> TraceSpanStatus.COMPLETED;
             };
         }
+    }
+
+    private WorkflowRunStatus toWorkflowStatus(AgentRunStatus status) {
+        return switch (status) {
+            case COMPLETED -> WorkflowRunStatus.COMPLETED;
+            case BLOCKED -> WorkflowRunStatus.BLOCKED;
+            case FAILED -> WorkflowRunStatus.FAILED;
+            case NEEDS_CLARIFICATION -> WorkflowRunStatus.RESUMABLE;
+        };
     }
 
     private void recordEstimatedUsage(TraceContext trace, PromptRequest prompt, String answer) {

@@ -469,5 +469,6 @@ Guardrails/HITL、Trace/Eval/AgentOps 和 Multi-Agent 协作。
 18. V4.0 AgentOps / Trace：完整 Run、统一 Span、耗时统计、Token/成本估算、失败原因、回放能力和 Trace 查询接口。已完成。
 19. V4.1 Agent Eval：评测集管理、Agent 回答评估、工具调用评估、RAG 使用评估、groundedness、LLM-as-Judge 和回归测试接口。已完成。
 20. V4.2 Guardrails / HITL：Prompt Injection 检测、敏感信息过滤、工具权限控制、高风险审批状态流转和审计查询接口。已完成。
-21. 后续增强更完整的性能压测报告。
+21. V4.3 Workflow 状态机：显式节点、分支转移、执行计划、checkpoint、retryable/resumable 标记和 Workflow 查询接口。已完成。
+22. 后续增强更完整的性能压测报告。
 ```

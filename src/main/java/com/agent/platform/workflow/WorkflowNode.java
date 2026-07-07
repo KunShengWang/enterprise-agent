@@ -1,0 +1,26 @@
+package com.agent.platform.workflow;
+
+public enum WorkflowNode {
+    START,
+    LOAD_MEMORY,
+    INPUT_GUARDRAIL,
+    SELECT_SKILL,
+    ROUTE_INTENT,
+    CLARIFY,
+    QUERY_REWRITE,
+    RAG_RETRIEVE,
+    TOOL_REGISTRY,
+    TOOL_PLAN,
+    TOOL_GUARDRAIL,
+    TOOL_APPROVAL,
+    TOOL_EXECUTE,
+    CHAT_FALLBACK,
+    PROMPT_ASSEMBLE,
+    LLM_CALL,
+    OUTPUT_GUARDRAIL,
+    SAVE_MEMORY,
+    EVAL_RECORD,
+    FINISH,
+    BLOCKED,
+    FAILED
+}
