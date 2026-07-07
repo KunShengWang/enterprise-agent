@@ -2,6 +2,9 @@ package com.agent.platform.prompt;
 
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.memory.ConversationMemory;
+import com.agent.platform.memory.LongTermMemory;
+import com.agent.platform.memory.MemorySearchResult;
+import com.agent.platform.memory.UserProfileItem;
 import com.agent.platform.rag.RagResult;
 import com.agent.platform.rag.RetrievedDocument;
 import com.agent.platform.tool.ToolCallResult;
@@ -22,6 +25,15 @@ public class DefaultPromptAssembler implements PromptAssembler {
         List<String> contextBlocks = new ArrayList<>();
         if (memory != null && memory.summary() != null && !memory.summary().isBlank()) {
             contextBlocks.add("Memory summary: " + memory.summary());
+        }
+        if (memory != null && !memory.userProfile().items().isEmpty()) {
+            contextBlocks.add("User profile: " + formatProfile(memory.userProfile().items()));
+        }
+        if (memory != null && !memory.longTermMemories().isEmpty()) {
+            contextBlocks.add("Long-term memory: " + formatLongTermMemories(memory.longTermMemories()));
+        }
+        if (memory != null && !memory.recalledMemories().isEmpty()) {
+            contextBlocks.add("Recalled memory: " + formatRecalledMemories(memory.recalledMemories()));
         }
         if (ragResult != null) {
             for (RetrievedDocument document : ragResult.documents()) {
@@ -58,5 +70,26 @@ public class DefaultPromptAssembler implements PromptAssembler {
                 + ", chunkIndex=" + chunkIndex
                 + ", score=" + document.score()
                 + "] " + document.content();
+    }
+
+    private String formatProfile(List<UserProfileItem> items) {
+        return items.stream()
+                .map(item -> item.key() + "=" + item.value())
+                .toList()
+                .toString();
+    }
+
+    private String formatLongTermMemories(List<LongTermMemory> memories) {
+        return memories.stream()
+                .map(memory -> "[" + memory.category() + ", confidence=" + memory.confidence() + "] " + memory.content())
+                .toList()
+                .toString();
+    }
+
+    private String formatRecalledMemories(List<MemorySearchResult> memories) {
+        return memories.stream()
+                .map(memory -> "[" + memory.type() + ", score=" + memory.score() + "] " + memory.content())
+                .toList()
+                .toString();
     }
 }

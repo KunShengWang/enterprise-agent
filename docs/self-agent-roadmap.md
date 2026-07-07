@@ -465,5 +465,6 @@ Guardrails/HITL、Trace/Eval/AgentOps 和 Multi-Agent 协作。
 14. V2.6 RAG AgentOps：RAG 运行记录、近 N 次命中率、平均耗时、平均召回数量和按模式统计。已完成。
 15. V2.7 pgvector 性能入口：支持手动创建 HNSW / IVFFlat 向量索引。已完成。
 16. V2.8 RAG 运行报告持久化：将近 N 次 RAG run 导出为 Markdown 报告。已完成。
-17. 后续增强 MCP 工具和更完整的性能压测报告。
+17. V3.2 Memory 增强：短期窗口、摘要压缩、长期记忆、用户画像、历史召回、JDBC 持久化和 Memory 查询接口。已完成。
+18. 后续增强更完整的性能压测报告。
 ```

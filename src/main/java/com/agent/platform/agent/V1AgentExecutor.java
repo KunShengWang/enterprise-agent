@@ -125,9 +125,13 @@ public class V1AgentExecutor implements AgentExecutor {
         boolean blockedByGuardrail = false;
 
         try {
-            ConversationMemory memory = memoryService.load(conversationId);
-            addStep(trace, steps, "memory.load", "COMPLETED", "loaded messages=" + memory.messages().size());
-            memoryService.append(conversationId, new MemoryMessage("user", request.question(), Instant.now()));
+            ConversationMemory memory = memoryService.load(conversationId, request.userId(), request.question());
+            addStep(trace, steps, "memory.load", "COMPLETED",
+                    "messages=" + memory.messages().size()
+                            + ", longTerm=" + memory.longTermMemories().size()
+                            + ", profileItems=" + memory.userProfile().items().size()
+                            + ", recalled=" + memory.recalledMemories().size());
+            memoryService.append(conversationId, request.userId(), new MemoryMessage("user", request.question(), Instant.now()));
 
             GuardrailDecision inputDecision = guardrailService.checkInput(request.question());
             addStep(trace, steps, "guardrail.input", inputDecision.action().name(), inputDecision.reason());
@@ -144,7 +148,7 @@ public class V1AgentExecutor implements AgentExecutor {
             addStep(trace, steps, "intent.route", route.type().name(), route.reason());
             if (route.type() == IntentType.CLARIFY) {
                 String answer = "你的问题还不够明确。请补充工单编号、故障现象，或者说明你想查询哪类知识库资料。";
-                memoryService.append(conversationId, new MemoryMessage("assistant", answer, Instant.now()));
+                memoryService.append(conversationId, request.userId(), new MemoryMessage("assistant", answer, Instant.now()));
                 return finish(request, conversationId, AgentRunStatus.NEEDS_CLARIFICATION, answer, steps, trace, usedTools, usedRag, false);
             }
 
@@ -206,7 +210,7 @@ public class V1AgentExecutor implements AgentExecutor {
                         "回答被输出护栏拦截：" + outputDecision.reason());
             }
 
-            memoryService.append(conversationId, new MemoryMessage("assistant", answer, Instant.now()));
+            memoryService.append(conversationId, request.userId(), new MemoryMessage("assistant", answer, Instant.now()));
             addStep(trace, steps, "conversation.save", "COMPLETED", "conversation messages appended");
             return finish(request, conversationId, AgentRunStatus.COMPLETED, answer, steps, trace, usedTools, usedRag, blockedByGuardrail);
         }

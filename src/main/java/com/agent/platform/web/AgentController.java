@@ -59,7 +59,7 @@ public class AgentController {
     public Mono<ApiResponse<Map<String, Object>>> previewRoute(@Valid @RequestBody AgentRequest request) {
         return Mono.fromSupplier(() -> {
                     String conversationId = normalizeConversationId(request.conversationId());
-                    IntentRoute route = intentRouter.route(request, memoryService.load(conversationId));
+                    IntentRoute route = intentRouter.route(request, memoryService.load(conversationId, request.userId(), request.question()));
                     return ApiResponse.success(Map.of(
                             "conversationId", conversationId,
                             "type", route.type().name(),
