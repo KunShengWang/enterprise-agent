@@ -30,7 +30,7 @@ public class RuleBasedIntentRouter implements IntentRouter {
         int ragScore = ragScore(question);
         int toolScore = toolScore(question);
         int clarifyScore = clarifyScore(question);
-        String toolName = toolScore > 0 ? resolveTicketTool(question) : null;
+        String toolName = toolScore > 0 ? resolvePreferredTool(question) : null;
         Map<String, Object> slots = routeSlots(ragScore, toolScore, clarifyScore, toolName);
 
         if (clarifyScore >= 3 && Math.max(ragScore, toolScore) < 3) {
@@ -69,7 +69,8 @@ public class RuleBasedIntentRouter implements IntentRouter {
     private int toolScore(String question) {
         int score = 0;
         score += containsAny(question, List.of("工单", "ticket", "报修")) * 3;
-        score += containsAny(question, List.of("查询", "查看", "状态", "创建", "新建", "升级", "关闭", "更新", "优先级")) * 2;
+        score += containsAny(question, List.of("文件", "目录", "filesystem", "read file", "list directory")) * 3;
+        score += containsAny(question, List.of("查询", "查看", "状态", "创建", "新建", "升级", "关闭", "更新", "优先级", "读取", "列出")) * 2;
         if (ticketIdPattern.matcher(question).find()) {
             score += 4;
         }
@@ -122,7 +123,14 @@ public class RuleBasedIntentRouter implements IntentRouter {
                 || normalized.contains("介绍一下你自己");
     }
 
-    private String resolveTicketTool(String question) {
+    private String resolvePreferredTool(String question) {
+        if (containsAny(question, List.of("文件", "目录", "filesystem", "read file", "list directory")) > 0) {
+            return null;
+        }
+        if (containsAny(question, List.of("关闭", "结束")) > 0
+                && containsAny(question, List.of("工单", "ticket")) > 0) {
+            return "ticket_close";
+        }
         if (containsAny(question, List.of("创建", "新建", "报修")) > 0) {
             return "ticket_create";
         }

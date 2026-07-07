@@ -1,0 +1,2 @@
+T3001 是一个用于 MCP 联调的测试工单。
+filesystem MCP 只能读取这个 sandbox 目录下的文件。

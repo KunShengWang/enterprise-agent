@@ -1,17 +1,21 @@
 package com.agent.platform.agent;
 
 import com.agent.platform.approval.LocalApprovalService;
+import com.agent.platform.config.AgentProperties;
 import com.agent.platform.eval.InMemoryEvalEventRecorder;
 import com.agent.platform.guardrail.DefaultGuardrailService;
 import com.agent.platform.llm.MockLlmService;
 import com.agent.platform.memory.InMemoryMemoryService;
 import com.agent.platform.prompt.DefaultPromptAssembler;
 import com.agent.platform.query.RuleBasedQueryRewriteService;
+import com.agent.platform.rag.InMemoryRagRunRecorder;
 import com.agent.platform.rag.InMemoryRagService;
 import com.agent.platform.router.RuleBasedIntentRouter;
 import com.agent.platform.skill.StaticSkillSelector;
+import com.agent.platform.tool.LlmToolCallPlanner;
 import com.agent.platform.tool.LocalToolExecutor;
 import com.agent.platform.tool.LocalToolRegistry;
+import tools.jackson.databind.ObjectMapper;
 import com.agent.platform.trace.InMemoryTraceRecorder;
 import org.junit.jupiter.api.Test;
 
@@ -55,15 +59,18 @@ class V1AgentExecutorTests {
     }
 
     private V1AgentExecutor newExecutor() {
+        ObjectMapper objectMapper = new ObjectMapper();
         return new V1AgentExecutor(
+                new AgentProperties(),
                 new InMemoryTraceRecorder(),
                 new InMemoryMemoryService(),
                 new DefaultGuardrailService(),
                 new RuleBasedIntentRouter(),
                 new StaticSkillSelector(),
                 new RuleBasedQueryRewriteService(),
-                new InMemoryRagService(),
+                new InMemoryRagService(new InMemoryRagRunRecorder()),
                 new LocalToolRegistry(),
+                new LlmToolCallPlanner(new MockLlmService(), objectMapper),
                 new LocalToolExecutor(),
                 new LocalApprovalService(),
                 new DefaultPromptAssembler(),

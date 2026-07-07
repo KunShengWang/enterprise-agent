@@ -3,6 +3,7 @@ package com.agent.platform.agent;
 import com.agent.platform.approval.ApprovalDecision;
 import com.agent.platform.approval.ApprovalRequest;
 import com.agent.platform.approval.ApprovalService;
+import com.agent.platform.config.AgentProperties;
 import com.agent.platform.eval.AgentRunEvalEvent;
 import com.agent.platform.eval.EvalEventRecorder;
 import com.agent.platform.guardrail.GuardrailAction;
@@ -23,6 +24,8 @@ import com.agent.platform.router.IntentRouter;
 import com.agent.platform.router.IntentType;
 import com.agent.platform.skill.SkillDefinition;
 import com.agent.platform.skill.SkillSelector;
+import com.agent.platform.tool.ToolCallPlan;
+import com.agent.platform.tool.ToolCallPlanner;
 import com.agent.platform.tool.ToolCallRequest;
 import com.agent.platform.tool.ToolCallResult;
 import com.agent.platform.tool.ToolDefinition;
@@ -36,13 +39,13 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Primary
 @Service
@@ -50,7 +53,7 @@ public class V1AgentExecutor implements AgentExecutor {
 
     private static final String DEFAULT_CONVERSATION_ID = "default-conversation";
 
-    private final Pattern ticketIdPattern = Pattern.compile("T\\d{3,}", Pattern.CASE_INSENSITIVE);
+    private final AgentProperties agentProperties;
 
     private final TraceRecorder traceRecorder;
 
@@ -68,6 +71,8 @@ public class V1AgentExecutor implements AgentExecutor {
 
     private final ToolRegistry toolRegistry;
 
+    private final ToolCallPlanner toolCallPlanner;
+
     private final ToolExecutor toolExecutor;
 
     private final ApprovalService approvalService;
@@ -78,7 +83,8 @@ public class V1AgentExecutor implements AgentExecutor {
 
     private final EvalEventRecorder evalEventRecorder;
 
-    public V1AgentExecutor(TraceRecorder traceRecorder,
+    public V1AgentExecutor(AgentProperties agentProperties,
+                           TraceRecorder traceRecorder,
                            MemoryService memoryService,
                            GuardrailService guardrailService,
                            IntentRouter intentRouter,
@@ -86,11 +92,13 @@ public class V1AgentExecutor implements AgentExecutor {
                            QueryRewriteService queryRewriteService,
                            RagService ragService,
                            ToolRegistry toolRegistry,
+                           ToolCallPlanner toolCallPlanner,
                            ToolExecutor toolExecutor,
                            ApprovalService approvalService,
                            PromptAssembler promptAssembler,
                            LlmService llmService,
                            EvalEventRecorder evalEventRecorder) {
+        this.agentProperties = agentProperties;
         this.traceRecorder = traceRecorder;
         this.memoryService = memoryService;
         this.guardrailService = guardrailService;
@@ -99,6 +107,7 @@ public class V1AgentExecutor implements AgentExecutor {
         this.queryRewriteService = queryRewriteService;
         this.ragService = ragService;
         this.toolRegistry = toolRegistry;
+        this.toolCallPlanner = toolCallPlanner;
         this.toolExecutor = toolExecutor;
         this.approvalService = approvalService;
         this.promptAssembler = promptAssembler;
@@ -158,7 +167,7 @@ public class V1AgentExecutor implements AgentExecutor {
                                 + ", hits=" + ragHitSummary(ragResult));
             }
             else if (route.type() == IntentType.TOOL) {
-                ToolExecutionOutcome outcome = executeToolBranch(request, conversationId, route, trace, steps);
+                ToolExecutionOutcome outcome = executeToolBranch(request, memory, conversationId, route, trace, steps);
                 usedTools.addAll(outcome.usedTools());
                 toolResults.addAll(outcome.toolResults());
                 if (outcome.blockedAnswer() != null) {
@@ -208,74 +217,83 @@ public class V1AgentExecutor implements AgentExecutor {
     }
 
     private ToolExecutionOutcome executeToolBranch(AgentRequest request,
+                                                   ConversationMemory memory,
                                                    String conversationId,
                                                    IntentRoute route,
                                                    TraceContext trace,
                                                    List<AgentStep> steps) {
-        String toolName = String.valueOf(route.slots().getOrDefault("toolName", "ticket_status"));
-        Optional<ToolDefinition> definition = toolRegistry.findTool(toolName);
-        if (definition.isEmpty()) {
-            addStep(trace, steps, "tool.registry", "FAILED", "tool not found: " + toolName);
-            return ToolExecutionOutcome.blocked("没有找到可执行工具：" + toolName, true);
+        List<ToolDefinition> availableTools = toolRegistry.listTools();
+        addStep(trace, steps, "tool.registry", "COMPLETED", "availableTools=" + availableTools.stream().map(ToolDefinition::name).toList());
+        if (availableTools.isEmpty()) {
+            return ToolExecutionOutcome.blocked("当前没有可用工具，无法执行该任务。", true);
         }
-        ToolCallRequest toolCall = buildToolCall(request, toolName);
-        addStep(trace, steps, "tool.plan", "COMPLETED", toolCall.toolName() + " " + toolCall.arguments());
 
-        GuardrailDecision toolDecision = guardrailService.checkToolCall(definition.get(), toolCall);
-        addStep(trace, steps, "guardrail.tool", toolDecision.action().name(), toolDecision.reason());
-        if (toolDecision.action() == GuardrailAction.BLOCK) {
-            return ToolExecutionOutcome.blocked("工具调用被护栏拦截：" + toolDecision.reason(), true);
-        }
-        if (toolDecision.action() == GuardrailAction.REQUIRE_APPROVAL) {
-            ApprovalRequest approvalRequest = new ApprovalRequest(
-                    UUID.randomUUID().toString(),
-                    conversationId,
-                    toolCall,
-                    toolDecision.reason(),
-                    Instant.now()
-            );
-            ApprovalDecision approvalDecision = approvalService.requestApproval(approvalRequest);
-            addStep(trace, steps, "approval.request", approvalDecision.approved() ? "APPROVED" : "REJECTED", approvalDecision.reason());
-            if (!approvalDecision.approved()) {
-                return ToolExecutionOutcome.blocked("高风险工具未通过人工确认，已停止执行。", false);
+        List<String> usedTools = new ArrayList<>();
+        List<ToolCallResult> toolResults = new ArrayList<>();
+        Set<String> executedSignatures = new HashSet<>();
+        int maxCalls = Math.max(1, agentProperties.getMaxToolCallsPerRun());
+
+        for (int index = 0; index < maxCalls; index++) {
+            ToolCallPlan plan = toolCallPlanner.plan(request, memory, route, availableTools, toolResults);
+            if (!plan.shouldCallTool()) {
+                addStep(trace, steps, "tool.plan", "STOPPED", plan.reason());
+                if (toolResults.isEmpty()) {
+                    return ToolExecutionOutcome.blocked("未能生成可执行工具调用计划：" + plan.reason(), true);
+                }
+                break;
+            }
+
+            Optional<ToolDefinition> definition = toolRegistry.findTool(plan.toolName());
+            if (definition.isEmpty()) {
+                addStep(trace, steps, "tool.registry", "FAILED", "tool not found: " + plan.toolName());
+                return ToolExecutionOutcome.blocked("没有找到可执行工具：" + plan.toolName(), true);
+            }
+
+            ToolCallRequest toolCall = new ToolCallRequest(plan.toolName(), UUID.randomUUID().toString(), plan.arguments());
+            String signature = toolCall.toolName() + toolCall.arguments();
+            if (!executedSignatures.add(signature)) {
+                addStep(trace, steps, "tool.plan", "STOPPED", "duplicate tool call stopped: " + signature);
+                break;
+            }
+            addStep(trace, steps, "tool.plan", "COMPLETED",
+                    "planner=" + plan.planner()
+                            + ", confidence=" + String.format(Locale.ROOT, "%.2f", plan.confidence())
+                            + ", tool=" + toolCall.toolName()
+                            + ", args=" + toolCall.arguments()
+                            + ", reason=" + plan.reason());
+
+            GuardrailDecision toolDecision = guardrailService.checkToolCall(definition.get(), toolCall);
+            addStep(trace, steps, "guardrail.tool", toolDecision.action().name(), toolDecision.reason());
+            if (toolDecision.action() == GuardrailAction.BLOCK) {
+                return ToolExecutionOutcome.blocked("工具调用被护栏拦截：" + toolDecision.reason(), true);
+            }
+            if (toolDecision.action() == GuardrailAction.REQUIRE_APPROVAL) {
+                ApprovalRequest approvalRequest = new ApprovalRequest(
+                        UUID.randomUUID().toString(),
+                        conversationId,
+                        toolCall,
+                        toolDecision.reason(),
+                        Instant.now()
+                );
+                ApprovalDecision approvalDecision = approvalService.requestApproval(approvalRequest);
+                addStep(trace, steps, "approval.request", approvalDecision.approved() ? "APPROVED" : "REJECTED", approvalDecision.reason());
+                if (!approvalDecision.approved()) {
+                    return ToolExecutionOutcome.blocked("高风险工具未通过人工确认，已停止执行。", false);
+                }
+            }
+
+            long toolStartNanos = System.nanoTime();
+            ToolCallResult result = toolExecutor.execute(toolCall);
+            String detail = result.success() ? result.content() : result.errorMessage();
+            addStep(trace, steps, "tool.execute", result.success() ? "COMPLETED" : "FAILED",
+                    detail + ", durationMs=" + elapsedMs(toolStartNanos));
+            usedTools.add(toolCall.toolName());
+            toolResults.add(result);
+            if (!result.success()) {
+                break;
             }
         }
-
-        long toolStartNanos = System.nanoTime();
-        ToolCallResult result = toolExecutor.execute(toolCall);
-        String detail = result.success() ? result.content() : result.errorMessage();
-        addStep(trace, steps, "tool.execute", result.success() ? "COMPLETED" : "FAILED",
-                detail + ", durationMs=" + elapsedMs(toolStartNanos));
-        return ToolExecutionOutcome.completed(List.of(toolCall.toolName()), List.of(result));
-    }
-
-    private ToolCallRequest buildToolCall(AgentRequest request, String toolName) {
-        return switch (toolName) {
-            case "ticket_create" -> new ToolCallRequest(toolName, UUID.randomUUID().toString(), Map.of(
-                    "title", request.question(),
-                    "priority", isUrgent(request.question()) ? "P1" : "P2"
-            ));
-            case "ticket_priority_update" -> new ToolCallRequest(toolName, UUID.randomUUID().toString(), Map.of(
-                    "ticketId", extractTicketId(request.question()),
-                    "priority", request.question().contains("P0") ? "P0" : "P1"
-            ));
-            default -> new ToolCallRequest(toolName, UUID.randomUUID().toString(), Map.of(
-                    "ticketId", extractTicketId(request.question())
-            ));
-        };
-    }
-
-    private boolean isUrgent(String question) {
-        String text = question == null ? "" : question;
-        return text.contains("紧急") || text.contains("高优先级") || text.contains("P1") || text.contains("P0");
-    }
-
-    private String extractTicketId(String question) {
-        Matcher matcher = ticketIdPattern.matcher(question == null ? "" : question);
-        if (matcher.find()) {
-            return matcher.group().toUpperCase();
-        }
-        return "T1001";
+        return ToolExecutionOutcome.completed(usedTools, toolResults);
     }
 
     private AgentResponse finishBlocked(AgentRequest request,

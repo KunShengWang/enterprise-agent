@@ -27,6 +27,36 @@ enterprise-agent:
   default-system-prompt: >
     You are an enterprise knowledge-base and support-ticket agent.
     Follow the orchestrated execution flow and do not bypass guardrails.
+  mcp:
+    enabled: false
+    server-name: filesystem
+    tool-name-prefix: mcp.filesystem.
+    protocol-version: "2025-11-25"
+    command: ${MCP_STDIO_COMMAND:}
+    args: []
+    working-directory: ${MCP_WORKING_DIRECTORY:}
+    servers:
+      - enabled: true
+        server-name: filesystem
+        tool-name-prefix: mcp.filesystem.
+        protocol-version: "2025-11-25"
+        command: ${MCP_FILESYSTEM_COMMAND:node}
+        args:
+          - ${MCP_NPX_CLI:D:/NodeJS/24.11/setup/node_modules/npm/bin/npx-cli.js}
+          - -y
+          - "@modelcontextprotocol/server-filesystem"
+          - ${MCP_FILESYSTEM_ROOT:D:/JDK/IDEA/java_reinforcement_learning/enterprise-agent/data/mcp-sandbox}
+        working-directory: ${MCP_FILESYSTEM_WORKING_DIRECTORY:}
+      - enabled: true
+        server-name: ticket
+        tool-name-prefix: mcp.ticket.
+        protocol-version: "2025-11-25"
+        command: ${MCP_TICKET_COMMAND:java}
+        args:
+          - -cp
+          - ${MCP_TICKET_CLASSPATH:target/classes}
+          - com.agent.platform.mcp.server.TicketMcpServerApplication
+        working-directory: ${MCP_TICKET_WORKING_DIRECTORY:}
   rag:
     mode: pgvector
     document-dir: ${RAG_DOCUMENT_DIR:data/rag-docs}

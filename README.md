@@ -59,7 +59,7 @@ EvalRunner
 
 ## 当前阶段
 
-当前处于 V2.3：单 Agent 核心闭环 + PostgreSQL/pgvector RAG 混合检索优化。
+当前处于 V3.1：单 Agent 核心闭环 + PostgreSQL/pgvector RAG + Tool Calling / MCP 执行层。
 
 已包含：
 
@@ -88,6 +88,14 @@ RAG AgentOps：运行记录、近 N 次命中率、平均耗时和召回数量
 RAG 运行报告：将近 N 次检索记录导出为 Markdown 文件
 RAG 性能入口：pgvector HNSW / IVFFlat 向量索引创建接口
 本地工单工具
+LLM 工具调用计划：由模型选择工具和生成参数，失败时规则降级
+工具 JSON Schema 参数校验
+工具 ReAct 简化循环：工具结果回填后可继续规划下一次工具调用
+工具执行记录：成功率、耗时、参数、错误和 provider
+MCP stdio 接入骨架：默认关闭，可接 filesystem MCP 或自研 MCP Server
+filesystem MCP 真实联调：限制在 data/mcp-sandbox 目录
+自研 ticket MCP Server：独立 stdio JSON-RPC 进程
+多 MCP Server 统一发现：mcp.filesystem.* 和 mcp.ticket.* 统一进入 ToolRegistry
 本地人工审批策略
 PromptAssembler
 Spring AI DeepSeek LLM 适配层
@@ -269,6 +277,62 @@ Content-Type: application/json
 }
 ```
 
+工具列表：
+
+```text
+GET http://localhost:8080/api/agent/tools
+```
+
+手动调用工具：
+
+```text
+POST http://localhost:8080/api/agent/tools/call
+Content-Type: application/json
+
+{
+  "toolName": "ticket_status",
+  "requestId": "manual-1",
+  "arguments": {
+    "ticketId": "T1001"
+  }
+}
+```
+
+工具调用记录：
+
+```text
+GET http://localhost:8080/api/agent/tools/runs?limit=20
+```
+
+工具调用统计：
+
+```text
+GET http://localhost:8080/api/agent/tools/runs/stats
+```
+
+启用 MCP：
+
+```yaml
+enterprise-agent:
+  mcp:
+    enabled: true
+```
+
+默认会尝试接入两个 MCP Server：
+
+```text
+mcp.filesystem.*  官方 filesystem MCP，只允许访问 data/mcp-sandbox
+mcp.ticket.*      自研 ticket MCP Server
+```
+
+启用前需要确保：
+
+```text
+Node.js 可用
+MCP_NPX_CLI 指向本机 npx-cli.js，默认 D:/NodeJS/24.11/setup/node_modules/npm/bin/npx-cli.js
+项目已经编译出 target/classes，供自研 ticket MCP Server 启动
+```
+
 流式调用：
 
 ```text
@@ -316,3 +380,7 @@ RAG
 [V1.3 地基加固](docs/v1-3-foundation-hardening.md)
 
 [V2.0 PostgreSQL + pgvector RAG](docs/v2-0-pgvector-rag.md)
+
+[V3.0 Tool Calling / MCP](docs/v3-0-tool-mcp.md)
+
+[V3.1 MCP 真实联调和自研 Ticket MCP Server](docs/v3-1-mcp-real-integration.md)
