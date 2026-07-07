@@ -33,6 +33,8 @@ import com.agent.platform.tool.ToolExecutor;
 import com.agent.platform.tool.ToolRegistry;
 import com.agent.platform.trace.TraceContext;
 import com.agent.platform.trace.TraceRecorder;
+import com.agent.platform.trace.TraceSpanKind;
+import com.agent.platform.trace.TraceSpanStatus;
 import com.agent.platform.trace.TraceSummary;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -46,12 +48,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Primary
 @Service
 public class V1AgentExecutor implements AgentExecutor {
 
     private static final String DEFAULT_CONVERSATION_ID = "default-conversation";
+
+    private static final Pattern DURATION_PATTERN = Pattern.compile("durationMs=(\\d+)");
 
     private final AgentProperties agentProperties;
 
@@ -190,12 +196,15 @@ public class V1AgentExecutor implements AgentExecutor {
             long llmStartNanos = System.nanoTime();
             try {
                 answer = llmService.complete(prompt);
+                long llmDurationMs = elapsedMs(llmStartNanos);
                 addStep(trace, steps, "llm.call", "COMPLETED",
-                        "real llm generated answer, durationMs=" + elapsedMs(llmStartNanos));
+                        "real llm generated answer, durationMs=" + llmDurationMs, llmDurationMs);
+                recordEstimatedUsage(trace, prompt, answer);
             }
             catch (LlmCallException exception) {
+                long llmDurationMs = elapsedMs(llmStartNanos);
                 addStep(trace, steps, "llm.call", "FAILED",
-                        "errorType=" + exception.errorType() + ", durationMs=" + elapsedMs(llmStartNanos));
+                        "errorType=" + exception.errorType() + ", durationMs=" + llmDurationMs, llmDurationMs);
                 return finish(request, conversationId, AgentRunStatus.FAILED, exception.safeMessage(), steps, trace, usedTools, usedRag, blockedByGuardrail);
             }
 
@@ -289,8 +298,9 @@ public class V1AgentExecutor implements AgentExecutor {
             long toolStartNanos = System.nanoTime();
             ToolCallResult result = toolExecutor.execute(toolCall);
             String detail = result.success() ? result.content() : result.errorMessage();
+            long toolDurationMs = elapsedMs(toolStartNanos);
             addStep(trace, steps, "tool.execute", result.success() ? "COMPLETED" : "FAILED",
-                    detail + ", durationMs=" + elapsedMs(toolStartNanos));
+                    detail + ", durationMs=" + toolDurationMs, toolDurationMs);
             usedTools.add(toolCall.toolName());
             toolResults.add(result);
             if (!result.success()) {
@@ -320,6 +330,7 @@ public class V1AgentExecutor implements AgentExecutor {
                                  List<String> usedTools,
                                  boolean usedRag,
                                  boolean blockedByGuardrail) {
+        traceRecorder.markStatus(trace, status.name(), status == AgentRunStatus.FAILED || status == AgentRunStatus.BLOCKED ? answer : "");
         TraceSummary traceSummary = traceRecorder.finish(trace);
         evalEventRecorder.record(new AgentRunEvalEvent(
                 traceSummary.traceId(),
@@ -335,8 +346,23 @@ public class V1AgentExecutor implements AgentExecutor {
     }
 
     private void addStep(TraceContext trace, List<AgentStep> steps, String name, String status, String summary) {
+        addStep(trace, steps, name, status, summary, parseDurationMs(summary));
+    }
+
+    private void addStep(TraceContext trace, List<AgentStep> steps, String name, String status, String summary, long durationMs) {
         steps.add(new AgentStep(name, status, summary));
-        traceRecorder.record(trace, name, summary);
+        traceRecorder.recordSpan(
+                trace,
+                name,
+                inferSpanKind(name),
+                inferSpanStatus(status),
+                summary,
+                durationMs,
+                "",
+                summary,
+                "FAILED".equalsIgnoreCase(status) ? summary : "",
+                Map.of("stepStatus", status)
+        );
     }
 
     private void addStepAfterFinish(List<AgentStep> steps, String name, String status, String summary) {
@@ -352,6 +378,64 @@ public class V1AgentExecutor implements AgentExecutor {
 
     private long elapsedMs(long startNanos) {
         return (System.nanoTime() - startNanos) / 1_000_000;
+    }
+
+    private long parseDurationMs(String summary) {
+        if (summary == null || summary.isBlank()) {
+            return 0;
+        }
+        Matcher matcher = DURATION_PATTERN.matcher(summary);
+        return matcher.find() ? Long.parseLong(matcher.group(1)) : 0;
+    }
+
+    private TraceSpanKind inferSpanKind(String name) {
+        String value = name == null ? "" : name.toLowerCase(Locale.ROOT);
+        if (value.contains("memory")) return TraceSpanKind.MEMORY;
+        if (value.contains("guardrail")) return TraceSpanKind.GUARDRAIL;
+        if (value.contains("skill")) return TraceSpanKind.SKILL;
+        if (value.contains("intent")) return TraceSpanKind.ROUTER;
+        if (value.contains("rewrite")) return TraceSpanKind.QUERY_REWRITE;
+        if (value.contains("rag")) return TraceSpanKind.RAG;
+        if (value.contains("tool")) return TraceSpanKind.TOOL;
+        if (value.contains("approval")) return TraceSpanKind.APPROVAL;
+        if (value.contains("prompt")) return TraceSpanKind.PROMPT;
+        if (value.contains("llm")) return TraceSpanKind.LLM;
+        if (value.contains("eval")) return TraceSpanKind.EVAL;
+        if (value.contains("error")) return TraceSpanKind.ERROR;
+        return TraceSpanKind.SYSTEM;
+    }
+
+    private TraceSpanStatus inferSpanStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return TraceSpanStatus.COMPLETED;
+        }
+        try {
+            return TraceSpanStatus.valueOf(status.toUpperCase(Locale.ROOT));
+        }
+        catch (IllegalArgumentException ignored) {
+            return switch (status.toUpperCase(Locale.ROOT)) {
+                case "ALLOW", "REDACT", "READY" -> TraceSpanStatus.COMPLETED;
+                case "REQUIRE_APPROVAL" -> TraceSpanStatus.STARTED;
+                default -> TraceSpanStatus.COMPLETED;
+            };
+        }
+    }
+
+    private void recordEstimatedUsage(TraceContext trace, PromptRequest prompt, String answer) {
+        long promptTokens = estimateTokens(prompt.systemPrompt())
+                + estimateTokens(prompt.userPrompt())
+                + prompt.contextBlocks().stream().mapToLong(this::estimateTokens).sum();
+        long completionTokens = estimateTokens(answer);
+        double estimatedCost = (promptTokens * 0.000001) + (completionTokens * 0.000002);
+        traceRecorder.recordTokenUsage(trace, promptTokens, completionTokens, estimatedCost);
+        traceRecorder.recordMetric(trace, "contextBlocks", prompt.contextBlocks().size());
+    }
+
+    private long estimateTokens(String value) {
+        if (value == null || value.isBlank()) {
+            return 0;
+        }
+        return Math.max(1, (long) Math.ceil(value.length() / 4.0));
     }
 
     private String ragHitSummary(RagResult ragResult) {
