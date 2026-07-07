@@ -467,5 +467,6 @@ Guardrails/HITL、Trace/Eval/AgentOps 和 Multi-Agent 协作。
 16. V2.8 RAG 运行报告持久化：将近 N 次 RAG run 导出为 Markdown 报告。已完成。
 17. V3.2 Memory 增强：短期窗口、摘要压缩、长期记忆、用户画像、历史召回、JDBC 持久化和 Memory 查询接口。已完成。
 18. V4.0 AgentOps / Trace：完整 Run、统一 Span、耗时统计、Token/成本估算、失败原因、回放能力和 Trace 查询接口。已完成。
-19. 后续增强更完整的性能压测报告。
+19. V4.1 Agent Eval：评测集管理、Agent 回答评估、工具调用评估、RAG 使用评估、groundedness、LLM-as-Judge 和回归测试接口。已完成。
+20. 后续增强更完整的性能压测报告。
 ```
