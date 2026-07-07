@@ -137,7 +137,6 @@ public class V1AgentExecutor implements AgentExecutor {
                             + ", longTerm=" + memory.longTermMemories().size()
                             + ", profileItems=" + memory.userProfile().items().size()
                             + ", recalled=" + memory.recalledMemories().size());
-            memoryService.append(conversationId, request.userId(), new MemoryMessage("user", request.question(), Instant.now()));
 
             GuardrailDecision inputDecision = guardrailService.checkInput(request.question());
             addStep(trace, steps, "guardrail.input", inputDecision.action().name(), inputDecision.reason());
@@ -146,6 +145,11 @@ public class V1AgentExecutor implements AgentExecutor {
                 return finishBlocked(request, conversationId, trace, steps, usedTools, usedRag, true,
                         "请求被输入护栏拦截：" + inputDecision.reason());
             }
+            if (inputDecision.action() == GuardrailAction.REDACT && inputDecision.safeContent() != null) {
+                request = new AgentRequest(request.conversationId(), request.userId(), inputDecision.safeContent(), request.metadata());
+                addStep(trace, steps, "guardrail.input.redact", "COMPLETED", "input was redacted before memory and model usage");
+            }
+            memoryService.append(conversationId, request.userId(), new MemoryMessage("user", request.question(), Instant.now()));
 
             Optional<SkillDefinition> skill = skillSelector.select(request, memory);
             addStep(trace, steps, "skill.select", skill.map(SkillDefinition::name).orElse("NONE"), skill.map(SkillDefinition::description).orElse("no skill selected"));
