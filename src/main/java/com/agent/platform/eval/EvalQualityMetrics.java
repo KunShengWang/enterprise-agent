@@ -6,12 +6,13 @@ public record EvalQualityMetrics(
         double toolRecall,
         double toolF1,
         double forbiddenViolationRate,
+        double hallucinationRiskRate,
         int adversarialCases,
         int adversarialPassedCases,
         double adversarialPassRate
 ) {
 
     public static EvalQualityMetrics empty() {
-        return new EvalQualityMetrics(0, 0, 0, 0, 0, 0, 0, 0);
+        return new EvalQualityMetrics(0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 }

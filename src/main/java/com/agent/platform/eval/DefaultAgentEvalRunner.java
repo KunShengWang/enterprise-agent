@@ -205,6 +205,7 @@ public class DefaultAgentEvalRunner implements EvalRunner {
         int actualToolCount = 0;
         int matchedToolCount = 0;
         int forbiddenViolationCount = 0;
+        int ungroundedCount = 0;
         int adversarialCases = 0;
         int adversarialPassedCases = 0;
 
@@ -220,6 +221,9 @@ public class DefaultAgentEvalRunner implements EvalRunner {
             matchedToolCount += matchedToolCount(evalCase.expectedTools(), result.actualTools());
             if (!result.forbiddenKeywordHits().isEmpty()) {
                 forbiddenViolationCount++;
+            }
+            if (!result.grounded()) {
+                ungroundedCount++;
             }
             if ("adversarial".equals(String.valueOf(evalCase.metadata().get("category")))) {
                 adversarialCases++;
@@ -238,6 +242,7 @@ public class DefaultAgentEvalRunner implements EvalRunner {
                 toolRecall,
                 toolF1,
                 rate(forbiddenViolationCount, results.size()),
+                rate(ungroundedCount, results.size()),
                 adversarialCases,
                 adversarialPassedCases,
                 rate(adversarialPassedCases, adversarialCases)

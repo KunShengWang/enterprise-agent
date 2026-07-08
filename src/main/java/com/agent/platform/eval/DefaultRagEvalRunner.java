@@ -37,6 +37,11 @@ public class DefaultRagEvalRunner implements RagEvalRunner {
         double averageScore = results.stream().mapToDouble(RagEvalCaseResult::score).average().orElse(0);
         double sourceHitRate = results.stream().filter(RagEvalCaseResult::sourceHit).count() / totalCases;
         double keywordHitRate = results.stream().filter(RagEvalCaseResult::keywordHit).count() / totalCases;
+        double recallAtK = sourceHitRate;
+        double meanReciprocalRank = results.stream()
+                .mapToDouble(result -> result.firstRelevantRank() <= 0 ? 0 : 1.0 / result.firstRelevantRank())
+                .average()
+                .orElse(0);
         return new RagEvalReport(
                 results.size(),
                 passedCases,
@@ -44,6 +49,8 @@ public class DefaultRagEvalRunner implements RagEvalRunner {
                 averageScore,
                 sourceHitRate,
                 keywordHitRate,
+                recallAtK,
+                meanReciprocalRank,
                 elapsedMs(totalStartNanos),
                 results
         );
@@ -54,6 +61,7 @@ public class DefaultRagEvalRunner implements RagEvalRunner {
         RagResult ragResult = ragService.retrieve(evalCase.question(), evalCase.effectiveTopK(ragProperties.getTopK()));
         Set<String> foundSources = foundSources(ragResult.documents());
         Set<String> foundKeywords = foundKeywords(ragResult.documents(), evalCase.expectedContentKeywords());
+        int firstRelevantRank = firstRelevantRank(ragResult.documents(), evalCase.expectedSources());
         boolean sourceHit = evalCase.expectedSources().isEmpty() || containsAny(foundSources, evalCase.expectedSources());
         boolean keywordHit = evalCase.expectedContentKeywords().isEmpty() || foundKeywords.containsAll(evalCase.expectedContentKeywords());
         double sourceScore = sourceHit ? 1.0 : 0.0;
@@ -74,6 +82,7 @@ public class DefaultRagEvalRunner implements RagEvalRunner {
                 List.copyOf(foundSources),
                 evalCase.expectedContentKeywords(),
                 List.copyOf(foundKeywords),
+                firstRelevantRank,
                 elapsedMs(startNanos)
         );
     }
@@ -87,6 +96,19 @@ public class DefaultRagEvalRunner implements RagEvalRunner {
             }
         }
         return sources;
+    }
+
+    private int firstRelevantRank(List<RetrievedDocument> documents, List<String> expectedSources) {
+        if (expectedSources == null || expectedSources.isEmpty()) {
+            return documents.isEmpty() ? 0 : 1;
+        }
+        for (int index = 0; index < documents.size(); index++) {
+            Object source = documents.get(index).metadata().getOrDefault("source", documents.get(index).title());
+            if (source != null && expectedSources.contains(String.valueOf(source))) {
+                return index + 1;
+            }
+        }
+        return 0;
     }
 
     private Set<String> foundKeywords(List<RetrievedDocument> documents, List<String> expectedKeywords) {

@@ -9,6 +9,8 @@ public record RagEvalReport(
         double averageScore,
         double sourceHitRate,
         double keywordHitRate,
+        double recallAtK,
+        double meanReciprocalRank,
         long totalDurationMs,
         List<RagEvalCaseResult> results
 ) {

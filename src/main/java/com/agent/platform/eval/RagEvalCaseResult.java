@@ -14,6 +14,7 @@ public record RagEvalCaseResult(
         List<String> foundSources,
         List<String> expectedContentKeywords,
         List<String> foundContentKeywords,
+        int firstRelevantRank,
         long durationMs
 ) {
 
