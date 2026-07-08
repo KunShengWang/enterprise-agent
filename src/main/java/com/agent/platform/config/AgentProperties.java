@@ -11,6 +11,12 @@ public class AgentProperties {
 
     private int maxToolCallsPerRun = 6;
 
+    private int maxToolExecutionAttempts = 2;
+
+    private long toolRetryBackoffMillis = 150;
+
+    private boolean replanAfterToolFailure = true;
+
     private String defaultSystemPrompt = "";
 
     public boolean isMockMode() {
@@ -35,6 +41,30 @@ public class AgentProperties {
 
     public void setMaxToolCallsPerRun(int maxToolCallsPerRun) {
         this.maxToolCallsPerRun = maxToolCallsPerRun;
+    }
+
+    public int getMaxToolExecutionAttempts() {
+        return maxToolExecutionAttempts;
+    }
+
+    public void setMaxToolExecutionAttempts(int maxToolExecutionAttempts) {
+        this.maxToolExecutionAttempts = maxToolExecutionAttempts;
+    }
+
+    public long getToolRetryBackoffMillis() {
+        return toolRetryBackoffMillis;
+    }
+
+    public void setToolRetryBackoffMillis(long toolRetryBackoffMillis) {
+        this.toolRetryBackoffMillis = toolRetryBackoffMillis;
+    }
+
+    public boolean isReplanAfterToolFailure() {
+        return replanAfterToolFailure;
+    }
+
+    public void setReplanAfterToolFailure(boolean replanAfterToolFailure) {
+        this.replanAfterToolFailure = replanAfterToolFailure;
     }
 
     public String getDefaultSystemPrompt() {

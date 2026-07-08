@@ -317,19 +317,90 @@ public class V1AgentExecutor implements AgentExecutor {
                 }
             }
 
-            long toolStartNanos = System.nanoTime();
-            ToolCallResult result = toolExecutor.execute(toolCall);
-            String detail = result.success() ? result.content() : result.errorMessage();
-            long toolDurationMs = elapsedMs(toolStartNanos);
-            addStep(trace, steps, "tool.execute", result.success() ? "COMPLETED" : "FAILED",
-                    detail + ", durationMs=" + toolDurationMs, toolDurationMs);
+            ToolCallResult result = executeToolWithRetry(toolCall, trace, steps);
             usedTools.add(toolCall.toolName());
             toolResults.add(result);
             if (!result.success()) {
+                if (agentProperties.isReplanAfterToolFailure() && index < maxCalls - 1) {
+                    addStep(trace, steps, "tool.replan", "READY",
+                            "tool failed; previous result will be sent back to planner for a new plan, tool="
+                                    + toolCall.toolName() + ", error=" + result.errorMessage());
+                    continue;
+                }
                 break;
             }
         }
         return ToolExecutionOutcome.completed(usedTools, toolResults);
+    }
+
+    private ToolCallResult executeToolWithRetry(ToolCallRequest toolCall,
+                                                TraceContext trace,
+                                                List<AgentStep> steps) {
+        int maxAttempts = Math.max(1, agentProperties.getMaxToolExecutionAttempts());
+        ToolCallResult lastResult = null;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            long toolStartNanos = System.nanoTime();
+            ToolCallResult result = toolExecutor.execute(toolCall);
+            lastResult = result;
+            boolean retryable = !result.success() && retryableToolFailure(result);
+            long toolDurationMs = elapsedMs(toolStartNanos);
+            String detail = result.success() ? result.content() : result.errorMessage();
+            addStep(trace, steps, "tool.execute", result.success() ? "COMPLETED" : "FAILED",
+                    "attempt=" + attempt
+                            + "/" + maxAttempts
+                            + ", tool=" + toolCall.toolName()
+                            + ", retryable=" + retryable
+                            + ", " + detail
+                            + ", durationMs=" + toolDurationMs,
+                    toolDurationMs);
+            if (result.success() || !retryable || attempt >= maxAttempts) {
+                return result;
+            }
+            addStep(trace, steps, "tool.retry", "READY",
+                    "retrying tool after retryable failure, tool=" + toolCall.toolName()
+                            + ", nextAttempt=" + (attempt + 1)
+                            + ", error=" + result.errorMessage());
+            sleepToolRetryBackoff(attempt);
+        }
+        return lastResult == null
+                ? new ToolCallResult(toolCall.toolName(), false, "", "tool execution produced no result", Map.of())
+                : lastResult;
+    }
+
+    private boolean retryableToolFailure(ToolCallResult result) {
+        if (result == null || result.success()) {
+            return false;
+        }
+        String error = result.errorMessage() == null ? "" : result.errorMessage().toLowerCase(Locale.ROOT);
+        Object provider = result.metadata().get("provider");
+        if ("mcp".equals(String.valueOf(provider))) {
+            return true;
+        }
+        if (result.metadata().containsKey("validation")) {
+            return false;
+        }
+        if (error.contains("unknown tool") || error.contains("not found") || error.contains("不存在")) {
+            return false;
+        }
+        return error.contains("timeout")
+                || error.contains("temporary")
+                || error.contains("network")
+                || error.contains("failed")
+                || error.contains("exception")
+                || error.contains("unavailable");
+    }
+
+    private void sleepToolRetryBackoff(int attempt) {
+        long base = Math.max(0, agentProperties.getToolRetryBackoffMillis());
+        if (base <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(base * attempt);
+        }
+        catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private AgentResponse finishBlocked(AgentRequest request,
