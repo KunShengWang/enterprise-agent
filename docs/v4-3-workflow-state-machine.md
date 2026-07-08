@@ -76,4 +76,11 @@ Workflow 的价值是把 Agent 从“一段过程代码”变成“有计划、�
 - checkpoint 记录。
 - 节点级 retryable / resumable 标记。
 
-后续可以继续增强为真正的持久化恢复：将 `WorkflowRunRecord` 存入 PostgreSQL，审批节点中断后由人工确认再恢复执行。
+当前已经新增 `/api/agent/workflows/{traceId}/resume`。它会读取最近一个 `resumable=true` 的 checkpoint，生成恢复计划，明确：
+
+- 从哪个节点恢复；
+- 哪些节点已完成可以跳过；
+- 哪些节点需要继续执行；
+- 为什么不能恢复。
+
+恢复接口会记录 `RESUME_REQUESTED` checkpoint，并把 Workflow 状态标记为 `RESUMABLE`。为了避免重复执行工具和 LLM 带来的副作用，当前版本先生成恢复计划，不直接重放工具调用；后续可以在执行器层根据这个计划实现真正的节点级继续执行。
