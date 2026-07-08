@@ -39,6 +39,12 @@ enterprise-agent:
       url: ${MEMORY_POSTGRES_URL:${RAG_POSTGRES_URL:jdbc:postgresql://localhost:5432/enterprise_agent}}
       username: ${MEMORY_POSTGRES_USERNAME:${RAG_POSTGRES_USERNAME:postgres}}
       password: ${MEMORY_POSTGRES_PASSWORD:${RAG_POSTGRES_PASSWORD:1234}}
+  storage:
+    mode: ${AGENT_STORAGE_MODE:jdbc}
+    datasource:
+      url: ${AGENT_STORAGE_POSTGRES_URL:${RAG_POSTGRES_URL:jdbc:postgresql://localhost:5432/enterprise_agent}}
+      username: ${AGENT_STORAGE_POSTGRES_USERNAME:${RAG_POSTGRES_USERNAME:postgres}}
+      password: ${AGENT_STORAGE_POSTGRES_PASSWORD:${RAG_POSTGRES_PASSWORD:1234}}
   mcp:
     enabled: false
     server-name: filesystem
