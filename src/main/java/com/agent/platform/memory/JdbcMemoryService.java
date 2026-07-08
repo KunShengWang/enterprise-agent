@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -539,9 +540,14 @@ public class JdbcMemoryService implements MemoryService {
         if (isBlank(content)) {
             return;
         }
-        double score = recallScorer.score(query, content);
-        if (score > 0) {
-            results.add(new MemorySearchResult(type, id, content, score, metadata));
+        MemoryRecallScore score = recallScorer.scoreDetail(query, content);
+        if (score.score() > 0) {
+            Map<String, Object> enrichedMetadata = new LinkedHashMap<>(metadata);
+            enrichedMetadata.put("recallMode", "hybrid_lexical_semantic");
+            enrichedMetadata.put("lexicalScore", score.lexicalScore());
+            enrichedMetadata.put("semanticScore", score.semanticScore());
+            enrichedMetadata.put("matchedTerms", score.matchedTerms());
+            results.add(new MemorySearchResult(type, id, content, score.score(), enrichedMetadata));
         }
     }
 
