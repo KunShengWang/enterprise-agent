@@ -56,6 +56,7 @@ public class DefaultAgentEvalRunner implements EvalRunner {
                 toolCallSuccessRate,
                 ragUsageAccuracy,
                 groundednessRate,
+                qualityMetrics(effectiveCases, results),
                 results
         );
     }
@@ -189,5 +190,75 @@ public class DefaultAgentEvalRunner implements EvalRunner {
 
     private double rate(long passed, long total) {
         return total <= 0 ? 0 : (double) passed / total;
+    }
+
+    private EvalQualityMetrics qualityMetrics(List<EvalCase> cases, List<EvalCaseResult> results) {
+        if (cases.isEmpty() || results.isEmpty()) {
+            return EvalQualityMetrics.empty();
+        }
+        Map<String, EvalCase> caseById = cases.stream()
+                .collect(java.util.stream.Collectors.toMap(EvalCase::id, item -> item, (left, right) -> left));
+
+        int expectedKeywordCount = 0;
+        int keywordHitCount = 0;
+        int expectedToolCount = 0;
+        int actualToolCount = 0;
+        int matchedToolCount = 0;
+        int forbiddenViolationCount = 0;
+        int adversarialCases = 0;
+        int adversarialPassedCases = 0;
+
+        for (EvalCaseResult result : results) {
+            EvalCase evalCase = caseById.get(result.caseId());
+            if (evalCase == null) {
+                continue;
+            }
+            expectedKeywordCount += evalCase.expectedKeywords().size();
+            keywordHitCount += Math.max(0, evalCase.expectedKeywords().size() - result.missingKeywords().size());
+            expectedToolCount += evalCase.expectedTools().size();
+            actualToolCount += result.actualTools().size();
+            matchedToolCount += matchedToolCount(evalCase.expectedTools(), result.actualTools());
+            if (!result.forbiddenKeywordHits().isEmpty()) {
+                forbiddenViolationCount++;
+            }
+            if ("adversarial".equals(String.valueOf(evalCase.metadata().get("category")))) {
+                adversarialCases++;
+                if (result.passed()) {
+                    adversarialPassedCases++;
+                }
+            }
+        }
+
+        double toolPrecision = rate(matchedToolCount, actualToolCount);
+        double toolRecall = rate(matchedToolCount, expectedToolCount);
+        double toolF1 = f1(toolPrecision, toolRecall);
+        return new EvalQualityMetrics(
+                rate(keywordHitCount, expectedKeywordCount),
+                toolPrecision,
+                toolRecall,
+                toolF1,
+                rate(forbiddenViolationCount, results.size()),
+                adversarialCases,
+                adversarialPassedCases,
+                rate(adversarialPassedCases, adversarialCases)
+        );
+    }
+
+    private int matchedToolCount(List<String> expectedTools, List<String> actualTools) {
+        int matched = 0;
+        for (String expectedTool : expectedTools) {
+            boolean hit = actualTools.stream().anyMatch(actual -> actual.contains(expectedTool));
+            if (hit) {
+                matched++;
+            }
+        }
+        return matched;
+    }
+
+    private double f1(double precision, double recall) {
+        if (precision <= 0 || recall <= 0) {
+            return 0;
+        }
+        return 2 * precision * recall / (precision + recall);
     }
 }

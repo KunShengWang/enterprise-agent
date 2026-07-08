@@ -2,6 +2,7 @@ package com.agent.platform.web;
 
 import com.agent.platform.common.ApiResponse;
 import com.agent.platform.common.ErrorCode;
+import com.agent.platform.eval.AdversarialEvalSuite;
 import com.agent.platform.eval.AgentRunEvalEvent;
 import com.agent.platform.eval.EvalCase;
 import com.agent.platform.eval.EvalCaseRepository;
@@ -35,14 +36,18 @@ public class EvalController {
 
     private final EvalEventRecorder evalEventRecorder;
 
+    private final AdversarialEvalSuite adversarialEvalSuite;
+
     public EvalController(EvalRunner evalRunner,
-                          EvalCaseRepository evalCaseRepository,
-                          EvalReportRecorder evalReportRecorder,
-                          EvalEventRecorder evalEventRecorder) {
+                           EvalCaseRepository evalCaseRepository,
+                           EvalReportRecorder evalReportRecorder,
+                           EvalEventRecorder evalEventRecorder,
+                           AdversarialEvalSuite adversarialEvalSuite) {
         this.evalRunner = evalRunner;
         this.evalCaseRepository = evalCaseRepository;
         this.evalReportRecorder = evalReportRecorder;
         this.evalEventRecorder = evalEventRecorder;
+        this.adversarialEvalSuite = adversarialEvalSuite;
     }
 
     @GetMapping("/cases")
@@ -77,6 +82,16 @@ public class EvalController {
     public Mono<ApiResponse<EvalReport>> regression() {
         return Mono.fromSupplier(() -> {
                     EvalReport report = evalRunner.run(List.of());
+                    evalReportRecorder.record(report);
+                    return ApiResponse.success(report);
+                })
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @PostMapping("/adversarial")
+    public Mono<ApiResponse<EvalReport>> adversarial() {
+        return Mono.fromSupplier(() -> {
+                    EvalReport report = evalRunner.run(adversarialEvalSuite.cases());
                     evalReportRecorder.record(report);
                     return ApiResponse.success(report);
                 })

@@ -14,10 +14,12 @@ public record EvalReport(
         double toolCallSuccessRate,
         double ragUsageAccuracy,
         double groundednessRate,
+        EvalQualityMetrics metrics,
         List<EvalCaseResult> results
 ) {
 
     public EvalReport {
+        metrics = metrics == null ? EvalQualityMetrics.empty() : metrics;
         results = results == null ? List.of() : List.copyOf(results);
     }
 }
