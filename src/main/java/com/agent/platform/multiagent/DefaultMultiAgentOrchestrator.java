@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
@@ -65,23 +66,24 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         List<MultiAgentMessage> messages = new ArrayList<>();
         messages.add(message(MultiAgentRole.PLANNER, "planner", "route=" + route.type() + ", reason=" + route.reason(), Map.of("slots", route.slots())));
 
-        RagResult ragResult = RagResult.empty(request.question());
-        List<ToolCallResult> toolResults = new ArrayList<>();
-        if (tasks.stream().anyMatch(task -> task.role() == MultiAgentRole.RAG_WORKER)) {
-            ragResult = ragService.retrieve(request.question(), 3);
-            messages.add(message(MultiAgentRole.RAG_WORKER, "rag", "retrieved documents=" + ragResult.documents().size(), Map.of("enoughEvidence", ragResult.enoughEvidence())));
+        boolean shouldRunRag = tasks.stream().anyMatch(task -> task.role() == MultiAgentRole.RAG_WORKER);
+        boolean shouldRunTool = tasks.stream().anyMatch(task -> task.role() == MultiAgentRole.TOOL_WORKER);
+        CompletableFuture<RagWorkerResult> ragFuture = shouldRunRag
+                ? CompletableFuture.supplyAsync(() -> runRagWorker(request))
+                : CompletableFuture.completedFuture(new RagWorkerResult(RagResult.empty(request.question()), message(MultiAgentRole.RAG_WORKER, "rag", "rag worker skipped", Map.of("skipped", true))));
+        CompletableFuture<ToolWorkerResult> toolFuture = shouldRunTool
+                ? CompletableFuture.supplyAsync(() -> runToolWorker(request, memory, route))
+                : CompletableFuture.completedFuture(new ToolWorkerResult(List.of(), message(MultiAgentRole.TOOL_WORKER, "tool", "tool worker skipped", Map.of("skipped", true))));
+        CompletableFuture.allOf(ragFuture, toolFuture).join();
+        RagWorkerResult ragWorkerResult = ragFuture.join();
+        ToolWorkerResult toolWorkerResult = toolFuture.join();
+        RagResult ragResult = ragWorkerResult.ragResult();
+        List<ToolCallResult> toolResults = toolWorkerResult.toolResults();
+        if (shouldRunRag) {
+            messages.add(ragWorkerResult.message());
         }
-        if (tasks.stream().anyMatch(task -> task.role() == MultiAgentRole.TOOL_WORKER)) {
-            List<ToolDefinition> tools = toolRegistry.listTools();
-            ToolCallPlan plan = toolCallPlanner.plan(request, memory, route, tools, toolResults);
-            if (plan.shouldCallTool()) {
-                ToolCallResult result = toolExecutor.execute(new ToolCallRequest(plan.toolName(), UUID.randomUUID().toString(), plan.arguments()));
-                toolResults.add(result);
-                messages.add(message(MultiAgentRole.TOOL_WORKER, "tool", "tool=" + plan.toolName() + ", success=" + result.success(), Map.of("result", result.content())));
-            }
-            else {
-                messages.add(message(MultiAgentRole.TOOL_WORKER, "tool", "no tool call: " + plan.reason(), Map.of()));
-            }
+        if (shouldRunTool) {
+            messages.add(toolWorkerResult.message());
         }
         String finalAnswer = reviewerAnswer(request, messages, ragResult, toolResults);
         messages.add(message(MultiAgentRole.REVIEWER, "reviewer", finalAnswer, Map.of()));
@@ -96,7 +98,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
                 startedAt,
                 finishedAt,
                 Math.max(0, finishedAt.toEpochMilli() - startedAt.toEpochMilli()),
-                Map.of("messageCount", messages.size(), "taskCount", tasks.size(), "route", route.type().name())
+                Map.of("messageCount", messages.size(), "taskCount", tasks.size(), "route", route.type().name(), "workerMode", "parallel")
         );
     }
 
@@ -107,6 +109,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
             tasks.add(new MultiAgentTask("rag", MultiAgentRole.RAG_WORKER, "检索知识库证据并返回来源", Map.of()));
         }
         else if (route.type() == IntentType.TOOL) {
+            tasks.add(new MultiAgentTask("rag", MultiAgentRole.RAG_WORKER, "并行检索相关知识库背景，辅助 Reviewer 判断工具结果", Map.of("optional", true)));
             tasks.add(new MultiAgentTask("tool", MultiAgentRole.TOOL_WORKER, "选择并执行合适工具", Map.of()));
         }
         else if (route.type() == IntentType.CHAT) {
@@ -114,6 +117,67 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         }
         tasks.add(new MultiAgentTask("reviewer", MultiAgentRole.REVIEWER, "检查子结果并聚合最终回答", Map.of()));
         return tasks;
+    }
+
+    private RagWorkerResult runRagWorker(AgentRequest request) {
+        long startNanos = System.nanoTime();
+        try {
+            RagResult ragResult = ragService.retrieve(request.question(), 3);
+            return new RagWorkerResult(
+                    ragResult,
+                    message(MultiAgentRole.RAG_WORKER, "rag", "retrieved documents=" + ragResult.documents().size(), Map.of(
+                            "enoughEvidence", ragResult.enoughEvidence(),
+                            "durationMs", elapsedMs(startNanos),
+                            "parallel", true
+                    ))
+            );
+        }
+        catch (RuntimeException exception) {
+            return new RagWorkerResult(
+                    RagResult.empty(request.question()),
+                    message(MultiAgentRole.RAG_WORKER, "rag", "rag worker failed: " + exception.getMessage(), Map.of(
+                            "error", exception.getClass().getSimpleName(),
+                            "durationMs", elapsedMs(startNanos),
+                            "parallel", true
+                    ))
+            );
+        }
+    }
+
+    private ToolWorkerResult runToolWorker(AgentRequest request, ConversationMemory memory, IntentRoute route) {
+        long startNanos = System.nanoTime();
+        try {
+            List<ToolDefinition> tools = toolRegistry.listTools();
+            ToolCallPlan plan = toolCallPlanner.plan(request, memory, route, tools, List.of());
+            if (plan.shouldCallTool()) {
+                ToolCallResult result = toolExecutor.execute(new ToolCallRequest(plan.toolName(), UUID.randomUUID().toString(), plan.arguments()));
+                return new ToolWorkerResult(
+                        List.of(result),
+                        message(MultiAgentRole.TOOL_WORKER, "tool", "tool=" + plan.toolName() + ", success=" + result.success(), Map.of(
+                                "result", result.content(),
+                                "durationMs", elapsedMs(startNanos),
+                                "parallel", true
+                        ))
+                );
+            }
+            return new ToolWorkerResult(
+                    List.of(),
+                    message(MultiAgentRole.TOOL_WORKER, "tool", "no tool call: " + plan.reason(), Map.of(
+                            "durationMs", elapsedMs(startNanos),
+                            "parallel", true
+                    ))
+            );
+        }
+        catch (RuntimeException exception) {
+            return new ToolWorkerResult(
+                    List.of(),
+                    message(MultiAgentRole.TOOL_WORKER, "tool", "tool worker failed: " + exception.getMessage(), Map.of(
+                            "error", exception.getClass().getSimpleName(),
+                            "durationMs", elapsedMs(startNanos),
+                            "parallel", true
+                    ))
+            );
+        }
     }
 
     private String reviewerAnswer(AgentRequest request,
@@ -134,5 +198,15 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
 
     private MultiAgentMessage message(MultiAgentRole role, String taskId, String content, Map<String, Object> metadata) {
         return new MultiAgentMessage(role, taskId, content, Instant.now(), metadata);
+    }
+
+    private long elapsedMs(long startNanos) {
+        return (System.nanoTime() - startNanos) / 1_000_000;
+    }
+
+    private record RagWorkerResult(RagResult ragResult, MultiAgentMessage message) {
+    }
+
+    private record ToolWorkerResult(List<ToolCallResult> toolResults, MultiAgentMessage message) {
     }
 }
