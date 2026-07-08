@@ -10,6 +10,7 @@ import com.agent.platform.guardrail.GuardrailAction;
 import com.agent.platform.guardrail.GuardrailDecision;
 import com.agent.platform.guardrail.GuardrailService;
 import com.agent.platform.llm.LlmCallException;
+import com.agent.platform.llm.LlmUsage;
 import com.agent.platform.llm.LlmService;
 import com.agent.platform.memory.ConversationMemory;
 import com.agent.platform.memory.MemoryMessage;
@@ -220,7 +221,7 @@ public class V1AgentExecutor implements AgentExecutor {
                 long llmDurationMs = elapsedMs(llmStartNanos);
                 addStep(trace, steps, "llm.call", "COMPLETED",
                         "real llm generated answer, durationMs=" + llmDurationMs, llmDurationMs);
-                recordEstimatedUsage(trace, prompt, answer);
+                recordUsage(trace, prompt, answer);
             }
             catch (LlmCallException exception) {
                 long llmDurationMs = elapsedMs(llmStartNanos);
@@ -460,13 +461,30 @@ public class V1AgentExecutor implements AgentExecutor {
         };
     }
 
-    private void recordEstimatedUsage(TraceContext trace, PromptRequest prompt, String answer) {
+    private void recordUsage(TraceContext trace, PromptRequest prompt, String answer) {
+        LlmUsage usage = llmService.lastUsage()
+                .filter(LlmUsage::hasTokenUsage)
+                .orElse(null);
+        if (usage != null) {
+            long promptTokens = usage.promptTokens() > 0 ? usage.promptTokens() : Math.max(0, usage.totalTokens() - usage.completionTokens());
+            long completionTokens = usage.completionTokens();
+            double estimatedCost = (promptTokens * 0.000001) + (completionTokens * 0.000002);
+            traceRecorder.recordTokenUsage(trace, promptTokens, completionTokens, estimatedCost);
+            traceRecorder.recordMetric(trace, "tokenUsageSource", usage.source());
+            traceRecorder.recordMetric(trace, "model", usage.model());
+            traceRecorder.recordMetric(trace, "totalTokens", usage.totalTokens());
+            traceRecorder.recordMetric(trace, "cacheReadInputTokens", usage.cacheReadInputTokens());
+            traceRecorder.recordMetric(trace, "cacheWriteInputTokens", usage.cacheWriteInputTokens());
+            traceRecorder.recordMetric(trace, "contextBlocks", prompt.contextBlocks().size());
+            return;
+        }
         long promptTokens = estimateTokens(prompt.systemPrompt())
                 + estimateTokens(prompt.userPrompt())
                 + prompt.contextBlocks().stream().mapToLong(this::estimateTokens).sum();
         long completionTokens = estimateTokens(answer);
         double estimatedCost = (promptTokens * 0.000001) + (completionTokens * 0.000002);
         traceRecorder.recordTokenUsage(trace, promptTokens, completionTokens, estimatedCost);
+        traceRecorder.recordMetric(trace, "tokenUsageSource", "estimated");
         traceRecorder.recordMetric(trace, "contextBlocks", prompt.contextBlocks().size());
     }
 

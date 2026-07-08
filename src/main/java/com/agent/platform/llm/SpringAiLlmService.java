@@ -4,6 +4,8 @@ import com.agent.platform.prompt.PromptRequest;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.metadata.ChatResponseMetadata;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -13,6 +15,7 @@ import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @ConditionalOnProperty(prefix = "enterprise-agent", name = "mock-mode", havingValue = "false", matchIfMissing = true)
@@ -29,6 +32,8 @@ public class SpringAiLlmService implements LlmService {
 
     private final ObjectProvider<ChatModel> chatModelProvider;
 
+    private final ThreadLocal<LlmUsage> lastUsage = new ThreadLocal<>();
+
     public SpringAiLlmService(ObjectProvider<ChatModel> chatModelProvider) {
         this.chatModelProvider = chatModelProvider;
     }
@@ -38,6 +43,7 @@ public class SpringAiLlmService implements LlmService {
         ChatResponse response;
         try {
             response = requireChatModel().call(toSpringPrompt(promptRequest));
+            lastUsage.set(extractUsage(response));
         }
         catch (RuntimeException exception) {
             throw toLlmCallException(exception);
@@ -52,6 +58,7 @@ public class SpringAiLlmService implements LlmService {
     public Flux<String> stream(PromptRequest promptRequest) {
         ChatModel chatModel = requireChatModel();
         return chatModel.stream(toSpringPrompt(promptRequest))
+                .doOnNext(response -> lastUsage.set(extractUsage(response)))
                 .map(response -> {
                     if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
                         return "";
@@ -60,6 +67,11 @@ public class SpringAiLlmService implements LlmService {
                 })
                 .filter(text -> text != null && !text.isBlank())
                 .onErrorMap(this::toLlmCallException);
+    }
+
+    @Override
+    public Optional<LlmUsage> lastUsage() {
+        return Optional.ofNullable(lastUsage.get());
     }
 
     private ChatModel requireChatModel() {
@@ -92,6 +104,37 @@ public class SpringAiLlmService implements LlmService {
         }
         messages.add(new UserMessage(buildUserContent(promptRequest)));
         return new Prompt(messages);
+    }
+
+    private LlmUsage extractUsage(ChatResponse response) {
+        if (response == null) {
+            return new LlmUsage(0, 0, 0, 0, 0, "", "spring-ai-empty");
+        }
+        ChatResponseMetadata metadata = response.getMetadata();
+        Usage usage = metadata == null ? null : metadata.getUsage();
+        if (usage == null) {
+            return new LlmUsage(0, 0, 0, 0, 0, metadata == null ? "" : metadata.getModel(), "spring-ai-no-usage");
+        }
+        long promptTokens = numberValue(usage.getPromptTokens());
+        long completionTokens = numberValue(usage.getCompletionTokens());
+        long totalTokens = numberValue(usage.getTotalTokens());
+        return new LlmUsage(
+                promptTokens,
+                completionTokens,
+                totalTokens,
+                longValue(usage.getCacheReadInputTokens()),
+                longValue(usage.getCacheWriteInputTokens()),
+                metadata.getModel() == null ? "" : metadata.getModel(),
+                "provider"
+        );
+    }
+
+    private long numberValue(Number value) {
+        return value == null ? 0 : Math.max(0, value.longValue());
+    }
+
+    private long longValue(Long value) {
+        return value == null ? 0 : Math.max(0, value);
     }
 
     private String buildUserContent(PromptRequest promptRequest) {
