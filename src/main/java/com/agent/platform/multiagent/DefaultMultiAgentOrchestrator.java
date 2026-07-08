@@ -18,9 +18,11 @@ import com.agent.platform.tool.ToolExecutor;
 import com.agent.platform.tool.ToolRegistry;
 import com.agent.platform.tool.ToolCallPlanner;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -36,6 +38,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
     private final ToolCallPlanner toolCallPlanner;
     private final ToolExecutor toolExecutor;
     private final LlmService llmService;
+    private final ObjectMapper objectMapper;
 
     public DefaultMultiAgentOrchestrator(MemoryService memoryService,
                                          IntentRouter intentRouter,
@@ -43,7 +46,8 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
                                          ToolRegistry toolRegistry,
                                          ToolCallPlanner toolCallPlanner,
                                          ToolExecutor toolExecutor,
-                                         LlmService llmService) {
+                                         LlmService llmService,
+                                         ObjectMapper objectMapper) {
         this.memoryService = memoryService;
         this.intentRouter = intentRouter;
         this.ragService = ragService;
@@ -51,6 +55,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         this.toolCallPlanner = toolCallPlanner;
         this.toolExecutor = toolExecutor;
         this.llmService = llmService;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -85,20 +90,34 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         if (shouldRunTool) {
             messages.add(toolWorkerResult.message());
         }
-        String finalAnswer = reviewerAnswer(request, messages, ragResult, toolResults);
-        messages.add(message(MultiAgentRole.REVIEWER, "reviewer", finalAnswer, Map.of()));
+        MultiAgentReviewResult review = reviewerAnswer(request, messages, ragResult, toolResults);
+        messages.add(message(MultiAgentRole.REVIEWER, "reviewer", review.finalAnswer(), Map.of(
+                "approved", review.approved(),
+                "confidence", review.confidence(),
+                "conflictDetected", review.conflictDetected(),
+                "conflictReason", review.conflictReason(),
+                "evidence", review.evidence()
+        )));
         Instant finishedAt = Instant.now();
+        Map<String, Object> metrics = new LinkedHashMap<>();
+        metrics.put("messageCount", messages.size());
+        metrics.put("taskCount", tasks.size());
+        metrics.put("route", route.type().name());
+        metrics.put("workerMode", "parallel");
+        metrics.put("reviewApproved", review.approved());
+        metrics.put("reviewConfidence", review.confidence());
+        metrics.put("conflictDetected", review.conflictDetected());
         return new MultiAgentRunResponse(
                 runId,
                 conversationId,
                 request.question(),
-                finalAnswer,
+                review.finalAnswer(),
                 tasks,
                 messages,
                 startedAt,
                 finishedAt,
                 Math.max(0, finishedAt.toEpochMilli() - startedAt.toEpochMilli()),
-                Map.of("messageCount", messages.size(), "taskCount", tasks.size(), "route", route.type().name(), "workerMode", "parallel")
+                metrics
         );
     }
 
@@ -180,20 +199,117 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         }
     }
 
-    private String reviewerAnswer(AgentRequest request,
-                                  List<MultiAgentMessage> messages,
-                                  RagResult ragResult,
-                                  List<ToolCallResult> toolResults) {
+    private MultiAgentReviewResult reviewerAnswer(AgentRequest request,
+                                                  List<MultiAgentMessage> messages,
+                                                  RagResult ragResult,
+                                                  List<ToolCallResult> toolResults) {
         List<String> contextBlocks = new ArrayList<>();
         messages.forEach(message -> contextBlocks.add(message.role() + ": " + message.content()));
         ragResult.documents().forEach(document -> contextBlocks.add("RAG: " + document.title() + " score=" + document.score() + " " + document.content()));
         toolResults.forEach(result -> contextBlocks.add("Tool: " + result.toolName() + " success=" + result.success() + " " + result.content()));
-        return llmService.complete(new PromptRequest(
+        contextBlocks.add("Reviewer must output JSON only: {\"approved\":true,\"confidence\":0.0,\"conflictDetected\":false,\"conflictReason\":\"\",\"evidence\":[\"evidence\"],\"finalAnswer\":\"final Chinese answer\"}");
+        String reviewText = llmService.complete(new PromptRequest(
                 "你是 Multi-Agent Reviewer。请综合 Planner、Worker 和工具/检索结果，给出简洁中文最终回答；资料不足时明确说明。",
                 "用户问题：" + request.question(),
                 contextBlocks,
                 Map.of("mode", "multi-agent")
         ));
+        return parseReview(reviewText, ragResult, toolResults);
+    }
+
+    private MultiAgentReviewResult parseReview(String reviewText, RagResult ragResult, List<ToolCallResult> toolResults) {
+        boolean deterministicConflict = deterministicConflict(ragResult, toolResults);
+        try {
+            Map<?, ?> raw = objectMapper.readValue(extractJsonObject(reviewText), Map.class);
+            return new MultiAgentReviewResult(
+                    booleanValue(raw.get("approved"), true),
+                    doubleValue(raw.get("confidence"), 0.6),
+                    booleanValue(raw.get("conflictDetected"), deterministicConflict),
+                    stringValue(raw.get("conflictReason"), ""),
+                    stringList(raw.get("evidence")),
+                    stringValue(raw.get("finalAnswer"), reviewText)
+            );
+        }
+        catch (RuntimeException ignored) {
+            return new MultiAgentReviewResult(
+                    true,
+                    0.5,
+                    deterministicConflict,
+                    deterministicConflict ? "worker result contains failed tool result and retrieved evidence" : "",
+                    fallbackEvidence(ragResult, toolResults),
+                    reviewText
+            );
+        }
+    }
+
+    private boolean deterministicConflict(RagResult ragResult, List<ToolCallResult> toolResults) {
+        boolean hasRagEvidence = ragResult != null && !ragResult.documents().isEmpty();
+        boolean hasFailedTool = toolResults != null && toolResults.stream().anyMatch(result -> !result.success());
+        return hasRagEvidence && hasFailedTool;
+    }
+
+    private List<String> fallbackEvidence(RagResult ragResult, List<ToolCallResult> toolResults) {
+        List<String> evidence = new ArrayList<>();
+        if (ragResult != null) {
+            ragResult.documents().stream()
+                    .limit(3)
+                    .forEach(document -> evidence.add("RAG:" + document.title() + ", score=" + document.score()));
+        }
+        if (toolResults != null) {
+            toolResults.forEach(result -> evidence.add("Tool:" + result.toolName() + ", success=" + result.success()));
+        }
+        return evidence;
+    }
+
+    private String extractJsonObject(String text) {
+        if (text == null) {
+            throw new IllegalArgumentException("model output is empty");
+        }
+        int start = text.indexOf('{');
+        int end = text.lastIndexOf('}');
+        if (start < 0 || end <= start) {
+            throw new IllegalArgumentException("model output does not contain JSON object");
+        }
+        return text.substring(start, end + 1);
+    }
+
+    private boolean booleanValue(Object value, boolean defaultValue) {
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        if (value instanceof String text) {
+            return Boolean.parseBoolean(text);
+        }
+        return defaultValue;
+    }
+
+    private double doubleValue(Object value, double defaultValue) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value instanceof String text) {
+            try {
+                return Double.parseDouble(text);
+            }
+            catch (NumberFormatException ignored) {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
+    private String stringValue(Object value, String defaultValue) {
+        return value == null ? defaultValue : String.valueOf(value);
+    }
+
+    private List<String> stringList(Object value) {
+        if (!(value instanceof List<?> rawList)) {
+            return List.of();
+        }
+        return rawList.stream()
+                .filter(item -> item != null)
+                .map(String::valueOf)
+                .toList();
     }
 
     private MultiAgentMessage message(MultiAgentRole role, String taskId, String content, Map<String, Object> metadata) {
