@@ -5,6 +5,8 @@ import com.agent.platform.tool.ToolDefinition;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -38,6 +40,14 @@ public class DefaultGuardrailService implements GuardrailService {
         }
         SensitiveDataFilterResult filterResult = sensitiveDataFilter.filter(userQuestion);
         if (!filterResult.categories().isEmpty()) {
+            if (isSensitiveDisclosureRequest(userQuestion)) {
+                GuardrailDecision decision = GuardrailDecision.block(
+                        GuardrailStage.INPUT,
+                        "敏感信息原样输出请求已被拦截，请先脱敏后再处理。categories=" + filterResult.categories()
+                );
+                audit("input", decision, filterResult.safeContent(), Map.of("categories", filterResult.categories(), "detector", "sensitive_disclosure"));
+                return decision;
+            }
             GuardrailDecision decision = GuardrailDecision.redact(
                     GuardrailStage.INPUT,
                     "sensitive input redacted: " + filterResult.categories(),
@@ -49,6 +59,23 @@ public class DefaultGuardrailService implements GuardrailService {
         GuardrailDecision decision = GuardrailDecision.allow(GuardrailStage.INPUT, "input is allowed");
         audit("input", decision, "", Map.of());
         return decision;
+    }
+
+    private boolean isSensitiveDisclosureRequest(String userQuestion) {
+        String normalized = userQuestion == null ? "" : userQuestion.toLowerCase(Locale.ROOT);
+        boolean asksToExpose = containsAny(normalized, List.of("原样", "完整", "明文", "不要脱敏", "不脱敏"))
+                || (containsAny(normalized, List.of("输出", "写进", "展示", "返回", "打印"))
+                && containsAny(normalized, List.of("手机号", "身份证", "api key", "apikey", "密码", "密钥")));
+        return asksToExpose;
+    }
+
+    private boolean containsAny(String text, List<String> keywords) {
+        for (String keyword : keywords) {
+            if (text.contains(keyword.toLowerCase(Locale.ROOT))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

@@ -313,7 +313,7 @@ public class V1AgentExecutor implements AgentExecutor {
                 ApprovalDecision approvalDecision = approvalService.requestApproval(approvalRequest);
                 addStep(trace, steps, "approval.request", approvalDecision.approved() ? "APPROVED" : "REJECTED", approvalDecision.reason());
                 if (!approvalDecision.approved()) {
-                    return ToolExecutionOutcome.blocked("高风险工具未通过人工确认，已停止执行。", false);
+                    return ToolExecutionOutcome.blocked("高风险工具未通过人工审批确认，已停止执行。", false);
                 }
             }
 

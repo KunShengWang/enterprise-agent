@@ -24,11 +24,11 @@ public class RegexSensitiveDataFilter implements SensitiveDataFilter {
         String next = apiKeyPattern.matcher(safe).replaceAll("[API_KEY_REDACTED]");
         if (!next.equals(safe)) categories.add("api_key");
         safe = next;
-        next = phonePattern.matcher(safe).replaceAll("[PHONE_REDACTED]");
-        if (!next.equals(safe)) categories.add("phone");
-        safe = next;
         next = idCardPattern.matcher(safe).replaceAll("[ID_CARD_REDACTED]");
         if (!next.equals(safe)) categories.add("id_card");
+        safe = next;
+        next = phonePattern.matcher(safe).replaceAll("[PHONE_REDACTED]");
+        if (!next.equals(safe)) categories.add("phone");
         safe = next;
         next = emailPattern.matcher(safe).replaceAll("[EMAIL_REDACTED]");
         if (!next.equals(safe)) categories.add("email");
