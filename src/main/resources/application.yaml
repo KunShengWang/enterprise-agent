@@ -27,6 +27,8 @@ enterprise-agent:
   max-tool-execution-attempts: ${AGENT_TOOL_MAX_ATTEMPTS:2}
   tool-retry-backoff-millis: ${AGENT_TOOL_RETRY_BACKOFF_MILLIS:150}
   replan-after-tool-failure: ${AGENT_TOOL_REPLAN_AFTER_FAILURE:true}
+  stream-backpressure-buffer-size: ${AGENT_STREAM_BACKPRESSURE_BUFFER_SIZE:256}
+  stream-heartbeat-seconds: ${AGENT_STREAM_HEARTBEAT_SECONDS:10}
   resilience:
     rate-limit:
       enabled: ${AGENT_RATE_LIMIT_ENABLED:true}

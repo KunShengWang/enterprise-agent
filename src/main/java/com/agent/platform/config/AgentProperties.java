@@ -17,6 +17,10 @@ public class AgentProperties {
 
     private boolean replanAfterToolFailure = true;
 
+    private int streamBackpressureBufferSize = 256;
+
+    private int streamHeartbeatSeconds = 10;
+
     private String defaultSystemPrompt = "";
 
     public boolean isMockMode() {
@@ -65,6 +69,22 @@ public class AgentProperties {
 
     public void setReplanAfterToolFailure(boolean replanAfterToolFailure) {
         this.replanAfterToolFailure = replanAfterToolFailure;
+    }
+
+    public int getStreamBackpressureBufferSize() {
+        return streamBackpressureBufferSize;
+    }
+
+    public void setStreamBackpressureBufferSize(int streamBackpressureBufferSize) {
+        this.streamBackpressureBufferSize = streamBackpressureBufferSize;
+    }
+
+    public int getStreamHeartbeatSeconds() {
+        return streamHeartbeatSeconds;
+    }
+
+    public void setStreamHeartbeatSeconds(int streamHeartbeatSeconds) {
+        this.streamHeartbeatSeconds = streamHeartbeatSeconds;
     }
 
     public String getDefaultSystemPrompt() {

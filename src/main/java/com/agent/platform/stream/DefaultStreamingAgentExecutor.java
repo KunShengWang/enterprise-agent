@@ -1,6 +1,7 @@
 package com.agent.platform.stream;
 
 import com.agent.platform.agent.AgentRequest;
+import com.agent.platform.config.AgentProperties;
 import com.agent.platform.guardrail.GuardrailAction;
 import com.agent.platform.guardrail.GuardrailDecision;
 import com.agent.platform.guardrail.GuardrailService;
@@ -26,6 +27,7 @@ import com.agent.platform.tool.ToolCallPlanner;
 import com.agent.platform.trace.TraceContext;
 import com.agent.platform.trace.TraceRecorder;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.BufferOverflowStrategy;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -40,6 +42,9 @@ import java.util.UUID;
 public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
 
     private final TraceRecorder traceRecorder;
+
+    private final AgentProperties agentProperties;
+
     private final MemoryService memoryService;
     private final GuardrailService guardrailService;
     private final IntentRouter intentRouter;
@@ -52,6 +57,7 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
     private final LlmService llmService;
 
     public DefaultStreamingAgentExecutor(TraceRecorder traceRecorder,
+                                         AgentProperties agentProperties,
                                          MemoryService memoryService,
                                          GuardrailService guardrailService,
                                          IntentRouter intentRouter,
@@ -63,6 +69,7 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                                          PromptAssembler promptAssembler,
                                          LlmService llmService) {
         this.traceRecorder = traceRecorder;
+        this.agentProperties = agentProperties;
         this.memoryService = memoryService;
         this.guardrailService = guardrailService;
         this.intentRouter = intentRouter;
@@ -90,8 +97,30 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                                     .map(token -> event(prepared.trace().traceId(), prepared.conversationId(), "llm.token", token, Map.of()))
                                     .concatWith(Mono.fromSupplier(() -> finishModelStream(prepared, answer.toString())))
                                     .onErrorResume(error -> Mono.fromSupplier(() -> failModelStream(prepared, error)));
-                            return Flux.concat(prefix, modelEvents);
+                            return Flux.concat(prefix, protectStream(prepared, modelEvents))
+                                    .onBackpressureBuffer(
+                                            streamBufferSize(),
+                                            dropped -> {
+                                            },
+                                            BufferOverflowStrategy.DROP_OLDEST
+                                    );
                         }));
+    }
+
+    private Flux<AgentStreamEvent> protectStream(PreparedStream prepared, Flux<AgentStreamEvent> modelEvents) {
+        return modelEvents.publish(shared -> {
+            Flux<AgentStreamEvent> heartbeat = Flux
+                    .interval(java.time.Duration.ofSeconds(streamHeartbeatSeconds()))
+                    .map(sequence -> event(
+                            prepared.trace().traceId(),
+                            prepared.conversationId(),
+                            "heartbeat",
+                            "stream is alive",
+                            Map.of("sequence", sequence)
+                    ))
+                    .takeUntilOther(shared.then());
+            return Flux.merge(shared, heartbeat);
+        });
     }
 
     private PreparedStream prepare(AgentRequest originalRequest) {
@@ -173,6 +202,14 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
 
     private AgentStreamEvent event(String traceId, String conversationId, String type, String content, Map<String, Object> metadata) {
         return new AgentStreamEvent(UUID.randomUUID().toString(), traceId, conversationId, type, content, Instant.now(), metadata);
+    }
+
+    private int streamBufferSize() {
+        return Math.max(16, agentProperties.getStreamBackpressureBufferSize());
+    }
+
+    private int streamHeartbeatSeconds() {
+        return Math.max(1, agentProperties.getStreamHeartbeatSeconds());
     }
 
     private record PreparedStream(
