@@ -25,6 +25,8 @@ public class RagProperties {
 
     private final Index index = new Index();
 
+    private final Cache cache = new Cache();
+
     private final Datasource datasource = new Datasource();
 
     private final Embedding embedding = new Embedding();
@@ -99,6 +101,10 @@ public class RagProperties {
 
     public Index getIndex() {
         return index;
+    }
+
+    public Cache getCache() {
+        return cache;
     }
 
     public Embedding getEmbedding() {
@@ -221,6 +227,39 @@ public class RagProperties {
 
         public void setIvfflatLists(int ivfflatLists) {
             this.ivfflatLists = ivfflatLists;
+        }
+    }
+
+    public static class Cache {
+
+        private boolean enabled = true;
+
+        private long ttlSeconds = 600;
+
+        private int maxEntries = 1000;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public long getTtlSeconds() {
+            return ttlSeconds;
+        }
+
+        public void setTtlSeconds(long ttlSeconds) {
+            this.ttlSeconds = ttlSeconds;
+        }
+
+        public int getMaxEntries() {
+            return maxEntries;
+        }
+
+        public void setMaxEntries(int maxEntries) {
+            this.maxEntries = maxEntries;
         }
     }
 

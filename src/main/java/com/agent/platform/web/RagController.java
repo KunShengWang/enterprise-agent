@@ -7,6 +7,8 @@ import com.agent.platform.eval.RagEvalRunner;
 import com.agent.platform.rag.IngestionReport;
 import com.agent.platform.rag.KnowledgeIngestionService;
 import com.agent.platform.rag.PgVectorRagRepository;
+import com.agent.platform.rag.RagCacheOperations;
+import com.agent.platform.rag.RagCacheStats;
 import com.agent.platform.rag.RagCorpusStats;
 import com.agent.platform.rag.RagResult;
 import com.agent.platform.rag.RagService;
@@ -48,18 +50,22 @@ public class RagController {
 
     private final RagRunReportService ragRunReportService;
 
+    private final ObjectProvider<RagCacheOperations> ragCacheOperationsProvider;
+
     public RagController(ObjectProvider<KnowledgeIngestionService> ingestionServiceProvider,
                          ObjectProvider<PgVectorRagRepository> pgVectorRepositoryProvider,
                          RagService ragService,
                          RagEvalRunner ragEvalRunner,
                          RagRunRecorder ragRunRecorder,
-                         RagRunReportService ragRunReportService) {
+                         RagRunReportService ragRunReportService,
+                         ObjectProvider<RagCacheOperations> ragCacheOperationsProvider) {
         this.ingestionServiceProvider = ingestionServiceProvider;
         this.pgVectorRepositoryProvider = pgVectorRepositoryProvider;
         this.ragService = ragService;
         this.ragEvalRunner = ragEvalRunner;
         this.ragRunRecorder = ragRunRecorder;
         this.ragRunReportService = ragRunReportService;
+        this.ragCacheOperationsProvider = ragCacheOperationsProvider;
     }
 
     /**
@@ -115,6 +121,28 @@ public class RagController {
     @GetMapping("/runs/stats")
     public Mono<ApiResponse<RagRunStats>> runStats(@RequestParam(defaultValue = "100") int limit) {
         return Mono.fromSupplier(() -> ApiResponse.success(ragRunRecorder.stats(limit)));
+    }
+
+    @GetMapping("/cache/stats")
+    public Mono<ApiResponse<RagCacheStats>> cacheStats() {
+        return Mono.fromSupplier(() -> {
+            RagCacheOperations operations = ragCacheOperationsProvider.getIfAvailable();
+            if (operations == null) {
+                return ApiResponse.success(new RagCacheStats(false, 0, 0, 0, 0, 0, 0));
+            }
+            return ApiResponse.success(operations.cacheStats());
+        });
+    }
+
+    @DeleteMapping("/cache")
+    public Mono<ApiResponse<String>> clearCache() {
+        return Mono.fromSupplier(() -> {
+            RagCacheOperations operations = ragCacheOperationsProvider.getIfAvailable();
+            if (operations != null) {
+                operations.clearCache();
+            }
+            return ApiResponse.success("RAG cache cleared");
+        });
     }
 
     @PostMapping("/runs/report")

@@ -9,11 +9,15 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @ConditionalOnProperty(prefix = "enterprise-agent.rag", name = "mode", havingValue = "pgvector", matchIfMissing = true)
-public class PgVectorRagService implements RagService {
+public class PgVectorRagService implements RagService, RagCacheOperations {
 
     private final RagProperties ragProperties;
 
@@ -24,6 +28,12 @@ public class PgVectorRagService implements RagService {
     private final RagReranker ragReranker;
 
     private final RagRunRecorder ragRunRecorder;
+
+    private final ConcurrentMap<String, CachedRagResult> cache = new ConcurrentHashMap<>();
+
+    private final AtomicLong cacheHits = new AtomicLong();
+
+    private final AtomicLong cacheMisses = new AtomicLong();
 
     public PgVectorRagService(RagProperties ragProperties,
                               EmbeddingClient embeddingClient,
@@ -45,6 +55,13 @@ public class PgVectorRagService implements RagService {
         long startNanos = System.nanoTime();
         int effectiveTopK = topK <= 0 ? ragProperties.getTopK() : topK;
         double minSimilarity = ragProperties.getMinSimilarity();
+        String cacheKey = cacheKey(query, effectiveTopK, minSimilarity);
+        RagResult cached = readCache(cacheKey, startNanos);
+        if (cached != null) {
+            ragRunRecorder.record(cached);
+            return cached;
+        }
+        cacheMisses.incrementAndGet();
         // 把问题向量化
         double[] queryEmbedding = embeddingClient.embed(query);
         List<RetrievedDocument> documents = retrieveDocuments(
@@ -63,8 +80,32 @@ public class PgVectorRagService implements RagService {
                 elapsedMs(startNanos),
                 ragProperties.getHybrid().isEnabled() ? "hybrid" : "pgvector"
         );
+        writeCache(cacheKey, result);
         ragRunRecorder.record(result);
         return result;
+    }
+
+    @Override
+    public RagCacheStats cacheStats() {
+        long hits = cacheHits.get();
+        long misses = cacheMisses.get();
+        long total = hits + misses;
+        return new RagCacheStats(
+                ragProperties.getCache().isEnabled(),
+                cache.size(),
+                hits,
+                misses,
+                total == 0 ? 0 : (double) hits / total,
+                Math.max(1, ragProperties.getCache().getTtlSeconds()),
+                Math.max(1, ragProperties.getCache().getMaxEntries())
+        );
+    }
+
+    @Override
+    public void clearCache() {
+        cache.clear();
+        cacheHits.set(0);
+        cacheMisses.set(0);
     }
 
     private List<RetrievedDocument> retrieveDocuments(String query,
@@ -146,10 +187,78 @@ public class PgVectorRagService implements RagService {
         return (System.nanoTime() - startNanos) / 1_000_000;
     }
 
+    private RagResult readCache(String cacheKey, long startNanos) {
+        if (!ragProperties.getCache().isEnabled()) {
+            return null;
+        }
+        CachedRagResult cached = cache.get(cacheKey);
+        if (cached == null) {
+            return null;
+        }
+        if (cached.expired()) {
+            cache.remove(cacheKey);
+            return null;
+        }
+        cacheHits.incrementAndGet();
+        RagResult result = cached.result();
+        return new RagResult(
+                result.query(),
+                result.documents(),
+                result.enoughEvidence(),
+                result.requestedTopK(),
+                result.effectiveTopK(),
+                result.minSimilarity(),
+                elapsedMs(startNanos),
+                result.retrievalMode() + ":cache-hit"
+        );
+    }
+
+    private void writeCache(String cacheKey, RagResult result) {
+        if (!ragProperties.getCache().isEnabled() || result == null) {
+            return;
+        }
+        long ttlMillis = Math.max(1, ragProperties.getCache().getTtlSeconds()) * 1000;
+        cache.put(cacheKey, new CachedRagResult(result, System.currentTimeMillis() + ttlMillis));
+        trimCache();
+    }
+
+    private void trimCache() {
+        int maxEntries = Math.max(1, ragProperties.getCache().getMaxEntries());
+        if (cache.size() <= maxEntries) {
+            return;
+        }
+        cache.entrySet()
+                .stream()
+                .sorted(Map.Entry.comparingByValue(Comparator.comparingLong(CachedRagResult::expiresAtMillis)))
+                .limit(Math.max(1, cache.size() - maxEntries))
+                .map(Map.Entry::getKey)
+                .forEach(cache::remove);
+    }
+
+    private String cacheKey(String query, int effectiveTopK, double minSimilarity) {
+        String normalizedQuery = query == null ? "" : query.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+        return String.join("|",
+                normalizedQuery,
+                "topK=" + effectiveTopK,
+                "min=" + minSimilarity,
+                "hybrid=" + ragProperties.getHybrid().isEnabled(),
+                "rerank=" + ragProperties.getRerank().isEnabled(),
+                "vw=" + ragProperties.getHybrid().getVectorWeight(),
+                "kw=" + ragProperties.getHybrid().getKeywordWeight()
+        );
+    }
+
     private static class HybridCandidate {
 
         private RetrievedDocument vectorDocument;
 
         private RetrievedDocument keywordDocument;
+    }
+
+    private record CachedRagResult(RagResult result, long expiresAtMillis) {
+
+        boolean expired() {
+            return System.currentTimeMillis() > expiresAtMillis;
+        }
     }
 }

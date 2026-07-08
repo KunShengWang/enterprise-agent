@@ -97,6 +97,10 @@ enterprise-agent:
     index:
       type: hnsw
       ivfflat-lists: 100
+    cache:
+      enabled: ${RAG_CACHE_ENABLED:true}
+      ttl-seconds: ${RAG_CACHE_TTL_SECONDS:600}
+      max-entries: ${RAG_CACHE_MAX_ENTRIES:1000}
     datasource:
       url: ${RAG_POSTGRES_URL:jdbc:postgresql://localhost:5432/enterprise_agent}
       username: ${RAG_POSTGRES_USERNAME:postgres}
