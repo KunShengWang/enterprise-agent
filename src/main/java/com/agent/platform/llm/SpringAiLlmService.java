@@ -1,6 +1,7 @@
 package com.agent.platform.llm;
 
 import com.agent.platform.prompt.PromptRequest;
+import com.agent.platform.config.ResilienceProperties;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -13,9 +14,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @ConditionalOnProperty(prefix = "enterprise-agent", name = "mock-mode", havingValue = "false", matchIfMissing = true)
@@ -32,20 +36,28 @@ public class SpringAiLlmService implements LlmService {
 
     private final ObjectProvider<ChatModel> chatModelProvider;
 
+    private final ResilienceProperties resilienceProperties;
+
     private final ThreadLocal<LlmUsage> lastUsage = new ThreadLocal<>();
 
-    public SpringAiLlmService(ObjectProvider<ChatModel> chatModelProvider) {
+    public SpringAiLlmService(ObjectProvider<ChatModel> chatModelProvider,
+                              ResilienceProperties resilienceProperties) {
         this.chatModelProvider = chatModelProvider;
+        this.resilienceProperties = resilienceProperties;
     }
 
     @Override
     public String complete(PromptRequest promptRequest) {
         ChatResponse response;
         try {
-            response = requireChatModel().call(toSpringPrompt(promptRequest));
+            response = callWithRetry(toSpringPrompt(promptRequest));
             lastUsage.set(extractUsage(response));
         }
         catch (RuntimeException exception) {
+            if (resilienceProperties.getLlm().isFallbackEnabled()) {
+                lastUsage.set(new LlmUsage(0, 0, 0, 0, 0, "", "fallback"));
+                return resilienceProperties.getLlm().getFallbackMessage();
+            }
             throw toLlmCallException(exception);
         }
         if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
@@ -58,6 +70,8 @@ public class SpringAiLlmService implements LlmService {
     public Flux<String> stream(PromptRequest promptRequest) {
         ChatModel chatModel = requireChatModel();
         return chatModel.stream(toSpringPrompt(promptRequest))
+                .timeout(Duration.ofMillis(Math.max(1000, resilienceProperties.getLlm().getTimeoutMillis())))
+                .retry(Math.max(0, resilienceProperties.getLlm().getMaxAttempts() - 1))
                 .doOnNext(response -> lastUsage.set(extractUsage(response)))
                 .map(response -> {
                     if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
@@ -66,7 +80,13 @@ public class SpringAiLlmService implements LlmService {
                     return response.getResult().getOutput().getText();
                 })
                 .filter(text -> text != null && !text.isBlank())
-                .onErrorMap(this::toLlmCallException);
+                .onErrorResume(error -> {
+                    if (resilienceProperties.getLlm().isFallbackEnabled()) {
+                        lastUsage.set(new LlmUsage(0, 0, 0, 0, 0, "", "fallback"));
+                        return Flux.just(resilienceProperties.getLlm().getFallbackMessage());
+                    }
+                    return Flux.error(toLlmCallException(error));
+                });
     }
 
     @Override
@@ -104,6 +124,38 @@ public class SpringAiLlmService implements LlmService {
         }
         messages.add(new UserMessage(buildUserContent(promptRequest)));
         return new Prompt(messages);
+    }
+
+    private ChatResponse callWithRetry(Prompt prompt) {
+        int maxAttempts = Math.max(1, resilienceProperties.getLlm().getMaxAttempts());
+        RuntimeException lastError = null;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                return CompletableFuture
+                        .supplyAsync(() -> requireChatModel().call(prompt))
+                        .get(Math.max(1000, resilienceProperties.getLlm().getTimeoutMillis()), TimeUnit.MILLISECONDS);
+            }
+            catch (Exception exception) {
+                lastError = exception instanceof RuntimeException runtimeException
+                        ? runtimeException
+                        : new RuntimeException(exception);
+                sleepBackoff(attempt);
+            }
+        }
+        throw lastError == null ? new IllegalStateException("LLM call failed") : lastError;
+    }
+
+    private void sleepBackoff(int attempt) {
+        long base = Math.max(0, resilienceProperties.getLlm().getBackoffMillis());
+        if (base <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(base * attempt);
+        }
+        catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private LlmUsage extractUsage(ChatResponse response) {

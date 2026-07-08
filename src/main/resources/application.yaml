@@ -24,6 +24,16 @@ enterprise-agent:
   mock-mode: false
   max-model-calls-per-run: 8
   max-tool-calls-per-run: 6
+  resilience:
+    rate-limit:
+      enabled: ${AGENT_RATE_LIMIT_ENABLED:true}
+      max-requests-per-minute: ${AGENT_RATE_LIMIT_PER_MINUTE:60}
+    llm:
+      max-attempts: ${LLM_MAX_ATTEMPTS:3}
+      timeout-millis: ${LLM_TIMEOUT_MILLIS:10000}
+      backoff-millis: ${LLM_BACKOFF_MILLIS:300}
+      fallback-enabled: ${LLM_FALLBACK_ENABLED:true}
+      fallback-message: ${LLM_FALLBACK_MESSAGE:AI 服务暂时不可用，请稍后重试。}
   default-system-prompt: >
     You are an enterprise knowledge-base and support-ticket agent.
     Follow the orchestrated execution flow and do not bypass guardrails.

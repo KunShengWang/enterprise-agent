@@ -6,6 +6,8 @@ import com.agent.platform.agent.AgentResponse;
 import com.agent.platform.common.ApiResponse;
 import com.agent.platform.config.AgentProperties;
 import com.agent.platform.memory.MemoryService;
+import com.agent.platform.resilience.RateLimitResult;
+import com.agent.platform.resilience.RateLimitService;
 import com.agent.platform.router.IntentRoute;
 import com.agent.platform.router.IntentRouter;
 import com.agent.platform.stream.AgentStreamEvent;
@@ -40,16 +42,20 @@ public class AgentController {
 
     private final StreamingAgentExecutor streamingAgentExecutor;
 
+    private final RateLimitService rateLimitService;
+
     public AgentController(AgentExecutor agentExecutor,
                            AgentProperties agentProperties,
                            IntentRouter intentRouter,
                            MemoryService memoryService,
-                           StreamingAgentExecutor streamingAgentExecutor) {
+                           StreamingAgentExecutor streamingAgentExecutor,
+                           RateLimitService rateLimitService) {
         this.agentExecutor = agentExecutor;
         this.agentProperties = agentProperties;
         this.intentRouter = intentRouter;
         this.memoryService = memoryService;
         this.streamingAgentExecutor = streamingAgentExecutor;
+        this.rateLimitService = rateLimitService;
     }
 
     @GetMapping("/health")
@@ -78,6 +84,11 @@ public class AgentController {
 
     @PostMapping("/runs")
     public Mono<ApiResponse<AgentResponse>> run(@Valid @RequestBody AgentRequest request) {
+        RateLimitResult limit = rateLimitService.acquire(rateLimitKey(request));
+        if (!limit.allowed()) {
+            return Mono.just(ApiResponse.failure(com.agent.platform.common.ErrorCode.TOO_MANY_REQUESTS,
+                    "请求过于频繁，请稍后重试。limit=" + limit.limit() + "/minute"));
+        }
         return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.execute(request)))
                 .subscribeOn(Schedulers.boundedElastic());
     }
@@ -91,6 +102,10 @@ public class AgentController {
      */
     @PostMapping(value = "/runs/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> stream(@Valid @RequestBody AgentRequest request) {
+        RateLimitResult limit = rateLimitService.acquire(rateLimitKey(request));
+        if (!limit.allowed()) {
+            return Flux.just("error: 请求过于频繁，请稍后重试。limit=" + limit.limit() + "/minute");
+        }
         return Mono.fromSupplier(() -> agentExecutor.execute(request))
                 .subscribeOn(Schedulers.boundedElastic())
                 // 把完整执行结果拆成 SSE 片段，方便前端观察步骤和最终回答。
@@ -102,7 +117,26 @@ public class AgentController {
 
     @PostMapping(value = "/runs/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<AgentStreamEvent> streamEvents(@Valid @RequestBody AgentRequest request) {
+        RateLimitResult limit = rateLimitService.acquire(rateLimitKey(request));
+        if (!limit.allowed()) {
+            return Flux.just(new AgentStreamEvent(
+                    java.util.UUID.randomUUID().toString(),
+                    "",
+                    normalizeConversationId(request.conversationId()),
+                    "error",
+                    "请求过于频繁，请稍后重试。limit=" + limit.limit() + "/minute",
+                    java.time.Instant.now(),
+                    Map.of("rateLimitKey", limit.key(), "resetEpochMillis", limit.resetEpochMillis())
+            ));
+        }
         return streamingAgentExecutor.stream(request);
+    }
+
+    private String rateLimitKey(AgentRequest request) {
+        if (request == null || request.userId() == null || request.userId().isBlank()) {
+            return "anonymous";
+        }
+        return request.userId().trim();
     }
 
     private String normalizeConversationId(String conversationId) {
