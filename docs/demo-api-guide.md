@@ -104,6 +104,28 @@ curl.exe -X POST http://localhost:8080/api/agent/runs `
   -d "{\"conversationId\":\"demo-conversation\",\"userId\":\"u1001\",\"question\":\"升级工单 T1001 的优先级到 P1\"}"
 ```
 
+响应中的 `status` 应为 `WAITING_APPROVAL`，保存 `runId` 和 `approvalId`。此时高风险工具尚未执行。
+
+批准并从 checkpoint 恢复：
+
+```powershell
+curl.exe -X POST http://localhost:8080/api/agent/guardrails/approvals/{approvalId}/decide `
+  -H "Content-Type: application/json" `
+  -d "{\"approved\":true,\"reviewer\":\"interviewer-demo\",\"reason\":\"业务信息已核对\"}"
+
+curl.exe -X POST http://localhost:8080/api/agent/runs/{runId}/resume
+```
+
+拒绝时将 `approved` 改为 `false`；恢复结果为 `REJECTED`，工具不会执行。重复调用恢复接口会返回已保存的终态，不会再次执行副作用。
+
+查询 Run 与 `toolCallId` 执行记录：
+
+```powershell
+curl.exe http://localhost:8080/api/agent/runs/{runId}
+curl.exe "http://localhost:8080/api/agent/tools/executions?runId={runId}"
+curl.exe http://localhost:8080/api/agent/tools/executions/{toolCallId}
+```
+
 Guardrail 拦截：
 
 ```powershell
@@ -262,6 +284,12 @@ Workflow 列表：
 
 ```powershell
 curl.exe "http://localhost:8080/api/agent/workflows?limit=20"
+```
+
+Workflow 恢复（与 Run 恢复调用同一执行语义）：
+
+```powershell
+curl.exe -X POST http://localhost:8080/api/agent/workflows/{traceId}/resume
 ```
 
 Eval 回归：

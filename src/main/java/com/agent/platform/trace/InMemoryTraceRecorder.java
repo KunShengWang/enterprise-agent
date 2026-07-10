@@ -38,6 +38,16 @@ public class InMemoryTraceRecorder implements TraceRecorder {
     }
 
     @Override
+    public TraceContext resume(String traceId) {
+        TraceRun run = findRun(traceId)
+                .orElseThrow(() -> new IllegalArgumentException("trace run not found: " + traceId));
+        TraceContext context = TraceContext.resume(run);
+        recordSpan(context, "agent.resume", TraceSpanKind.AGENT, TraceSpanStatus.STARTED,
+                "agent run resumed", 0, traceId, "", "", Map.of("traceId", traceId));
+        return context;
+    }
+
+    @Override
     public void record(TraceContext context, String stage, String detail) {
         if (context == null) {
             return;
@@ -127,6 +137,7 @@ public class InMemoryTraceRecorder implements TraceRecorder {
         context.addReplayEvent("run.finished", "Agent run finished", Map.of("traceId", context.traceId()));
         TraceRun run = context.runSnapshot(Instant.now());
         runsByTraceId.put(run.traceId(), run);
+        recentTraceIds.remove(run.traceId());
         recentTraceIds.addFirst(run.traceId());
         trimOldRuns();
         return context.summary();

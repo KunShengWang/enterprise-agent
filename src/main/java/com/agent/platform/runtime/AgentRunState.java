@@ -1,6 +1,7 @@
-package com.agent.platform.agent;
+package com.agent.platform.runtime;
 
-public enum AgentRunStatus {
+public enum AgentRunState {
+    CREATED,
     RUNNING,
     WAITING_APPROVAL,
     COMPLETED,

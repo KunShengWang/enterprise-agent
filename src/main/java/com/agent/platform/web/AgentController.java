@@ -10,20 +10,25 @@ import com.agent.platform.resilience.RateLimitResult;
 import com.agent.platform.resilience.RateLimitService;
 import com.agent.platform.router.IntentRoute;
 import com.agent.platform.router.IntentRouter;
+import com.agent.platform.runtime.AgentRunRecord;
+import com.agent.platform.runtime.AgentRunStore;
 import com.agent.platform.stream.AgentStreamEvent;
 import com.agent.platform.stream.StreamingAgentExecutor;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.Map;
+import java.util.List;
 import java.util.stream.Stream;
 
 @RestController
@@ -44,18 +49,22 @@ public class AgentController {
 
     private final RateLimitService rateLimitService;
 
+    private final AgentRunStore agentRunStore;
+
     public AgentController(AgentExecutor agentExecutor,
                            AgentProperties agentProperties,
                            IntentRouter intentRouter,
                            MemoryService memoryService,
                            StreamingAgentExecutor streamingAgentExecutor,
-                           RateLimitService rateLimitService) {
+                           RateLimitService rateLimitService,
+                           AgentRunStore agentRunStore) {
         this.agentExecutor = agentExecutor;
         this.agentProperties = agentProperties;
         this.intentRouter = intentRouter;
         this.memoryService = memoryService;
         this.streamingAgentExecutor = streamingAgentExecutor;
         this.rateLimitService = rateLimitService;
+        this.agentRunStore = agentRunStore;
     }
 
     @GetMapping("/health")
@@ -90,6 +99,29 @@ public class AgentController {
                     "请求过于频繁，请稍后重试。limit=" + limit.limit() + "/minute"));
         }
         return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.execute(request)))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @GetMapping("/runs")
+    public Mono<ApiResponse<List<AgentRunRecord>>> recentRuns(@RequestParam(defaultValue = "20") int limit) {
+        return Mono.fromSupplier(() -> ApiResponse.success(agentRunStore.recent(limit)))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @GetMapping("/runs/{runId}")
+    public Mono<ApiResponse<AgentRunRecord>> findRun(@PathVariable String runId) {
+        return Mono.fromSupplier(() -> agentRunStore.find(runId)
+                .map(ApiResponse::success)
+                .orElseGet(() -> ApiResponse.failure(
+                        com.agent.platform.common.ErrorCode.NOT_FOUND,
+                        "agent run not found: " + runId
+                )))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @PostMapping("/runs/{runId}/resume")
+    public Mono<ApiResponse<AgentResponse>> resumeRun(@PathVariable String runId) {
+        return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.resume(runId)))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 

@@ -1,6 +1,7 @@
 package com.agent.platform.eval;
 
 import com.agent.platform.agent.AgentResponse;
+import com.agent.platform.config.AgentProperties;
 import com.agent.platform.llm.LlmService;
 import com.agent.platform.prompt.PromptRequest;
 import org.springframework.context.annotation.Primary;
@@ -21,13 +22,21 @@ public class LlmAsJudgeAnswerJudge implements AnswerJudge {
 
     private final HeuristicAnswerJudge fallbackJudge;
 
-    public LlmAsJudgeAnswerJudge(LlmService llmService, HeuristicAnswerJudge fallbackJudge) {
+    private final AgentProperties agentProperties;
+
+    public LlmAsJudgeAnswerJudge(LlmService llmService,
+                                 HeuristicAnswerJudge fallbackJudge,
+                                 AgentProperties agentProperties) {
         this.llmService = llmService;
         this.fallbackJudge = fallbackJudge;
+        this.agentProperties = agentProperties;
     }
 
     @Override
     public AnswerJudgement judge(EvalCase evalCase, AgentResponse response) {
+        if (agentProperties.isMockMode()) {
+            return fallbackJudge.judge(evalCase, response);
+        }
         try {
             String judgeText = llmService.complete(new PromptRequest(
                     "你是 Agent 自动评测裁判。请根据用例要求判断回答是否正确、是否基于可用证据、是否有编造。只输出 score、grounded、reason 三项。",

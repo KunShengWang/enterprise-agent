@@ -8,6 +8,8 @@ public interface TraceRecorder {
 
     TraceContext start(String conversationId, String question);
 
+    TraceContext resume(String traceId);
+
     void record(TraceContext context, String stage, String detail);
 
     void recordSpan(TraceContext context,

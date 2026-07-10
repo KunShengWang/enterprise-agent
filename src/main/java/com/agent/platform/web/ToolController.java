@@ -9,8 +9,11 @@ import com.agent.platform.tool.ToolExecutor;
 import com.agent.platform.tool.ToolRegistry;
 import com.agent.platform.tool.ToolRunRecorder;
 import com.agent.platform.tool.ToolRunStats;
+import com.agent.platform.runtime.ToolExecutionRecord;
+import com.agent.platform.runtime.ToolExecutionStore;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -30,12 +33,16 @@ public class ToolController {
 
     private final ToolRunRecorder toolRunRecorder;
 
+    private final ToolExecutionStore toolExecutionStore;
+
     public ToolController(ToolRegistry toolRegistry,
                           ToolExecutor toolExecutor,
-                          ToolRunRecorder toolRunRecorder) {
+                          ToolRunRecorder toolRunRecorder,
+                          ToolExecutionStore toolExecutionStore) {
         this.toolRegistry = toolRegistry;
         this.toolExecutor = toolExecutor;
         this.toolRunRecorder = toolRunRecorder;
+        this.toolExecutionStore = toolExecutionStore;
     }
 
     @GetMapping
@@ -58,5 +65,20 @@ public class ToolController {
     @GetMapping("/runs/stats")
     public ApiResponse<ToolRunStats> stats() {
         return ApiResponse.success(toolRunRecorder.stats());
+    }
+
+    @GetMapping("/executions/{toolCallId}")
+    public ApiResponse<ToolExecutionRecord> execution(@PathVariable String toolCallId) {
+        return toolExecutionStore.findToolExecution(toolCallId)
+                .map(ApiResponse::success)
+                .orElseGet(() -> ApiResponse.failure(
+                        com.agent.platform.common.ErrorCode.NOT_FOUND,
+                        "tool execution not found: " + toolCallId
+                ));
+    }
+
+    @GetMapping("/executions")
+    public ApiResponse<List<ToolExecutionRecord>> executionsByRun(@RequestParam String runId) {
+        return ApiResponse.success(toolExecutionStore.findByRun(runId));
     }
 }

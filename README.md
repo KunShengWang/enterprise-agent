@@ -31,7 +31,7 @@ Spring AI 负责：
 - Memory 短期记忆、长期记忆、用户画像
 - Guardrails / HITL
 - Trace / Eval / AgentOps
-- Workflow 状态机记录
+- Agent Run / Workflow 状态机、checkpoint 与恢复执行
 - Multi-Agent 协作编排
 - Streaming Agent 事件流
 
@@ -45,8 +45,9 @@ Spring AI 负责：
 | Memory | 短期记忆、摘要压缩、长期记忆、用户画像；支持 JDBC 持久化和内存模式 |
 | AgentOps / Trace | Run / Span / Replay / Stats，记录耗时、状态、失败原因、token 和成本估算 |
 | Eval | 评测集、回归评测、关键词、RAG 命中、工具调用、groundedness、LLM-as-Judge 兜底 |
-| Guardrails / HITL | Prompt Injection 检测、敏感信息脱敏、工具权限、高风险工具审批、审计记录 |
-| Workflow | 显式状态节点、执行计划、checkpoint、retryable / resumable 标记和查询接口 |
+| Guardrails / HITL | Prompt Injection 检测、敏感信息脱敏、工具权限、高风险工具挂起审批、批准/拒绝和审计记录 |
+| Reliable Run | Agent Run、执行计划和 checkpoint 持久化；审批后恢复；`toolCallId` 副作用幂等；未知结果进入人工兜底 |
+| Workflow | 显式状态节点、执行计划、checkpoint、retryable / resumable 标记、真实恢复执行和查询接口 |
 | Skills | Skill 注册、描述检索、工具绑定和默认任务能力 |
 | Multi-Agent | Planner、RAG Worker、Tool Worker、Reviewer 角色协作和结果聚合 |
 | Streaming | 结构化 SSE 事件流，输出 run、memory、guardrail、rag/tool、llm.token、final、error |
@@ -72,17 +73,19 @@ Spring AI 负责：
 
 更完整的图见 [架构说明](docs/architecture.md)。
 
+高风险工具的可靠执行闭环：
+
+```text
+创建 Agent Run -> 持久化计划/checkpoint -> WAITING_APPROVAL
+-> 人工批准或拒绝 -> 从同一 run/checkpoint 恢复
+-> toolCallId 幂等执行 -> COMPLETED / REJECTED / MANUAL_REVIEW
+-> Trace 回放和 Eval 验证
+```
+
 ## 快速构建
 
 ```powershell
-mvn test
-```
-
-当前验证结果：
-
-```text
-Tests run: 9, Failures: 0, Errors: 0, Skipped: 0
-BUILD SUCCESS
+mvn -DskipTests package
 ```
 
 如果 Maven 报 `NoClassDefFoundError: org/apache/http/client/HttpResponseException`，说明本机 Maven 运行时缺 Apache HttpClient 4.x jar，处理方式见 [构建与启动说明](docs/build-and-run.md)。
@@ -152,6 +155,7 @@ curl.exe http://localhost:8080/api/agent/health
 - [V4.4 Skills](docs/v4-4-skills.md)
 - [V4.5 Multi-Agent](docs/v4-5-multi-agent.md)
 - [V4.6 Streaming Agent](docs/v4-6-streaming-agent.md)
+- [V4.9 Reliable Agent Run](docs/v4-9-reliable-agent-run.md)
 
 ## 面试可讲点
 
@@ -161,15 +165,16 @@ curl.exe http://localhost:8080/api/agent/health
 - Memory 不只是最近消息，还包含摘要、长期记忆和用户画像。
 - AgentOps 覆盖 Trace、Replay、Eval、Workflow、成本估算和失败原因。
 - Guardrails / HITL 体现企业场景中安全、权限和审计问题。
+- 高风险副作用不会在审批请求阶段执行；批准后以原 `toolCallId` 恢复，重复恢复不会重复执行副作用。
+- 工具返回后若执行结果无法可靠落库，Run 进入 `MANUAL_REVIEW`，避免盲目重试造成二次副作用。
 
 ## 已知风险
 
 这些风险来自代码审查和当前实现边界，后续优化优先级高于继续堆新功能：
 
-- Trace、Eval、Approval、Workflow、Skill 等部分模块仍是内存实现，生产环境需要 PostgreSQL 持久化。
+- Agent Run 和 Tool Execution 的 JDBC 表目前由应用自初始化，生产部署仍应迁移到 Flyway/Liquibase 管理。
 - RAG 还没有 Redis 缓存和压测报告。
-- Workflow 有 checkpoint 记录，但还没有完整 `resume()` 恢复执行。
 - Multi-Agent 当前是轻量顺序编排，不是真并行调度。
-- Token / 成本统计目前以估算为主，后续应接入模型真实 usage。
+- Token / 成本优先使用模型 provider usage，provider 不返回时仍会退化为估算。
 - Streaming 中 LLM token 是真流式，RAG / Tool 阶段是事件化输出。
-- 测试覆盖率和集成测试仍需继续补强。
+- 当前恢复点聚焦高价值的高风险工具审批场景，不是任意节点通用 DAG 调度器。

@@ -150,6 +150,8 @@ flowchart TB
 ```mermaid
 flowchart LR
     Run["Agent Run"]
+    Approval["WAITING_APPROVAL / Human Decision"]
+    Idempotency["toolCallId Idempotency"]
     Trace["Trace / Span"]
     Workflow["Workflow Checkpoint"]
     Eval["Eval Report"]
@@ -159,6 +161,9 @@ flowchart LR
 
     Run --> Trace
     Run --> Workflow
+    Workflow --> Approval
+    Approval --> Idempotency
+    Idempotency --> Run
     Run --> Eval
     Run --> GuardAudit
     Run --> ToolRun
@@ -167,7 +172,8 @@ flowchart LR
 
 ## 当前边界
 
-- Workflow 已记录 checkpoint，但还没有完整恢复执行逻辑。
+- Agent Run、计划、checkpoint、待审批 ToolCall 和工具执行结果支持 JDBC 持久化；审批后从同一 run 恢复。
+- `toolCallId` 用作副作用幂等键；已成功结果直接复用，结果不确定时进入 `MANUAL_REVIEW`。
 - Multi-Agent 已有角色协作，但目前是轻量顺序编排。
 - Streaming 已支持 LLM token 流式输出，RAG / Tool 阶段是事件化输出。
-- 部分 AgentOps 数据仍是内存存储，后续需要 JDBC 持久化。
+- 运行时同时保留 memory 模式用于本地演示，默认 storage 模式为 JDBC。

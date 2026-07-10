@@ -1,5 +1,8 @@
 package com.agent.platform.workflow;
 
+import com.agent.platform.agent.AgentExecutor;
+import com.agent.platform.agent.AgentResponse;
+
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -11,8 +14,12 @@ public class DefaultWorkflowResumeService implements WorkflowResumeService {
 
     private final WorkflowRecorder workflowRecorder;
 
-    public DefaultWorkflowResumeService(WorkflowRecorder workflowRecorder) {
+    private final AgentExecutor agentExecutor;
+
+    public DefaultWorkflowResumeService(WorkflowRecorder workflowRecorder,
+                                        AgentExecutor agentExecutor) {
         this.workflowRecorder = workflowRecorder;
+        this.agentExecutor = agentExecutor;
     }
 
     @Override
@@ -46,14 +53,17 @@ public class DefaultWorkflowResumeService implements WorkflowResumeService {
                 true,
                 Instant.now()
         ));
-        workflowRecorder.finish(record.traceId(), WorkflowRunStatus.RESUMABLE, "resume plan generated");
+        AgentResponse response = agentExecutor.resume(record.traceId());
         return new WorkflowResumeResult(
                 record.traceId(),
                 true,
                 checkpoint.node(),
                 skipped,
                 remaining,
-                "resume plan generated from last resumable checkpoint",
+                response.status(),
+                response.answer(),
+                response.approvalId(),
+                "workflow resume executed from last resumable checkpoint",
                 Instant.now()
         );
     }

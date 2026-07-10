@@ -41,6 +41,36 @@ public final class TraceContext {
         this.startedAt = Instant.now();
     }
 
+    private TraceContext(TraceRun run) {
+        this.traceId = run.traceId();
+        this.conversationId = run.conversationId();
+        this.question = run.question();
+        this.startedAt = run.startedAt();
+        this.spans.addAll(run.spans());
+        this.events.addAll(run.events());
+        this.replayEvents.addAll(run.replayEvents());
+        this.metrics.putAll(run.metrics());
+        this.status = run.status();
+        this.failureReason = run.failureReason();
+        this.estimatedPromptTokens = run.estimatedPromptTokens();
+        this.estimatedCompletionTokens = run.estimatedCompletionTokens();
+        this.estimatedCost = run.estimatedCost();
+    }
+
+    public static TraceContext resume(TraceRun run) {
+        if (run == null) {
+            throw new IllegalArgumentException("trace run must not be null");
+        }
+        TraceContext context = new TraceContext(run);
+        context.addEvent("trace.resume", "agent run resumed");
+        context.addReplayEvent("run.resumed", "Agent run resumed", Map.of(
+                "traceId", run.traceId(),
+                "previousStatus", run.status()
+        ));
+        context.markStatus("RUNNING", "");
+        return context;
+    }
+
     public String traceId() {
         return traceId;
     }

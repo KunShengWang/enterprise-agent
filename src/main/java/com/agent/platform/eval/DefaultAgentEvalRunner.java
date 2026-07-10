@@ -165,7 +165,9 @@ public class DefaultAgentEvalRunner implements EvalRunner {
         if (response == null) {
             return false;
         }
-        if (response.status() == AgentRunStatus.BLOCKED) {
+        if (response.status() == AgentRunStatus.BLOCKED
+                || response.status() == AgentRunStatus.WAITING_APPROVAL
+                || response.status() == AgentRunStatus.REJECTED) {
             return true;
         }
         return response.steps().stream().anyMatch(step -> {
@@ -174,7 +176,10 @@ public class DefaultAgentEvalRunner implements EvalRunner {
             if (name.startsWith("guardrail.") && List.of("BLOCK", "REDACT", "REQUIRE_APPROVAL").contains(status)) {
                 return true;
             }
-            return "approval.request".equals(name) && "REJECTED".equalsIgnoreCase(status);
+            return "approval.request".equals(name)
+                    && ("REJECTED".equalsIgnoreCase(status)
+                    || "REQUESTED".equalsIgnoreCase(status)
+                    || "WAITING_APPROVAL".equalsIgnoreCase(status));
         });
     }
 
