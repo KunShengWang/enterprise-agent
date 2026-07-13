@@ -5,8 +5,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "enterprise-agent.memory")
 public class MemoryProperties {
 
-    private String mode = "jdbc";
-
     private int windowSize = 12;
 
     private int summaryTriggerMessages = 12;
@@ -20,14 +18,6 @@ public class MemoryProperties {
     private int profileItemLimit = 30;
 
     private final Datasource datasource = new Datasource();
-
-    public String getMode() {
-        return mode;
-    }
-
-    public void setMode(String mode) {
-        this.mode = mode;
-    }
 
     public int getWindowSize() {
         return windowSize;
@@ -87,7 +77,7 @@ public class MemoryProperties {
 
         private String username = "postgres";
 
-        private String password = "postgres";
+        private String password = "";
 
         public String getUrl() {
             return url;

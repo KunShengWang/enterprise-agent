@@ -1,7 +1,6 @@
 package com.agent.platform.trace;
 
 import com.agent.platform.storage.JdbcAgentStoreSupport;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +15,6 @@ import java.util.UUID;
 
 @Primary
 @Component
-@ConditionalOnProperty(prefix = "enterprise-agent.storage", name = "mode", havingValue = "jdbc", matchIfMissing = true)
 public class JdbcTraceRecorder implements TraceRecorder {
 
     private static final String CATEGORY = "trace_run";

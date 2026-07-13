@@ -1,7 +1,6 @@
 package com.agent.platform.workflow;
 
 import com.agent.platform.storage.JdbcAgentStoreSupport;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
@@ -12,7 +11,6 @@ import java.util.Optional;
 
 @Primary
 @Component
-@ConditionalOnProperty(prefix = "enterprise-agent.storage", name = "mode", havingValue = "jdbc", matchIfMissing = true)
 public class JdbcWorkflowRecorder implements WorkflowRecorder {
 
     private static final String CATEGORY = "workflow";

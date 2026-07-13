@@ -1,7 +1,6 @@
 package com.agent.platform.rag;
 
 import com.agent.platform.config.RagProperties;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -16,7 +15,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
-@ConditionalOnProperty(prefix = "enterprise-agent.rag", name = "mode", havingValue = "pgvector", matchIfMissing = true)
 public class PgVectorRagService implements RagService, RagCacheOperations {
 
     private final RagProperties ragProperties;

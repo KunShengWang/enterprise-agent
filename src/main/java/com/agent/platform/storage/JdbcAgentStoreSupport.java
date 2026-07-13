@@ -1,7 +1,6 @@
 package com.agent.platform.storage;
 
 import com.agent.platform.config.AgentStorageProperties;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
@@ -19,7 +18,6 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
-@ConditionalOnProperty(prefix = "enterprise-agent.storage", name = "mode", havingValue = "jdbc", matchIfMissing = true)
 public class JdbcAgentStoreSupport {
 
     private final AgentStorageProperties properties;

@@ -57,7 +57,6 @@ enterprise-agent:
     You are an enterprise knowledge-base and support-ticket agent.
     Follow the orchestrated execution flow and do not bypass guardrails.
   memory:
-    mode: ${MEMORY_MODE:jdbc}
     window-size: 12
     summary-trigger-messages: 8
     summary-max-chars: 1200
@@ -67,13 +66,12 @@ enterprise-agent:
     datasource:
       url: ${MEMORY_POSTGRES_URL:${RAG_POSTGRES_URL:jdbc:postgresql://localhost:5432/enterprise_agent}}
       username: ${MEMORY_POSTGRES_USERNAME:${RAG_POSTGRES_USERNAME:postgres}}
-      password: ${MEMORY_POSTGRES_PASSWORD:${RAG_POSTGRES_PASSWORD:1234}}
+      password: ${MEMORY_POSTGRES_PASSWORD:${RAG_POSTGRES_PASSWORD:}}
   storage:
-    mode: ${AGENT_STORAGE_MODE:jdbc}
     datasource:
       url: ${AGENT_STORAGE_POSTGRES_URL:${RAG_POSTGRES_URL:jdbc:postgresql://localhost:5432/enterprise_agent}}
       username: ${AGENT_STORAGE_POSTGRES_USERNAME:${RAG_POSTGRES_USERNAME:postgres}}
-      password: ${AGENT_STORAGE_POSTGRES_PASSWORD:${RAG_POSTGRES_PASSWORD:1234}}
+      password: ${AGENT_STORAGE_POSTGRES_PASSWORD:${RAG_POSTGRES_PASSWORD:}}
   tool-policy:
     default-decision: allow
     decisions:
@@ -115,7 +113,6 @@ enterprise-agent:
           - com.agent.platform.mcp.server.TicketMcpServerApplication
         working-directory: ${MCP_TICKET_WORKING_DIRECTORY:}
   rag:
-    mode: pgvector
     document-dir: ${RAG_DOCUMENT_DIR:data/rag-docs}
     report-dir: ${RAG_REPORT_DIR:data/rag-reports}
     chunk-size: 500
@@ -143,7 +140,7 @@ enterprise-agent:
     datasource:
       url: ${RAG_POSTGRES_URL:jdbc:postgresql://localhost:5432/enterprise_agent}
       username: ${RAG_POSTGRES_USERNAME:postgres}
-      password: ${RAG_POSTGRES_PASSWORD:1234}
+      password: ${RAG_POSTGRES_PASSWORD:}
     embedding:
       base-url: ${EMBEDDING_BASE_URL:https://open.bigmodel.cn/api/paas/v4}
       path: ${EMBEDDING_PATH:/embeddings}

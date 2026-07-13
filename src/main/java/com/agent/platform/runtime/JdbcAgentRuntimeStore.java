@@ -4,7 +4,6 @@ import com.agent.platform.config.AgentStorageProperties;
 import com.agent.platform.storage.AgentStorageException;
 import com.agent.platform.tool.ToolCallRequest;
 import com.agent.platform.tool.ToolCallResult;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
@@ -25,7 +24,6 @@ import java.util.function.UnaryOperator;
 
 @Primary
 @Component
-@ConditionalOnProperty(prefix = "enterprise-agent.storage", name = "mode", havingValue = "jdbc", matchIfMissing = true)
 public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore {
 
     private final AgentStorageProperties properties;

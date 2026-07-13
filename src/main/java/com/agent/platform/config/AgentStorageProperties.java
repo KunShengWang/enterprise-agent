@@ -5,17 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "enterprise-agent.storage")
 public class AgentStorageProperties {
 
-    private String mode = "jdbc";
-
     private final Datasource datasource = new Datasource();
-
-    public String getMode() {
-        return mode;
-    }
-
-    public void setMode(String mode) {
-        this.mode = mode;
-    }
 
     public Datasource getDatasource() {
         return datasource;
@@ -27,7 +17,7 @@ public class AgentStorageProperties {
 
         private String username = "postgres";
 
-        private String password = "1234";
+        private String password = "";
 
         public String getUrl() {
             return url;

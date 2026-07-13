@@ -1,7 +1,6 @@
 package com.agent.platform.rag;
 
 import com.agent.platform.config.RagProperties;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -15,7 +14,6 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 
 @Service
-@ConditionalOnProperty(prefix = "enterprise-agent.rag", name = "mode", havingValue = "pgvector", matchIfMissing = true)
 public class OpenAiCompatibleEmbeddingClient implements EmbeddingClient {
 
     private final RagProperties ragProperties;

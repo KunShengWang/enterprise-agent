@@ -1,7 +1,6 @@
 package com.agent.platform.rag;
 
 import com.agent.platform.config.RagProperties;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
@@ -11,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@ConditionalOnProperty(prefix = "enterprise-agent.rag", name = "mode", havingValue = "pgvector", matchIfMissing = true)
 public class PgVectorKnowledgeIngestionService implements KnowledgeIngestionService {
 
     private final RagProperties ragProperties;

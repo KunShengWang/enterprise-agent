@@ -1,7 +1,6 @@
 package com.agent.platform.eval;
 
 import com.agent.platform.storage.JdbcAgentStoreSupport;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +10,6 @@ import java.util.Optional;
 
 @Primary
 @Component
-@ConditionalOnProperty(prefix = "enterprise-agent.storage", name = "mode", havingValue = "jdbc", matchIfMissing = true)
 public class JdbcEvalReportRecorder implements EvalReportRecorder {
 
     private static final String CATEGORY = "eval_report";

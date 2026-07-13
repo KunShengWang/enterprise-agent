@@ -3,7 +3,6 @@ package com.agent.platform.memory;
 import com.agent.platform.config.MemoryProperties;
 import com.agent.platform.rag.EmbeddingClient;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
@@ -28,7 +27,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
-@ConditionalOnProperty(prefix = "enterprise-agent.memory", name = "mode", havingValue = "jdbc")
 public class JdbcMemoryService implements MemoryService {
 
     private static final String DEFAULT_CONVERSATION_ID = "default-conversation";

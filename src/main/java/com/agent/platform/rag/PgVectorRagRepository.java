@@ -1,7 +1,6 @@
 package com.agent.platform.rag;
 
 import com.agent.platform.config.RagProperties;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Connection;
@@ -20,7 +19,6 @@ import java.util.Map;
 import java.util.Set;
 
 @Repository
-@ConditionalOnProperty(prefix = "enterprise-agent.rag", name = "mode", havingValue = "pgvector", matchIfMissing = true)
 public class PgVectorRagRepository {
 
     private final RagProperties ragProperties;

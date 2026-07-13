@@ -5,8 +5,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "enterprise-agent.rag")
 public class RagProperties {
 
-    private String mode = "pgvector";
-
     private String documentDir = "data/rag-docs";
 
     private String reportDir = "data/rag-reports";
@@ -30,14 +28,6 @@ public class RagProperties {
     private final Datasource datasource = new Datasource();
 
     private final Embedding embedding = new Embedding();
-
-    public String getMode() {
-        return mode;
-    }
-
-    public void setMode(String mode) {
-        this.mode = mode;
-    }
 
     public String getDocumentDir() {
         return documentDir;
@@ -269,7 +259,7 @@ public class RagProperties {
 
         private String username = "postgres";
 
-        private String password = "postgres";
+        private String password = "";
 
         public String getUrl() {
             return url;
