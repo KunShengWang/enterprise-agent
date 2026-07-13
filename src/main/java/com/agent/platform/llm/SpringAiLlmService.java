@@ -2,6 +2,7 @@ package com.agent.platform.llm;
 
 import com.agent.platform.prompt.PromptRequest;
 import com.agent.platform.config.ResilienceProperties;
+import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -18,8 +19,15 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @ConditionalOnProperty(prefix = "enterprise-agent", name = "mock-mode", havingValue = "false", matchIfMissing = true)
@@ -40,10 +48,31 @@ public class SpringAiLlmService implements LlmService {
 
     private final ThreadLocal<LlmUsage> lastUsage = new ThreadLocal<>();
 
+    private final ThreadPoolExecutor callExecutor;
+    private final AtomicInteger consecutiveFailures = new AtomicInteger();
+    private final AtomicLong circuitOpenUntilEpochMillis = new AtomicLong();
+
     public SpringAiLlmService(ObjectProvider<ChatModel> chatModelProvider,
                               ResilienceProperties resilienceProperties) {
         this.chatModelProvider = chatModelProvider;
         this.resilienceProperties = resilienceProperties;
+        int threads = Math.max(1, resilienceProperties.getLlm().getExecutorThreads());
+        int queueCapacity = Math.max(1, resilienceProperties.getLlm().getExecutorQueueCapacity());
+        AtomicInteger threadSequence = new AtomicInteger();
+        this.callExecutor = new ThreadPoolExecutor(
+                threads,
+                threads,
+                30,
+                TimeUnit.SECONDS,
+                new ArrayBlockingQueue<>(queueCapacity),
+                runnable -> {
+                    Thread thread = new Thread(runnable, "agent-llm-" + threadSequence.incrementAndGet());
+                    thread.setDaemon(true);
+                    return thread;
+                },
+                new ThreadPoolExecutor.AbortPolicy()
+        );
+        this.callExecutor.allowCoreThreadTimeOut(true);
     }
 
     @Override
@@ -59,6 +88,9 @@ public class SpringAiLlmService implements LlmService {
             // 上下文溢出必须交给 Agent Runtime 压缩后重试，不能降级成一条伪最终回答。
             if (isContextOverflow(exception)) {
                 throw contextOverflowException(exception);
+            }
+            if (isInterruptedFailure(exception)) {
+                throw toLlmCallException(exception);
             }
             if (resilienceProperties.getLlm().isFallbackEnabled()) {
                 lastUsage.set(new LlmUsage(0, 0, 0, 0, 0, "", "fallback"));
@@ -145,21 +177,57 @@ public class SpringAiLlmService implements LlmService {
         int maxAttempts = Math.max(1, resilienceProperties.getLlm().getMaxAttempts());
         RuntimeException lastError = null;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            assertCircuitClosed();
+            Future<ChatResponse> future = null;
             try {
-                return CompletableFuture
-                        .supplyAsync(() -> requireChatModel().call(prompt))
-                        .get(Math.max(1000, resilienceProperties.getLlm().getTimeoutMillis()), TimeUnit.MILLISECONDS);
+                future = callExecutor.submit(() -> requireChatModel().call(prompt));
+                ChatResponse response = future.get(
+                        Math.max(1000, resilienceProperties.getLlm().getTimeoutMillis()),
+                        TimeUnit.MILLISECONDS
+                );
+                consecutiveFailures.set(0);
+                circuitOpenUntilEpochMillis.set(0);
+                return response;
             }
-            catch (Exception exception) {
-                if (isContextOverflow(exception)) {
-                    throw contextOverflowException(exception);
+            catch (TimeoutException exception) {
+                cancelFuture(future);
+                lastError = new LlmCallException(
+                        "MODEL_TIMEOUT",
+                        "模型服务调用超时，请稍后重试。",
+                        exception
+                );
+            }
+            catch (InterruptedException exception) {
+                cancelFuture(future);
+                Thread.currentThread().interrupt();
+                throw new LlmCallException(
+                        "MODEL_CALL_INTERRUPTED",
+                        "模型调用已被取消。",
+                        exception
+                );
+            }
+            catch (RejectedExecutionException exception) {
+                lastError = new LlmCallException(
+                        "MODEL_EXECUTOR_SATURATED",
+                        "模型调用队列已满，请稍后重试。",
+                        exception
+                );
+            }
+            catch (ExecutionException exception) {
+                Throwable cause = exception.getCause() == null ? exception : exception.getCause();
+                if (isContextOverflow(cause)) {
+                    throw contextOverflowException(cause);
                 }
-                lastError = exception instanceof RuntimeException runtimeException
+                lastError = cause instanceof RuntimeException runtimeException
                         ? runtimeException
-                        : new RuntimeException(exception);
-                sleepBackoff(attempt);
+                        : new RuntimeException(cause);
             }
+            if (isNonRetryable(lastError) || attempt >= maxAttempts) {
+                break;
+            }
+            sleepBackoff(attempt);
         }
+        recordCircuitFailure();
         throw lastError == null ? new IllegalStateException("LLM call failed") : lastError;
     }
 
@@ -206,7 +274,77 @@ public class SpringAiLlmService implements LlmService {
         }
         catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
+            throw new LlmCallException(
+                    "MODEL_CALL_INTERRUPTED",
+                    "模型重试等待已被取消。",
+                    exception
+            );
         }
+    }
+
+    private void assertCircuitClosed() {
+        long openUntil = circuitOpenUntilEpochMillis.get();
+        if (openUntil > System.currentTimeMillis()) {
+            throw new LlmCallException(
+                    "MODEL_CIRCUIT_OPEN",
+                    "模型服务熔断器处于打开状态，请稍后重试。",
+                    null
+            );
+        }
+        if (openUntil > 0) {
+            circuitOpenUntilEpochMillis.compareAndSet(openUntil, 0);
+        }
+    }
+
+    private void recordCircuitFailure() {
+        int threshold = Math.max(1, resilienceProperties.getLlm().getCircuitBreakerFailureThreshold());
+        if (consecutiveFailures.incrementAndGet() >= threshold) {
+            long openMillis = Math.max(1_000, resilienceProperties.getLlm().getCircuitBreakerOpenMillis());
+            circuitOpenUntilEpochMillis.set(System.currentTimeMillis() + openMillis);
+            consecutiveFailures.set(0);
+        }
+    }
+
+    private boolean isNonRetryable(Throwable failure) {
+        if (failure instanceof LlmCallException llmCallException) {
+            return "MODEL_NOT_CONFIGURED".equals(llmCallException.errorType())
+                    || "MODEL_CALL_INTERRUPTED".equals(llmCallException.errorType())
+                    || "MODEL_EXECUTOR_SATURATED".equals(llmCallException.errorType())
+                    || "MODEL_CIRCUIT_OPEN".equals(llmCallException.errorType());
+        }
+        String message = failure == null || failure.getMessage() == null
+                ? ""
+                : failure.getMessage().toLowerCase(java.util.Locale.ROOT);
+        return message.contains("unauthorized")
+                || message.contains("invalid api key")
+                || message.contains("authentication")
+                || message.contains("status code 400")
+                || message.contains("bad request");
+    }
+
+    private boolean isInterruptedFailure(Throwable failure) {
+        Throwable current = failure;
+        int depth = 0;
+        while (current != null && depth++ < 12) {
+            if (current instanceof InterruptedException
+                    || current instanceof LlmCallException llmCallException
+                    && "MODEL_CALL_INTERRUPTED".equals(llmCallException.errorType())) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private void cancelFuture(Future<?> future) {
+        if (future != null && !future.isDone()) {
+            future.cancel(true);
+        }
+    }
+
+    @PreDestroy
+    public void shutdownExecutor() {
+        callExecutor.shutdownNow();
     }
 
     /**

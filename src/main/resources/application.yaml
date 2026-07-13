@@ -48,6 +48,10 @@ enterprise-agent:
       timeout-millis: ${LLM_TIMEOUT_MILLIS:10000}
       backoff-millis: ${LLM_BACKOFF_MILLIS:300}
       fallback-enabled: ${LLM_FALLBACK_ENABLED:true}
+      executor-threads: ${LLM_EXECUTOR_THREADS:8}
+      executor-queue-capacity: ${LLM_EXECUTOR_QUEUE_CAPACITY:64}
+      circuit-breaker-failure-threshold: ${LLM_CIRCUIT_FAILURE_THRESHOLD:5}
+      circuit-breaker-open-millis: ${LLM_CIRCUIT_OPEN_MILLIS:30000}
       fallback-message: ${LLM_FALLBACK_MESSAGE:AI 服务暂时不可用，请稍后重试。}
   default-system-prompt: >
     You are an enterprise knowledge-base and support-ticket agent.

@@ -2,6 +2,7 @@ package com.agent.platform.runtime;
 
 import com.agent.platform.llm.LlmService;
 import com.agent.platform.llm.LlmUsage;
+import com.agent.platform.llm.LlmCallException;
 import com.agent.platform.prompt.PromptRequest;
 import com.agent.platform.tool.ToolDefinition;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,13 @@ public class JsonAgentModelGateway implements AgentModelGateway {
                 Map.of("purpose", "agent_loop", "runId", request.runId(), "sessionId", request.sessionId())
         ));
         LlmUsage usage = llmService.lastUsage().orElse(new LlmUsage(0, 0, 0, 0, 0, "", "unavailable"));
+        if ("fallback".equalsIgnoreCase(usage.source())) {
+            throw new LlmCallException(
+                    "MODEL_FALLBACK",
+                    "模型服务不可用，Agent Runtime 不会把降级提示伪装成成功回答。",
+                    null
+            );
+        }
         try {
             return parseTurn(raw, usage);
         }

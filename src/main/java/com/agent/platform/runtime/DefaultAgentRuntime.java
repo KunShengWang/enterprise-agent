@@ -328,7 +328,23 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     break;
                 }
                 catch (RuntimeException modelFailure) {
-                    if (isContextOverflow(modelFailure)
+                    boolean contextOverflow = isContextOverflow(modelFailure);
+                    publish(sessionId, userId, runId, AgentEventType.MODEL_FAILED,
+                            contextOverflow ? "model rejected context" : "model turn failed",
+                            Map.of(
+                                    "errorType", modelErrorType(modelFailure),
+                                    "recoverableByCompaction", contextOverflow
+                            ), listener);
+                    if (!contextOverflow) {
+                        budget.recordModelCall(new LlmUsage(0, 0, 0, 0, 0, "", "failed"), 0);
+                        synchronizeCancellation(runId, budget);
+                        Optional<AgentStopReason> interruptedStop = budget.currentStopReason();
+                        if (interruptedStop.isPresent()) {
+                            return finishBudgetStop(request, runId, sessionId, userId, interruptedStop.get(),
+                                    toolResults, usedTools, usedRag, budget, listener);
+                        }
+                    }
+                    if (contextOverflow
                             && contextOverflowRetries < Math.max(0, properties.getMaxContextOverflowRetries())) {
                         contextOverflowRetries++;
                         budget.recordModelCall(new LlmUsage(0, 0, 0, 0, 0, "", "context-overflow"), 0);
@@ -365,7 +381,10 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                 listener);
                         continue;
                     }
-                    AgentStopReason stopReason = isContextOverflow(modelFailure)
+                    if (contextOverflow) {
+                        budget.recordModelCall(new LlmUsage(0, 0, 0, 0, 0, "", "context-overflow"), 0);
+                    }
+                    AgentStopReason stopReason = contextOverflow
                             ? AgentStopReason.CONTEXT_OVERFLOW
                             : AgentStopReason.MODEL_ERROR;
                     String answer = stopReason == AgentStopReason.CONTEXT_OVERFLOW
@@ -697,6 +716,18 @@ public class DefaultAgentRuntime implements AgentRuntime {
             current = current.getCause();
         }
         return false;
+    }
+
+    private String modelErrorType(Throwable failure) {
+        Throwable current = failure;
+        int depth = 0;
+        while (current != null && depth++ < 12) {
+            if (current instanceof LlmCallException llmCallException) {
+                return llmCallException.errorType();
+            }
+            current = current.getCause();
+        }
+        return failure == null ? "UNKNOWN" : failure.getClass().getSimpleName();
     }
 
     private void acquireRun(String sessionId, String runId, AgentRunBudget budget) {

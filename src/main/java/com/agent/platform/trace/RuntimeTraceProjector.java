@@ -173,7 +173,7 @@ public class RuntimeTraceProjector {
                 case CONTEXT_PREPARED, CONTEXT_COMPACTED -> TraceSpanKind.PROMPT;
                 case POLICY_DECIDED -> TraceSpanKind.GUARDRAIL;
                 case APPROVAL_REQUIRED -> TraceSpanKind.APPROVAL;
-                case RUN_FAILED -> TraceSpanKind.ERROR;
+                case MODEL_FAILED, RUN_FAILED -> TraceSpanKind.ERROR;
                 default -> null;
             };
             if (kind != null) {
@@ -251,7 +251,7 @@ public class RuntimeTraceProjector {
     }
 
     private TraceSpanStatus eventStatus(AgentEvent event) {
-        if (event.type() == AgentEventType.RUN_FAILED) {
+        if (event.type() == AgentEventType.MODEL_FAILED || event.type() == AgentEventType.RUN_FAILED) {
             return TraceSpanStatus.FAILED;
         }
         if (event.type() == AgentEventType.APPROVAL_REQUIRED) {

@@ -52,6 +52,14 @@ public class ResilienceProperties {
 
         private String fallbackMessage = "AI 服务暂时不可用，请稍后重试。";
 
+        private int executorThreads = 8;
+
+        private int executorQueueCapacity = 64;
+
+        private int circuitBreakerFailureThreshold = 5;
+
+        private long circuitBreakerOpenMillis = 30000;
+
         public int getMaxAttempts() {
             return maxAttempts;
         }
@@ -90,6 +98,38 @@ public class ResilienceProperties {
 
         public void setFallbackMessage(String fallbackMessage) {
             this.fallbackMessage = fallbackMessage;
+        }
+
+        public int getExecutorThreads() {
+            return executorThreads;
+        }
+
+        public void setExecutorThreads(int executorThreads) {
+            this.executorThreads = executorThreads;
+        }
+
+        public int getExecutorQueueCapacity() {
+            return executorQueueCapacity;
+        }
+
+        public void setExecutorQueueCapacity(int executorQueueCapacity) {
+            this.executorQueueCapacity = executorQueueCapacity;
+        }
+
+        public int getCircuitBreakerFailureThreshold() {
+            return circuitBreakerFailureThreshold;
+        }
+
+        public void setCircuitBreakerFailureThreshold(int circuitBreakerFailureThreshold) {
+            this.circuitBreakerFailureThreshold = circuitBreakerFailureThreshold;
+        }
+
+        public long getCircuitBreakerOpenMillis() {
+            return circuitBreakerOpenMillis;
+        }
+
+        public void setCircuitBreakerOpenMillis(long circuitBreakerOpenMillis) {
+            this.circuitBreakerOpenMillis = circuitBreakerOpenMillis;
         }
     }
 }
