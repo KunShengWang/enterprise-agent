@@ -5,11 +5,8 @@ import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.agent.AgentResponse;
 import com.agent.platform.common.ApiResponse;
 import com.agent.platform.config.AgentProperties;
-import com.agent.platform.memory.MemoryService;
 import com.agent.platform.resilience.RateLimitResult;
 import com.agent.platform.resilience.RateLimitService;
-import com.agent.platform.router.IntentRoute;
-import com.agent.platform.router.IntentRouter;
 import com.agent.platform.runtime.AgentRunRecord;
 import com.agent.platform.runtime.AgentRunStore;
 import com.agent.platform.runtime.AgentRuntime;
@@ -41,10 +38,6 @@ public class AgentController {
 
     private final AgentProperties agentProperties;
 
-    private final IntentRouter intentRouter;
-
-    private final MemoryService memoryService;
-
     private final StreamingAgentExecutor streamingAgentExecutor;
 
     private final RateLimitService rateLimitService;
@@ -54,16 +47,12 @@ public class AgentController {
 
     public AgentController(AgentExecutor agentExecutor,
                            AgentProperties agentProperties,
-                           IntentRouter intentRouter,
-                           MemoryService memoryService,
                            StreamingAgentExecutor streamingAgentExecutor,
                            RateLimitService rateLimitService,
                            AgentRunStore agentRunStore,
                            AgentRuntime agentRuntime) {
         this.agentExecutor = agentExecutor;
         this.agentProperties = agentProperties;
-        this.intentRouter = intentRouter;
-        this.memoryService = memoryService;
         this.streamingAgentExecutor = streamingAgentExecutor;
         this.rateLimitService = rateLimitService;
         this.agentRunStore = agentRunStore;
@@ -77,21 +66,6 @@ public class AgentController {
                 "stage", "V2.0",
                 "mockMode", agentProperties.isMockMode()
         ));
-    }
-
-    @PostMapping("/routes/preview")
-    public Mono<ApiResponse<Map<String, Object>>> previewRoute(@Valid @RequestBody AgentRequest request) {
-        return Mono.fromSupplier(() -> {
-                    String conversationId = normalizeConversationId(request.conversationId());
-                    IntentRoute route = intentRouter.route(request, memoryService.load(conversationId, request.userId(), request.question()));
-                    return ApiResponse.success(Map.of(
-                            "conversationId", conversationId,
-                            "type", route.type().name(),
-                            "reason", route.reason(),
-                            "slots", route.slots()
-                    ));
-                })
-                .subscribeOn(Schedulers.boundedElastic());
     }
 
     @PostMapping("/runs")

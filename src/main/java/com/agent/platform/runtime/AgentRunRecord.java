@@ -3,8 +3,6 @@ package com.agent.platform.runtime;
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.tool.ToolCallRequest;
 import com.agent.platform.tool.ToolCallResult;
-import com.agent.platform.workflow.WorkflowExecutionPlan;
-import com.agent.platform.workflow.WorkflowNode;
 
 import java.time.Instant;
 import java.util.List;
@@ -16,8 +14,7 @@ public record AgentRunRecord(
         String userId,
         AgentRequest request,
         AgentRunState state,
-        WorkflowExecutionPlan plan,
-        WorkflowNode currentNode,
+        AgentRunPhase phase,
         String approvalId,
         ToolCallRequest pendingToolCall,
         List<ToolCallResult> toolResults,
@@ -36,7 +33,7 @@ public record AgentRunRecord(
         toolResults = toolResults == null ? List.of() : List.copyOf(toolResults);
         usedTools = usedTools == null ? List.of() : List.copyOf(usedTools);
         state = state == null ? AgentRunState.CREATED : state;
-        currentNode = currentNode == null ? WorkflowNode.START : currentNode;
+        phase = phase == null ? AgentRunPhase.START : phase;
         approvalId = approvalId == null ? "" : approvalId;
         answer = answer == null ? "" : answer;
         failureReason = failureReason == null ? "" : failureReason;
@@ -50,14 +47,11 @@ public record AgentRunRecord(
                                         AgentRequest request) {
         Instant now = Instant.now();
         return new AgentRunRecord(
-                runId,
-                traceId,
-                conversationId,
+                runId, traceId, conversationId,
                 request == null ? "" : request.userId(),
                 request,
                 AgentRunState.RUNNING,
-                null,
-                WorkflowNode.START,
+                AgentRunPhase.START,
                 "",
                 null,
                 List.of(),
@@ -73,45 +67,14 @@ public record AgentRunRecord(
         );
     }
 
-    public AgentRunRecord withPlan(WorkflowExecutionPlan executionPlan) {
-        return copy(
-                AgentRunState.RUNNING,
-                executionPlan,
-                WorkflowNode.START,
-                approvalId,
-                pendingToolCall,
-                toolResults,
-                usedTools,
-                usedRag,
-                blockedByGuardrail,
-                answer,
-                failureReason,
-                resumeCount
-        );
-    }
-
     public AgentRunRecord withRequest(AgentRequest nextRequest) {
         return new AgentRunRecord(
-                runId,
-                traceId,
-                conversationId,
+                runId, traceId, conversationId,
                 nextRequest == null ? userId : nextRequest.userId(),
                 nextRequest == null ? request : nextRequest,
-                state,
-                plan,
-                currentNode,
-                approvalId,
-                pendingToolCall,
-                toolResults,
-                usedTools,
-                usedRag,
-                blockedByGuardrail,
-                answer,
-                failureReason,
-                resumeCount,
-                version,
-                createdAt,
-                Instant.now()
+                state, phase, approvalId, pendingToolCall, toolResults, usedTools,
+                usedRag, blockedByGuardrail, answer, failureReason, resumeCount,
+                version, createdAt, Instant.now()
         );
     }
 
@@ -122,8 +85,7 @@ public record AgentRunRecord(
                                              boolean ragUsed) {
         return copy(
                 AgentRunState.WAITING_APPROVAL,
-                plan,
-                WorkflowNode.TOOL_APPROVAL,
+                AgentRunPhase.WAITING_APPROVAL,
                 pendingApprovalId,
                 toolCall,
                 completedToolResults,
@@ -139,8 +101,7 @@ public record AgentRunRecord(
     public AgentRunRecord claimedForResume() {
         return copy(
                 AgentRunState.RUNNING,
-                plan,
-                WorkflowNode.TOOL_EXECUTE,
+                AgentRunPhase.EXECUTING_TOOL,
                 approvalId,
                 pendingToolCall,
                 toolResults,
@@ -154,7 +115,7 @@ public record AgentRunRecord(
     }
 
     public AgentRunRecord finished(AgentRunState targetState,
-                                   WorkflowNode node,
+                                   AgentRunPhase targetPhase,
                                    String finalAnswer,
                                    String error,
                                    List<ToolCallResult> finalToolResults,
@@ -163,8 +124,7 @@ public record AgentRunRecord(
                                    boolean guardrailBlocked) {
         return copy(
                 targetState,
-                plan,
-                node,
+                targetPhase,
                 approvalId,
                 pendingToolCall,
                 finalToolResults,
@@ -179,32 +139,15 @@ public record AgentRunRecord(
 
     public AgentRunRecord withVersion(long nextVersion, Instant timestamp) {
         return new AgentRunRecord(
-                runId,
-                traceId,
-                conversationId,
-                userId,
-                request,
-                state,
-                plan,
-                currentNode,
-                approvalId,
-                pendingToolCall,
-                toolResults,
-                usedTools,
-                usedRag,
-                blockedByGuardrail,
-                answer,
-                failureReason,
-                resumeCount,
-                nextVersion,
-                createdAt,
-                timestamp == null ? Instant.now() : timestamp
+                runId, traceId, conversationId, userId, request, state, phase,
+                approvalId, pendingToolCall, toolResults, usedTools, usedRag,
+                blockedByGuardrail, answer, failureReason, resumeCount,
+                nextVersion, createdAt, timestamp == null ? Instant.now() : timestamp
         );
     }
 
     private AgentRunRecord copy(AgentRunState nextState,
-                                WorkflowExecutionPlan executionPlan,
-                                WorkflowNode node,
+                                AgentRunPhase nextPhase,
                                 String nextApprovalId,
                                 ToolCallRequest nextPendingToolCall,
                                 List<ToolCallResult> nextToolResults,
@@ -215,26 +158,10 @@ public record AgentRunRecord(
                                 String nextFailureReason,
                                 int nextResumeCount) {
         return new AgentRunRecord(
-                runId,
-                traceId,
-                conversationId,
-                userId,
-                request,
-                nextState,
-                executionPlan,
-                node,
-                nextApprovalId,
-                nextPendingToolCall,
-                nextToolResults,
-                nextUsedTools,
-                nextUsedRag,
-                nextBlockedByGuardrail,
-                nextAnswer,
-                nextFailureReason,
-                nextResumeCount,
-                version,
-                createdAt,
-                Instant.now()
+                runId, traceId, conversationId, userId, request, nextState, nextPhase,
+                nextApprovalId, nextPendingToolCall, nextToolResults, nextUsedTools,
+                nextUsedRag, nextBlockedByGuardrail, nextAnswer, nextFailureReason,
+                nextResumeCount, version, createdAt, Instant.now()
         );
     }
 }

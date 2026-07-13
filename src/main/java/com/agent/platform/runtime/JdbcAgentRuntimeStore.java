@@ -300,7 +300,7 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
         statement.setString(2, record.traceId());
         statement.setString(3, record.conversationId());
         statement.setString(4, record.state().name());
-        statement.setString(5, record.currentNode().name());
+        statement.setString(5, record.phase().name());
         statement.setString(6, toJson(record));
         statement.setLong(7, record.version());
         statement.setTimestamp(8, Timestamp.from(record.createdAt()));
@@ -314,7 +314,7 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
                 WHERE run_id = ?
                 """)) {
             statement.setString(1, record.state().name());
-            statement.setString(2, record.currentNode().name());
+            statement.setString(2, record.phase().name());
             statement.setString(3, toJson(record));
             statement.setLong(4, record.version());
             statement.setTimestamp(5, Timestamp.from(record.updatedAt()));

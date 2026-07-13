@@ -15,7 +15,6 @@ import com.agent.platform.memory.MemoryMessage;
 import com.agent.platform.memory.MemoryService;
 import com.agent.platform.tool.ToolCallResult;
 import com.agent.platform.tool.ToolDefinition;
-import com.agent.platform.workflow.WorkflowNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -635,15 +634,15 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                       boolean guardrailBlocked,
                                       AgentRunBudget budget,
                                       AgentEventListener listener) {
-        WorkflowNode node = switch (state) {
-            case COMPLETED -> WorkflowNode.FINISH;
-            case BLOCKED, REJECTED -> WorkflowNode.BLOCKED;
-            case WAITING_APPROVAL -> WorkflowNode.TOOL_APPROVAL;
-            default -> WorkflowNode.FAILED;
+        AgentRunPhase phase = switch (state) {
+            case COMPLETED -> AgentRunPhase.FINISHED;
+            case BLOCKED, REJECTED -> AgentRunPhase.BLOCKED;
+            case WAITING_APPROVAL -> AgentRunPhase.WAITING_APPROVAL;
+            default -> AgentRunPhase.FAILED;
         };
         runStore.update(runId, current -> current.finished(
                 state,
-                node,
+                phase,
                 answer,
                 state == AgentRunState.COMPLETED ? "" : stopReason.name(),
                 toolResults,

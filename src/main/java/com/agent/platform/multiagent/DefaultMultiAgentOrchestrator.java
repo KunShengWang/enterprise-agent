@@ -8,7 +8,7 @@ import com.agent.platform.runtime.AgentRunState;
 import com.agent.platform.runtime.AgentRunStore;
 import com.agent.platform.runtime.AgentStopReason;
 import com.agent.platform.runtime.AgentTimelineStore;
-import com.agent.platform.workflow.WorkflowNode;
+import com.agent.platform.runtime.AgentRunPhase;
 import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Service;
 
@@ -201,7 +201,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
         boolean usedRag = specialistTasks.stream().anyMatch(task -> task.role() == MultiAgentRole.RAG_WORKER);
         runStore.update(runId, current -> current.finished(
                 AgentRunState.COMPLETED,
-                WorkflowNode.FINISH,
+                AgentRunPhase.FINISHED,
                 review.finalAnswer(),
                 "",
                 List.of(),
@@ -224,7 +224,7 @@ public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
                                  RuntimeException exception) {
         runStore.update(runId, current -> current.finished(
                 AgentRunState.FAILED,
-                WorkflowNode.FAILED,
+                AgentRunPhase.FAILED,
                 "Multi-Agent 编排失败，请稍后重试。",
                 exception.getClass().getSimpleName(),
                 List.of(),
