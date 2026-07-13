@@ -30,10 +30,14 @@ public class LlmQueryRewriteService implements QueryRewriteService {
         this.fallbackService = fallbackService;
     }
 
+    /**
+     * 用户问题改写
+     */
     @Override
     public String rewrite(AgentRequest request, ConversationMemory memory) {
         String fallback = fallbackService.rewrite(request, memory);
         try {
+            // 调用 query 改写 LLM 并解析返回的数据
             String rewritten = parseRewrite(callRewriteModel(request, memory, fallback));
             if (rewritten != null && !rewritten.isBlank()) {
                 return rewritten.trim();
@@ -45,6 +49,9 @@ public class LlmQueryRewriteService implements QueryRewriteService {
         return fallback;
     }
 
+    /**
+     * 调用 query 改写 LLM
+     */
     private String callRewriteModel(AgentRequest request, ConversationMemory memory, String fallback) {
         return llmService.complete(new PromptRequest(
                 """

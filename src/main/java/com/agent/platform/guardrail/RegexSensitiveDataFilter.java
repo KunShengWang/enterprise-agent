@@ -17,6 +17,10 @@ public class RegexSensitiveDataFilter implements SensitiveDataFilter {
 
     private final Pattern emailPattern = Pattern.compile("[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}");
 
+    /**
+     * 敏感数据过滤
+     * TODO 简陋
+     */
     @Override
     public SensitiveDataFilterResult filter(String content) {
         String safe = content == null ? "" : content;

@@ -33,7 +33,10 @@ public class MemoryRecallScorer {
         if (isBlank(query) || isBlank(content)) {
             return new MemoryRecallScore(0, 0, 0, Set.of(), Set.of());
         }
+        // 把字符串统一转为小写
         String normalizedContent = content.toLowerCase(Locale.ROOT);
+        // TODO 这块的分词是不是有点简陋
+        // 分词 ["退款", "款审", "审批", "批流", ...]
         Set<String> tokens = tokenize(query);
         if (tokens.isEmpty()) {
             double exactScore = normalizedContent.contains(query.toLowerCase(Locale.ROOT)) ? 1.0 : 0;
@@ -42,11 +45,13 @@ public class MemoryRecallScorer {
         int hits = 0;
         Set<String> matchedTokens = new LinkedHashSet<>();
         for (String token : tokens) {
+            // 每个 token 去记忆内容里找
             if (normalizedContent.contains(token.toLowerCase(Locale.ROOT))) {
                 hits++;
                 matchedTokens.add(token);
             }
         }
+        // 命中率 = 命中数 / 总token数
         double lexicalScore = (double) hits / tokens.size();
 
         Set<String> expandedQueryTerms = semanticTerms(query);
@@ -68,16 +73,20 @@ public class MemoryRecallScorer {
 
     private Set<String> tokenize(String value) {
         Set<String> tokens = new LinkedHashSet<>();
+        // ① 转小写 + 把标点/特殊字符替换成空格
         String normalized = value.toLowerCase(Locale.ROOT).replaceAll("[^\\p{IsHan}a-z0-9]+", " ");
+        // ② 按空白字符切分
         for (String part : normalized.split("\\s+")) {
             if (part.isBlank()) {
                 continue;
             }
+            // ③ 如果是中文长串（>6个字），用 bigram 分词
             if (containsHan(part) && part.length() > 6) {
                 for (int index = 0; index < part.length() - 1; index++) {
                     tokens.add(part.substring(index, index + 2));
                 }
             }
+            // 英文/短中文直接作为一个 token
             else {
                 tokens.add(part);
             }

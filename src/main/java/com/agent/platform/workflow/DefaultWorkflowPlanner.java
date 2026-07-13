@@ -15,6 +15,7 @@ public class DefaultWorkflowPlanner implements WorkflowPlanner {
     @Override
     public WorkflowExecutionPlan plan(String traceId, String conversationId, IntentRoute route) {
         IntentType type = route == null ? IntentType.CHAT : route.type();
+        // 把之前执行过的工作添加进工作流节点列表
         List<WorkflowNode> nodes = new ArrayList<>(List.of(
                 WorkflowNode.START,
                 WorkflowNode.LOAD_MEMORY,
@@ -63,6 +64,9 @@ public class DefaultWorkflowPlanner implements WorkflowPlanner {
         );
     }
 
+    /**
+     * 根据名称映射成 WorkflowNode
+     */
     @Override
     public WorkflowNode mapStepName(String stepName) {
         String value = stepName == null ? "" : stepName.toLowerCase();
@@ -102,6 +106,9 @@ public class DefaultWorkflowPlanner implements WorkflowPlanner {
                 || node == WorkflowNode.OUTPUT_GUARDRAIL;
     }
 
+    /**
+     * 节点之间的过渡，如：START -> LOAD_MEMORY
+     */
     private List<WorkflowTransition> transitions(List<WorkflowNode> nodes, IntentType type) {
         List<WorkflowTransition> transitions = new ArrayList<>();
         for (int index = 0; index < nodes.size() - 1; index++) {

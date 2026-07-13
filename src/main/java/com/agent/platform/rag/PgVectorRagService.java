@@ -55,7 +55,9 @@ public class PgVectorRagService implements RagService, RagCacheOperations {
         long startNanos = System.nanoTime();
         int effectiveTopK = topK <= 0 ? ragProperties.getTopK() : topK;
         double minSimilarity = ragProperties.getMinSimilarity();
+        // 缓存 key
         String cacheKey = cacheKey(query, effectiveTopK, minSimilarity);
+        // 读取缓存
         RagResult cached = readCache(cacheKey, startNanos);
         if (cached != null) {
             ragRunRecorder.record(cached);
@@ -187,6 +189,9 @@ public class PgVectorRagService implements RagService, RagCacheOperations {
         return (System.nanoTime() - startNanos) / 1_000_000;
     }
 
+    /**
+     * 读取缓存
+     */
     private RagResult readCache(String cacheKey, long startNanos) {
         if (!ragProperties.getCache().isEnabled()) {
             return null;

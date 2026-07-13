@@ -37,10 +37,14 @@ public class StdioMcpToolGateway implements McpToolGateway {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 寻找服务商的工具
+     */
     @Override
     public List<ToolDefinition> discoverTools() {
         List<ToolDefinition> definitions = new ArrayList<>();
         for (McpProperties.Server server : mcpProperties.effectiveServers()) {
+            // 寻找服务商的工具
             definitions.addAll(discoverTools(server));
         }
         return List.copyOf(definitions);
@@ -55,6 +59,9 @@ public class StdioMcpToolGateway implements McpToolGateway {
         return callTool(server.get(), request);
     }
 
+    /**
+     * 寻找服务商的工具
+     */
     private List<ToolDefinition> discoverTools(McpProperties.Server server) {
         try (McpSession session = openSession(server)) {
             initialize(server, session);

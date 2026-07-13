@@ -198,16 +198,25 @@ public class V1AgentExecutor implements AgentExecutor {
 
     @Override
     public AgentResponse execute(AgentRequest request) {
+        // 阶段 1：初始化本次 Agent Run。
+        // conversationId 标识多轮会话；runId/traceId 标识当前这一次执行。
         String conversationId = normalizeConversationId(request.conversationId());
         TraceContext trace = traceRecorder.start(conversationId, request.question());
         String runId = trace.traceId();
+
+        // 先持久化 RUNNING 状态。后续即使进入澄清、阻断、审批或失败分支，
+        // 都可以通过同一个 runId 查询这次执行留下的状态和上下文。
         agentRunStore.create(AgentRunRecord.create(runId, trace.traceId(), conversationId, request));
+
+        // steps 面向接口调用方展示执行过程；其余字段会在 finish() 中进入 Trace/Eval。
         List<AgentStep> steps = new ArrayList<>();
         List<String> usedTools = new ArrayList<>();
         boolean usedRag = false;
         boolean blockedByGuardrail = false;
 
         try {
+            // 阶段 2：加载当前会话的短期消息、摘要、长期记忆和用户画像。
+            // question 也会作为长期记忆语义召回的查询条件。
             ConversationMemory memory = memoryService.load(conversationId, request.userId(), request.question());
             addStep(trace, steps, "memory.load", "COMPLETED",
                     "messages=" + memory.messages().size()
@@ -215,26 +224,38 @@ public class V1AgentExecutor implements AgentExecutor {
                             + ", profileItems=" + memory.userProfile().items().size()
                             + ", recalled=" + memory.recalledMemories().size());
 
+            // 阶段 3：输入护栏必须在问题进入 Memory、Router、Tool 和 LLM 之前执行。
             GuardrailDecision inputDecision = guardrailService.checkInput(request.question());
             addStep(trace, steps, "guardrail.input", inputDecision.action().name(), inputDecision.reason());
             if (inputDecision.action() == GuardrailAction.BLOCK) {
+                // Prompt Injection 或敏感信息外泄等高风险输入直接结束，不再调用模型和工具。
                 blockedByGuardrail = true;
                 return finishBlocked(request, conversationId, trace, steps, usedTools, usedRag, true,
                         "请求被输入护栏拦截：" + inputDecision.reason());
             }
             if (inputDecision.action() == GuardrailAction.REDACT && inputDecision.safeContent() != null) {
+                // REDACT 不终止任务，而是使用脱敏后的安全内容替换原问题。
+                // 同时更新 AgentRun，防止恢复执行时重新使用未脱敏的原始输入。
                 request = new AgentRequest(request.conversationId(), request.userId(), inputDecision.safeContent(), request.metadata());
                 AgentRequest safeRequest = request;
                 agentRunStore.update(runId, current -> current.withRequest(safeRequest));
                 addStep(trace, steps, "guardrail.input.redact", "COMPLETED", "input was redacted before memory and model usage");
             }
+
+            // 护栏处理完成后，才把本轮用户问题保存到会话记忆中。
             memoryService.append(conversationId, request.userId(), new MemoryMessage("user", request.question(), Instant.now()));
 
+            // 阶段 4：Skill 表示适合完成当前任务的能力描述及其绑定工具。
+            // 没有匹配 Skill 也可以继续执行，只是在 Trace 中记录为 NONE。
             Optional<SkillDefinition> skill = skillSelector.select(request, memory);
             addStep(trace, steps, "skill.select", skill.map(SkillDefinition::name).orElse("NONE"), skill.map(SkillDefinition::description).orElse("no skill selected"));
 
+            // 阶段 5：Router 决定本次请求走 CHAT、RAG、TOOL 还是 CLARIFY。
             IntentRoute route = intentRouter.route(request, memory);
             addStep(trace, steps, "intent.route", route.type().name(), route.reason());
+
+            // 根据路由生成显式 Workflow 计划并持久化。
+            // 前面的 Memory/Guardrail/Route 在计划创建前已经完成，因此需要补写已有 checkpoint。
             WorkflowExecutionPlan workflowPlan = workflowPlanner.plan(trace.traceId(), conversationId, route);
             workflowRecorder.start(workflowPlan);
             persistExistingWorkflowCheckpoints(trace, steps);
@@ -242,18 +263,22 @@ public class V1AgentExecutor implements AgentExecutor {
             addStep(trace, steps, "workflow.plan", "COMPLETED",
                     "route=" + route.type().name() + ", nodes=" + workflowPlan.nodes().size() + ", resumable=" + workflowPlan.resumable());
             if (route.type() == IntentType.CLARIFY) {
+                // 信息不足时提前返回澄清提示，不浪费 RAG、Tool 和 LLM 调用。
                 String answer = "你的问题还不够明确。请补充工单编号、故障现象，或者说明你想查询哪类知识库资料。";
                 memoryService.append(conversationId, request.userId(), new MemoryMessage("assistant", answer, Instant.now()));
                 return finish(request, conversationId, AgentRunStatus.NEEDS_CLARIFICATION, answer, steps, trace, usedTools, usedRag, false);
             }
 
+            // 阶段 6：结合历史上下文，把省略主语或依赖上文的问题改写成可独立理解的查询。
             String rewrittenQuery = queryRewriteService.rewrite(request, memory);
             addStep(trace, steps, "query.rewrite", "COMPLETED", rewrittenQuery);
 
+            // 三种路由最终都汇合到 PromptAssembler，因此先准备空的 RAG/Tool 结果。
             RagResult ragResult = RagResult.empty(rewrittenQuery);
             List<ToolCallResult> toolResults = new ArrayList<>();
 
             if (route.type() == IntentType.RAG) {
+                // RAG 路由：执行混合检索和 Rerank，结果稍后作为 Prompt 上下文。
                 long ragStartNanos = System.nanoTime();
                 ragResult = ragService.retrieve(rewrittenQuery, 3);
                 usedRag = !ragResult.documents().isEmpty();
@@ -266,10 +291,13 @@ public class V1AgentExecutor implements AgentExecutor {
                                 + ", hits=" + ragHitSummary(ragResult));
             }
             else if (route.type() == IntentType.TOOL) {
+                // TOOL 路由：进入“规划 -> 护栏/审批 -> 执行 -> 失败重规划”的有限循环。
                 ToolExecutionOutcome outcome = executeToolBranch(runId, request, memory, conversationId, route, trace, steps);
                 usedTools.addAll(outcome.usedTools());
                 toolResults.addAll(outcome.toolResults());
                 if (outcome.terminalStatus() != null) {
+                    // WAITING_APPROVAL、MANUAL_REVIEW 等状态会暂停或终止当前 Run，
+                    // 此时不能继续组装 Prompt 和调用 LLM。
                     blockedByGuardrail = outcome.blockedByGuardrail();
                     return finish(
                             request,
@@ -284,9 +312,12 @@ public class V1AgentExecutor implements AgentExecutor {
                     );
                 }
                 if (outcome.blockedAnswer() != null) {
+                    // 工具不存在、规划失败或工具护栏阻断时，统一按 BLOCKED 收口。
                     blockedByGuardrail = outcome.blockedByGuardrail();
                     return finishBlocked(request, conversationId, trace, steps, usedTools, false, blockedByGuardrail, outcome.blockedAnswer());
                 }
+
+                // 工具执行完成后保存中间结果。后面如果 LLM 失败，仍能查询工具执行证据。
                 List<ToolCallResult> persistedToolResults = List.copyOf(toolResults);
                 List<String> persistedUsedTools = List.copyOf(usedTools);
                 agentRunStore.update(runId, current -> current.finished(
@@ -301,12 +332,16 @@ public class V1AgentExecutor implements AgentExecutor {
                 ));
             }
             else {
+                // CHAT 路由不检索资料、不调用工具，直接使用用户问题和 Memory 组装 Prompt。
                 addStep(trace, steps, "chat.fallback", "COMPLETED", "general chat uses prompt without RAG or tool");
             }
 
+            // 阶段 7：把 System Prompt、用户问题、Memory、RAG 证据和工具结果统一组装。
             PromptRequest prompt = promptAssembler.assemble(request, memory, ragResult, toolResults);
             addStep(trace, steps, "prompt.assemble", "COMPLETED", "contextBlocks=" + prompt.contextBlocks().size());
 
+            // 阶段 8：调用真实模型。LlmService 内部负责超时、重试和降级，
+            // 编排层只处理成功结果或包装后的 LlmCallException。
             String answer;
             long llmStartNanos = System.nanoTime();
             try {
@@ -323,6 +358,7 @@ public class V1AgentExecutor implements AgentExecutor {
                 return finish(request, conversationId, AgentRunStatus.FAILED, exception.safeMessage(), steps, trace, usedTools, usedRag, blockedByGuardrail);
             }
 
+            // 阶段 9：模型回答返回后再做一次输出护栏，防止敏感信息或违规内容直接返回。
             GuardrailDecision outputDecision = guardrailService.checkOutput(answer);
             addStep(trace, steps, "guardrail.output", outputDecision.action().name(), outputDecision.reason());
             if (outputDecision.action() == GuardrailAction.REDACT) {
@@ -334,11 +370,13 @@ public class V1AgentExecutor implements AgentExecutor {
                         "回答被输出护栏拦截：" + outputDecision.reason());
             }
 
+            // 阶段 10：保存本轮 assistant 消息，随后统一结束 Run、Trace、Workflow 和 Eval。
             memoryService.append(conversationId, request.userId(), new MemoryMessage("assistant", answer, Instant.now()));
             addStep(trace, steps, "conversation.save", "COMPLETED", "conversation messages appended");
             return finish(request, conversationId, AgentRunStatus.COMPLETED, answer, steps, trace, usedTools, usedRag, blockedByGuardrail);
         }
         catch (RuntimeException exception) {
+            // 未被业务分支单独处理的异常在最外层兜底，避免把堆栈和内部细节直接暴露给调用方。
             addStep(trace, steps, "agent.error", "FAILED", "errorType=" + exception.getClass().getSimpleName());
             return finish(request, conversationId, AgentRunStatus.FAILED, "Agent 执行失败，请稍后重试或根据 traceId 排查。", steps, trace, usedTools, usedRag, blockedByGuardrail);
         }
@@ -572,8 +610,9 @@ public class V1AgentExecutor implements AgentExecutor {
                                                    ConversationMemory memory,
                                                    String conversationId,
                                                    IntentRoute route,
-                                                   TraceContext trace,
-                                                   List<AgentStep> steps) {
+                                                    TraceContext trace,
+                                                    List<AgentStep> steps) {
+        // ToolRegistry 对本地工具和 MCP 工具提供统一视图，Planner 不需要关心工具来源。
         List<ToolDefinition> availableTools = toolRegistry.listTools();
         addStep(trace, steps, "tool.registry", "COMPLETED", "availableTools=" + availableTools.stream().map(ToolDefinition::name).toList());
         if (availableTools.isEmpty()) {
@@ -585,7 +624,10 @@ public class V1AgentExecutor implements AgentExecutor {
         Set<String> executedSignatures = new HashSet<>();
         int maxCalls = Math.max(1, agentProperties.getMaxToolCallsPerRun());
 
+        // 这是一个有最大次数限制的轻量 ReAct/Tool 循环。
+        // 每轮 Planner 都能看到之前的 toolResults，从而决定停止、继续或改用其他工具。
         for (int index = 0; index < maxCalls; index++) {
+            // 让 LLM 根据情况选择工具
             ToolCallPlan plan = toolCallPlanner.plan(request, memory, route, availableTools, toolResults);
             if (!plan.shouldCallTool()) {
                 addStep(trace, steps, "tool.plan", "STOPPED", plan.reason());
@@ -594,7 +636,7 @@ public class V1AgentExecutor implements AgentExecutor {
                 }
                 break;
             }
-
+            // 根据工具名称寻找工具
             Optional<ToolDefinition> definition = toolRegistry.findTool(plan.toolName());
             if (definition.isEmpty()) {
                 addStep(trace, steps, "tool.registry", "FAILED", "tool not found: " + plan.toolName());
@@ -603,6 +645,7 @@ public class V1AgentExecutor implements AgentExecutor {
 
             ToolCallRequest toolCall = new ToolCallRequest(plan.toolName(), UUID.randomUUID().toString(), plan.arguments());
             String signature = toolCall.toolName() + toolCall.arguments();
+            // 同一次 Run 中阻止相同工具和相同参数的循环调用。
             if (!executedSignatures.add(signature)) {
                 addStep(trace, steps, "tool.plan", "STOPPED", "duplicate tool call stopped: " + signature);
                 break;
@@ -614,6 +657,7 @@ public class V1AgentExecutor implements AgentExecutor {
                             + ", args=" + toolCall.arguments()
                             + ", reason=" + plan.reason());
 
+            // 工具执行前单独检查权限和风险级别；高风险副作用不能直接执行。
             GuardrailDecision toolDecision = guardrailService.checkToolCall(definition.get(), toolCall);
             addStep(trace, steps, "guardrail.tool", toolDecision.action().name(), toolDecision.reason());
             if (toolDecision.action() == GuardrailAction.BLOCK) {
@@ -631,6 +675,8 @@ public class V1AgentExecutor implements AgentExecutor {
                 ApprovalDecision approvalDecision = approvalService.requestApproval(approvalRequest);
                 addStep(trace, steps, "approval.request", approvalDecision.status().name(), approvalDecision.reason());
                 if (approvalDecision.pending()) {
+                    // 只持久化待执行 ToolCall 和当前上下文，不在审批请求阶段执行任何副作用。
+                    // 审批通过后由 resume(runId) 使用同一个 toolCallId 恢复。
                     List<ToolCallResult> persistedResults = List.copyOf(toolResults);
                     List<String> persistedTools = List.copyOf(usedTools);
                     agentRunStore.update(runId, current -> current.waitingForApproval(
@@ -652,6 +698,7 @@ public class V1AgentExecutor implements AgentExecutor {
                 }
             }
 
+            // 审批和护栏通过后，进入带幂等保护和有限重试的真实工具执行。
             IdempotentToolOutcome execution = executeToolWithRetry(runId, toolCall, trace, steps);
             if (execution.manualReview()) {
                 return ToolExecutionOutcome.manualReview(
@@ -680,6 +727,7 @@ public class V1AgentExecutor implements AgentExecutor {
                                                        ToolCallRequest toolCall,
                                                        TraceContext trace,
                                                        List<AgentStep> steps) {
+        // 只对明确可重试的临时错误重试；参数错误、工具不存在等确定性错误不会重试。
         int maxAttempts = Math.max(1, agentProperties.getMaxToolExecutionAttempts());
         ToolCallResult lastResult = null;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -719,6 +767,8 @@ public class V1AgentExecutor implements AgentExecutor {
     }
 
     private IdempotentToolOutcome executeToolOnce(String runId, ToolCallRequest toolCall) {
+        // 先用 toolCallId 抢占执行权。相同 ID 已成功时直接复用结果，
+        // 状态不确定或仍在执行时进入人工核对，避免重复产生业务副作用。
         ToolExecutionClaim claim = toolExecutionStore.claim(runId, toolCall);
         if (!claim.claimed()) {
             if (claim.state() == ToolExecutionState.SUCCEEDED && claim.cachedResult() != null) {
@@ -741,6 +791,7 @@ public class V1AgentExecutor implements AgentExecutor {
 
         ToolCallResult result;
         try {
+            // 只有成功 claim 的调用才会真正进入 ToolExecutor。
             result = toolExecutor.execute(toolCall);
         }
         catch (RuntimeException exception) {
@@ -762,6 +813,7 @@ public class V1AgentExecutor implements AgentExecutor {
         }
 
         try {
+            // 工具结果必须可靠落库后才能认为这次副作用闭环完成。
             if (result != null && result.success()) {
                 toolExecutionStore.markSucceeded(toolCall.requestId(), result);
             }
@@ -844,11 +896,14 @@ public class V1AgentExecutor implements AgentExecutor {
                                  List<String> usedTools,
                                  boolean usedRag,
                                  boolean blockedByGuardrail) {
+        // 所有正常完成、澄清、阻断、失败和人工兜底分支最终都在这里统一收口。
+        // 收口顺序：AgentRun -> Trace -> Workflow -> Eval -> HTTP 响应。
         boolean failureStatus = status == AgentRunStatus.FAILED
                 || status == AgentRunStatus.BLOCKED
                 || status == AgentRunStatus.REJECTED
                 || status == AgentRunStatus.MANUAL_REVIEW;
         String failureReason = failureStatus ? answer : "";
+        // 1. 持久化最终 AgentRun 状态和执行结果。
         AgentRunRecord persistedRun = agentRunStore.update(trace.traceId(), current -> current.finished(
                 toAgentRunState(status),
                 terminalNode(status, current.currentNode()),
@@ -859,6 +914,7 @@ public class V1AgentExecutor implements AgentExecutor {
                 usedRag,
                 blockedByGuardrail
         ));
+        // 2. 结束 Trace；JdbcTraceRecorder 会在 finish() 中把完整 TraceRun 快照写入 PostgreSQL。
         traceRecorder.recordReplay(trace, "run.status", "Agent run status changed to " + status, Map.of(
                 "runId", trace.traceId(),
                 "status", status.name(),
@@ -866,7 +922,10 @@ public class V1AgentExecutor implements AgentExecutor {
         ));
         traceRecorder.markStatus(trace, status.name(), failureReason);
         TraceSummary traceSummary = traceRecorder.finish(trace);
+        // 3. 将 Workflow 同步更新为对应终态。
         workflowRecorder.finish(trace.traceId(), toWorkflowStatus(status), failureReason);
+
+        // 4. 记录轻量 Eval 事件，供后续 AgentOps 和自动评测统计使用。
         evalEventRecorder.record(new AgentRunEvalEvent(
                 traceSummary.traceId(),
                 conversationId,
@@ -877,6 +936,7 @@ public class V1AgentExecutor implements AgentExecutor {
                 Instant.now()
         ));
         addStepAfterFinish(steps, "eval.record", "COMPLETED", "eval event recorded for status=" + status);
+        // 5. 把回答、执行状态、审批 ID、步骤和 Trace 摘要返回给 Controller。
         return new AgentResponse(
                 trace.traceId(),
                 conversationId,
@@ -890,6 +950,7 @@ public class V1AgentExecutor implements AgentExecutor {
 
     private void persistExistingWorkflowCheckpoints(TraceContext trace, List<AgentStep> steps) {
         for (AgentStep step : steps) {
+            // 根据名称映射成 WorkflowNode
             WorkflowNode node = workflowPlanner.mapStepName(step.name());
             workflowRecorder.checkpoint(trace.traceId(), new WorkflowCheckpoint(
                     node,
@@ -907,6 +968,8 @@ public class V1AgentExecutor implements AgentExecutor {
     }
 
     private void addStep(TraceContext trace, List<AgentStep> steps, String name, String status, String summary, long durationMs) {
+        // 一次业务步骤同时进入三个视角：
+        // 1) AgentStep 返回给调用方；2) TraceSpan 用于观测/回放；3) WorkflowCheckpoint 用于状态查询和恢复。
         steps.add(new AgentStep(name, status, summary));
         traceRecorder.recordSpan(
                 trace,
@@ -934,6 +997,9 @@ public class V1AgentExecutor implements AgentExecutor {
         steps.add(new AgentStep(name, status, summary));
     }
 
+    /**
+     * 规范化 conversationId，去除首尾空格
+     */
     private String normalizeConversationId(String conversationId) {
         if (conversationId == null || conversationId.isBlank()) {
             return DEFAULT_CONVERSATION_ID;
@@ -945,6 +1011,11 @@ public class V1AgentExecutor implements AgentExecutor {
         return (System.nanoTime() - startNanos) / 1_000_000;
     }
 
+    /**
+     * 解析持续时间（毫秒）
+     * 例如：String summary = "mode=hybrid, documents=3, durationMs=127, hits=[...]";
+     * 会解析出 durationMs=127
+     */
     private long parseDurationMs(String summary) {
         if (summary == null || summary.isBlank()) {
             return 0;

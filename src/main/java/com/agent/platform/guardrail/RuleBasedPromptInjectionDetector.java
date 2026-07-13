@@ -34,9 +34,14 @@ public class RuleBasedPromptInjectionDetector implements PromptInjectionDetector
             Pattern.compile("(reveal|show|dump).*(system prompt|developer message|tool config|secrets)", Pattern.CASE_INSENSITIVE)
     );
 
+    /**
+     * 检测用户输入是否是不安全的操作
+     */
     @Override
     public GuardrailDecision detect(String input) {
         String normalized = input == null ? "" : input.toLowerCase(Locale.ROOT);
+        // TODO 较为简陋
+        // 判断用户输入是否符合不安全的操作
         for (String phrase : injectionPhrases) {
             if (normalized.contains(phrase.toLowerCase(Locale.ROOT))) {
                 return GuardrailDecision.block(GuardrailStage.INPUT, "prompt injection detected: " + phrase);

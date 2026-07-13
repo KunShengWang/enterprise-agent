@@ -3,8 +3,8 @@ package com.agent.platform.router;
 import java.util.Map;
 
 public record IntentRoute(
-        IntentType type,
-        String reason,
+        IntentType type,// 路由类型
+        String reason,// 选择的原因
         Map<String, Object> slots
 ) {
 

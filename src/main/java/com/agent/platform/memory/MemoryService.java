@@ -19,6 +19,9 @@ public interface MemoryService {
         append(conversationId, null, message);
     }
 
+    /**
+     * 把本轮用户问题保存到会话记忆中
+     */
     void append(String conversationId, String userId, MemoryMessage message);
 
     List<MemorySearchResult> recall(String conversationId, String userId, String query, int limit);

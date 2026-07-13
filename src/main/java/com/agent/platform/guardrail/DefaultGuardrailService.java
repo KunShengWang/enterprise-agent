@@ -33,13 +33,16 @@ public class DefaultGuardrailService implements GuardrailService {
 
     @Override
     public GuardrailDecision checkInput(String userQuestion) {
+        // 检测用户输入是否是不安全的操作
         GuardrailDecision injectionDecision = promptInjectionDetector.detect(userQuestion);
         if (injectionDecision.action() == GuardrailAction.BLOCK) {
             audit("input", injectionDecision, "", Map.of("detector", "prompt_injection"));
             return injectionDecision;
         }
+        // 敏感数据过滤
         SensitiveDataFilterResult filterResult = sensitiveDataFilter.filter(userQuestion);
         if (!filterResult.categories().isEmpty()) {
+            // 用户问题是敏感信息披露请求
             if (isSensitiveDisclosureRequest(userQuestion)) {
                 GuardrailDecision decision = GuardrailDecision.block(
                         GuardrailStage.INPUT,
@@ -61,6 +64,9 @@ public class DefaultGuardrailService implements GuardrailService {
         return decision;
     }
 
+    /**
+     * 敏感信息披露请求
+     */
     private boolean isSensitiveDisclosureRequest(String userQuestion) {
         String normalized = userQuestion == null ? "" : userQuestion.toLowerCase(Locale.ROOT);
         boolean asksToExpose = containsAny(normalized, List.of("原样", "完整", "明文", "不要脱敏", "不脱敏"))
@@ -78,8 +84,12 @@ public class DefaultGuardrailService implements GuardrailService {
         return false;
     }
 
+    /**
+     * 工具执行前单独检查权限和风险级别；高风险副作用不能直接执行
+     */
     @Override
     public GuardrailDecision checkToolCall(ToolDefinition toolDefinition, ToolCallRequest toolCallRequest) {
+        // 工具风险检查
         GuardrailDecision decision = toolPermissionPolicy.check(toolDefinition, toolCallRequest);
         audit(toolDefinition == null ? "unknown" : toolDefinition.name(), decision, "", Map.of(
                 "toolName", toolDefinition == null ? "unknown" : toolDefinition.name(),

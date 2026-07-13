@@ -27,13 +27,17 @@ public class JdbcTraceRecorder implements TraceRecorder {
 
     @Override
     public TraceContext start(String conversationId, String question) {
+        // ① 创建 TraceContext，生成唯一 traceId
         TraceContext context = new TraceContext(UUID.randomUUID().toString(), conversationId, question);
+        // ② 记录开始事件，普通 TraceEvent 用于让人快速查看 Agent 做过什么
         context.addEvent("trace.start", "question received");
+        // ③ 记录可重放事件（用于执行回放），ReplayEvent 重新还原 Agent 的执行过程
         context.addReplayEvent("run.started", "Agent run started", Map.of(
                 "traceId", context.traceId(),
                 "conversationId", context.conversationId(),
                 "question", question == null ? "" : question
         ));
+        // ④ 开启根 span：agent.run
         recordSpan(context, "agent.run", TraceSpanKind.AGENT, TraceSpanStatus.STARTED, "agent run started",
                 0, question, "", "", Map.of("conversationId", conversationId));
         return context;

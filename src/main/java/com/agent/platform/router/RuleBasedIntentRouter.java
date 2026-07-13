@@ -17,12 +17,16 @@ public class RuleBasedIntentRouter implements IntentRouter {
 
     private final Pattern incidentLevelPattern = Pattern.compile("\\bP[0-3]\\b", Pattern.CASE_INSENSITIVE);
 
+    /**
+     * 根据用户问题进行路由判断，选择对应的意图类型
+     */
     @Override
     public IntentRoute route(AgentRequest request, ConversationMemory memory) {
         String question = request.question() == null ? "" : request.question().trim();
         if (question.isBlank()) {
             return new IntentRoute(IntentType.CLARIFY, "empty question needs clarification", Map.of());
         }
+        // 用户的问题是简单消息
         if (isSmallTalk(question)) {
             return new IntentRoute(IntentType.CHAT, "small talk or general chat detected", routeSlots(0, 0, 0, null));
         }
@@ -30,6 +34,7 @@ public class RuleBasedIntentRouter implements IntentRouter {
         int ragScore = ragScore(question);
         int toolScore = toolScore(question);
         int clarifyScore = clarifyScore(question);
+        // 根据用户问题选择首选工具
         String toolName = toolScore > 0 ? resolvePreferredTool(question) : null;
         Map<String, Object> slots = routeSlots(ragScore, toolScore, clarifyScore, toolName);
 
@@ -104,6 +109,9 @@ public class RuleBasedIntentRouter implements IntentRouter {
         return containsAny(question, List.of("怎么", "如何", "是什么", "有哪些", "需要哪些", "规则", "流程", "规范", "制度", "手册")) > 0;
     }
 
+    /**
+     * 用户的问题是简单消息
+     */
     private boolean isSmallTalk(String question) {
         String normalized = question.replace("？", "")
                 .replace("?", "")
@@ -123,6 +131,9 @@ public class RuleBasedIntentRouter implements IntentRouter {
                 || normalized.contains("介绍一下你自己");
     }
 
+    /**
+     * 根据用户问题选择首选工具
+     */
     private String resolvePreferredTool(String question) {
         if (containsAny(question, List.of("文件", "目录", "filesystem", "read file", "list directory")) > 0) {
             return null;

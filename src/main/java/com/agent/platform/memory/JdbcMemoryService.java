@@ -49,19 +49,29 @@ public class JdbcMemoryService implements MemoryService {
         this.recallScorer = recallScorer;
     }
 
+    /**
+     * 加载消息，包含近期消息、压缩消息、长期记忆、用户画像和召回消息
+     */
     @Override
     public ConversationMemory load(String conversationId, String userId, String query) {
         String normalizedConversationId = normalizeConversationId(conversationId);
         String normalizedUserId = normalizeUserId(userId);
+        // 确保数据库表已经创建
         ensureSchema();
         try (Connection connection = openConnection()) {
+            // 从数据库读取最近的几条消息
             List<MemoryMessage> recentMessages = readRecentMessages(connection, normalizedConversationId, memoryProperties.getWindowSize());
+            // 读取压缩消息
             String summary = readSummary(connection, normalizedConversationId);
+            // 读取长期记忆
             List<LongTermMemory> longTerm = readLongTermMemories(connection, normalizedConversationId, normalizedUserId, memoryProperties.getLongTermLimit());
+            // 读取用户画像
             UserProfile profile = readUserProfile(connection, normalizedUserId);
+            // 返回的是近期消息、压缩消息、长期记忆和用户画像四类记忆中相关性最高的前 limit 条
             List<MemorySearchResult> recalled = isBlank(query)
                     ? List.of()
                     : recall(normalizedConversationId, normalizedUserId, query, memoryProperties.getRecallLimit());
+            // 包含近期消息、压缩消息、长期记忆、用户画像和召回消息
             return new ConversationMemory(normalizedConversationId, normalizedUserId, recentMessages, summary, longTerm, profile, recalled);
         }
         catch (SQLException exception) {
@@ -69,6 +79,9 @@ public class JdbcMemoryService implements MemoryService {
         }
     }
 
+    /**
+     * 把本轮用户问题保存到会话记忆中
+     */
     @Override
     public void append(String conversationId, String userId, MemoryMessage message) {
         if (message == null || isBlank(message.content())) {
@@ -83,8 +96,11 @@ public class JdbcMemoryService implements MemoryService {
         );
         ensureSchema();
         try (Connection connection = openConnection()) {
+            // 往数据库中插入数据
             insertMessage(connection, normalizedConversationId, normalizedUserId, effectiveMessage);
+            // 提炼用户画像和长期记忆
             extractAndStore(connection, normalizedConversationId, normalizedUserId, effectiveMessage);
+            // 如果消息超出窗口消息大小就进行消息压缩
             updateSummaryIfNeeded(connection, normalizedConversationId, normalizedUserId);
         }
         catch (SQLException exception) {
@@ -99,22 +115,28 @@ public class JdbcMemoryService implements MemoryService {
         ensureSchema();
         try (Connection connection = openConnection()) {
             List<MemorySearchResult> results = new ArrayList<>();
+            // 会话摘要 summary
             addScoredResult(results, query, "summary", normalizedConversationId, readSummary(connection, normalizedConversationId),
                     Map.of("conversationId", normalizedConversationId));
+            // 读取近期 80 条数据
             List<MemoryMessage> recentMessages = readRecentMessages(connection, normalizedConversationId, 80);
+            // 最近消息 message
             for (int index = 0; index < recentMessages.size(); index++) {
                 MemoryMessage message = recentMessages.get(index);
                 addScoredResult(results, query, "message", normalizedConversationId + ":" + index, message.content(),
                         Map.of("role", message.role(), "createdAt", message.createdAt()));
             }
+            // 长期记忆 long_term
             for (LongTermMemory memory : readLongTermMemories(connection, normalizedConversationId, normalizedUserId, memoryProperties.getLongTermLimit())) {
                 addScoredResult(results, query, "long_term", memory.memoryId(), memory.content(),
                         Map.of("category", memory.category(), "confidence", memory.confidence()));
             }
+            // 用户画像 user_profile
             for (UserProfileItem item : readUserProfile(connection, normalizedUserId).items()) {
                 addScoredResult(results, query, "user_profile", normalizedUserId + ":" + item.key(), item.key() + "=" + item.value(),
                         Map.of("key", item.key(), "source", item.source()));
             }
+            // 返回的是四类记忆中相关性最高的前 limit 条
             return results.stream()
                     .filter(result -> result.score() > 0)
                     .sorted(Comparator.comparingDouble(MemorySearchResult::score).reversed())
@@ -226,6 +248,9 @@ public class JdbcMemoryService implements MemoryService {
         }
     }
 
+    /**
+     * 确保数据库表已经创建
+     */
     private void ensureSchema() {
         if (schemaReady.get()) {
             return;
@@ -288,6 +313,9 @@ public class JdbcMemoryService implements MemoryService {
         }
     }
 
+    /**
+     * 往数据库中插入数据
+     */
     private void insertMessage(Connection connection, String conversationId, String userId, MemoryMessage message) throws SQLException {
         String sql = """
                 INSERT INTO agent_memory_message(conversation_id, user_id, role, content, created_at)
@@ -303,10 +331,15 @@ public class JdbcMemoryService implements MemoryService {
         }
     }
 
+    /**
+     * 提炼用户画像和长期记忆
+     */
     private void extractAndStore(Connection connection, String conversationId, String userId, MemoryMessage message) throws SQLException {
+        // 提炼用户画像和长期记忆
         MemoryExtraction extraction = memoryExtractor.extract(conversationId, userId, message);
         for (LongTermMemoryDraft draft : extraction.longTermMemories()) {
             Instant now = Instant.now();
+            // 插入长期记忆
             insertLongTermMemory(connection, new LongTermMemory(
                     UUID.randomUUID().toString(),
                     conversationId,
@@ -318,11 +351,15 @@ public class JdbcMemoryService implements MemoryService {
                     now
             ));
         }
+        // 添加用户画像
         for (UserProfileItem item : extraction.profileItems()) {
             upsertProfileItem(connection, userId, item);
         }
     }
 
+    /**
+     * 插入长期记忆
+     */
     private void insertLongTermMemory(Connection connection, LongTermMemory memory) throws SQLException {
         String sql = """
                 INSERT INTO agent_long_term_memory(memory_id, conversation_id, user_id, category, content, confidence, created_at, updated_at)
@@ -341,6 +378,9 @@ public class JdbcMemoryService implements MemoryService {
         }
     }
 
+    /**
+     * 添加用户画像
+     */
     private void upsertProfileItem(Connection connection, String userId, UserProfileItem item) throws SQLException {
         if (item == null || isBlank(item.key()) || isBlank(item.value())) {
             return;
@@ -363,11 +403,18 @@ public class JdbcMemoryService implements MemoryService {
         }
     }
 
+    /**
+     * 如果消息超出窗口消息大小就进行消息压缩
+     */
     private void updateSummaryIfNeeded(Connection connection, String conversationId, String userId) throws SQLException {
+        // 查询总共有多少用户消息数
         int totalMessages = (int) count(connection, "SELECT COUNT(*) FROM agent_memory_message WHERE conversation_id = ?", conversationId);
+        // 读取压缩消息
         SummaryState state = readSummaryState(connection, conversationId);
         int trigger = Math.max(2, memoryProperties.getSummaryTriggerMessages());
+        // 窗口大小
         int windowSize = Math.max(1, memoryProperties.getWindowSize());
+        // 要总结的消息数
         int targetSummarizedCount = Math.max(0, totalMessages - windowSize);
         int unsummarizedCount = targetSummarizedCount - state.summarizedMessageCount();
         if (unsummarizedCount < trigger) {
@@ -377,10 +424,15 @@ public class JdbcMemoryService implements MemoryService {
         if (messagesToSummarize.isEmpty()) {
             return;
         }
+        // 压缩消息
         String nextSummary = conversationSummarizer.summarize(state.summary(), messagesToSummarize, memoryProperties.getSummaryMaxChars());
+        // 插入/更新消息压缩
         upsertSummary(connection, conversationId, userId, nextSummary, targetSummarizedCount);
     }
 
+    /**
+     * 读取压缩消息
+     */
     private SummaryState readSummaryState(Connection connection, String conversationId) throws SQLException {
         String sql = """
                 SELECT summary, summarized_message_count
@@ -398,10 +450,17 @@ public class JdbcMemoryService implements MemoryService {
         }
     }
 
+    /**
+     * 读取压缩消息
+     */
     private String readSummary(Connection connection, String conversationId) throws SQLException {
+        // 读取压缩消息
         return readSummaryState(connection, conversationId).summary();
     }
 
+    /**
+     * 插入/更新消息压缩
+     */
     private void upsertSummary(Connection connection, String conversationId, String userId, String summary, int summarizedMessageCount) throws SQLException {
         String sql = """
                 INSERT INTO agent_memory_summary(conversation_id, user_id, summary, summarized_message_count, updated_at)
@@ -416,12 +475,15 @@ public class JdbcMemoryService implements MemoryService {
             statement.setString(1, conversationId);
             statement.setString(2, userId);
             statement.setString(3, summary);
-            statement.setInt(4, summarizedMessageCount);
+            statement.setInt(4, summarizedMessageCount);// 总结的消息数
             statement.setTimestamp(5, Timestamp.from(Instant.now()));
             statement.executeUpdate();
         }
     }
 
+    /**
+     * 从数据库读取最近的几条消息
+     */
     private List<MemoryMessage> readRecentMessages(Connection connection, String conversationId, int limit) throws SQLException {
         String sql = """
                 SELECT role, content, created_at
@@ -475,6 +537,9 @@ public class JdbcMemoryService implements MemoryService {
         );
     }
 
+    /**
+     * 读取长期记忆
+     */
     private List<LongTermMemory> readLongTermMemories(Connection connection, String conversationId, String userId, int limit) throws SQLException {
         String sql = """
                 SELECT memory_id, conversation_id, user_id, category, content, confidence, created_at, updated_at
@@ -506,6 +571,9 @@ public class JdbcMemoryService implements MemoryService {
         }
     }
 
+    /**
+     * 读取用户画像
+     */
     private UserProfile readUserProfile(Connection connection, String userId) throws SQLException {
         String sql = """
                 SELECT profile_key, profile_value, source, updated_at

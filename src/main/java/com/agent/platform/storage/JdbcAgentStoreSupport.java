@@ -82,7 +82,11 @@ public class JdbcAgentStoreSupport {
         }
     }
 
+    /**
+     * 读取数据库中最近的几条数据，类似是 type 确定的，会进行反序列化
+     */
     public <T> List<T> recent(String category, Class<T> type, int limit) {
+        // 确保 agent_store_record 表的存在
         ensureSchema();
         int effectiveLimit = limit == Integer.MAX_VALUE ? Integer.MAX_VALUE : Math.max(1, limit);
         try (Connection connection = openConnection();
@@ -149,6 +153,9 @@ public class JdbcAgentStoreSupport {
         }
     }
 
+    /**
+     * 确保 agent_store_record 表的存在
+     */
     private void ensureSchema() {
         if (schemaReady.get()) {
             return;

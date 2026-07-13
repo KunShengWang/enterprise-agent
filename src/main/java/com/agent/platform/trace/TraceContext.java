@@ -8,31 +8,19 @@ import java.util.Map;
 
 public final class TraceContext {
 
-    private final String traceId;
-
-    private final String conversationId;
-
-    private final String question;
-
-    private final Instant startedAt;
-
-    private final List<TraceEvent> events = new ArrayList<>();
-
-    private final List<TraceSpan> spans = new ArrayList<>();
-
-    private final List<TraceReplayEvent> replayEvents = new ArrayList<>();
-
-    private final Map<String, Object> metrics = new LinkedHashMap<>();
-
-    private String status = "RUNNING";
-
+    private final String traceId;           // 全局唯一 ID
+    private final String conversationId;    // 会话 ID（同会话多轮对话共享）
+    private final String question;          // 用户原始问题
+    private final Instant startedAt;        // 开始时间戳
+    private final List<TraceEvent> events = new ArrayList<>();  // 阶段事件（时间线）
+    private final List<TraceSpan> spans = new ArrayList<>();    // 分段计时（类似 OpenTelemetry span）
+    private final List<TraceReplayEvent> replayEvents = new ArrayList<>();  // 可回放事件
+    private final Map<String, Object> metrics = new LinkedHashMap<>();          // 自定义指标
+    private String status = "RUNNING";                  // 状态机
     private String failureReason = "";
-
-    private long estimatedPromptTokens;
-
+    private long estimatedPromptTokens;                 // token 累计
     private long estimatedCompletionTokens;
-
-    private double estimatedCost;
+    private double estimatedCost;                       // 成本累计
 
     public TraceContext(String traceId, String conversationId, String question) {
         this.traceId = traceId;

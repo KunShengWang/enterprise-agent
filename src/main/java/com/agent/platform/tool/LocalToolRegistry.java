@@ -63,6 +63,9 @@ public class LocalToolRegistry implements ToolRegistry {
         this.mcpToolGatewayProvider = mcpToolGatewayProvider;
     }
 
+    /**
+     * 寻找服务商的工具
+     */
     @Override
     public List<ToolDefinition> listTools() {
         List<ToolDefinition> mergedTools = new ArrayList<>(tools);
@@ -72,6 +75,9 @@ public class LocalToolRegistry implements ToolRegistry {
         return List.copyOf(mergedTools);
     }
 
+    /**
+     * 根据工具名称寻找工具
+     */
     @Override
     public Optional<ToolDefinition> findTool(String toolName) {
         return listTools().stream()

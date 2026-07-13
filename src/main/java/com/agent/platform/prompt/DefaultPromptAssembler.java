@@ -17,6 +17,9 @@ import java.util.Map;
 @Service
 public class DefaultPromptAssembler implements PromptAssembler {
 
+    /**
+     * 把 System Prompt、用户问题、Memory、RAG 证据和工具结果统一组装
+     */
     @Override
     public PromptRequest assemble(AgentRequest request,
                                   ConversationMemory memory,

@@ -26,6 +26,9 @@ public class JdbcSkillRegistry implements SkillRegistry {
         this.store = store;
     }
 
+    /**
+     * 列出 skills
+     */
     @Override
     public List<SkillDefinition> list() {
         seedDefaultsIfNeeded();
@@ -54,16 +57,21 @@ public class JdbcSkillRegistry implements SkillRegistry {
         return store.delete(CATEGORY, name);
     }
 
+    /**
+     * 根据用户问题选出评分较高的几个 skill
+     */
     @Override
     public List<SkillMatch> search(String query, int limit) {
         String normalizedQuery = query == null ? "" : query.toLowerCase(Locale.ROOT);
         List<SkillMatch> matches = new ArrayList<>();
         for (SkillDefinition skill : list()) {
+            // 根据用户问题对 skills 进行打分
             SkillMatch match = match(skill, normalizedQuery);
             if (match.score() > 0) {
                 matches.add(match);
             }
         }
+        // 选出评分较高的几个 skill
         return matches.stream()
                 .sorted((left, right) -> Double.compare(right.score(), left.score()))
                 .limit(Math.max(1, limit))

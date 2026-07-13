@@ -8,6 +8,9 @@ import java.util.List;
 
 public interface ToolCallPlanner {
 
+    /**
+     * 让 LLM 根据情况选择工具
+     */
     ToolCallPlan plan(AgentRequest request,
                       ConversationMemory memory,
                       IntentRoute route,

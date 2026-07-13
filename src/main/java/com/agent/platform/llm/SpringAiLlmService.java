@@ -50,7 +50,9 @@ public class SpringAiLlmService implements LlmService {
     public String complete(PromptRequest promptRequest) {
         ChatResponse response;
         try {
+            // 调用 LLM 并在 LLM 调用失败时进行有限次重试
             response = callWithRetry(toSpringPrompt(promptRequest));
+            // 从 LLM 返回信息中提取 token 调用额度并保存
             lastUsage.set(extractUsage(response));
         }
         catch (RuntimeException exception) {
@@ -117,6 +119,9 @@ public class SpringAiLlmService implements LlmService {
         );
     }
 
+    /**
+     * 构建 Spring 需要的 Prompt
+     */
     private Prompt toSpringPrompt(PromptRequest promptRequest) {
         List<org.springframework.ai.chat.messages.Message> messages = new ArrayList<>();
         if (promptRequest.systemPrompt() != null && !promptRequest.systemPrompt().isBlank()) {
@@ -126,6 +131,9 @@ public class SpringAiLlmService implements LlmService {
         return new Prompt(messages);
     }
 
+    /**
+     * 调用 LLM 并在 LLM 调用失败时进行有限次重试
+     */
     private ChatResponse callWithRetry(Prompt prompt) {
         int maxAttempts = Math.max(1, resilienceProperties.getLlm().getMaxAttempts());
         RuntimeException lastError = null;
@@ -158,6 +166,9 @@ public class SpringAiLlmService implements LlmService {
         }
     }
 
+    /**
+     * 从 LLM 返回信息中提取 token 调用额度
+     */
     private LlmUsage extractUsage(ChatResponse response) {
         if (response == null) {
             return new LlmUsage(0, 0, 0, 0, 0, "", "spring-ai-empty");

@@ -10,6 +10,9 @@ import java.util.Map;
 @Component
 public class DefaultToolPermissionPolicy implements ToolPermissionPolicy {
 
+    /**
+     * 工具风险检查
+     */
     @Override
     public GuardrailDecision check(ToolDefinition toolDefinition, ToolCallRequest toolCallRequest) {
         if (toolDefinition == null) {

@@ -7,6 +7,9 @@ import java.util.List;
 @Service
 public class RuleBasedConversationSummarizer implements ConversationSummarizer {
 
+    /**
+     * 压缩消息
+     */
     @Override
     public String summarize(String previousSummary, List<MemoryMessage> messages, int maxChars) {
         StringBuilder builder = new StringBuilder();
@@ -23,14 +26,21 @@ public class RuleBasedConversationSummarizer implements ConversationSummarizer {
                     .append(compact(message.content(), 180))
                     .append('\n');
         }
+        // 去除超出范围的字符
         return trimToMaxChars(builder.toString().trim(), Math.max(200, maxChars));
     }
 
+    /**
+     * 压缩消息
+     */
     private String compact(String content, int maxChars) {
         String compacted = content.replaceAll("\\s+", " ").trim();
         return trimToMaxChars(compacted, maxChars);
     }
 
+    /**
+     * 去除超出范围的字符
+     */
     private String trimToMaxChars(String value, int maxChars) {
         if (value == null || value.length() <= maxChars) {
             return value == null ? "" : value;

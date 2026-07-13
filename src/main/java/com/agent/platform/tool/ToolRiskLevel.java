@@ -4,5 +4,5 @@ public enum ToolRiskLevel {
     LOW,
     MEDIUM,
     HIGH,
-    CRITICAL
+    CRITICAL// 严重
 }

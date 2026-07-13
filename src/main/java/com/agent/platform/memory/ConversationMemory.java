@@ -5,10 +5,10 @@ import java.util.List;
 public record ConversationMemory(
         String conversationId,
         String userId,
-        List<MemoryMessage> messages,
-        String summary,
-        List<LongTermMemory> longTermMemories,
-        UserProfile userProfile,
+        List<MemoryMessage> messages,// 对话消息
+        String summary,// 压缩消息
+        List<LongTermMemory> longTermMemories,// 长期记忆
+        UserProfile userProfile,// 用户画像
         List<MemorySearchResult> recalledMemories
 ) {
 

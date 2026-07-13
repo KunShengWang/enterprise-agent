@@ -93,11 +93,17 @@ public class AgentController {
 
     @PostMapping("/runs")
     public Mono<ApiResponse<AgentResponse>> run(@Valid @RequestBody AgentRequest request) {
+        // @Valid 会在进入方法前校验 AgentRequest；这里先按 userId 做入口限流，
+        // 避免单个用户在一分钟内创建过多 Agent Run 和模型调用。
         RateLimitResult limit = rateLimitService.acquire(rateLimitKey(request));
         if (!limit.allowed()) {
             return Mono.just(ApiResponse.failure(com.agent.platform.common.ErrorCode.TOO_MANY_REQUESTS,
                     "请求过于频繁，请稍后重试。limit=" + limit.limit() + "/minute"));
         }
+
+        // agentExecutor.execute() 是同步阻塞流程，内部可能访问 PostgreSQL、Embedding API 和 LLM。
+        // Mono.fromSupplier 让它在 WebFlux 订阅时才真正执行；boundedElastic 用于承载这些阻塞操作，
+        // 避免占用 Netty EventLoop 线程。当前实际注入的是 @Primary 的 V1AgentExecutor。
         return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.execute(request)))
                 .subscribeOn(Schedulers.boundedElastic());
     }

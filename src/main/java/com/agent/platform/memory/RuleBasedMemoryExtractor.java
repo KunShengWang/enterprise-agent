@@ -17,6 +17,9 @@ public class RuleBasedMemoryExtractor implements MemoryExtractor {
 
     private static final Pattern MY_FIELD_PATTERN = Pattern.compile("我的([^，。,.!！?？\\s]{1,12})是([^，。,.!！?？]{1,80})");
 
+    /**
+     * 提炼用户画像和长期记忆
+     */
     @Override
     public MemoryExtraction extract(String conversationId, String userId, MemoryMessage message) {
         if (message == null || !"user".equalsIgnoreCase(message.role()) || isBlank(message.content())) {
@@ -26,11 +29,13 @@ public class RuleBasedMemoryExtractor implements MemoryExtractor {
         Instant now = message.createdAt() == null ? Instant.now() : message.createdAt();
         List<LongTermMemoryDraft> longTermMemories = new ArrayList<>();
         List<UserProfileItem> profileItems = new ArrayList<>();
-
+        // 用户说：我叫张三，会提取用户画像：key = name；value = 张三
         match(NAME_PATTERN, content)
                 .forEach(value -> profileItems.add(new UserProfileItem("name", value, "message:" + conversationId, now)));
+        // 用户说：我是 Java 后端开发，会提炼：key = identity；value = Java 后端开发
         match(IDENTITY_PATTERN, content)
                 .forEach(value -> profileItems.add(new UserProfileItem("identity", value, "message:" + conversationId, now)));
+        // 用户说：我的部门是研发部。key = department；value = 研发部
         Matcher fieldMatcher = MY_FIELD_PATTERN.matcher(content);
         while (fieldMatcher.find()) {
             String key = normalizeProfileKey(fieldMatcher.group(1));
@@ -39,6 +44,7 @@ public class RuleBasedMemoryExtractor implements MemoryExtractor {
                 profileItems.add(new UserProfileItem(key, value, "message:" + conversationId, now));
             }
         }
+        // 我喜欢简洁回答，key = preference；value = 简洁回答
         if (content.contains("我喜欢")) {
             profileItems.add(new UserProfileItem("preference", after(content, "我喜欢"), "message:" + conversationId, now));
         }

@@ -33,6 +33,9 @@ public class LlmToolCallPlanner implements ToolCallPlanner {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 让 LLM 根据情况选择工具
+     */
     @Override
     public ToolCallPlan plan(AgentRequest request,
                              ConversationMemory memory,
@@ -43,6 +46,7 @@ public class LlmToolCallPlanner implements ToolCallPlanner {
             return ToolCallPlan.noTool("no available tools", "fallback");
         }
         try {
+            // 让 LLM 根据情况选择工具并解析 LLM 返回的结果
             ToolCallPlan llmPlan = parsePlan(callPlannerModel(request, route, availableTools, previousResults), availableTools);
             if (llmPlan.shouldCallTool()) {
                 return llmPlan;
@@ -54,6 +58,9 @@ public class LlmToolCallPlanner implements ToolCallPlanner {
         return fallbackPlan(request, route, availableTools, previousResults);
     }
 
+    /**
+     * 让 LLM 根据情况选择工具
+     */
     private String callPlannerModel(AgentRequest request,
                                     IntentRoute route,
                                     List<ToolDefinition> availableTools,
