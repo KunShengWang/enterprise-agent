@@ -1,0 +1,22 @@
+package com.agent.platform.runtime;
+
+/**
+ * Runtime 对外发布且先落库的统一事件类型。
+ */
+public enum AgentEventType {
+    RUN_STARTED,
+    CONTEXT_PREPARED,
+    CONTEXT_COMPACTED,
+    MODEL_STARTED,
+    MODEL_DELTA,
+    MODEL_COMPLETED,
+    TOOL_REQUESTED,
+    POLICY_DECIDED,
+    APPROVAL_REQUIRED,
+    TOOL_STARTED,
+    TOOL_COMPLETED,
+    RUN_COMPLETED,
+    RUN_FAILED,
+    RUN_CANCELLED,
+    HEARTBEAT
+}

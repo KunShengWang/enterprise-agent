@@ -7,9 +7,19 @@ public class AgentProperties {
 
     private boolean mockMode = false;
 
+    private int maxTurnsPerRun = 12;
+
     private int maxModelCallsPerRun = 8;
 
     private int maxToolCallsPerRun = 6;
+
+    private long maxInputTokensPerRun = 24_000;
+
+    private long maxOutputTokensPerRun = 8_000;
+
+    private double maxEstimatedCostPerRun = 1.0;
+
+    private long maxRunDurationMillis = 120_000;
 
     private int maxToolExecutionAttempts = 2;
 
@@ -35,6 +45,14 @@ public class AgentProperties {
         return maxModelCallsPerRun;
     }
 
+    public int getMaxTurnsPerRun() {
+        return maxTurnsPerRun;
+    }
+
+    public void setMaxTurnsPerRun(int maxTurnsPerRun) {
+        this.maxTurnsPerRun = maxTurnsPerRun;
+    }
+
     public void setMaxModelCallsPerRun(int maxModelCallsPerRun) {
         this.maxModelCallsPerRun = maxModelCallsPerRun;
     }
@@ -45,6 +63,38 @@ public class AgentProperties {
 
     public void setMaxToolCallsPerRun(int maxToolCallsPerRun) {
         this.maxToolCallsPerRun = maxToolCallsPerRun;
+    }
+
+    public long getMaxInputTokensPerRun() {
+        return maxInputTokensPerRun;
+    }
+
+    public void setMaxInputTokensPerRun(long maxInputTokensPerRun) {
+        this.maxInputTokensPerRun = maxInputTokensPerRun;
+    }
+
+    public long getMaxOutputTokensPerRun() {
+        return maxOutputTokensPerRun;
+    }
+
+    public void setMaxOutputTokensPerRun(long maxOutputTokensPerRun) {
+        this.maxOutputTokensPerRun = maxOutputTokensPerRun;
+    }
+
+    public double getMaxEstimatedCostPerRun() {
+        return maxEstimatedCostPerRun;
+    }
+
+    public void setMaxEstimatedCostPerRun(double maxEstimatedCostPerRun) {
+        this.maxEstimatedCostPerRun = maxEstimatedCostPerRun;
+    }
+
+    public long getMaxRunDurationMillis() {
+        return maxRunDurationMillis;
+    }
+
+    public void setMaxRunDurationMillis(long maxRunDurationMillis) {
+        this.maxRunDurationMillis = maxRunDurationMillis;
     }
 
     public int getMaxToolExecutionAttempts() {
