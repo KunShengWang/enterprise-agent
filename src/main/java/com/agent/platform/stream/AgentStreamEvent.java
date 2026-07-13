@@ -7,6 +7,7 @@ public record AgentStreamEvent(
         String eventId,
         String traceId,
         String conversationId,
+        long sequence,
         String type,
         String content,
         Instant createdAt,

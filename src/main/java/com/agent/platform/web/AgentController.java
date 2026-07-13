@@ -149,6 +149,7 @@ public class AgentController {
                     java.util.UUID.randomUUID().toString(),
                     "",
                     normalizeConversationId(request.conversationId()),
+                    0,
                     "error",
                     "请求过于频繁，请稍后重试。limit=" + limit.limit() + "/minute",
                     java.time.Instant.now(),

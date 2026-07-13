@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -32,13 +33,21 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
 
     @Override
     public Flux<AgentStreamEvent> stream(AgentRequest request) {
-        return Flux.<AgentStreamEvent>create(sink -> {
-                    AtomicReference<String> runId = new AtomicReference<>();
+        AtomicReference<String> runId = new AtomicReference<>();
+        AtomicLong lastSequence = new AtomicLong(0);
+        Flux<AgentStreamEvent> source = Flux.<AgentStreamEvent>create(sink -> {
                     AtomicBoolean cancelled = new AtomicBoolean(false);
+                    long heartbeatSeconds = Math.max(1, properties.getStreamHeartbeatSeconds());
+                    Disposable heartbeat = Schedulers.parallel().schedulePeriodically(() -> {
+                        if (!sink.isCancelled()) {
+                            sink.next(heartbeatEvent(request, runId.get(), lastSequence.get()));
+                        }
+                    }, heartbeatSeconds, heartbeatSeconds, java.util.concurrent.TimeUnit.SECONDS);
                     Disposable task = Schedulers.boundedElastic().schedule(() -> {
                         try {
                             runtime.run(request, event -> {
                                 runId.compareAndSet(null, event.runId());
+                                lastSequence.accumulateAndGet(event.sequence(), Math::max);
                                 if (cancelled.get()) {
                                     runtime.cancel(event.runId());
                                 }
@@ -56,6 +65,9 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                                 sink.complete();
                             }
                         }
+                        finally {
+                            heartbeat.dispose();
+                        }
                     });
                     sink.onCancel(() -> {
                         cancelled.set(true);
@@ -63,16 +75,20 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                         if (activeRunId != null && !activeRunId.isBlank()) {
                             runtime.cancel(activeRunId);
                         }
+                        heartbeat.dispose();
                         task.dispose();
                     });
-                    sink.onDispose(task::dispose);
-                }, FluxSinkOverflowStrategy.buffer())
+                    sink.onDispose(() -> {
+                        heartbeat.dispose();
+                        task.dispose();
+                    });
+                }, reactor.core.publisher.FluxSink.OverflowStrategy.IGNORE);
+        return source
                 .onBackpressureBuffer(
                         Math.max(16, properties.getStreamBackpressureBufferSize()),
-                        dropped -> {
-                        },
-                        BufferOverflowStrategy.DROP_OLDEST
-                );
+                        BufferOverflowStrategy.ERROR
+                )
+                .onErrorResume(error -> Flux.just(gapEvent(request, runId.get(), lastSequence.get(), error)));
     }
 
     private AgentStreamEvent toStreamEvent(AgentEvent event) {
@@ -80,6 +96,7 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                 event.eventId(),
                 event.runId(),
                 event.sessionId(),
+                event.sequence(),
                 event.type().name().toLowerCase(java.util.Locale.ROOT),
                 event.content(),
                 event.createdAt(),
@@ -95,6 +112,7 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                 UUID.randomUUID().toString(),
                 "",
                 sessionId,
+                0,
                 "transport_error",
                 "Agent Runtime 事件流异常终止。",
                 Instant.now(),
@@ -102,13 +120,40 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
         );
     }
 
-    /**
-     * Reactor 3.8 的 Flux.create 仍通过 OverflowStrategy 选择生产侧策略，封装在这里
-     * 避免 Runtime 感知 Reactor 类型。
-     */
-    private static final class FluxSinkOverflowStrategy {
-        private static reactor.core.publisher.FluxSink.OverflowStrategy buffer() {
-            return reactor.core.publisher.FluxSink.OverflowStrategy.BUFFER;
-        }
+    private AgentStreamEvent heartbeatEvent(AgentRequest request, String runId, long sequence) {
+        return new AgentStreamEvent(
+                UUID.randomUUID().toString(),
+                runId == null ? "" : runId,
+                sessionId(request),
+                sequence,
+                "heartbeat",
+                "keep-alive",
+                Instant.now(),
+                Map.of("persisted", false, "lastPersistedSequence", sequence)
+        );
+    }
+
+    private AgentStreamEvent gapEvent(AgentRequest request, String runId, long sequence, Throwable error) {
+        return new AgentStreamEvent(
+                UUID.randomUUID().toString(),
+                runId == null ? "" : runId,
+                sessionId(request),
+                sequence,
+                "stream_gap",
+                "SSE 消费速度不足，事件流已终止，请按持久化序号重新加载。",
+                Instant.now(),
+                Map.of(
+                        "persisted", false,
+                        "lastPersistedSequence", sequence,
+                        "replayRequired", true,
+                        "errorType", error.getClass().getSimpleName()
+                )
+        );
+    }
+
+    private String sessionId(AgentRequest request) {
+        return request == null || request.conversationId() == null || request.conversationId().isBlank()
+                ? "default-conversation"
+                : request.conversationId().trim();
     }
 }
