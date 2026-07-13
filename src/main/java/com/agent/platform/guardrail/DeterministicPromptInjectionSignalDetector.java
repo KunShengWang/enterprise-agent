@@ -1,25 +1,18 @@
 package com.agent.platform.guardrail;
 
 import org.springframework.stereotype.Component;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+/**
+ * High-recall deterministic signal detector. A signature is evidence for semantic review, not final intent proof.
+ */
 @Component
-public class RuleBasedPromptInjectionDetector implements PromptInjectionDetector {
+public class DeterministicPromptInjectionSignalDetector implements PromptInjectionDetector {
 
     private final PromptInputNormalizer normalizer;
-
-    public RuleBasedPromptInjectionDetector() {
-        this(new PromptInputNormalizer());
-    }
-
-    @Autowired
-    public RuleBasedPromptInjectionDetector(PromptInputNormalizer normalizer) {
-        this.normalizer = normalizer;
-    }
 
     private final List<String> injectionPhrases = List.of(
             "忽略之前的指令",
@@ -46,9 +39,10 @@ public class RuleBasedPromptInjectionDetector implements PromptInjectionDetector
             Pattern.compile("(reveal|show|dump).*(system prompt|developer message|tool config|secrets)", Pattern.CASE_INSENSITIVE)
     );
 
-    /**
-     * 检测用户输入是否是不安全的操作
-     */
+    public DeterministicPromptInjectionSignalDetector(PromptInputNormalizer normalizer) {
+        this.normalizer = normalizer;
+    }
+
     @Override
     public GuardrailDecision detect(String input) {
         NormalizedPrompt normalizedPrompt = normalizer.normalize(input);
@@ -56,15 +50,21 @@ public class RuleBasedPromptInjectionDetector implements PromptInjectionDetector
             String normalized = variant.toLowerCase(Locale.ROOT);
             for (String phrase : injectionPhrases) {
                 if (normalized.contains(phrase.toLowerCase(Locale.ROOT))) {
-                    return GuardrailDecision.block(GuardrailStage.INPUT, "prompt injection signature: " + phrase);
+                    return GuardrailDecision.requireApproval(
+                            GuardrailStage.INPUT,
+                            "prompt injection signal phrase=" + phrase
+                    );
                 }
             }
             for (Pattern pattern : injectionPatterns) {
                 if (pattern.matcher(variant).find()) {
-                    return GuardrailDecision.block(GuardrailStage.INPUT, "prompt injection pattern: " + pattern.pattern());
+                    return GuardrailDecision.requireApproval(
+                            GuardrailStage.INPUT,
+                            "prompt injection signal pattern=" + pattern.pattern()
+                    );
                 }
             }
         }
-        return GuardrailDecision.allow(GuardrailStage.INPUT, "no deterministic injection signature detected");
+        return GuardrailDecision.allow(GuardrailStage.INPUT, "no deterministic injection signal detected");
     }
 }

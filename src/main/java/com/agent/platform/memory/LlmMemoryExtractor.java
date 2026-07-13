@@ -29,16 +29,13 @@ public class LlmMemoryExtractor implements MemoryExtractor {
     private final LlmService llmService;
     private final ObjectMapper objectMapper;
     private final SensitiveDataFilter sensitiveDataFilter;
-    private final RuleBasedMemoryExtractor fallback;
 
     public LlmMemoryExtractor(LlmService llmService,
                               ObjectMapper objectMapper,
-                              SensitiveDataFilter sensitiveDataFilter,
-                              RuleBasedMemoryExtractor fallback) {
+                              SensitiveDataFilter sensitiveDataFilter) {
         this.llmService = llmService;
         this.objectMapper = objectMapper;
         this.sensitiveDataFilter = sensitiveDataFilter;
-        this.fallback = fallback;
     }
 
     @Override
@@ -64,7 +61,8 @@ public class LlmMemoryExtractor implements MemoryExtractor {
             return parseExtraction(raw, conversationId, message.createdAt());
         }
         catch (RuntimeException exception) {
-            return fallback.extract(conversationId, userId, message);
+            // Extraction is a persistence decision. On model/protocol failure, do not guess and write false memory.
+            return MemoryExtraction.empty();
         }
     }
 
