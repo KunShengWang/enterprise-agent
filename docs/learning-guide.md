@@ -23,6 +23,8 @@
 - ToolResult 怎样返回模型？
 - 为什么模型不能直接绕过审批？
 - 达到最大轮次、超时、取消和上下文溢出时分别发生什么？
+- 为什么审批恢复必须使用原 Profile、累计 BudgetSnapshot 和原截止时间？
+- 为什么过期工具执行检查点不能自动重放？
 
 ## 第二阶段：消息时间线和 Context
 
@@ -121,5 +123,7 @@ Memory：
 3. `multiagent/DefaultMultiAgentOrchestrator.java`
 4. `multiagent/SubAgentProfileFactory.java`
 5. `multiagent/SubAgentRunner.java`
+
+额外观察 SSE 的 `sequence`、`heartbeat.lastPersistedSequence` 和 `stream_gap.replayRequired`，理解“实时通知”和“数据库事实源”之间的区别。
 
 最终你应能自己画出 [当前架构](architecture.md)，并用一次“高风险工具审批后恢复”的 Run 贯穿 Session、Message、Event、Approval、ToolExecution 和 Trace。

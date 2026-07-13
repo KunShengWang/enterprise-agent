@@ -10,6 +10,8 @@ import com.agent.platform.resilience.RateLimitService;
 import com.agent.platform.runtime.AgentRunRecord;
 import com.agent.platform.runtime.AgentRunStore;
 import com.agent.platform.runtime.AgentRuntime;
+import com.agent.platform.runtime.AgentEvent;
+import com.agent.platform.runtime.AgentTimelineStore;
 import com.agent.platform.stream.AgentStreamEvent;
 import com.agent.platform.stream.StreamingAgentExecutor;
 import jakarta.validation.Valid;
@@ -44,19 +46,22 @@ public class AgentController {
 
     private final AgentRunStore agentRunStore;
     private final AgentRuntime agentRuntime;
+    private final AgentTimelineStore timelineStore;
 
     public AgentController(AgentExecutor agentExecutor,
                            AgentProperties agentProperties,
                            StreamingAgentExecutor streamingAgentExecutor,
                            RateLimitService rateLimitService,
                            AgentRunStore agentRunStore,
-                           AgentRuntime agentRuntime) {
+                           AgentRuntime agentRuntime,
+                           AgentTimelineStore timelineStore) {
         this.agentExecutor = agentExecutor;
         this.agentProperties = agentProperties;
         this.streamingAgentExecutor = streamingAgentExecutor;
         this.rateLimitService = rateLimitService;
         this.agentRunStore = agentRunStore;
         this.agentRuntime = agentRuntime;
+        this.timelineStore = timelineStore;
     }
 
     @GetMapping("/health")
@@ -98,6 +103,16 @@ public class AgentController {
                         com.agent.platform.common.ErrorCode.NOT_FOUND,
                         "agent run not found: " + runId
                 )))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @GetMapping("/runs/{runId}/events")
+    public Mono<ApiResponse<List<AgentEvent>>> runEvents(@PathVariable String runId,
+                                                         @RequestParam(defaultValue = "-1") long afterSequence,
+                                                         @RequestParam(defaultValue = "500") int limit) {
+        return Mono.fromSupplier(() -> ApiResponse.success(
+                        timelineStore.loadEventsAfter(runId, afterSequence, Math.max(1, Math.min(limit, 10_000)))
+                ))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 

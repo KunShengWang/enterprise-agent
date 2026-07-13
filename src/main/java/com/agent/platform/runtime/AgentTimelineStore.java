@@ -25,4 +25,6 @@ public interface AgentTimelineStore {
                            AgentEventDraft event);
 
     List<AgentEvent> loadEvents(String runId, int limit);
+
+    List<AgentEvent> loadEventsAfter(String runId, long afterSequence, int limit);
 }

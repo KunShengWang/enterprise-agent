@@ -20,7 +20,7 @@
 
 - `JsonAgentModelGateway` 使用提示词约束的 JSON ToolCall 协议；还没有针对不同模型 Provider 的原生 Tool Calling Adapter。
 - SSE 转发持久化 Runtime 事件，不解析模型 JSON 的逐 Token 增量；`MODEL_DELTA` 尚未成为主路径事件。
-- Token/Usage 优先采用 Provider 返回值，无法取得时使用估算并标记 source；成本配置不是财务账单。
+- Token/Usage 优先采用 Provider 返回值，无法取得时使用估算并标记 source；成本按运维配置价格估算，默认关闭，仍不是财务账单。
 - Sub-Agent 并行使用单进程有界线程池，没有消息队列、跨节点调度、优先级和长期任务接管。
 - RAG 文档加载仅支持 UTF-8 文本格式，未接入 PDF/DOCX/PPTX OCR 和复杂表格解析。
 - RAG 语义重排调用通用 ChatModel，不是专用 cross-encoder；成本和延迟需要基于真实数据评测。
@@ -32,12 +32,12 @@
 
 - 已验证 `mvn clean test`、Spring Context 启动和现有测试通过。
 - 最终 HTTP 冒烟以 Mock ChatModel 验证 Runtime/数据库/同步/SSE 连接，不代表真实 DeepSeek ToolCall 质量。
-- 当前没有覆盖审批恢复、上下文溢出、多实例租约和副作用不确定状态的系统化自动测试，因此简历不要声称“完善的测试体系”。
+- 已有 11 个测试覆盖 Spring Context、预算/Profile 续接、原子恢复、异常收敛、不确定工具检查点、SSE 心跳和 ToolResult 边界；尚无多实例 PostgreSQL 故障注入与上下文溢出系统测试，因此不要声称“完善的测试体系”。
 
 ## 可以继续做，但只有拿到证据后再写简历
 
 - Testcontainers + PostgreSQL/pgvector 集成测试；
-- 高风险工具审批恢复与幂等故障注入；
+- 高风险工具审批恢复与幂等的真实 PostgreSQL/多实例故障注入；
 - 多实例 Session Lease 竞争验证；
 - 长上下文压缩质量 Eval；
 - 真实模型下 ToolCall 成功率、RAG Recall@K、重排增益、P95 延迟和成本；

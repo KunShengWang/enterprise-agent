@@ -42,7 +42,13 @@ Accept: text/event-stream
 Content-Type: application/json
 ```
 
-事件包括：Run 开始/结束、Context 投影/压缩、模型开始/完成/失败、工具请求、策略判定、审批等待、工具开始/结束、Sub-Agent 开始/结束和心跳。
+事件包括：Run 开始/恢复/结束、Context 投影/压缩、模型开始/完成/失败、工具请求、策略判定、审批等待、工具开始/结束、Sub-Agent 开始/结束和心跳。持久事件包含 `sequence`；心跳携带 `lastPersistedSequence`。收到 `stream_gap` 时应停止消费并按最后序号重新加载持久事件。
+
+```http
+GET /api/agent/runs/{runId}/events?afterSequence=42&limit=500
+```
+
+该接口从 PostgreSQL 返回序号大于 `afterSequence` 的事件，用于 SSE 断线或 `stream_gap` 后补拉。
 
 `/runs/stream` 是兼容的字符串事件视图；新调用方优先使用 `/runs/events` 的结构化 `AgentStreamEvent`。
 
@@ -74,7 +80,7 @@ Content-Type: application/json
 POST /api/agent/runs/{runId}/resume
 ```
 
-恢复不是重新执行整个问题。Runtime 会 claim 等待中的 Run，处理已审批/拒绝的 ToolCall，将 ToolResult 加回原 Session，再继续模型循环。
+恢复不是重新执行整个问题。Runtime 会原子 claim 等待中的 Run，从持久化 Profile 与 BudgetSnapshot 继续；抢占失败者只返回当前状态。对租约已过期的 `RUNNING` Run，Context/Model 检查点可以继续，处于工具副作用检查点时转入人工核对。
 
 ## 4. RAG
 

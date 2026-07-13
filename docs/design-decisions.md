@@ -55,3 +55,21 @@
 原因：避免学习和演示在单进程内看似正常，却无法证明恢复、多实例或重启语义。
 
 例外：Runtime 内部正在执行的 Future、取消句柄和锁条带属于进程资源，不是业务事实；相应取消请求和租约仍持久化。
+
+## ADR-09：恢复必须携带原执行身份和累计预算
+
+决定：Run 持久化 ExecutionProfile、BudgetSnapshot 与 Phase；审批恢复采用原子 claim，崩溃恢复依赖唯一 leaseOwnerId 和过期租约。
+
+原因：恢复不能获得新的权限或预算；工具副作用检查点无法证明结果时必须进入人工核对。
+
+## ADR-10：SSE 是可丢传输，PostgreSQL Event 才是事实
+
+决定：SSE 暴露持久序号、发送心跳并显式报告缓冲缺口；客户端通过 `afterSequence` 补拉。
+
+原因：网络流无法承诺永久可靠，静默丢事件会让客户端形成错误状态。
+
+## ADR-11：模型只接收 ToolResult 有界投影
+
+决定：完整工具原文保存在 ToolExecutionStore；Timeline 只保存有界摘要、哈希和 rawReference，并对 Prompt 结构边界转义。
+
+原因：外部工具结果既可能过大，也是不可信内容，不能直接拼入 Prompt。

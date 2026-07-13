@@ -214,6 +214,11 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
 
     @Override
     public List<AgentEvent> loadEvents(String runId, int limit) {
+        return loadEventsAfter(runId, -1, limit);
+    }
+
+    @Override
+    public List<AgentEvent> loadEventsAfter(String runId, long afterSequence, int limit) {
         if (runId == null || runId.isBlank()) {
             return List.of();
         }
@@ -223,12 +228,13 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
                      SELECT event_id, run_id, session_id, event_sequence, event_type,
                             content, payload_json, created_at
                      FROM agent_runtime_event
-                     WHERE run_id = ?
+                      WHERE run_id = ? AND event_sequence > ?
                      ORDER BY event_sequence ASC
                      LIMIT ?
                      """)) {
             statement.setString(1, runId.trim());
-            statement.setInt(2, Math.max(1, limit));
+            statement.setLong(2, afterSequence);
+            statement.setInt(3, Math.max(1, Math.min(limit, 10_000)));
             List<AgentEvent> events = new ArrayList<>();
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) {

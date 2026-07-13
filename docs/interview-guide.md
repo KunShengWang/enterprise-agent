@@ -60,6 +60,8 @@
 
 - Run 在 `WAITING_APPROVAL` 时保存 pending ToolCall、已完成结果和使用工具。
 - 审批后 claim 同一个 Run，执行或写入拒绝 ToolResult，再继续同一个 Agent Loop。
+- Profile、能力白名单、累计 Token/成本与截止时间都随 Run 持久化，恢复不会重新获得预算或默认权限。
+- 同一个 Run 的每次执行使用唯一 leaseOwnerId；claim 失败者不能继续工具执行。
 - 工具执行按 toolCallId/requestId 声明；已完成调用返回持久化结果。
 - 对“远端可能成功但本地超时”的不确定状态进入 `MANUAL_REVIEW`，不自动重复副作用。
 
@@ -102,7 +104,7 @@
 - 没有内建身份认证和租户管理后台，管理 API 需要外部网关保护。
 - 模型工具协议目前是 JSON Gateway，不是各 Provider 原生 Tool Calling Adapter。
 - SSE 是 Runtime 事件级，未实现结构化 JSON 的逐 Token 增量解析。
-- 测试覆盖仍少，当前证据是干净构建、Spring Context 和手工/冒烟链路，不应声称完善测试体系。
+- 已有少量 Runtime 核心状态测试覆盖预算/Profile 续接、并发 claim、异常收敛、工具检查点、SSE 心跳和 ToolResult 边界；仍不应声称完善测试体系。
 - PDF/DOCX 等二进制文档解析尚未实现。
 
 主动说清边界通常比堆叠“大厂级、生产级、全链路”更可信。

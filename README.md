@@ -24,7 +24,7 @@
 
 ## 当前工程能力
 
-- 统一模型驱动 Agent Loop：最大轮次、模型/工具次数、Token、成本和运行时长预算。
+- 统一模型驱动 Agent Loop：最大轮次、模型/工具次数、Token、可配置价格成本和运行时长预算；Profile 与累计 Budget 随 Run 持久化。
 - 严格消息时间线：`USER -> ASSISTANT_TOOL_CALL -> TOOL_RESULT -> ASSISTANT_TEXT`，工具调用与结果不能拆对。
 - Context Budget：滚动摘要、完整工具单元裁剪、模型上下文溢出后的有限压缩重试。
 - Runtime Tool Policy：执行 Profile 白名单、allow/ask/deny、参数 Schema 校验、审批暂停/恢复、副作用幂等。
@@ -32,7 +32,9 @@
 - RAG：真实 Embedding、pgvector、向量 + 关键词混合召回、模型语义重排、确定性降级、引用元数据、持久化 TTL 缓存。
 - Memory：Runtime 时间线负责短期上下文；结构化模型提取后的长期记忆使用 pgvector 召回；用户画像独立持久化。
 - Guardrail：输入规范化、确定性注入信号 + 模型语义确认、分层 DLP、输出脱敏、工具策略审计。
-- 可靠性：会话租约、跨实例取消信号、有界模型线程池、超时重试、熔断、失败分类和明确终止原因。
+- 可靠性：唯一执行租约、原子恢复抢占、过期 RUNNING 检查点恢复、跨实例取消、有界模型线程池、超时重试、熔断和明确终止原因。
+- ToolResult 隔离：完整原文保存在工具执行记录，模型时间线只接收带哈希和 rawReference 的有界投影，并转义结构边界。
+- SSE 可靠性：持久化事件序号、心跳、背压缺口通知；客户端可以识别不完整事件流。
 - Sub-Agent：独立 Session、System Prompt、能力白名单、预算和父子 Run；只向协调者返回摘要与 childRunId。
 - AgentOps：Runtime 事件投影为 Trace / Eval / Replay，保留真实 Usage 或明确标记估算来源。
 

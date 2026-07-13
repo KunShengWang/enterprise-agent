@@ -42,7 +42,7 @@ public class JsonSchemaToolParameterValidator implements ToolParameterValidator 
             return ToolValidationResult.ok();
         }
         for (JsonNode field : required) {
-            String fieldName = field.asText();
+            String fieldName = field.stringValue("");
             Object value = arguments.get(fieldName);
             if (value == null || (value instanceof String text && text.isBlank())) {
                 return ToolValidationResult.invalid("missing required argument: " + fieldName);
@@ -61,7 +61,9 @@ public class JsonSchemaToolParameterValidator implements ToolParameterValidator 
             if (property.isMissingNode()) {
                 continue;
             }
-            ToolValidationResult typeResult = validateType(entry.getKey(), property.path("type").asText(""), entry.getValue());
+            ToolValidationResult typeResult = validateType(
+                    entry.getKey(), property.path("type").stringValue(""), entry.getValue()
+            );
             if (!typeResult.valid()) {
                 return typeResult;
             }
@@ -96,7 +98,7 @@ public class JsonSchemaToolParameterValidator implements ToolParameterValidator 
         }
         String actual = String.valueOf(value);
         for (JsonNode allowed : enumNode) {
-            if (actual.equals(allowed.asText())) {
+            if (actual.equals(allowed.stringValue(""))) {
                 return ToolValidationResult.ok();
             }
         }
