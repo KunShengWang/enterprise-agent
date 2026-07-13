@@ -1,7 +1,5 @@
 package com.agent.platform.eval;
 
-import org.springframework.stereotype.Component;
-
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +7,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-@Component
+@Deprecated(forRemoval = true)
 public class InMemoryEvalCaseRepository implements EvalCaseRepository {
 
     private final ConcurrentMap<String, EvalCase> cases = new ConcurrentHashMap<>();

@@ -25,7 +25,6 @@ import com.agent.platform.rag.RagService;
 import com.agent.platform.runtime.AgentRunRecord;
 import com.agent.platform.runtime.AgentRunState;
 import com.agent.platform.runtime.AgentRunStore;
-import com.agent.platform.runtime.InMemoryAgentRuntimeStore;
 import com.agent.platform.runtime.ToolExecutionClaim;
 import com.agent.platform.runtime.ToolExecutionState;
 import com.agent.platform.runtime.ToolExecutionStore;
@@ -153,46 +152,6 @@ public class V1AgentExecutor implements AgentExecutor {
         this.workflowRecorder = workflowRecorder;
         this.agentRunStore = agentRunStore;
         this.toolExecutionStore = toolExecutionStore;
-    }
-
-    public V1AgentExecutor(AgentProperties agentProperties,
-                           TraceRecorder traceRecorder,
-                           MemoryService memoryService,
-                           GuardrailService guardrailService,
-                           IntentRouter intentRouter,
-                           SkillSelector skillSelector,
-                           QueryRewriteService queryRewriteService,
-                           RagService ragService,
-                           ToolRegistry toolRegistry,
-                           ToolCallPlanner toolCallPlanner,
-                           ToolExecutor toolExecutor,
-                           ApprovalService approvalService,
-                           PromptAssembler promptAssembler,
-                           LlmService llmService,
-                           EvalEventRecorder evalEventRecorder,
-                           WorkflowPlanner workflowPlanner,
-                           WorkflowRecorder workflowRecorder) {
-        this(
-                agentProperties,
-                traceRecorder,
-                memoryService,
-                guardrailService,
-                intentRouter,
-                skillSelector,
-                queryRewriteService,
-                ragService,
-                toolRegistry,
-                toolCallPlanner,
-                toolExecutor,
-                approvalService,
-                promptAssembler,
-                llmService,
-                evalEventRecorder,
-                workflowPlanner,
-                workflowRecorder,
-                new InMemoryAgentRuntimeStore(),
-                new InMemoryAgentRuntimeStore()
-        );
     }
 
     @Override

@@ -1,7 +1,5 @@
 package com.agent.platform.workflow;
 
-import org.springframework.stereotype.Component;
-
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 
-@Component
+@Deprecated(forRemoval = true)
 public class InMemoryWorkflowRecorder implements WorkflowRecorder {
 
     private static final int MAX_RECORDS = 500;

@@ -1,8 +1,5 @@
 package com.agent.platform.rag;
 
-import org.springframework.stereotype.Service;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -10,8 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-@Service
-@ConditionalOnProperty(prefix = "enterprise-agent.rag", name = "mode", havingValue = "memory")
+@Deprecated(forRemoval = true)
 public class InMemoryRagService implements RagService {
 
     private final RagRunRecorder ragRunRecorder;

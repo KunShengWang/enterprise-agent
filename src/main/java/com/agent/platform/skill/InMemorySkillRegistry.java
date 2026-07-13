@@ -1,7 +1,5 @@
 package com.agent.platform.skill;
 
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -11,7 +9,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-@Component
+@Deprecated(forRemoval = true)
 public class InMemorySkillRegistry implements SkillRegistry {
 
     private final ConcurrentMap<String, SkillDefinition> skills = new ConcurrentHashMap<>();

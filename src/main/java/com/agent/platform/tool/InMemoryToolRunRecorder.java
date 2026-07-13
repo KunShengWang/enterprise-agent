@@ -1,6 +1,5 @@
 package com.agent.platform.tool;
 
-import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -10,7 +9,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
-@Service
+@Deprecated(forRemoval = true)
 public class InMemoryToolRunRecorder implements ToolRunRecorder {
 
     private final List<ToolCallRecord> records = new CopyOnWriteArrayList<>();

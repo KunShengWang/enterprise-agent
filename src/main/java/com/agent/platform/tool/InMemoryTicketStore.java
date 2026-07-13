@@ -1,6 +1,5 @@
 package com.agent.platform.tool;
 
-import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -8,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@Service
+@Deprecated(forRemoval = true)
 public class InMemoryTicketStore implements TicketStore {
 
     private final ConcurrentMap<String, SupportTicket> tickets = new ConcurrentHashMap<>();

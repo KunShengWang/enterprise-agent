@@ -2,8 +2,6 @@ package com.agent.platform.runtime;
 
 import com.agent.platform.tool.ToolCallRequest;
 import com.agent.platform.tool.ToolCallResult;
-import org.springframework.stereotype.Component;
-
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -11,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.UnaryOperator;
 
-@Component
+@Deprecated(forRemoval = true)
 public class InMemoryAgentRuntimeStore implements AgentRunStore, ToolExecutionStore {
 
     private final ConcurrentMap<String, AgentRunRecord> runs = new ConcurrentHashMap<>();

@@ -1,12 +1,10 @@
 package com.agent.platform.eval;
 
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-@Component
+@Deprecated(forRemoval = true)
 public class InMemoryEvalEventRecorder implements EvalEventRecorder {
 
     private final List<AgentRunEvalEvent> events = Collections.synchronizedList(new ArrayList<>());

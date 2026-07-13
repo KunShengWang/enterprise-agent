@@ -1,7 +1,5 @@
 package com.agent.platform.trace;
 
-import org.springframework.stereotype.Component;
-
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -14,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 
-@Component
+@Deprecated(forRemoval = true)
 public class InMemoryTraceRecorder implements TraceRecorder {
 
     private static final int MAX_RUNS = 500;

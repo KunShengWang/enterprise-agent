@@ -1,6 +1,5 @@
 package com.agent.platform.rag;
 
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -8,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Component
+@Deprecated(forRemoval = true)
 public class InMemoryRagRunRecorder implements RagRunRecorder {
 
     private static final int MAX_RECORDS = 200;

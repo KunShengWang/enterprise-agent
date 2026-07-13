@@ -23,16 +23,6 @@ public class LocalToolExecutor implements ToolExecutor {
 
     private final ObjectProvider<McpToolGateway> mcpToolGatewayProvider;
 
-    public LocalToolExecutor() {
-        this(
-                new LocalToolRegistry(),
-                new JsonSchemaToolParameterValidator(new tools.jackson.databind.ObjectMapper()),
-                new InMemoryToolRunRecorder(),
-                new InMemoryTicketStore(),
-                null
-        );
-    }
-
     @Autowired
     public LocalToolExecutor(ToolRegistry toolRegistry,
                              ToolParameterValidator parameterValidator,

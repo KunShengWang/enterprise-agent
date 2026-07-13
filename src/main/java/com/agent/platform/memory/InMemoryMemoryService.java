@@ -1,9 +1,6 @@
 package com.agent.platform.memory;
 
 import com.agent.platform.config.MemoryProperties;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Service;
-
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -14,8 +11,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-@Service
-@ConditionalOnProperty(prefix = "enterprise-agent.memory", name = "mode", havingValue = "memory")
 @Deprecated(forRemoval = true)
 public class InMemoryMemoryService implements MemoryService {
 

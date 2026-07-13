@@ -1,12 +1,11 @@
 package com.agent.platform.resilience;
 
 import com.agent.platform.config.ResilienceProperties;
-import org.springframework.stereotype.Service;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-@Service
+@Deprecated(forRemoval = true)
 public class InMemoryRateLimitService implements RateLimitService {
 
     private static final long WINDOW_MILLIS = 60_000;
