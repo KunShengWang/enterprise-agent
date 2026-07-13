@@ -57,12 +57,11 @@ enterprise-agent:
     You are an enterprise knowledge-base and support-ticket agent.
     Follow the orchestrated execution flow and do not bypass guardrails.
   memory:
-    window-size: 12
-    summary-trigger-messages: 8
-    summary-max-chars: 1200
-    recall-limit: 8
-    long-term-limit: 20
+    long-term-candidate-limit: 40
     profile-item-limit: 30
+    semantic-weight: 0.75
+    lexical-weight: 0.10
+    minimum-recall-score: 0.30
     datasource:
       url: ${MEMORY_POSTGRES_URL:${RAG_POSTGRES_URL:jdbc:postgresql://localhost:5432/enterprise_agent}}
       username: ${MEMORY_POSTGRES_USERNAME:${RAG_POSTGRES_USERNAME:postgres}}

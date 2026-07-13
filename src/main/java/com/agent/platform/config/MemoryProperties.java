@@ -5,58 +5,19 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "enterprise-agent.memory")
 public class MemoryProperties {
 
-    private int windowSize = 12;
-
-    private int summaryTriggerMessages = 12;
-
-    private int summaryMaxChars = 1200;
-
-    private int recallLimit = 8;
-
-    private int longTermLimit = 20;
-
+    private int longTermCandidateLimit = 40;
     private int profileItemLimit = 30;
-
+    private double semanticWeight = 0.75;
+    private double lexicalWeight = 0.10;
+    private double minimumRecallScore = 0.30;
     private final Datasource datasource = new Datasource();
 
-    public int getWindowSize() {
-        return windowSize;
+    public int getLongTermCandidateLimit() {
+        return longTermCandidateLimit;
     }
 
-    public void setWindowSize(int windowSize) {
-        this.windowSize = windowSize;
-    }
-
-    public int getSummaryTriggerMessages() {
-        return summaryTriggerMessages;
-    }
-
-    public void setSummaryTriggerMessages(int summaryTriggerMessages) {
-        this.summaryTriggerMessages = summaryTriggerMessages;
-    }
-
-    public int getSummaryMaxChars() {
-        return summaryMaxChars;
-    }
-
-    public void setSummaryMaxChars(int summaryMaxChars) {
-        this.summaryMaxChars = summaryMaxChars;
-    }
-
-    public int getRecallLimit() {
-        return recallLimit;
-    }
-
-    public void setRecallLimit(int recallLimit) {
-        this.recallLimit = recallLimit;
-    }
-
-    public int getLongTermLimit() {
-        return longTermLimit;
-    }
-
-    public void setLongTermLimit(int longTermLimit) {
-        this.longTermLimit = longTermLimit;
+    public void setLongTermCandidateLimit(int longTermCandidateLimit) {
+        this.longTermCandidateLimit = longTermCandidateLimit;
     }
 
     public int getProfileItemLimit() {
@@ -67,16 +28,37 @@ public class MemoryProperties {
         this.profileItemLimit = profileItemLimit;
     }
 
+    public double getSemanticWeight() {
+        return semanticWeight;
+    }
+
+    public void setSemanticWeight(double semanticWeight) {
+        this.semanticWeight = semanticWeight;
+    }
+
+    public double getLexicalWeight() {
+        return lexicalWeight;
+    }
+
+    public void setLexicalWeight(double lexicalWeight) {
+        this.lexicalWeight = lexicalWeight;
+    }
+
+    public double getMinimumRecallScore() {
+        return minimumRecallScore;
+    }
+
+    public void setMinimumRecallScore(double minimumRecallScore) {
+        this.minimumRecallScore = minimumRecallScore;
+    }
+
     public Datasource getDatasource() {
         return datasource;
     }
 
     public static class Datasource {
-
         private String url = "jdbc:postgresql://localhost:5432/enterprise_agent";
-
         private String username = "postgres";
-
         private String password = "";
 
         public String getUrl() {
