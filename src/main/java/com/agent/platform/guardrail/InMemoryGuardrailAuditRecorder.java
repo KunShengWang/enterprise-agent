@@ -1,12 +1,10 @@
 package com.agent.platform.guardrail;
 
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-@Component
+@Deprecated(forRemoval = true)
 public class InMemoryGuardrailAuditRecorder implements GuardrailAuditRecorder {
 
     private static final int MAX_RECORDS = 500;

@@ -12,5 +12,11 @@ public interface GuardrailService {
      */
     GuardrailDecision checkToolCall(ToolDefinition toolDefinition, ToolCallRequest toolCallRequest);
 
+    default GuardrailDecision checkToolCall(ToolDefinition toolDefinition,
+                                            ToolCallRequest toolCallRequest,
+                                            ToolPolicyContext context) {
+        return checkToolCall(toolDefinition, toolCallRequest);
+    }
+
     GuardrailDecision checkOutput(String answer);
 }

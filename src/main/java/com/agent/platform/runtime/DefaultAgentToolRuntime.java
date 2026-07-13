@@ -8,6 +8,7 @@ import com.agent.platform.config.AgentProperties;
 import com.agent.platform.guardrail.GuardrailAction;
 import com.agent.platform.guardrail.GuardrailDecision;
 import com.agent.platform.guardrail.GuardrailService;
+import com.agent.platform.guardrail.ToolPolicyContext;
 import com.agent.platform.tool.ToolCallRequest;
 import com.agent.platform.tool.ToolCallResult;
 import com.agent.platform.tool.ToolDefinition;
@@ -45,10 +46,13 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
     @Override
     public AgentToolRuntimeResult execute(String runId,
                                           String sessionId,
+                                          String userId,
+                                          Map<String, Object> attributes,
                                           AgentToolCall toolCall,
                                           ToolDefinition definition) {
         ToolCallRequest request = new ToolCallRequest(toolCall.toolName(), toolCall.toolCallId(), toolCall.arguments());
-        GuardrailDecision policy = guardrailService.checkToolCall(definition, request);
+        ToolPolicyContext policyContext = ToolPolicyContext.from(runId, sessionId, userId, attributes);
+        GuardrailDecision policy = guardrailService.checkToolCall(definition, request, policyContext);
         if (policy.action() == GuardrailAction.BLOCK) {
             return denied(request, policy);
         }
@@ -76,7 +80,9 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
     }
 
     @Override
-    public AgentToolRuntimeResult executeApproved(ApprovalRecord approval, ToolDefinition definition) {
+    public AgentToolRuntimeResult executeApproved(ApprovalRecord approval,
+                                                  ToolDefinition definition,
+                                                  ToolPolicyContext context) {
         if (approval == null || approval.status() != ApprovalStatus.APPROVED) {
             throw new IllegalArgumentException("approved approval record is required");
         }
@@ -84,7 +90,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         if (request == null || definition == null || !definition.name().equals(request.toolName())) {
             throw new IllegalArgumentException("approval tool does not match capability definition");
         }
-        GuardrailDecision currentPolicy = guardrailService.checkToolCall(definition, request);
+        GuardrailDecision currentPolicy = guardrailService.checkToolCall(definition, request, context);
         if (currentPolicy.action() == GuardrailAction.BLOCK) {
             return denied(request, currentPolicy);
         }

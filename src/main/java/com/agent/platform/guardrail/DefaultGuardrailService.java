@@ -89,12 +89,21 @@ public class DefaultGuardrailService implements GuardrailService {
      */
     @Override
     public GuardrailDecision checkToolCall(ToolDefinition toolDefinition, ToolCallRequest toolCallRequest) {
+        return checkToolCall(toolDefinition, toolCallRequest, null);
+    }
+
+    @Override
+    public GuardrailDecision checkToolCall(ToolDefinition toolDefinition,
+                                           ToolCallRequest toolCallRequest,
+                                           ToolPolicyContext context) {
         // 工具风险检查
-        GuardrailDecision decision = toolPermissionPolicy.check(toolDefinition, toolCallRequest);
+        GuardrailDecision decision = toolPermissionPolicy.check(toolDefinition, toolCallRequest, context);
         audit(toolDefinition == null ? "unknown" : toolDefinition.name(), decision, "", Map.of(
                 "toolName", toolDefinition == null ? "unknown" : toolDefinition.name(),
                 "riskLevel", toolDefinition == null || toolDefinition.riskLevel() == null ? "unknown" : toolDefinition.riskLevel().name(),
-                "arguments", toolCallRequest == null ? Map.of() : toolCallRequest.arguments()
+                "arguments", toolCallRequest == null ? Map.of() : toolCallRequest.arguments(),
+                "userId", context == null ? "anonymous" : context.userId(),
+                "tenantId", context == null ? "default" : context.tenantId()
         ));
         return decision;
     }

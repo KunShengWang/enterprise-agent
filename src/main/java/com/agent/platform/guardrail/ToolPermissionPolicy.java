@@ -9,4 +9,10 @@ public interface ToolPermissionPolicy {
      * 工具风险检查
      */
     GuardrailDecision check(ToolDefinition toolDefinition, ToolCallRequest toolCallRequest);
+
+    default GuardrailDecision check(ToolDefinition toolDefinition,
+                                    ToolCallRequest toolCallRequest,
+                                    ToolPolicyContext context) {
+        return check(toolDefinition, toolCallRequest);
+    }
 }

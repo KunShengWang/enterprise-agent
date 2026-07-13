@@ -65,6 +65,16 @@ enterprise-agent:
       url: ${AGENT_STORAGE_POSTGRES_URL:${RAG_POSTGRES_URL:jdbc:postgresql://localhost:5432/enterprise_agent}}
       username: ${AGENT_STORAGE_POSTGRES_USERNAME:${RAG_POSTGRES_USERNAME:postgres}}
       password: ${AGENT_STORAGE_POSTGRES_PASSWORD:${RAG_POSTGRES_PASSWORD:1234}}
+  tool-policy:
+    default-decision: allow
+    decisions:
+      ticket_priority_update: ask
+      ticket_close: ask
+    admin-only-tools: []
+    allowed-filesystem-roots:
+      - ${MCP_FILESYSTEM_ROOT:D:/JDK/IDEA/java_reinforcement_learning/enterprise-agent/data/mcp-sandbox}
+    allowed-network-hosts: []
+    tenant-denied-tools: {}
   mcp:
     enabled: false
     server-name: filesystem
@@ -133,4 +143,4 @@ enterprise-agent:
       dimension: ${EMBEDDING_DIMENSION:1024}
 llm:
   http-log:
-    enabled: true
+    enabled: ${LLM_HTTP_LOG_ENABLED:false}

@@ -8,6 +8,7 @@ import com.agent.platform.config.AgentProperties;
 import com.agent.platform.guardrail.GuardrailAction;
 import com.agent.platform.guardrail.GuardrailDecision;
 import com.agent.platform.guardrail.GuardrailService;
+import com.agent.platform.guardrail.ToolPolicyContext;
 import com.agent.platform.llm.LlmUsage;
 import com.agent.platform.memory.MemoryMessage;
 import com.agent.platform.memory.MemoryService;
@@ -161,7 +162,12 @@ public class DefaultAgentRuntime implements AgentRuntime {
             );
         }
         else {
-            AgentToolRuntimeResult execution = toolRuntime.executeApproved(approval, definition);
+            AgentToolRuntimeResult execution = toolRuntime.executeApproved(
+                    approval,
+                    definition,
+                    ToolPolicyContext.from(runId, sessionId, userId,
+                            claimed.request() == null ? Map.of() : claimed.request().metadata())
+            );
             if (execution.status() == AgentToolExecutionStatus.MANUAL_REVIEW) {
                 return finish(
                         runId, sessionId, userId, AgentRunState.MANUAL_REVIEW, AgentStopReason.TOOL_ERROR,
@@ -310,7 +316,14 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     continue;
                 }
 
-                AgentToolRuntimeResult execution = toolRuntime.execute(runId, sessionId, call, definition.get());
+                AgentToolRuntimeResult execution = toolRuntime.execute(
+                        runId,
+                        sessionId,
+                        userId,
+                        request.metadata(),
+                        call,
+                        definition.get()
+                );
                 publish(sessionId, userId, runId, AgentEventType.POLICY_DECIDED,
                         execution.policyReason(),
                         Map.of(
