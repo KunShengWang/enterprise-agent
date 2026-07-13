@@ -13,6 +13,8 @@ public record AgentRunRecord(
         String conversationId,
         String userId,
         AgentRequest request,
+        AgentExecutionProfile executionProfile,
+        AgentRunBudgetSnapshot budgetSnapshot,
         AgentRunState state,
         AgentRunPhase phase,
         String approvalId,
@@ -45,11 +47,22 @@ public record AgentRunRecord(
                                         String traceId,
                                         String conversationId,
                                         AgentRequest request) {
+        return create(runId, traceId, conversationId, request, null, null);
+    }
+
+    public static AgentRunRecord create(String runId,
+                                        String traceId,
+                                        String conversationId,
+                                        AgentRequest request,
+                                        AgentExecutionProfile executionProfile,
+                                        AgentRunBudgetSnapshot budgetSnapshot) {
         Instant now = Instant.now();
         return new AgentRunRecord(
                 runId, traceId, conversationId,
                 request == null ? "" : request.userId(),
                 request,
+                executionProfile,
+                budgetSnapshot,
                 AgentRunState.RUNNING,
                 AgentRunPhase.START,
                 "",
@@ -72,6 +85,7 @@ public record AgentRunRecord(
                 runId, traceId, conversationId,
                 nextRequest == null ? userId : nextRequest.userId(),
                 nextRequest == null ? request : nextRequest,
+                executionProfile, budgetSnapshot,
                 state, phase, approvalId, pendingToolCall, toolResults, usedTools,
                 usedRag, blockedByGuardrail, answer, failureReason, resumeCount,
                 version, createdAt, Instant.now()
@@ -82,7 +96,8 @@ public record AgentRunRecord(
                                              ToolCallRequest toolCall,
                                              List<ToolCallResult> completedToolResults,
                                              List<String> completedTools,
-                                             boolean ragUsed) {
+                                             boolean ragUsed,
+                                             AgentRunBudgetSnapshot currentBudget) {
         return copy(
                 AgentRunState.WAITING_APPROVAL,
                 AgentRunPhase.WAITING_APPROVAL,
@@ -94,7 +109,8 @@ public record AgentRunRecord(
                 blockedByGuardrail,
                 "等待人工审批",
                 "",
-                resumeCount
+                resumeCount,
+                currentBudget
         );
     }
 
@@ -110,7 +126,8 @@ public record AgentRunRecord(
                 blockedByGuardrail,
                 "",
                 "",
-                resumeCount + 1
+                resumeCount + 1,
+                budgetSnapshot
         );
     }
 
@@ -122,6 +139,19 @@ public record AgentRunRecord(
                                    List<String> finalUsedTools,
                                    boolean ragUsed,
                                    boolean guardrailBlocked) {
+        return finished(targetState, targetPhase, finalAnswer, error, finalToolResults,
+                finalUsedTools, ragUsed, guardrailBlocked, budgetSnapshot);
+    }
+
+    public AgentRunRecord finished(AgentRunState targetState,
+                                   AgentRunPhase targetPhase,
+                                   String finalAnswer,
+                                   String error,
+                                   List<ToolCallResult> finalToolResults,
+                                   List<String> finalUsedTools,
+                                   boolean ragUsed,
+                                   boolean guardrailBlocked,
+                                   AgentRunBudgetSnapshot finalBudget) {
         return copy(
                 targetState,
                 targetPhase,
@@ -133,13 +163,22 @@ public record AgentRunRecord(
                 guardrailBlocked,
                 finalAnswer,
                 error,
-                resumeCount
+                resumeCount,
+                finalBudget
+        );
+    }
+
+    public AgentRunRecord withBudgetSnapshot(AgentRunBudgetSnapshot currentBudget) {
+        return new AgentRunRecord(
+                runId, traceId, conversationId, userId, request, executionProfile, currentBudget,
+                state, phase, approvalId, pendingToolCall, toolResults, usedTools, usedRag,
+                blockedByGuardrail, answer, failureReason, resumeCount, version, createdAt, Instant.now()
         );
     }
 
     public AgentRunRecord withVersion(long nextVersion, Instant timestamp) {
         return new AgentRunRecord(
-                runId, traceId, conversationId, userId, request, state, phase,
+                runId, traceId, conversationId, userId, request, executionProfile, budgetSnapshot, state, phase,
                 approvalId, pendingToolCall, toolResults, usedTools, usedRag,
                 blockedByGuardrail, answer, failureReason, resumeCount,
                 nextVersion, createdAt, timestamp == null ? Instant.now() : timestamp
@@ -156,9 +195,10 @@ public record AgentRunRecord(
                                 boolean nextBlockedByGuardrail,
                                 String nextAnswer,
                                 String nextFailureReason,
-                                int nextResumeCount) {
+                                int nextResumeCount,
+                                AgentRunBudgetSnapshot nextBudgetSnapshot) {
         return new AgentRunRecord(
-                runId, traceId, conversationId, userId, request, nextState, nextPhase,
+                runId, traceId, conversationId, userId, request, executionProfile, nextBudgetSnapshot, nextState, nextPhase,
                 nextApprovalId, nextPendingToolCall, nextToolResults, nextUsedTools,
                 nextUsedRag, nextBlockedByGuardrail, nextAnswer, nextFailureReason,
                 nextResumeCount, version, createdAt, Instant.now()

@@ -113,7 +113,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
         acquireRun(sessionId, runId, budget);
         try {
             timelineStore.openSession(sessionId, userId);
-            runStore.create(AgentRunRecord.create(runId, runId, sessionId, originalRequest));
+            runStore.create(AgentRunRecord.create(
+                    runId, runId, sessionId, originalRequest, profile, budget.snapshot()
+            ));
             publish(sessionId, userId, runId, AgentEventType.RUN_STARTED,
                     "agent run started", Map.of(
                             "question", originalRequest.question(),
@@ -175,7 +177,13 @@ public class DefaultAgentRuntime implements AgentRuntime {
             return resultFromStored(stored, AgentStopReason.WAITING_APPROVAL);
         }
         String sessionId = stored.conversationId();
-        AgentRunBudget budget = new AgentRunBudget(AgentRunLimits.from(properties));
+        AgentExecutionProfile profile = stored.executionProfile() == null
+                ? defaultExecutionProfile()
+                : stored.executionProfile();
+        AgentRunBudget budget = new AgentRunBudget(
+                profile.limits(),
+                stored.budgetSnapshot()
+        );
         acquireRun(sessionId, runId, budget);
         try {
             AgentRunRecord claimed = runStore.claimForResume(runId)
@@ -229,7 +237,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     toolResultPayload(approval.toolCallRequest().requestId(), result), effectiveListener);
             AgentRequest request = claimed.request();
             return executeLoop(request, runId, sessionId, userId, budget, toolResults, usedTools,
-                    claimed.usedRag(), defaultExecutionProfile(), effectiveListener);
+                    claimed.usedRag(), profile, effectiveListener);
         }
         finally {
             releaseRun(sessionId, runId);
@@ -519,7 +527,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
                             execution.request(),
                             persistedToolResults,
                             persistedUsedTools,
-                            ragUsedAtPause
+                            ragUsedAtPause,
+                            budget.snapshot()
                     ));
                     publish(sessionId, userId, runId, AgentEventType.APPROVAL_REQUIRED,
                             "tool call is waiting for human approval",
@@ -648,7 +657,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 toolResults,
                 usedTools,
                 usedRag,
-                guardrailBlocked
+                guardrailBlocked,
+                budget.snapshot()
         ));
         AgentEventType eventType = state == AgentRunState.COMPLETED
                 ? AgentEventType.RUN_COMPLETED

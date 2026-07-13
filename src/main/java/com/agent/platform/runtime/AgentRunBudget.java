@@ -24,12 +24,28 @@ public final class AgentRunBudget {
     private double estimatedCost;
 
     public AgentRunBudget(AgentRunLimits limits) {
+        this(limits, null);
+    }
+
+    public AgentRunBudget(AgentRunLimits limits, AgentRunBudgetSnapshot snapshot) {
         if (limits == null) {
             throw new IllegalArgumentException("run limits must not be null");
         }
         this.limits = limits;
-        this.startedAt = Instant.now();
-        this.deadline = startedAt.plusMillis(limits.maxRunDurationMillis());
+        Instant now = Instant.now();
+        this.startedAt = snapshot == null || snapshot.startedAt() == null ? now : snapshot.startedAt();
+        this.deadline = snapshot == null || snapshot.deadline() == null
+                ? this.startedAt.plusMillis(limits.maxRunDurationMillis())
+                : snapshot.deadline();
+        if (snapshot != null) {
+            this.turns = Math.max(0, snapshot.turns());
+            this.modelCalls = Math.max(0, snapshot.modelCalls());
+            this.toolCalls = Math.max(0, snapshot.toolCalls());
+            this.inputTokens = Math.max(0, snapshot.inputTokens());
+            this.outputTokens = Math.max(0, snapshot.outputTokens());
+            this.estimatedCost = Math.max(0, snapshot.estimatedCost());
+            this.cancelled.set(snapshot.cancelled());
+        }
     }
 
     public synchronized Optional<AgentStopReason> beforeTurn() {
