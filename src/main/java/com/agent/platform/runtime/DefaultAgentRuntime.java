@@ -111,11 +111,13 @@ public class DefaultAgentRuntime implements AgentRuntime {
         String runId = UUID.randomUUID().toString();
         AgentRunBudget budget = new AgentRunBudget(profile.limits());
         acquireRun(sessionId, runId, budget);
+        boolean runCreated = false;
         try {
             timelineStore.openSession(sessionId, userId);
             runStore.create(AgentRunRecord.create(
                     runId, runId, sessionId, originalRequest, profile, budget.snapshot()
             ));
+            runCreated = true;
             publish(sessionId, userId, runId, AgentEventType.RUN_STARTED,
                     "agent run started", Map.of(
                             "question", originalRequest.question(),
@@ -158,6 +160,14 @@ public class DefaultAgentRuntime implements AgentRuntime {
             return executeLoop(request, runId, sessionId, userId, budget,
                     new ArrayList<>(), new ArrayList<>(), false, profile, effectiveListener);
         }
+        catch (RuntimeException exception) {
+            if (!runCreated) {
+                throw exception;
+            }
+            return finishUnexpectedFailure(
+                    runId, sessionId, userId, budget, effectiveListener, exception
+            );
+        }
         finally {
             releaseRun(sessionId, runId);
         }
@@ -177,17 +187,20 @@ public class DefaultAgentRuntime implements AgentRuntime {
             return resultFromStored(stored, AgentStopReason.WAITING_APPROVAL);
         }
         String sessionId = stored.conversationId();
-        AgentExecutionProfile profile = stored.executionProfile() == null
+        Optional<AgentRunRecord> claim = runStore.claimForResume(runId);
+        if (claim.isEmpty()) {
+            AgentRunRecord current = runStore.find(runId).orElse(stored);
+            return resultFromStored(current, inferStoredStopReason(current));
+        }
+        AgentRunRecord claimed = claim.get();
+        AgentExecutionProfile profile = claimed.executionProfile() == null
                 ? defaultExecutionProfile()
-                : stored.executionProfile();
-        AgentRunBudget budget = new AgentRunBudget(
-                profile.limits(),
-                stored.budgetSnapshot()
-        );
-        acquireRun(sessionId, runId, budget);
+                : claimed.executionProfile();
+        AgentRunBudget budget = new AgentRunBudget(profile.limits(), claimed.budgetSnapshot());
+        boolean acquired = false;
         try {
-            AgentRunRecord claimed = runStore.claimForResume(runId)
-                    .orElseGet(() -> runStore.find(runId).orElse(stored));
+            acquireRun(sessionId, runId, budget);
+            acquired = true;
             String userId = normalize(claimed.userId(), DEFAULT_USER_ID);
             List<ToolCallResult> toolResults = new ArrayList<>(claimed.toolResults());
             List<String> usedTools = new ArrayList<>(claimed.usedTools());
@@ -239,8 +252,20 @@ public class DefaultAgentRuntime implements AgentRuntime {
             return executeLoop(request, runId, sessionId, userId, budget, toolResults, usedTools,
                     claimed.usedRag(), profile, effectiveListener);
         }
+        catch (RuntimeException exception) {
+            return finishUnexpectedFailure(
+                    runId,
+                    sessionId,
+                    normalize(claimed.userId(), DEFAULT_USER_ID),
+                    budget,
+                    effectiveListener,
+                    exception
+            );
+        }
         finally {
-            releaseRun(sessionId, runId);
+            if (acquired) {
+                releaseRun(sessionId, runId);
+            }
         }
     }
 
@@ -677,6 +702,34 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 approvalId,
                 budget.snapshot(),
                 timelineStore.loadEvents(runId, MAX_RETURNED_EVENTS)
+        );
+    }
+
+    private AgentRuntimeResult finishUnexpectedFailure(String runId,
+                                                       String sessionId,
+                                                       String userId,
+                                                       AgentRunBudget budget,
+                                                       AgentEventListener listener,
+                                                       RuntimeException failure) {
+        LOGGER.error("Unhandled Agent Runtime failure for run {}", runId, failure);
+        AgentRunRecord current = runStore.find(runId).orElse(null);
+        if (current != null && isTerminal(current.state())) {
+            return resultFromStored(current, inferStoredStopReason(current));
+        }
+        return finish(
+                runId,
+                sessionId,
+                userId,
+                AgentRunState.FAILED,
+                AgentStopReason.INTERNAL_ERROR,
+                "Agent Runtime 发生未预期异常，运行已安全终止。",
+                "",
+                current == null ? List.of() : current.toolResults(),
+                current == null ? List.of() : current.usedTools(),
+                current != null && current.usedRag(),
+                current != null && current.blockedByGuardrail(),
+                budget,
+                listener
         );
     }
 
