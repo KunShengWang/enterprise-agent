@@ -29,7 +29,10 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
     }
 
     @Override
-    public void acquireSessionLease(String sessionId, String runId, Duration leaseDuration) {
+    public void acquireSessionLease(String sessionId,
+                                    String runId,
+                                    String leaseOwnerId,
+                                    Duration leaseDuration) {
         ensureSchema();
         Instant now = Instant.now();
         Instant leaseUntil = now.plus(normalizeDuration(leaseDuration));
@@ -49,7 +52,7 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
                         RETURNING owner_run_id
                         """)) {
                     statement.setString(1, sessionId);
-                    statement.setString(2, runId);
+                    statement.setString(2, leaseOwnerId);
                     statement.setTimestamp(3, Timestamp.from(leaseUntil));
                     statement.setTimestamp(4, Timestamp.from(now));
                     try (ResultSet resultSet = statement.executeQuery()) {
@@ -72,7 +75,7 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
     }
 
     @Override
-    public boolean renewSessionLease(String sessionId, String runId, Duration leaseDuration) {
+    public boolean renewSessionLease(String sessionId, String leaseOwnerId, Duration leaseDuration) {
         ensureSchema();
         Instant now = Instant.now();
         try (Connection connection = openConnection();
@@ -84,7 +87,7 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
             statement.setTimestamp(1, Timestamp.from(now.plus(normalizeDuration(leaseDuration))));
             statement.setTimestamp(2, Timestamp.from(now));
             statement.setString(3, sessionId);
-            statement.setString(4, runId);
+            statement.setString(4, leaseOwnerId);
             return statement.executeUpdate() == 1;
         }
         catch (SQLException exception) {
@@ -93,14 +96,14 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
     }
 
     @Override
-    public void releaseSessionLease(String sessionId, String runId) {
+    public void releaseSessionLease(String sessionId, String leaseOwnerId) {
         ensureSchema();
         try (Connection connection = openConnection();
              PreparedStatement statement = connection.prepareStatement("""
                      DELETE FROM agent_session_lease WHERE session_id = ? AND owner_run_id = ?
                      """)) {
             statement.setString(1, sessionId);
-            statement.setString(2, runId);
+            statement.setString(2, leaseOwnerId);
             statement.executeUpdate();
         }
         catch (SQLException exception) {

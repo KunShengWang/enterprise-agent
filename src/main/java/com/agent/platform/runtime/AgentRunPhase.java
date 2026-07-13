@@ -5,6 +5,8 @@ package com.agent.platform.runtime;
  */
 public enum AgentRunPhase {
     START,
+    CONTEXT_PREPARATION,
+    MODEL_CALL,
     WAITING_APPROVAL,
     EXECUTING_TOOL,
     FINISHED,

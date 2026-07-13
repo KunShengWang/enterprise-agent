@@ -14,6 +14,7 @@ import com.agent.platform.llm.LlmCallException;
 import com.agent.platform.memory.MemoryMessage;
 import com.agent.platform.memory.MemoryService;
 import com.agent.platform.tool.ToolCallResult;
+import com.agent.platform.tool.ToolCallRequest;
 import com.agent.platform.tool.ToolDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,8 +110,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
         String sessionId = normalize(originalRequest.conversationId(), DEFAULT_SESSION_ID);
         String userId = normalize(originalRequest.userId(), DEFAULT_USER_ID);
         String runId = UUID.randomUUID().toString();
+        String leaseOwnerId = newLeaseOwnerId(runId);
         AgentRunBudget budget = new AgentRunBudget(profile.limits());
-        acquireRun(sessionId, runId, budget);
+        acquireRun(sessionId, runId, leaseOwnerId, budget);
         boolean runCreated = false;
         try {
             timelineStore.openSession(sessionId, userId);
@@ -157,7 +159,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
             if (profile.longTermMemoryEnabled()) {
                 memoryService.rememberLongTerm(sessionId, userId, new MemoryMessage("user", safeQuestion, Instant.now()));
             }
-            return executeLoop(request, runId, sessionId, userId, budget,
+            return executeLoop(request, runId, leaseOwnerId, sessionId, userId, budget,
                     new ArrayList<>(), new ArrayList<>(), false, profile, effectiveListener);
         }
         catch (RuntimeException exception) {
@@ -169,7 +171,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
             );
         }
         finally {
-            releaseRun(sessionId, runId);
+            releaseRun(sessionId, runId, leaseOwnerId);
         }
     }
 
@@ -178,6 +180,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
         AgentEventListener effectiveListener = listener == null ? AgentEventListener.NOOP : listener;
         AgentRunRecord stored = runStore.find(runId)
                 .orElseThrow(() -> new IllegalArgumentException("agent run not found: " + runId));
+        if (stored.state() == AgentRunState.RUNNING) {
+            return recoverRunning(stored, effectiveListener);
+        }
         if (stored.state() != AgentRunState.WAITING_APPROVAL) {
             return resultFromStored(stored, inferStoredStopReason(stored));
         }
@@ -187,6 +192,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
             return resultFromStored(stored, AgentStopReason.WAITING_APPROVAL);
         }
         String sessionId = stored.conversationId();
+        String leaseOwnerId = newLeaseOwnerId(runId);
         Optional<AgentRunRecord> claim = runStore.claimForResume(runId);
         if (claim.isEmpty()) {
             AgentRunRecord current = runStore.find(runId).orElse(stored);
@@ -199,7 +205,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         AgentRunBudget budget = new AgentRunBudget(profile.limits(), claimed.budgetSnapshot());
         boolean acquired = false;
         try {
-            acquireRun(sessionId, runId, budget);
+            acquireRun(sessionId, runId, leaseOwnerId, budget);
             acquired = true;
             String userId = normalize(claimed.userId(), DEFAULT_USER_ID);
             List<ToolCallResult> toolResults = new ArrayList<>(claimed.toolResults());
@@ -245,11 +251,13 @@ public class DefaultAgentRuntime implements AgentRuntime {
             }
             appendToolResult(sessionId, userId, runId, approval.toolCallRequest().requestId(), result);
             toolResults.add(result);
+            checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
+                    toolResults, usedTools, claimed.usedRag(), budget);
             publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
                     result.success() ? "approved tool completed" : "approved tool returned failure",
                     toolResultPayload(approval.toolCallRequest().requestId(), result), effectiveListener);
             AgentRequest request = claimed.request();
-            return executeLoop(request, runId, sessionId, userId, budget, toolResults, usedTools,
+            return executeLoop(request, runId, leaseOwnerId, sessionId, userId, budget, toolResults, usedTools,
                     claimed.usedRag(), profile, effectiveListener);
         }
         catch (RuntimeException exception) {
@@ -264,7 +272,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         }
         finally {
             if (acquired) {
-                releaseRun(sessionId, runId);
+                releaseRun(sessionId, runId, leaseOwnerId);
             }
         }
     }
@@ -299,6 +307,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
 
     private AgentRuntimeResult executeLoop(AgentRequest request,
                                            String runId,
+                                           String leaseOwnerId,
                                            String sessionId,
                                            String userId,
                                            AgentRunBudget budget,
@@ -310,7 +319,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         Set<String> toolCallIds = new HashSet<>();
         int contextOverflowRetries = 0;
         while (true) {
-            if (!runControlStore.renewSessionLease(sessionId, runId, sessionLeaseDuration())) {
+            if (!runControlStore.renewSessionLease(sessionId, leaseOwnerId, sessionLeaseDuration())) {
                 return finish(
                         runId, sessionId, userId, AgentRunState.FAILED, AgentStopReason.INTERNAL_ERROR,
                         "会话执行租约已丢失，Runtime 已停止以避免并发写入同一时间线。", "",
@@ -324,6 +333,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
                         toolResults, usedTools, usedRag, budget, listener);
             }
             budget.recordTurnStarted();
+            checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
+                    toolResults, usedTools, usedRag, budget);
 
             long contextTokenBudget = contextMessageBudget(profile);
             AgentContextView context = contextManager.project(
@@ -363,6 +374,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
 
             publish(sessionId, userId, runId, AgentEventType.MODEL_STARTED,
                     "model turn started", Map.of("turn", budget.snapshot().turns()), listener);
+            checkpoint(runId, AgentRunPhase.MODEL_CALL, null,
+                    toolResults, usedTools, usedRag, budget);
             AgentModelTurn modelTurn;
             while (true) {
                 try {
@@ -447,6 +460,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
             }
             LlmUsage effectiveUsage = effectiveUsage(modelTurn, context);
             budget.recordModelCall(effectiveUsage, 0);
+            checkpoint(runId, AgentRunPhase.MODEL_CALL, null,
+                    toolResults, usedTools, usedRag, budget);
             publish(sessionId, userId, runId, AgentEventType.MODEL_COMPLETED,
                     "model turn completed",
                     Map.of(
@@ -492,6 +507,11 @@ public class DefaultAgentRuntime implements AgentRuntime {
                             toolResults, usedTools, usedRag, budget, listener);
                 }
                 AgentToolCall call = uniqueToolCall(rawCall, toolCallIds);
+                ToolCallRequest checkpointCall = new ToolCallRequest(
+                        call.toolName(), call.toolCallId(), call.arguments()
+                );
+                checkpoint(runId, AgentRunPhase.EXECUTING_TOOL, checkpointCall,
+                        toolResults, usedTools, usedRag, budget);
                 timelineStore.appendMessages(sessionId, userId, runId, List.of(
                         AgentMessageDraft.toolCall(
                                 call.toolCallId(),
@@ -522,6 +542,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     appendToolResult(sessionId, userId, runId, call.toolCallId(), unknown);
                     toolResults.add(unknown);
                     budget.recordToolCall();
+                    checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
+                            toolResults, usedTools, usedRag, budget);
                     publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
                             "unknown capability returned to model", toolResultPayload(call.toolCallId(), unknown), listener);
                     continue;
@@ -593,8 +615,75 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
                         toolResult.success() ? "capability completed" : "capability failure returned to model",
                         toolResultPayload(call.toolCallId(), toolResult), listener);
+                checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
+                        toolResults, usedTools, usedRag, budget);
             }
         }
+    }
+
+    private AgentRuntimeResult recoverRunning(AgentRunRecord stored, AgentEventListener listener) {
+        String runId = stored.runId();
+        String sessionId = stored.conversationId();
+        String userId = normalize(stored.userId(), DEFAULT_USER_ID);
+        String leaseOwnerId = newLeaseOwnerId(runId);
+        AgentExecutionProfile profile = stored.executionProfile() == null
+                ? defaultExecutionProfile()
+                : stored.executionProfile();
+        AgentRunBudget budget = new AgentRunBudget(profile.limits(), stored.budgetSnapshot());
+        boolean acquired = false;
+        try {
+            acquireRun(sessionId, runId, leaseOwnerId, budget);
+            acquired = true;
+            AgentRunRecord current = runStore.find(runId).orElse(stored);
+            if (current.state() != AgentRunState.RUNNING) {
+                return resultFromStored(current, inferStoredStopReason(current));
+            }
+            AgentRunRecord claimed = runStore.update(runId, AgentRunRecord::claimedForRecovery);
+            if (claimed.phase() == AgentRunPhase.EXECUTING_TOOL) {
+                return finish(
+                        runId, sessionId, userId, AgentRunState.MANUAL_REVIEW, AgentStopReason.TOOL_ERROR,
+                        "进程在工具执行检查点中断，副作用结果不确定，需要人工核对。", claimed.approvalId(),
+                        claimed.toolResults(), claimed.usedTools(), claimed.usedRag(),
+                        claimed.blockedByGuardrail(), budget, listener
+                );
+            }
+            publish(sessionId, userId, runId, AgentEventType.RUN_RESUMED,
+                    "stale running checkpoint recovered", Map.of(
+                            "phase", claimed.phase().name(),
+                            "resumeCount", claimed.resumeCount()
+                    ), listener);
+            return executeLoop(
+                    claimed.request(), runId, leaseOwnerId, sessionId, userId, budget,
+                    new ArrayList<>(claimed.toolResults()), new ArrayList<>(claimed.usedTools()),
+                    claimed.usedRag(), profile, listener
+            );
+        }
+        catch (AgentSessionBusyException busy) {
+            return resultFromStored(stored, AgentStopReason.IN_PROGRESS);
+        }
+        catch (RuntimeException failure) {
+            return finishUnexpectedFailure(runId, sessionId, userId, budget, listener, failure);
+        }
+        finally {
+            if (acquired) {
+                releaseRun(sessionId, runId, leaseOwnerId);
+            }
+        }
+    }
+
+    private void checkpoint(String runId,
+                            AgentRunPhase phase,
+                            ToolCallRequest pendingToolCall,
+                            List<ToolCallResult> toolResults,
+                            List<String> usedTools,
+                            boolean usedRag,
+                            AgentRunBudget budget) {
+        List<ToolCallResult> persistedResults = List.copyOf(toolResults);
+        List<String> persistedTools = List.copyOf(usedTools);
+        AgentRunBudgetSnapshot snapshot = budget.snapshot();
+        runStore.update(runId, current -> current.checkpoint(
+                phase, pendingToolCall, persistedResults, persistedTools, usedRag, snapshot
+        ));
     }
 
     private AgentRuntimeResult finishFinalAnswer(AgentRequest request,
@@ -835,20 +924,27 @@ public class DefaultAgentRuntime implements AgentRuntime {
         return failure == null ? "UNKNOWN" : failure.getClass().getSimpleName();
     }
 
-    private void acquireRun(String sessionId, String runId, AgentRunBudget budget) {
-        runControlStore.acquireSessionLease(sessionId, runId, sessionLeaseDuration());
+    private void acquireRun(String sessionId,
+                            String runId,
+                            String leaseOwnerId,
+                            AgentRunBudget budget) {
+        runControlStore.acquireSessionLease(sessionId, runId, leaseOwnerId, sessionLeaseDuration());
         activeBudgets.put(runId, budget);
     }
 
-    private void releaseRun(String sessionId, String runId) {
+    private void releaseRun(String sessionId, String runId, String leaseOwnerId) {
         activeBudgets.remove(runId);
         try {
-            runControlStore.releaseSessionLease(sessionId, runId);
+            runControlStore.releaseSessionLease(sessionId, leaseOwnerId);
         }
         catch (RuntimeException exception) {
             // 租约有过期时间；释放失败不能覆盖已经持久化的 Agent 最终结果。
             LOGGER.warn("Failed to release Agent session lease for run {}", runId, exception);
         }
+    }
+
+    private String newLeaseOwnerId(String runId) {
+        return runId + ":" + UUID.randomUUID();
     }
 
     private void synchronizeCancellation(String runId, AgentRunBudget budget) {
@@ -915,7 +1011,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
     }
 
     private AgentRuntimeResult resultFromStored(AgentRunRecord stored, AgentStopReason stopReason) {
-        AgentRunBudgetSnapshot budget = new AgentRunBudget(AgentRunLimits.from(properties)).snapshot();
+        AgentRunBudgetSnapshot budget = stored.budgetSnapshot() == null
+                ? new AgentRunBudget(AgentRunLimits.from(properties)).snapshot()
+                : stored.budgetSnapshot();
         return new AgentRuntimeResult(
                 stored.runId(),
                 stored.conversationId(),
@@ -932,6 +1030,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         return switch (stored.state()) {
             case COMPLETED -> AgentStopReason.COMPLETED;
             case WAITING_APPROVAL -> AgentStopReason.WAITING_APPROVAL;
+            case RUNNING -> AgentStopReason.IN_PROGRESS;
             case BLOCKED, REJECTED -> AgentStopReason.GUARDRAIL_BLOCKED;
             case MANUAL_REVIEW -> AgentStopReason.TOOL_ERROR;
             default -> AgentStopReason.INTERNAL_ERROR;

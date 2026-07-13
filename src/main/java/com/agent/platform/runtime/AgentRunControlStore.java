@@ -7,11 +7,11 @@ import java.time.Duration;
  */
 public interface AgentRunControlStore {
 
-    void acquireSessionLease(String sessionId, String runId, Duration leaseDuration);
+    void acquireSessionLease(String sessionId, String runId, String leaseOwnerId, Duration leaseDuration);
 
-    boolean renewSessionLease(String sessionId, String runId, Duration leaseDuration);
+    boolean renewSessionLease(String sessionId, String leaseOwnerId, Duration leaseDuration);
 
-    void releaseSessionLease(String sessionId, String runId);
+    void releaseSessionLease(String sessionId, String leaseOwnerId);
 
     boolean requestCancellation(String runId);
 

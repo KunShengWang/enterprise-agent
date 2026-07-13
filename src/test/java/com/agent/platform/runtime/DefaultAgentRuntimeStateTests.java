@@ -59,7 +59,7 @@ class DefaultAgentRuntimeStateTests {
 
         assertEquals(AgentRunState.RUNNING, result.state());
         verify(fixture.toolRuntime, never()).executeApproved(any(), any(), any());
-        verify(fixture.runControlStore, never()).acquireSessionLease(anyString(), anyString(), any());
+        verify(fixture.runControlStore, never()).acquireSessionLease(anyString(), anyString(), anyString(), any());
     }
 
     @Test
@@ -90,6 +90,38 @@ class DefaultAgentRuntimeStateTests {
         assertEquals(AgentStopReason.INTERNAL_ERROR, result.stopReason());
         assertEquals(AgentRunState.FAILED, persisted.get().state());
         verify(fixture.runControlStore).releaseSessionLease(anyString(), anyString());
+    }
+
+    @Test
+    void staleToolExecutionCheckpointRequiresManualReviewInsteadOfRepeatingSideEffect() {
+        Fixture fixture = new Fixture();
+        AgentRunLimits limits = AgentRunLimits.from(fixture.properties);
+        AgentExecutionProfile profile = new AgentExecutionProfile(
+                "restricted", "prompt", Set.of("ticket_close"), limits, false
+        );
+        AgentRunBudget budget = new AgentRunBudget(limits);
+        ToolCallRequest pending = new ToolCallRequest("ticket_close", "call-1", Map.of("id", "T1"));
+        AtomicReference<AgentRunRecord> persisted = new AtomicReference<>(
+                AgentRunRecord.create(
+                                "run-1", "run-1", "session-1",
+                                new AgentRequest("session-1", "user-1", "close ticket", Map.of()),
+                                profile, budget.snapshot())
+                        .checkpoint(AgentRunPhase.EXECUTING_TOOL, pending, List.of(), List.of(), false,
+                                budget.snapshot())
+        );
+        when(fixture.runStore.find("run-1")).thenAnswer(invocation -> Optional.of(persisted.get()));
+        when(fixture.runStore.update(anyString(), any())).thenAnswer(invocation -> {
+            java.util.function.UnaryOperator<AgentRunRecord> updater = invocation.getArgument(1);
+            AgentRunRecord updated = updater.apply(persisted.get());
+            persisted.set(updated);
+            return updated;
+        });
+
+        AgentRuntimeResult result = fixture.runtime().resume("run-1", AgentEventListener.NOOP);
+
+        assertEquals(AgentRunState.MANUAL_REVIEW, result.state());
+        assertEquals(AgentRunState.MANUAL_REVIEW, persisted.get().state());
+        verify(fixture.toolRuntime, never()).execute(anyString(), anyString(), anyString(), any(), any(), any());
     }
 
     private static final class Fixture {

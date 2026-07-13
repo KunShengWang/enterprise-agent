@@ -5,6 +5,7 @@ package com.agent.platform.runtime;
  */
 public enum AgentEventType {
     RUN_STARTED,
+    RUN_RESUMED,
     CONTEXT_PREPARED,
     CONTEXT_COMPACTED,
     MODEL_STARTED,

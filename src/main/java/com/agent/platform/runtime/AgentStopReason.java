@@ -5,6 +5,7 @@ package com.agent.platform.runtime;
  */
 public enum AgentStopReason {
     COMPLETED,
+    IN_PROGRESS,
     WAITING_APPROVAL,
     MAX_TURNS,
     MODEL_BUDGET_EXHAUSTED,

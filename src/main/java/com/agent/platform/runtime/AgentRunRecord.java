@@ -131,6 +131,45 @@ public record AgentRunRecord(
         );
     }
 
+    public AgentRunRecord claimedForRecovery() {
+        return copy(
+                AgentRunState.RUNNING,
+                phase,
+                approvalId,
+                pendingToolCall,
+                toolResults,
+                usedTools,
+                usedRag,
+                blockedByGuardrail,
+                "",
+                "",
+                resumeCount + 1,
+                budgetSnapshot
+        );
+    }
+
+    public AgentRunRecord checkpoint(AgentRunPhase checkpointPhase,
+                                     ToolCallRequest activeToolCall,
+                                     List<ToolCallResult> completedToolResults,
+                                     List<String> completedTools,
+                                     boolean ragUsed,
+                                     AgentRunBudgetSnapshot currentBudget) {
+        return copy(
+                AgentRunState.RUNNING,
+                checkpointPhase,
+                approvalId,
+                activeToolCall,
+                completedToolResults,
+                completedTools,
+                ragUsed,
+                blockedByGuardrail,
+                "",
+                "",
+                resumeCount,
+                currentBudget
+        );
+    }
+
     public AgentRunRecord finished(AgentRunState targetState,
                                    AgentRunPhase targetPhase,
                                    String finalAnswer,
