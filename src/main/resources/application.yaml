@@ -80,7 +80,6 @@ enterprise-agent:
     allowed-filesystem-roots:
       - ${MCP_FILESYSTEM_ROOT:D:/JDK/IDEA/java_reinforcement_learning/enterprise-agent/data/mcp-sandbox}
     allowed-network-hosts: []
-    tenant-denied-tools: {}
   mcp:
     enabled: false
     server-name: filesystem

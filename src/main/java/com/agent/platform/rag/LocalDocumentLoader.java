@@ -8,9 +8,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 @Component
 public class LocalDocumentLoader {
+
+    private static final long MAX_TEXT_DOCUMENT_BYTES = 5 * 1024 * 1024;
+
+    private static final Set<String> TEXT_EXTENSIONS = Set.of(
+            ".md", ".txt", ".adoc", ".rst", ".csv", ".json", ".jsonl",
+            ".yaml", ".yml", ".xml", ".html", ".htm", ".log", ".sql",
+            ".java", ".kt", ".py", ".js", ".ts"
+    );
 
     public List<LoadedDocument> load(Path documentDir) {
         if (documentDir == null || !Files.exists(documentDir)) {
@@ -30,12 +40,18 @@ public class LocalDocumentLoader {
         }
     }
 
-    /**
-     * TODO 只支撑.md和.txt两种格式，后续使用 Spring AI 的 DocumentReader 扩展其他格式的文件
-     */
     private boolean isSupported(Path path) {
-        String fileName = path.getFileName().toString().toLowerCase();
-        return fileName.endsWith(".md") || fileName.endsWith(".txt");
+        String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
+        return TEXT_EXTENSIONS.stream().anyMatch(fileName::endsWith) && withinSizeLimit(path);
+    }
+
+    private boolean withinSizeLimit(Path path) {
+        try {
+            return Files.size(path) <= MAX_TEXT_DOCUMENT_BYTES;
+        }
+        catch (IOException exception) {
+            throw new IllegalStateException("Failed to inspect RAG document: " + path, exception);
+        }
     }
 
     private String read(Path path) {
@@ -43,7 +59,10 @@ public class LocalDocumentLoader {
             return Files.readString(path, StandardCharsets.UTF_8);
         }
         catch (IOException exception) {
-            throw new IllegalStateException("Failed to read RAG document: " + path, exception);
+            throw new IllegalStateException(
+                    "Failed to read UTF-8 text RAG document (binary PDF/DOCX requires a dedicated parser): " + path,
+                    exception
+            );
         }
     }
 }
