@@ -1,179 +1,111 @@
-# Enterprise Agent 架构说明
+# 当前架构
 
-本文用于解释 Enterprise Agent 的整体架构、主执行链路和关键模块关系。
-
-## 总体架构
+## 1. 组件关系
 
 ```mermaid
-flowchart TB
-    Client["Client / Frontend / Apifox"]
-    Controller["Web Controllers"]
-    Executor["V1AgentExecutor"]
-    StreamExecutor["StreamingAgentExecutor"]
+flowchart LR
+    HTTP["AgentController"] --> Sync["RuntimeAgentExecutor"]
+    HTTP --> SSE["DefaultStreamingAgentExecutor"]
+    Sync --> Runtime["DefaultAgentRuntime"]
+    SSE --> Runtime
 
-    Memory["Memory Service\n短期记忆 / 长期记忆 / 用户画像"]
-    Guardrail["Guardrails / HITL\n输入检查 / 输出脱敏 / 工具审批"]
-    Skill["Skills\n能力注册 / 描述检索 / 工具绑定"]
-    Router["Intent Router\nCHAT / RAG / TOOL / CLARIFY"]
-    QueryRewrite["Query Rewrite"]
-    Rag["RAG Service\npgvector / Hybrid Retrieval / Rerank"]
-    Tool["Tool Layer\nLocal Tools / MCP Tools"]
-    Prompt["Prompt Assembler"]
-    LLM["LLM Service\nSpring AI / DeepSeek"]
-    Ops["AgentOps\nTrace / Eval / Workflow / Replay"]
+    Runtime --> Context["DefaultAgentContextManager"]
+    Runtime --> Model["JsonAgentModelGateway"]
+    Runtime --> Cap["Capability Registry"]
+    Runtime --> ToolRuntime["DefaultAgentToolRuntime"]
+    Runtime --> Guard["Guardrail / Tool Policy"]
+    Runtime --> Control["Run Control / Lease / Cancel"]
 
-    Pg["PostgreSQL + pgvector"]
-    Mcp["MCP Servers\nfilesystem / ticket"]
+    Context --> Timeline["PostgreSQL Message Timeline"]
+    Context --> Memory["pgvector Long-term Memory"]
+    Cap --> RAG["knowledge_search"]
+    Cap --> Skill["skill_catalog"]
+    Cap --> Tools["Local Tools / MCP"]
+    ToolRuntime --> Approval["Approval + Idempotency"]
 
-    Client --> Controller
-    Controller --> Executor
-    Controller --> StreamExecutor
-    Executor --> Memory
-    Executor --> Guardrail
-    Executor --> Skill
-    Executor --> Router
-    Executor --> QueryRewrite
-    QueryRewrite --> Rag
-    Router --> Rag
-    Router --> Tool
-    Tool --> Mcp
-    Rag --> Pg
-    Memory --> Pg
-    Executor --> Prompt
-    Prompt --> LLM
-    LLM --> Executor
-    Executor --> Ops
-    StreamExecutor --> LLM
-    StreamExecutor --> Ops
+    Runtime --> Events["PostgreSQL Agent Events"]
+    Events --> Ops["Trace / Eval / Replay"]
+    Runtime --> Sub["Isolated Sub-Agent Runtime"]
 ```
 
-## Agent 主执行链路
+核心依赖方向是 Controller/Adapter -> Runtime -> Port/Store。HTTP、SSE、RAG、MCP 和 Sub-Agent 都不能各自创建一套执行语义。
+
+## 2. Agent Loop
 
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant A as AgentController
-    participant E as V1AgentExecutor
-    participant T as TraceRecorder
-    participant M as MemoryService
-    participant G as GuardrailService
-    participant R as IntentRouter
-    participant Q as QueryRewriteService
-    participant K as RagService
-    participant Tool as ToolExecutor
-    participant P as PromptAssembler
-    participant L as LlmService
-    participant Eval as EvalEventRecorder
+    participant C as Client
+    participant R as AgentRuntime
+    participant DB as PostgreSQL Timeline
+    participant M as Model Gateway
+    participant P as Tool Policy
+    participant T as Tool Runtime
 
-    U->>A: POST /api/agent/runs
-    A->>E: execute(request)
-    E->>T: start run
-    E->>M: load conversation memory
-    E->>G: check input
-    E->>R: route intent
-    E->>Q: rewrite query
-    alt RAG route
-        E->>K: retrieve evidence
-    else TOOL route
-        E->>Tool: execute local or MCP tool
-    else CHAT route
-        E->>E: fallback to direct chat
+    C->>R: AgentRequest
+    R->>DB: open session / create run / append USER
+    loop bounded turns
+        R->>DB: load ordered messages and context summary
+        R->>M: messages + capability definitions
+        M-->>R: assistantText or toolCalls
+        alt final answer
+            R->>DB: append ASSISTANT_TEXT and final event
+            R-->>C: completed
+        else tool calls
+            R->>DB: append ASSISTANT_TOOL_CALL
+            R->>P: profile + tenant + tool + arguments
+            alt ask
+                R->>DB: persist approval and waiting state
+                R-->>C: WAITING_APPROVAL
+            else deny
+                R->>DB: append rejected TOOL_RESULT
+            else allow
+                R->>T: claim idempotency key and execute
+                T-->>R: ToolCallResult
+                R->>DB: append paired TOOL_RESULT
+            end
+        end
     end
-    E->>P: assemble prompt
-    E->>L: call model
-    L-->>E: answer
-    E->>G: check output
-    E->>M: save assistant message
-    E->>Eval: record eval event
-    E->>T: finish run
-    E-->>A: AgentResponse
-    A-->>U: ApiResponse
 ```
 
-## RAG 链路
+模型只负责“下一步是什么”。能否执行、何时终止、如何恢复、是否重复执行副作用，都由 Runtime 决定。
 
-```mermaid
-flowchart LR
-    Docs["Markdown / TXT Documents"]
-    Loader["LocalDocumentLoader"]
-    Splitter["Chunk Splitter"]
-    Embedding["Embedding Client\n智谱 embedding-3"]
-    Store["PgVector Repository"]
-    Query["User Query"]
-    Rewrite["Query Rewrite"]
-    VectorSearch["Vector Search"]
-    KeywordSearch["Keyword Search"]
-    Merge["Hybrid Merge"]
-    Rerank["Rerank"]
-    Context["Context Blocks"]
-    Prompt["Prompt"]
+## 3. 消息与上下文
 
-    Docs --> Loader --> Splitter --> Embedding --> Store
-    Query --> Rewrite
-    Rewrite --> VectorSearch
-    Rewrite --> KeywordSearch
-    VectorSearch --> Merge
-    KeywordSearch --> Merge
-    Merge --> Rerank
-    Rerank --> Context --> Prompt
-    Store --> VectorSearch
-    Store --> KeywordSearch
-```
+`agent_message` 是完整事实时间线。`DefaultAgentContextManager` 只生成下一轮模型投影，不删除历史：
 
-## Tool / MCP 链路
+1. 找到最新 `CONTEXT_SUMMARY` 及其 `coversThroughSequence`。
+2. 将工具调用和工具结果组合为不可拆分单元。
+3. 按 Token 预算从后向前选择完整近期单元。
+4. 超预算时，对更早的完整单元生成滚动摘要并持久化。
+5. 加入 pgvector 长期记忆，但明确标记为不可信历史用户数据。
+6. Provider 返回上下文溢出时，缩小预算再压缩一次；仍失败则以 `CONTEXT_OVERFLOW` 终止。
 
-```mermaid
-flowchart TB
-    Planner["ToolCallPlanner\nLLM 规划 + 规则降级"]
-    Registry["ToolRegistry"]
-    Local["Local Tools\n工单查询 / 创建 / 优先级 / 关闭"]
-    McpTools["MCP Tools\nfilesystem / ticket"]
-    Guard["Tool Guardrail"]
-    Approval["Approval Service"]
-    Executor["ToolExecutor"]
-    Recorder["ToolRunRecorder"]
+## 4. Tool Runtime
 
-    Planner --> Registry
-    Registry --> Local
-    Registry --> McpTools
-    Planner --> Guard
-    Guard --> Approval
-    Approval --> Executor
-    Guard --> Executor
-    Executor --> Local
-    Executor --> McpTools
-    Executor --> Recorder
-```
+能力目录包含：
 
-## AgentOps 闭环
+- `knowledge_search`：RAG 只读能力；
+- `skill_catalog`：只读技能指导，不授予工具权限；
+- 本地工单工具；
+- 可选 MCP 工具。
 
-```mermaid
-flowchart LR
-    Run["Agent Run"]
-    Approval["WAITING_APPROVAL / Human Decision"]
-    Idempotency["toolCallId Idempotency"]
-    Trace["Trace / Span"]
-    Workflow["Workflow Checkpoint"]
-    Eval["Eval Report"]
-    GuardAudit["Guardrail Audit"]
-    ToolRun["Tool Run Record"]
-    Replay["Replay"]
+执行前依次经过 Profile 白名单、能力存在性、JSON Schema 参数校验、Tool Policy 和审批。写工具使用 `toolCallId/requestId` 持久化执行声明；不确定副作用不会盲目重试，而是进入 `MANUAL_REVIEW`。
 
-    Run --> Trace
-    Run --> Workflow
-    Workflow --> Approval
-    Approval --> Idempotency
-    Idempotency --> Run
-    Run --> Eval
-    Run --> GuardAudit
-    Run --> ToolRun
-    Trace --> Replay
-```
+## 5. 同步与 SSE
 
-## 当前边界
+`RuntimeAgentExecutor` 收集 Runtime 结果并投影为同步 `AgentResponse`。`DefaultStreamingAgentExecutor` 将相同 Runtime 发出的事件转成 SSE，客户端断开时请求取消对应 Run。
 
-- Agent Run、计划、checkpoint、待审批 ToolCall 和工具执行结果支持 JDBC 持久化；审批后从同一 run 恢复。
-- `toolCallId` 用作副作用幂等键；已成功结果直接复用，结果不确定时进入 `MANUAL_REVIEW`。
-- Multi-Agent 已有角色协作，但目前是轻量顺序编排。
-- Streaming 已支持 LLM token 流式输出，RAG / Tool 阶段是事件化输出。
-- 运行时同时保留 memory 模式用于本地演示，默认 storage 模式为 JDBC。
+当前 SSE 是 Runtime 事件流，不是逐 Token 输出流。`MODEL_STARTED`、`MODEL_COMPLETED`、工具、审批、压缩、Sub-Agent 和终态事件都先持久化再通知监听器。
+
+## 6. Sub-Agent
+
+Planner、Specialist、Reviewer 都通过同一个 Runtime 运行，但使用独立 `AgentExecutionProfile`：
+
+- 独立 Session 和 child Run；
+- 独立 System Prompt；
+- 独立工具白名单；
+- 独立模型/工具/Token/时间预算；
+- 禁用长期记忆写入；
+- 主协调者只接收摘要和 childRunId。
+
+这实现了上下文与权限隔离，但还不是跨进程分布式调度。

@@ -1,0 +1,44 @@
+# 仍然存在的边界
+
+这份清单用于约束简历和面试表述，不是继续无止境堆功能的任务列表。
+
+## 高优先级但不属于本轮 Runtime 重构
+
+1. 身份认证与管理 API 授权
+   - 当前没有 Spring Security、OAuth2 或租户管理后台。
+   - Tool Runtime 能识别 metadata 中的角色/tenant，但 HTTP metadata 仍需可信网关签发，不能直接信任公网请求体。
+
+2. 真正执行隔离
+   - 当前提供文件根目录、网络 Host 白名单和 MCP 进程边界。
+   - 这不是 OS/容器 Sandbox；Shell、文件和网络高风险能力若扩展，需容器、seccomp、低权限用户和出站网络隔离。
+
+3. 数据库迁移治理
+   - 代码使用 `CREATE TABLE IF NOT EXISTS` 便于学习启动。
+   - 正式部署应使用 Flyway/Liquibase、版本化 DDL、回滚方案和旧 `record_json` 数据迁移。
+
+## 已知技术边界
+
+- `JsonAgentModelGateway` 使用提示词约束的 JSON ToolCall 协议；还没有针对不同模型 Provider 的原生 Tool Calling Adapter。
+- SSE 转发持久化 Runtime 事件，不解析模型 JSON 的逐 Token 增量；`MODEL_DELTA` 尚未成为主路径事件。
+- Token/Usage 优先采用 Provider 返回值，无法取得时使用估算并标记 source；成本配置不是财务账单。
+- Sub-Agent 并行使用单进程有界线程池，没有消息队列、跨节点调度、优先级和长期任务接管。
+- RAG 文档加载仅支持 UTF-8 文本格式，未接入 PDF/DOCX/PPTX OCR 和复杂表格解析。
+- RAG 语义重排调用通用 ChatModel，不是专用 cross-encoder；成本和延迟需要基于真实数据评测。
+- Prompt Injection 语义分类与主模型共用 LLM Service，尚未使用独立安全模型或外部内容安全服务。
+- PostgreSQL RAG 缓存提供 TTL 和容量裁剪，但没有 Redis 的高吞吐与主动广播失效能力。
+- 管理接口、AgentOps 和 Eval 还没有前端控制台。
+
+## 证据边界
+
+- 已验证 `mvn clean test`、Spring Context 启动和现有测试通过。
+- 最终 HTTP 冒烟以 Mock ChatModel 验证 Runtime/数据库/同步/SSE 连接，不代表真实 DeepSeek ToolCall 质量。
+- 当前没有覆盖审批恢复、上下文溢出、多实例租约和副作用不确定状态的系统化自动测试，因此简历不要声称“完善的测试体系”。
+
+## 可以继续做，但只有拿到证据后再写简历
+
+- Testcontainers + PostgreSQL/pgvector 集成测试；
+- 高风险工具审批恢复与幂等故障注入；
+- 多实例 Session Lease 竞争验证；
+- 长上下文压缩质量 Eval；
+- 真实模型下 ToolCall 成功率、RAG Recall@K、重排增益、P95 延迟和成本；
+- 容器 Sandbox 与可信身份边界。
