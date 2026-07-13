@@ -29,7 +29,6 @@ import reactor.core.scheduler.Schedulers;
 
 import java.util.Map;
 import java.util.List;
-import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/agent")
@@ -101,9 +100,8 @@ public class AgentController {
                     "请求过于频繁，请稍后重试。limit=" + limit.limit() + "/minute"));
         }
 
-        // agentExecutor.execute() 是同步阻塞流程，内部可能访问 PostgreSQL、Embedding API 和 LLM。
-        // Mono.fromSupplier 让它在 WebFlux 订阅时才真正执行；boundedElastic 用于承载这些阻塞操作，
-        // 避免占用 Netty EventLoop 线程。当前实际注入的是 @Primary 的 V1AgentExecutor。
+        // RuntimeAgentExecutor 和 SSE 适配器共享同一个 AgentRuntime；同步接口只是在完成后
+        // 把已持久化事件投影为 AgentResponse。
         return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.execute(request)))
                 .subscribeOn(Schedulers.boundedElastic());
     }
@@ -144,13 +142,8 @@ public class AgentController {
         if (!limit.allowed()) {
             return Flux.just("error: 请求过于频繁，请稍后重试。limit=" + limit.limit() + "/minute");
         }
-        return Mono.fromSupplier(() -> agentExecutor.execute(request))
-                .subscribeOn(Schedulers.boundedElastic())
-                // 把完整执行结果拆成 SSE 片段，方便前端观察步骤和最终回答。
-                .flatMapMany(response -> Flux.fromStream(Stream.concat(
-                        response.steps().stream().map(step -> "step: " + step.name() + " [" + step.status() + "] " + step.summary()),
-                        Stream.of("answer: " + response.answer(), "traceId: " + response.trace().traceId())
-                )));
+        return streamingAgentExecutor.stream(request)
+                .map(event -> event.type() + ": " + event.content());
     }
 
     @PostMapping(value = "/runs/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

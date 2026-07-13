@@ -53,7 +53,6 @@ import com.agent.platform.workflow.WorkflowPlanner;
 import com.agent.platform.workflow.WorkflowRecorder;
 import com.agent.platform.workflow.WorkflowRunStatus;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -69,7 +68,7 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Primary
+@Deprecated(forRemoval = false)
 @Service
 public class V1AgentExecutor implements AgentExecutor {
 
