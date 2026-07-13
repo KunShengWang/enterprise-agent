@@ -1,7 +1,6 @@
 package com.agent.platform.tool;
 
 import com.agent.platform.mcp.McpToolGateway;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
@@ -54,11 +53,6 @@ public class LocalToolRegistry implements ToolRegistry {
             )
     );
 
-    public LocalToolRegistry() {
-        this.mcpToolGatewayProvider = null;
-    }
-
-    @Autowired
     public LocalToolRegistry(ObjectProvider<McpToolGateway> mcpToolGatewayProvider) {
         this.mcpToolGatewayProvider = mcpToolGatewayProvider;
     }
@@ -69,9 +63,7 @@ public class LocalToolRegistry implements ToolRegistry {
     @Override
     public List<ToolDefinition> listTools() {
         List<ToolDefinition> mergedTools = new ArrayList<>(tools);
-        if (mcpToolGatewayProvider != null) {
-            mcpToolGatewayProvider.ifAvailable(gateway -> mergedTools.addAll(gateway.discoverTools()));
-        }
+        mcpToolGatewayProvider.ifAvailable(gateway -> mergedTools.addAll(gateway.discoverTools()));
         return List.copyOf(mergedTools);
     }
 

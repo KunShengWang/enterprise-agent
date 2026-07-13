@@ -2,17 +2,13 @@ package com.agent.platform.web;
 
 import com.agent.platform.common.ApiResponse;
 import com.agent.platform.tool.ToolCallRecord;
-import com.agent.platform.tool.ToolCallRequest;
-import com.agent.platform.tool.ToolCallResult;
 import com.agent.platform.tool.ToolDefinition;
-import com.agent.platform.tool.ToolExecutor;
 import com.agent.platform.tool.ToolRegistry;
 import com.agent.platform.tool.ToolRunRecorder;
 import com.agent.platform.tool.ToolRunStats;
 import com.agent.platform.runtime.ToolExecutionRecord;
 import com.agent.platform.runtime.ToolExecutionStore;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,18 +25,14 @@ public class ToolController {
 
     private final ToolRegistry toolRegistry;
 
-    private final ToolExecutor toolExecutor;
-
     private final ToolRunRecorder toolRunRecorder;
 
     private final ToolExecutionStore toolExecutionStore;
 
     public ToolController(ToolRegistry toolRegistry,
-                          ToolExecutor toolExecutor,
                           ToolRunRecorder toolRunRecorder,
                           ToolExecutionStore toolExecutionStore) {
         this.toolRegistry = toolRegistry;
-        this.toolExecutor = toolExecutor;
         this.toolRunRecorder = toolRunRecorder;
         this.toolExecutionStore = toolExecutionStore;
     }
@@ -48,12 +40,6 @@ public class ToolController {
     @GetMapping
     public Mono<ApiResponse<List<ToolDefinition>>> listTools() {
         return Mono.fromSupplier(() -> ApiResponse.success(toolRegistry.listTools()))
-                .subscribeOn(Schedulers.boundedElastic());
-    }
-
-    @PostMapping("/call")
-    public Mono<ApiResponse<ToolCallResult>> callTool(@RequestBody ToolCallRequest request) {
-        return Mono.fromSupplier(() -> ApiResponse.success(toolExecutor.execute(request)))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 

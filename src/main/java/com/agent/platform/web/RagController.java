@@ -164,7 +164,7 @@ public class RagController {
         return Mono.fromSupplier(() -> {
                     PgVectorRagRepository repository = pgVectorRepositoryProvider.getIfAvailable();
                     if (repository == null) {
-                        return ApiResponse.success(new RagCorpusStats("memory", 0, List.of()));
+                        return ApiResponse.success(new RagCorpusStats("postgresql-unavailable", 0, List.of()));
                     }
                     return ApiResponse.success(repository.stats());
                 })
@@ -179,6 +179,10 @@ public class RagController {
                         throw new IllegalStateException("Deleting RAG source is only available in pgvector mode");
                     }
                     int deletedChunks = repository.deleteBySource(request.source());
+                    RagCacheOperations cacheOperations = ragCacheOperationsProvider.getIfAvailable();
+                    if (deletedChunks > 0 && cacheOperations != null) {
+                        cacheOperations.clearCache();
+                    }
                     return ApiResponse.success(new RagSourceDeleteReport("pgvector", request.source(), deletedChunks));
                 })
                 .subscribeOn(Schedulers.boundedElastic());
