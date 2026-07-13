@@ -9,6 +9,8 @@ import com.agent.platform.guardrail.GuardrailAction;
 import com.agent.platform.guardrail.GuardrailDecision;
 import com.agent.platform.guardrail.GuardrailService;
 import com.agent.platform.llm.LlmUsage;
+import com.agent.platform.memory.MemoryMessage;
+import com.agent.platform.memory.MemoryService;
 import com.agent.platform.tool.ToolCallResult;
 import com.agent.platform.tool.ToolDefinition;
 import com.agent.platform.workflow.WorkflowNode;
@@ -48,6 +50,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
     private final ApprovalService approvalService;
     private final TokenEstimator tokenEstimator;
 
+    private final MemoryService memoryService;
+
     public DefaultAgentRuntime(AgentProperties properties,
                                AgentTimelineStore timelineStore,
                                AgentRunStore runStore,
@@ -57,7 +61,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                AgentToolRuntime toolRuntime,
                                GuardrailService guardrailService,
                                ApprovalService approvalService,
-                               TokenEstimator tokenEstimator) {
+                               TokenEstimator tokenEstimator,
+                               MemoryService memoryService) {
         this.properties = properties;
         this.timelineStore = timelineStore;
         this.runStore = runStore;
@@ -68,6 +73,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         this.guardrailService = guardrailService;
         this.approvalService = approvalService;
         this.tokenEstimator = tokenEstimator;
+        this.memoryService = memoryService;
     }
 
     @Override
@@ -114,6 +120,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         timelineStore.appendMessages(sessionId, userId, runId, List.of(
                 AgentMessageDraft.user(safeQuestion, tokenEstimator.estimate(safeQuestion))
         ));
+        memoryService.rememberLongTerm(sessionId, userId, new MemoryMessage("user", safeQuestion, Instant.now()));
         return executeLoop(request, runId, sessionId, userId, budget,
                 new ArrayList<>(), new ArrayList<>(), false, effectiveListener);
     }
@@ -194,7 +201,12 @@ public class DefaultAgentRuntime implements AgentRuntime {
             }
             budget.recordTurnStarted();
 
-            AgentContextView context = contextManager.project(sessionId, AgentRunLimits.from(properties).maxInputTokens());
+            AgentContextView context = contextManager.project(
+                    sessionId,
+                    userId,
+                    request.question(),
+                    AgentRunLimits.from(properties).maxInputTokens()
+            );
             publish(sessionId, userId, runId,
                     context.compacted() ? AgentEventType.CONTEXT_COMPACTED : AgentEventType.CONTEXT_PREPARED,
                     "context projected",

@@ -1,5 +1,8 @@
 package com.agent.platform.runtime;
 
+import com.agent.platform.memory.MemorySearchResult;
+import com.agent.platform.memory.MemoryService;
+import com.agent.platform.memory.UserProfile;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -24,13 +27,18 @@ public class DefaultAgentContextManager implements AgentContextManager {
     private final AgentTimelineStore timelineStore;
     private final TokenEstimator tokenEstimator;
 
-    public DefaultAgentContextManager(AgentTimelineStore timelineStore, TokenEstimator tokenEstimator) {
+    private final MemoryService memoryService;
+
+    public DefaultAgentContextManager(AgentTimelineStore timelineStore,
+                                      TokenEstimator tokenEstimator,
+                                      MemoryService memoryService) {
         this.timelineStore = timelineStore;
         this.tokenEstimator = tokenEstimator;
+        this.memoryService = memoryService;
     }
 
     @Override
-    public AgentContextView project(String sessionId, long maxTokens) {
+    public AgentContextView project(String sessionId, String userId, String query, long maxTokens) {
         List<AgentMessage> timeline = timelineStore.loadMessages(sessionId, MAX_TIMELINE_MESSAGES);
         if (timeline.isEmpty()) {
             return new AgentContextView(List.of(), 0, 0, false);
@@ -65,13 +73,48 @@ public class DefaultAgentContextManager implements AgentContextManager {
             }
         }
 
-        List<AgentMessage> projected = selected.stream()
+        List<AgentMessage> projected = new ArrayList<>(selected.stream()
                 .flatMap(unit -> unit.messages().stream())
                 .distinct()
                 .sorted(Comparator.comparingLong(AgentMessage::sequence))
-                .toList();
-        int omitted = Math.max(0, timeline.size() - projected.size());
-        return new AgentContextView(projected, selectedTokens, omitted, omitted > 0);
+                .toList());
+        AgentMessage memoryContext = longTermMemoryContext(sessionId, userId, query);
+        if (memoryContext != null) {
+            long memoryTokens = tokens(memoryContext);
+            while (!projected.isEmpty() && selectedTokens + memoryTokens > budget) {
+                AgentMessage removed = projected.remove(0);
+                selectedTokens = Math.max(0, selectedTokens - tokens(removed));
+                if (removed.isToolCall()) {
+                    String toolCallId = removed.toolCallId();
+                    AgentMessage paired = projected.stream()
+                            .filter(message -> message.isToolResult() && toolCallId.equals(message.toolCallId()))
+                            .findFirst()
+                            .orElse(null);
+                    if (paired != null) {
+                        projected.remove(paired);
+                        selectedTokens = Math.max(0, selectedTokens - tokens(paired));
+                    }
+                }
+                else if (removed.isToolResult()) {
+                    String toolCallId = removed.toolCallId();
+                    AgentMessage paired = projected.stream()
+                            .filter(message -> message.isToolCall() && toolCallId.equals(message.toolCallId()))
+                            .findFirst()
+                            .orElse(null);
+                    if (paired != null) {
+                        projected.remove(paired);
+                        selectedTokens = Math.max(0, selectedTokens - tokens(paired));
+                    }
+                }
+            }
+            projected.add(0, memoryContext);
+            selectedTokens += memoryTokens;
+        }
+        long projectedTimelineMessages = projected.stream()
+                .filter(message -> !message.messageId().startsWith("memory-context-"))
+                .count();
+        int omitted = Math.max(0, timeline.size() - (int) projectedTimelineMessages);
+        return new AgentContextView(List.copyOf(projected), selectedTokens, omitted, omitted > 0);
     }
 
     private List<MessageUnit> buildUnits(List<AgentMessage> messages) {
@@ -110,6 +153,43 @@ public class DefaultAgentContextManager implements AgentContextManager {
         return tokenEstimator.estimate(message.content())
                 + tokenEstimator.estimate(String.valueOf(message.arguments()))
                 + tokenEstimator.estimate(String.valueOf(message.metadata()));
+    }
+
+    private AgentMessage longTermMemoryContext(String sessionId, String userId, String query) {
+        if (query == null || query.isBlank()) {
+            return null;
+        }
+        List<MemorySearchResult> recalled = memoryService.recall(sessionId, userId, query, 8);
+        UserProfile profile = memoryService.loadUserProfile(userId);
+        if (recalled.isEmpty() && profile.items().isEmpty()) {
+            return null;
+        }
+        StringBuilder content = new StringBuilder("<trusted_memory_context>\n");
+        for (MemorySearchResult result : recalled) {
+            content.append("- type=").append(result.type())
+                    .append("; score=").append(result.score())
+                    .append("; content=").append(result.content())
+                    .append('\n');
+        }
+        for (var item : profile.items()) {
+            content.append("- profile.").append(item.key()).append('=').append(item.value()).append('\n');
+        }
+        content.append("</trusted_memory_context>");
+        String value = content.toString();
+        return new AgentMessage(
+                "memory-context-" + sessionId,
+                sessionId,
+                "",
+                0,
+                AgentMessageType.CONTEXT_SUMMARY,
+                value,
+                "",
+                "",
+                Map.of(),
+                Map.of("source", "postgresql-long-term-memory", "recalled", recalled.size()),
+                tokenEstimator.estimate(value),
+                java.time.Instant.now()
+        );
     }
 
     private record MessageUnit(List<AgentMessage> messages, long tokens) {

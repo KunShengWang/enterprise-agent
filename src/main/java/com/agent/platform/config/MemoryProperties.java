@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "enterprise-agent.memory")
 public class MemoryProperties {
 
-    private String mode = "memory";
+    private String mode = "jdbc";
 
     private int windowSize = 12;
 

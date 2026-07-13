@@ -1,6 +1,8 @@
 package com.agent.platform.memory;
 
 import com.agent.platform.config.MemoryProperties;
+import com.agent.platform.rag.EmbeddingClient;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +14,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -19,6 +22,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
@@ -37,16 +43,20 @@ public class JdbcMemoryService implements MemoryService {
 
     private final MemoryRecallScorer recallScorer;
 
+    private final ObjectProvider<EmbeddingClient> embeddingClientProvider;
+
     private final AtomicBoolean schemaReady = new AtomicBoolean(false);
 
     public JdbcMemoryService(MemoryProperties memoryProperties,
                              ConversationSummarizer conversationSummarizer,
                              MemoryExtractor memoryExtractor,
-                             MemoryRecallScorer recallScorer) {
+                             MemoryRecallScorer recallScorer,
+                             ObjectProvider<EmbeddingClient> embeddingClientProvider) {
         this.memoryProperties = memoryProperties;
         this.conversationSummarizer = conversationSummarizer;
         this.memoryExtractor = memoryExtractor;
         this.recallScorer = recallScorer;
+        this.embeddingClientProvider = embeddingClientProvider;
     }
 
     /**
@@ -94,17 +104,43 @@ public class JdbcMemoryService implements MemoryService {
                 message.content().trim(),
                 message.createdAt() == null ? Instant.now() : message.createdAt()
         );
+        MemoryExtraction extraction = memoryExtractor.extract(normalizedConversationId, normalizedUserId, effectiveMessage);
         ensureSchema();
         try (Connection connection = openConnection()) {
             // 往数据库中插入数据
             insertMessage(connection, normalizedConversationId, normalizedUserId, effectiveMessage);
             // 提炼用户画像和长期记忆
-            extractAndStore(connection, normalizedConversationId, normalizedUserId, effectiveMessage);
+            storeExtraction(connection, normalizedConversationId, normalizedUserId, extraction);
             // 如果消息超出窗口消息大小就进行消息压缩
             updateSummaryIfNeeded(connection, normalizedConversationId, normalizedUserId);
         }
         catch (SQLException exception) {
             throw new MemoryException("Failed to append conversation memory", exception);
+        }
+    }
+
+    @Override
+    public void rememberLongTerm(String conversationId, String userId, MemoryMessage message) {
+        if (message == null || isBlank(message.content())) {
+            return;
+        }
+        String normalizedConversationId = normalizeConversationId(conversationId);
+        String normalizedUserId = normalizeUserId(userId);
+        MemoryMessage effectiveMessage = new MemoryMessage(
+                normalizeRole(message.role()),
+                message.content().trim(),
+                message.createdAt() == null ? Instant.now() : message.createdAt()
+        );
+        MemoryExtraction extraction = memoryExtractor.extract(normalizedConversationId, normalizedUserId, effectiveMessage);
+        if (extraction.longTermMemories().isEmpty() && extraction.profileItems().isEmpty()) {
+            return;
+        }
+        ensureSchema();
+        try (Connection connection = openConnection()) {
+            storeExtraction(connection, normalizedConversationId, normalizedUserId, extraction);
+        }
+        catch (SQLException exception) {
+            throw new MemoryException("Failed to persist extracted long-term memory", exception);
         }
     }
 
@@ -115,6 +151,7 @@ public class JdbcMemoryService implements MemoryService {
         ensureSchema();
         try (Connection connection = openConnection()) {
             List<MemorySearchResult> results = new ArrayList<>();
+            double[] queryEmbedding = embedBestEffort(query);
             // 会话摘要 summary
             addScoredResult(results, query, "summary", normalizedConversationId, readSummary(connection, normalizedConversationId),
                     Map.of("conversationId", normalizedConversationId));
@@ -127,9 +164,13 @@ public class JdbcMemoryService implements MemoryService {
                         Map.of("role", message.role(), "createdAt", message.createdAt()));
             }
             // 长期记忆 long_term
-            for (LongTermMemory memory : readLongTermMemories(connection, normalizedConversationId, normalizedUserId, memoryProperties.getLongTermLimit())) {
-                addScoredResult(results, query, "long_term", memory.memoryId(), memory.content(),
-                        Map.of("category", memory.category(), "confidence", memory.confidence()));
+            for (StoredMemory memory : readStoredMemories(
+                    connection,
+                    normalizedConversationId,
+                    normalizedUserId,
+                    memoryProperties.getLongTermLimit()
+            )) {
+                addSemanticMemoryResult(results, query, queryEmbedding, memory);
             }
             // 用户画像 user_profile
             for (UserProfileItem item : readUserProfile(connection, normalizedUserId).items()) {
@@ -137,11 +178,13 @@ public class JdbcMemoryService implements MemoryService {
                         Map.of("key", item.key(), "source", item.source()));
             }
             // 返回的是四类记忆中相关性最高的前 limit 条
-            return results.stream()
+            List<MemorySearchResult> selected = results.stream()
                     .filter(result -> result.score() > 0)
                     .sorted(Comparator.comparingDouble(MemorySearchResult::score).reversed())
                     .limit(Math.max(1, limit))
                     .toList();
+            touchSelectedMemories(connection, selected);
+            return selected;
         }
         catch (SQLException exception) {
             throw new MemoryException("Failed to recall memory", exception);
@@ -283,15 +326,27 @@ public class JdbcMemoryService implements MemoryService {
                 statement.execute("""
                         CREATE TABLE IF NOT EXISTS agent_long_term_memory (
                             memory_id TEXT PRIMARY KEY,
+                            memory_key TEXT,
                             conversation_id TEXT NOT NULL,
                             user_id TEXT NOT NULL,
                             category TEXT NOT NULL,
                             content TEXT NOT NULL,
                             confidence DOUBLE PRECISION NOT NULL,
+                            importance DOUBLE PRECISION NOT NULL DEFAULT 0.5,
+                            embedding_json TEXT,
+                            access_count BIGINT NOT NULL DEFAULT 0,
+                            last_accessed_at TIMESTAMPTZ,
+                            expires_at TIMESTAMPTZ,
                             created_at TIMESTAMPTZ NOT NULL,
                             updated_at TIMESTAMPTZ NOT NULL
                         )
                         """);
+                statement.execute("ALTER TABLE agent_long_term_memory ADD COLUMN IF NOT EXISTS memory_key TEXT");
+                statement.execute("ALTER TABLE agent_long_term_memory ADD COLUMN IF NOT EXISTS importance DOUBLE PRECISION NOT NULL DEFAULT 0.5");
+                statement.execute("ALTER TABLE agent_long_term_memory ADD COLUMN IF NOT EXISTS embedding_json TEXT");
+                statement.execute("ALTER TABLE agent_long_term_memory ADD COLUMN IF NOT EXISTS access_count BIGINT NOT NULL DEFAULT 0");
+                statement.execute("ALTER TABLE agent_long_term_memory ADD COLUMN IF NOT EXISTS last_accessed_at TIMESTAMPTZ");
+                statement.execute("ALTER TABLE agent_long_term_memory ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ");
                 statement.execute("""
                         CREATE TABLE IF NOT EXISTS agent_user_profile (
                             user_id TEXT NOT NULL,
@@ -305,6 +360,7 @@ public class JdbcMemoryService implements MemoryService {
                 statement.execute("CREATE INDEX IF NOT EXISTS idx_agent_memory_message_conversation ON agent_memory_message(conversation_id, id)");
                 statement.execute("CREATE INDEX IF NOT EXISTS idx_agent_long_term_conversation ON agent_long_term_memory(conversation_id, updated_at DESC)");
                 statement.execute("CREATE INDEX IF NOT EXISTS idx_agent_long_term_user ON agent_long_term_memory(user_id, updated_at DESC)");
+                statement.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_long_term_memory_key ON agent_long_term_memory(user_id, memory_key) WHERE memory_key IS NOT NULL");
                 schemaReady.set(true);
             }
             catch (SQLException exception) {
@@ -334,9 +390,10 @@ public class JdbcMemoryService implements MemoryService {
     /**
      * 提炼用户画像和长期记忆
      */
-    private void extractAndStore(Connection connection, String conversationId, String userId, MemoryMessage message) throws SQLException {
-        // 提炼用户画像和长期记忆
-        MemoryExtraction extraction = memoryExtractor.extract(conversationId, userId, message);
+    private void storeExtraction(Connection connection,
+                                 String conversationId,
+                                 String userId,
+                                 MemoryExtraction extraction) throws SQLException {
         for (LongTermMemoryDraft draft : extraction.longTermMemories()) {
             Instant now = Instant.now();
             // 插入长期记忆
@@ -362,18 +419,30 @@ public class JdbcMemoryService implements MemoryService {
      */
     private void insertLongTermMemory(Connection connection, LongTermMemory memory) throws SQLException {
         String sql = """
-                INSERT INTO agent_long_term_memory(memory_id, conversation_id, user_id, category, content, confidence, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO agent_long_term_memory(
+                    memory_id, memory_key, conversation_id, user_id, category, content,
+                    confidence, importance, embedding_json, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(user_id, memory_key) WHERE memory_key IS NOT NULL DO UPDATE SET
+                    conversation_id = EXCLUDED.conversation_id,
+                    confidence = GREATEST(agent_long_term_memory.confidence, EXCLUDED.confidence),
+                    importance = GREATEST(agent_long_term_memory.importance, EXCLUDED.importance),
+                    embedding_json = COALESCE(EXCLUDED.embedding_json, agent_long_term_memory.embedding_json),
+                    updated_at = EXCLUDED.updated_at
                 """;
+        double[] embedding = embedBestEffort(memory.content());
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, memory.memoryId());
-            statement.setString(2, memory.conversationId());
-            statement.setString(3, memory.userId());
-            statement.setString(4, memory.category());
-            statement.setString(5, memory.content());
-            statement.setDouble(6, memory.confidence());
-            statement.setTimestamp(7, Timestamp.from(memory.createdAt()));
-            statement.setTimestamp(8, Timestamp.from(memory.updatedAt()));
+            statement.setString(2, memoryKey(memory.category(), memory.content()));
+            statement.setString(3, memory.conversationId());
+            statement.setString(4, memory.userId());
+            statement.setString(5, memory.category());
+            statement.setString(6, memory.content());
+            statement.setDouble(7, memory.confidence());
+            statement.setDouble(8, memory.confidence());
+            statement.setString(9, embedding == null ? null : encodeVector(embedding));
+            statement.setTimestamp(10, Timestamp.from(memory.createdAt()));
+            statement.setTimestamp(11, Timestamp.from(memory.updatedAt()));
             statement.executeUpdate();
         }
     }
@@ -544,7 +613,8 @@ public class JdbcMemoryService implements MemoryService {
         String sql = """
                 SELECT memory_id, conversation_id, user_id, category, content, confidence, created_at, updated_at
                 FROM agent_long_term_memory
-                WHERE conversation_id = ? OR user_id = ?
+                WHERE (conversation_id = ? OR user_id = ?)
+                  AND (expires_at IS NULL OR expires_at > NOW())
                 ORDER BY updated_at DESC
                 LIMIT ?
                 """;
@@ -619,6 +689,178 @@ public class JdbcMemoryService implements MemoryService {
         }
     }
 
+    private List<StoredMemory> readStoredMemories(Connection connection,
+                                                   String conversationId,
+                                                   String userId,
+                                                   int limit) throws SQLException {
+        String sql = """
+                SELECT memory_id, category, content, confidence, importance, embedding_json,
+                       created_at, updated_at, access_count, last_accessed_at
+                FROM agent_long_term_memory
+                WHERE (conversation_id = ? OR user_id = ?)
+                  AND (expires_at IS NULL OR expires_at > NOW())
+                ORDER BY importance DESC, updated_at DESC
+                LIMIT ?
+                """;
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, conversationId);
+            statement.setString(2, userId);
+            statement.setInt(3, Math.max(1, limit));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                List<StoredMemory> memories = new ArrayList<>();
+                while (resultSet.next()) {
+                    Timestamp lastAccessed = resultSet.getTimestamp("last_accessed_at");
+                    memories.add(new StoredMemory(
+                            resultSet.getString("memory_id"),
+                            resultSet.getString("category"),
+                            resultSet.getString("content"),
+                            resultSet.getDouble("confidence"),
+                            resultSet.getDouble("importance"),
+                            decodeVector(resultSet.getString("embedding_json")),
+                            resultSet.getTimestamp("created_at").toInstant(),
+                            resultSet.getTimestamp("updated_at").toInstant(),
+                            resultSet.getLong("access_count"),
+                            lastAccessed == null ? null : lastAccessed.toInstant()
+                    ));
+                }
+                return memories;
+            }
+        }
+    }
+
+    private void addSemanticMemoryResult(List<MemorySearchResult> results,
+                                         String query,
+                                         double[] queryEmbedding,
+                                         StoredMemory memory) {
+        MemoryRecallScore lexical = recallScorer.scoreDetail(query, memory.content());
+        double semantic = cosineSimilarity(queryEmbedding, memory.embedding());
+        double recency = recencyScore(memory.updatedAt());
+        boolean semanticAvailable = queryEmbedding != null && memory.embedding() != null;
+        double score = semanticAvailable
+                ? semantic * 0.65 + lexical.lexicalScore() * 0.15
+                + memory.confidence() * 0.10 + memory.importance() * 0.05 + recency * 0.05
+                : lexical.lexicalScore() * 0.70 + memory.confidence() * 0.15
+                + memory.importance() * 0.10 + recency * 0.05;
+        if (score <= 0) {
+            return;
+        }
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("category", memory.category());
+        metadata.put("confidence", memory.confidence());
+        metadata.put("importance", memory.importance());
+        metadata.put("lexicalScore", lexical.lexicalScore());
+        metadata.put("semanticScore", semantic);
+        metadata.put("recencyScore", recency);
+        metadata.put("recallMode", semanticAvailable ? "embedding_hybrid" : "lexical_fallback");
+        metadata.put("accessCount", memory.accessCount());
+        results.add(new MemorySearchResult("long_term", memory.memoryId(), memory.content(), Math.min(1, score), metadata));
+    }
+
+    private void touchSelectedMemories(Connection connection, List<MemorySearchResult> selected) throws SQLException {
+        List<String> memoryIds = selected.stream()
+                .filter(result -> "long_term".equals(result.type()))
+                .map(MemorySearchResult::id)
+                .distinct()
+                .toList();
+        if (memoryIds.isEmpty()) {
+            return;
+        }
+        try (PreparedStatement statement = connection.prepareStatement("""
+                UPDATE agent_long_term_memory
+                SET access_count = access_count + 1, last_accessed_at = ?
+                WHERE memory_id = ?
+                """)) {
+            for (String memoryId : memoryIds) {
+                statement.setTimestamp(1, Timestamp.from(Instant.now()));
+                statement.setString(2, memoryId);
+                statement.addBatch();
+            }
+            statement.executeBatch();
+        }
+    }
+
+    private double[] embedBestEffort(String text) {
+        if (isBlank(text) || embeddingClientProvider == null) {
+            return null;
+        }
+        EmbeddingClient client = embeddingClientProvider.getIfAvailable();
+        if (client == null) {
+            return null;
+        }
+        try {
+            double[] vector = client.embed(text);
+            return vector == null || vector.length == 0 ? null : vector;
+        }
+        catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private double cosineSimilarity(double[] left, double[] right) {
+        if (left == null || right == null || left.length == 0 || left.length != right.length) {
+            return 0;
+        }
+        double dot = 0;
+        double leftNorm = 0;
+        double rightNorm = 0;
+        for (int index = 0; index < left.length; index++) {
+            dot += left[index] * right[index];
+            leftNorm += left[index] * left[index];
+            rightNorm += right[index] * right[index];
+        }
+        if (leftNorm == 0 || rightNorm == 0) {
+            return 0;
+        }
+        return Math.max(0, Math.min(1, dot / (Math.sqrt(leftNorm) * Math.sqrt(rightNorm))));
+    }
+
+    private double recencyScore(Instant updatedAt) {
+        if (updatedAt == null) {
+            return 0;
+        }
+        long ageDays = Math.max(0, Duration.between(updatedAt, Instant.now()).toDays());
+        return 1.0 / (1.0 + ageDays / 30.0);
+    }
+
+    private String encodeVector(double[] vector) {
+        StringBuilder builder = new StringBuilder();
+        for (int index = 0; index < vector.length; index++) {
+            if (index > 0) {
+                builder.append(',');
+            }
+            builder.append(vector[index]);
+        }
+        return builder.toString();
+    }
+
+    private double[] decodeVector(String encoded) {
+        if (isBlank(encoded)) {
+            return null;
+        }
+        String[] parts = encoded.split(",");
+        double[] vector = new double[parts.length];
+        try {
+            for (int index = 0; index < parts.length; index++) {
+                vector[index] = Double.parseDouble(parts[index]);
+            }
+            return vector;
+        }
+        catch (NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    private String memoryKey(String category, String content) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest((category + "\n" + content).getBytes(StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(hash);
+        }
+        catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+
     private long count(Connection connection, String sql, String... args) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             for (int index = 0; index < args.length; index++) {
@@ -664,5 +906,19 @@ public class JdbcMemoryService implements MemoryService {
     }
 
     private record SummaryState(String summary, int summarizedMessageCount) {
+    }
+
+    private record StoredMemory(
+            String memoryId,
+            String category,
+            String content,
+            double confidence,
+            double importance,
+            double[] embedding,
+            Instant createdAt,
+            Instant updatedAt,
+            long accessCount,
+            Instant lastAccessedAt
+    ) {
     }
 }

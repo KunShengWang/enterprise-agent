@@ -1,10 +1,10 @@
 package com.agent.platform.memory;
 
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-@Service
+@Component
 public class RuleBasedConversationSummarizer implements ConversationSummarizer {
 
     /**

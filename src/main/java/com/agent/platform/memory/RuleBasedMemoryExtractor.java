@@ -1,6 +1,6 @@
 package com.agent.platform.memory;
 
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Service
+@Component
 public class RuleBasedMemoryExtractor implements MemoryExtractor {
 
     private static final Pattern NAME_PATTERN = Pattern.compile("我叫([^，。,.!！?？\\s]{1,20})");

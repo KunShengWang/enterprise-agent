@@ -15,7 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @Service
-@ConditionalOnProperty(prefix = "enterprise-agent.memory", name = "mode", havingValue = "memory", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "enterprise-agent.memory", name = "mode", havingValue = "memory")
+@Deprecated(forRemoval = true)
 public class InMemoryMemoryService implements MemoryService {
 
     private static final String DEFAULT_CONVERSATION_ID = "default-conversation";
