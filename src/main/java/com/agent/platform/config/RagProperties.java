@@ -158,6 +158,12 @@ public class RagProperties {
 
         private boolean enabled = true;
 
+        private double semanticWeight = 0.65;
+
+        private int maxCandidates = 20;
+
+        private int maxSnippetChars = 1200;
+
         private double baseScoreWeight = 0.75;
 
         private double queryCoverageWeight = 0.2;
@@ -170,6 +176,30 @@ public class RagProperties {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+
+        public double getSemanticWeight() {
+            return semanticWeight;
+        }
+
+        public void setSemanticWeight(double semanticWeight) {
+            this.semanticWeight = semanticWeight;
+        }
+
+        public int getMaxCandidates() {
+            return maxCandidates;
+        }
+
+        public void setMaxCandidates(int maxCandidates) {
+            this.maxCandidates = maxCandidates;
+        }
+
+        public int getMaxSnippetChars() {
+            return maxSnippetChars;
+        }
+
+        public void setMaxSnippetChars(int maxSnippetChars) {
+            this.maxSnippetChars = maxSnippetChars;
         }
 
         public double getBaseScoreWeight() {

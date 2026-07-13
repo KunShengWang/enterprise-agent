@@ -127,6 +127,9 @@ enterprise-agent:
       keyword-weight: 0.3
     rerank:
       enabled: true
+      semantic-weight: 0.65
+      max-candidates: 20
+      max-snippet-chars: 1200
       base-score-weight: 0.75
       query-coverage-weight: 0.2
       source-match-weight: 0.05
