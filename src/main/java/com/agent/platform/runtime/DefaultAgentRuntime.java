@@ -200,20 +200,23 @@ public class DefaultAgentRuntime implements AgentRuntime {
         }
         String sessionId = stored.conversationId();
         String leaseOwnerId = newLeaseOwnerId(runId);
-        Optional<AgentRunRecord> claim = runStore.claimForResume(runId);
-        if (claim.isEmpty()) {
-            AgentRunRecord current = runStore.find(runId).orElse(stored);
-            return resultFromStored(current, inferStoredStopReason(current));
-        }
-        AgentRunRecord claimed = claim.get();
-        AgentExecutionProfile profile = claimed.executionProfile() == null
+        AgentExecutionProfile profile = stored.executionProfile() == null
                 ? defaultExecutionProfile()
-                : claimed.executionProfile();
-        AgentRunBudget budget = new AgentRunBudget(profile.limits(), claimed.budgetSnapshot());
+                : stored.executionProfile();
+        AgentRunBudget budget = new AgentRunBudget(profile.limits(), stored.budgetSnapshot());
         boolean acquired = false;
+        boolean claimedForResume = false;
+        AgentRunRecord claimed = stored;
         try {
             acquireRun(sessionId, runId, leaseOwnerId, budget);
             acquired = true;
+            Optional<AgentRunRecord> claim = runStore.claimForResume(runId);
+            if (claim.isEmpty()) {
+                AgentRunRecord current = runStore.find(runId).orElse(stored);
+                return resultFromStored(current, inferStoredStopReason(current));
+            }
+            claimed = claim.get();
+            claimedForResume = true;
             String userId = normalize(claimed.userId(), DEFAULT_USER_ID);
             List<ToolCallResult> toolResults = new ArrayList<>(claimed.toolResults());
             List<String> usedTools = new ArrayList<>(claimed.usedTools());
@@ -270,7 +273,14 @@ public class DefaultAgentRuntime implements AgentRuntime {
             return executeLoop(request, runId, leaseOwnerId, sessionId, userId, budget, toolResults, usedTools,
                     claimed.usedRag(), profile, effectiveListener);
         }
+        catch (AgentSessionBusyException busy) {
+            AgentRunRecord current = runStore.find(runId).orElse(stored);
+            return resultFromStored(current, AgentStopReason.IN_PROGRESS);
+        }
         catch (RuntimeException exception) {
+            if (!claimedForResume) {
+                throw exception;
+            }
             return finishUnexpectedFailure(
                     runId,
                     sessionId,

@@ -61,7 +61,8 @@ class DefaultAgentRuntimeStateTests {
 
         assertEquals(AgentRunState.RUNNING, result.state());
         verify(fixture.toolRuntime, never()).executeApproved(any(), any(), any());
-        verify(fixture.runControlStore, never()).acquireSessionLease(anyString(), anyString(), anyString(), any());
+        verify(fixture.runControlStore).acquireSessionLease(anyString(), anyString(), anyString(), any());
+        verify(fixture.runControlStore).releaseSessionLease(anyString(), anyString());
     }
 
     @Test
