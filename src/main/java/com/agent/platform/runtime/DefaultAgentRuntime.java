@@ -63,6 +63,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
 
     private final MemoryService memoryService;
     private final LlmCostCalculator costCalculator;
+    private final ToolResultProjector toolResultProjector;
 
     /** 仅保存本实例中正在执行的取消句柄，持久取消事实仍写入 AgentRunControlStore。 */
     private final ConcurrentMap<String, AgentRunBudget> activeBudgets = new ConcurrentHashMap<>();
@@ -79,7 +80,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                TokenEstimator tokenEstimator,
                                AgentRunControlStore runControlStore,
                                MemoryService memoryService,
-                               LlmCostCalculator costCalculator) {
+                               LlmCostCalculator costCalculator,
+                               ToolResultProjector toolResultProjector) {
         this.properties = properties;
         this.timelineStore = timelineStore;
         this.runStore = runStore;
@@ -93,6 +95,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         this.runControlStore = runControlStore;
         this.memoryService = memoryService;
         this.costCalculator = costCalculator;
+        this.toolResultProjector = toolResultProjector;
     }
 
     @Override
@@ -253,8 +256,11 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 budget.recordToolCall();
                 usedTools.add(execution.request().toolName());
             }
-            appendToolResult(sessionId, userId, runId, approval.toolCallRequest().requestId(), result);
-            toolResults.add(result);
+            ToolCallResult projectedResult = appendToolResult(
+                    sessionId, userId, runId, approval.toolCallRequest().requestId(), result,
+                    approval.status() == ApprovalStatus.APPROVED
+            );
+            toolResults.add(projectedResult);
             checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
                     toolResults, usedTools, claimed.usedRag(), budget);
             publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
@@ -545,8 +551,10 @@ public class DefaultAgentRuntime implements AgentRuntime {
                             call.toolName(), false, "", errorMessage,
                             Map.of("errorType", errorType, "profile", profile.name())
                     );
-                    appendToolResult(sessionId, userId, runId, call.toolCallId(), unknown);
-                    toolResults.add(unknown);
+                    ToolCallResult projectedUnknown = appendToolResult(
+                            sessionId, userId, runId, call.toolCallId(), unknown, false
+                    );
+                    toolResults.add(projectedUnknown);
                     budget.recordToolCall();
                     checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
                             toolResults, usedTools, usedRag, budget);
@@ -612,8 +620,12 @@ public class DefaultAgentRuntime implements AgentRuntime {
 
                 budget.recordToolCall();
                 ToolCallResult toolResult = execution.result();
-                appendToolResult(sessionId, userId, runId, call.toolCallId(), toolResult);
-                toolResults.add(toolResult);
+                ToolCallResult projectedToolResult = appendToolResult(
+                        sessionId, userId, runId, call.toolCallId(), toolResult,
+                        execution.status() == AgentToolExecutionStatus.COMPLETED
+                                || execution.status() == AgentToolExecutionStatus.FAILED
+                );
+                toolResults.add(projectedToolResult);
                 usedTools.add(call.toolName());
                 if (DefaultAgentCapabilityRegistry.KNOWLEDGE_SEARCH.equals(call.toolName()) && toolResult.success()) {
                     usedRag = true;
@@ -828,22 +840,26 @@ public class DefaultAgentRuntime implements AgentRuntime {
         );
     }
 
-    private void appendToolResult(String sessionId,
-                                  String userId,
-                                  String runId,
-                                  String toolCallId,
-                                  ToolCallResult result) {
+    private ToolCallResult appendToolResult(String sessionId,
+                                            String userId,
+                                            String runId,
+                                            String toolCallId,
+                                            ToolCallResult result,
+                                            boolean rawPersisted) {
+        ToolCallResult projected = toolResultProjector.project(toolCallId, result, rawPersisted);
         timelineStore.appendMessages(sessionId, userId, runId, List.of(
                 AgentMessageDraft.toolResult(
                         toolCallId,
-                        result.toolName(),
-                        result.success(),
-                        result.content(),
-                        result.errorMessage(),
-                        result.metadata(),
-                        tokenEstimator.estimate(result.content()) + tokenEstimator.estimate(result.errorMessage())
+                        projected.toolName(),
+                        projected.success(),
+                        projected.content(),
+                        projected.errorMessage(),
+                        projected.metadata(),
+                        tokenEstimator.estimate(projected.content())
+                                + tokenEstimator.estimate(projected.errorMessage())
                 )
         ));
+        return projected;
     }
 
     private AgentToolCall uniqueToolCall(AgentToolCall call, Set<String> usedIds) {

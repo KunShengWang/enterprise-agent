@@ -122,17 +122,24 @@ public class JsonAgentModelGateway implements AgentModelGateway {
                 builder.append(" tool=").append(message.toolName());
             }
             if (!message.arguments().isEmpty()) {
-                builder.append(" arguments=").append(toJson(message.arguments()));
+                builder.append(" arguments_json=").append(structuralJson(message.arguments()));
             }
             if (!message.content().isBlank()) {
-                builder.append(" content=").append(message.content());
+                builder.append(" content_json=").append(structuralJson(message.content()));
             }
             if (!message.metadata().isEmpty() && message.type() == AgentMessageType.TOOL_RESULT) {
-                builder.append(" resultMetadata=").append(toJson(message.metadata()));
+                builder.append(" result_metadata_json=").append(structuralJson(message.metadata()));
             }
             builder.append('\n');
         }
         return builder.append("</agent_messages>").toString();
+    }
+
+    private String structuralJson(Object value) {
+        return toJson(value)
+                .replace("&", "\\u0026")
+                .replace("<", "\\u003c")
+                .replace(">", "\\u003e");
     }
 
     private String formatTools(List<ToolDefinition> tools) {

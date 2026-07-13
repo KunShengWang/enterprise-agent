@@ -43,6 +43,10 @@ public class AgentProperties {
 
     private int streamHeartbeatSeconds = 10;
 
+    private int maxToolResultCharsForModel = 12_000;
+
+    private int maxToolErrorCharsForModel = 2_000;
+
     private String defaultSystemPrompt = "";
 
     public boolean isMockMode() {
@@ -195,6 +199,22 @@ public class AgentProperties {
 
     public void setStreamHeartbeatSeconds(int streamHeartbeatSeconds) {
         this.streamHeartbeatSeconds = streamHeartbeatSeconds;
+    }
+
+    public int getMaxToolResultCharsForModel() {
+        return maxToolResultCharsForModel;
+    }
+
+    public void setMaxToolResultCharsForModel(int maxToolResultCharsForModel) {
+        this.maxToolResultCharsForModel = Math.max(512, maxToolResultCharsForModel);
+    }
+
+    public int getMaxToolErrorCharsForModel() {
+        return maxToolErrorCharsForModel;
+    }
+
+    public void setMaxToolErrorCharsForModel(int maxToolErrorCharsForModel) {
+        this.maxToolErrorCharsForModel = Math.max(256, maxToolErrorCharsForModel);
     }
 
     public String getDefaultSystemPrompt() {

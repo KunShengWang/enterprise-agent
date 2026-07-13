@@ -157,7 +157,7 @@ class DefaultAgentRuntimeStateTests {
                     properties, timelineStore, runStore, contextManager, modelGateway,
                     capabilityRegistry, toolRuntime, guardrailService, approvalService,
                     new ConservativeTokenEstimator(), runControlStore, memoryService,
-                    new ConfiguredLlmCostCalculator(properties)
+                    new ConfiguredLlmCostCalculator(properties), new ToolResultProjector(properties)
             );
         }
     }
