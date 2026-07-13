@@ -12,9 +12,4 @@ public interface SkillRegistry {
     SkillDefinition save(SkillDefinition skill);
 
     boolean delete(String name);
-
-    /**
-     * 根据用户问题选出评分较高的几个 skill
-     */
-    List<SkillMatch> search(String query, int limit);
 }

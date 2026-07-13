@@ -3,7 +3,6 @@ package com.agent.platform.web;
 import com.agent.platform.common.ApiResponse;
 import com.agent.platform.common.ErrorCode;
 import com.agent.platform.skill.SkillDefinition;
-import com.agent.platform.skill.SkillMatch;
 import com.agent.platform.skill.SkillRegistry;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,7 +11,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
@@ -38,12 +36,6 @@ public class SkillController {
         return Mono.fromSupplier(() -> skillRegistry.find(name)
                 .map(ApiResponse::success)
                 .orElseGet(() -> ApiResponse.failure(ErrorCode.NOT_FOUND, "skill not found: " + name)));
-    }
-
-    @GetMapping("/search")
-    public Mono<ApiResponse<List<SkillMatch>>> search(@RequestParam String query,
-                                                      @RequestParam(defaultValue = "5") int limit) {
-        return Mono.fromSupplier(() -> ApiResponse.success(skillRegistry.search(query, limit)));
     }
 
     @PostMapping

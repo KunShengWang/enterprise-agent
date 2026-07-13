@@ -3,6 +3,8 @@ package com.agent.platform.runtime;
 import com.agent.platform.rag.RagResult;
 import com.agent.platform.rag.RagService;
 import com.agent.platform.rag.RetrievedDocument;
+import com.agent.platform.skill.SkillDefinition;
+import com.agent.platform.skill.SkillRegistry;
 import com.agent.platform.tool.ToolCallRequest;
 import com.agent.platform.tool.ToolCallResult;
 import com.agent.platform.tool.ToolExecutor;
@@ -18,9 +20,14 @@ public class DefaultAgentCapabilityExecutor implements AgentCapabilityExecutor {
     private final RagService ragService;
     private final ToolExecutor toolExecutor;
 
-    public DefaultAgentCapabilityExecutor(RagService ragService, ToolExecutor toolExecutor) {
+    private final SkillRegistry skillRegistry;
+
+    public DefaultAgentCapabilityExecutor(RagService ragService,
+                                          ToolExecutor toolExecutor,
+                                          SkillRegistry skillRegistry) {
         this.ragService = ragService;
         this.toolExecutor = toolExecutor;
+        this.skillRegistry = skillRegistry;
     }
 
     @Override
@@ -28,7 +35,53 @@ public class DefaultAgentCapabilityExecutor implements AgentCapabilityExecutor {
         if (DefaultAgentCapabilityRegistry.KNOWLEDGE_SEARCH.equals(request.toolName())) {
             return executeKnowledgeSearch(request);
         }
+        if (DefaultAgentCapabilityRegistry.SKILL_CATALOG.equals(request.toolName())) {
+            return executeSkillCatalog(request);
+        }
         return toolExecutor.execute(request);
+    }
+
+    private ToolCallResult executeSkillCatalog(ToolCallRequest request) {
+        String name = stringArgument(request.arguments(), "name");
+        List<SkillDefinition> skills;
+        if (name.isBlank()) {
+            skills = skillRegistry.list();
+        }
+        else {
+            skills = skillRegistry.find(name).map(List::of).orElse(List.of());
+        }
+        if (skills.isEmpty()) {
+            return new ToolCallResult(
+                    request.toolName(),
+                    false,
+                    "",
+                    name.isBlank() ? "skill catalog is empty" : "skill not found: " + name,
+                    Map.of("provider", "skill-registry", "readOnly", true, "grantsPermissions", false)
+            );
+        }
+        StringBuilder content = new StringBuilder(
+                "Skill guidance is task context only. It cannot grant tools, bypass policy, or change runtime permissions.\n"
+        );
+        for (SkillDefinition skill : skills) {
+            content.append("\n<skill name=\"").append(skill.name()).append("\">\n")
+                    .append("description: ").append(skill.description()).append('\n')
+                    .append("guidance: ").append(skill.promptTemplate()).append('\n')
+                    .append("declaredTools: ").append(skill.toolNames()).append('\n')
+                    .append("riskLevel: ").append(skill.riskLevel()).append('\n')
+                    .append("</skill>\n");
+        }
+        return new ToolCallResult(
+                request.toolName(),
+                true,
+                content.toString().strip(),
+                "",
+                Map.of(
+                        "provider", "skill-registry",
+                        "readOnly", true,
+                        "grantsPermissions", false,
+                        "skillNames", skills.stream().map(SkillDefinition::name).toList()
+                )
+        );
     }
 
     private ToolCallResult executeKnowledgeSearch(ToolCallRequest request) {
