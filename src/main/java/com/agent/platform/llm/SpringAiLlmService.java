@@ -56,6 +56,10 @@ public class SpringAiLlmService implements LlmService {
             lastUsage.set(extractUsage(response));
         }
         catch (RuntimeException exception) {
+            // 上下文溢出必须交给 Agent Runtime 压缩后重试，不能降级成一条伪最终回答。
+            if (isContextOverflow(exception)) {
+                throw contextOverflowException(exception);
+            }
             if (resilienceProperties.getLlm().isFallbackEnabled()) {
                 lastUsage.set(new LlmUsage(0, 0, 0, 0, 0, "", "fallback"));
                 return resilienceProperties.getLlm().getFallbackMessage();
@@ -83,6 +87,9 @@ public class SpringAiLlmService implements LlmService {
                 })
                 .filter(text -> text != null && !text.isBlank())
                 .onErrorResume(error -> {
+                    if (isContextOverflow(error)) {
+                        return Flux.error(contextOverflowException(error));
+                    }
                     if (resilienceProperties.getLlm().isFallbackEnabled()) {
                         lastUsage.set(new LlmUsage(0, 0, 0, 0, 0, "", "fallback"));
                         return Flux.just(resilienceProperties.getLlm().getFallbackMessage());
@@ -144,6 +151,9 @@ public class SpringAiLlmService implements LlmService {
                         .get(Math.max(1000, resilienceProperties.getLlm().getTimeoutMillis()), TimeUnit.MILLISECONDS);
             }
             catch (Exception exception) {
+                if (isContextOverflow(exception)) {
+                    throw contextOverflowException(exception);
+                }
                 lastError = exception instanceof RuntimeException runtimeException
                         ? runtimeException
                         : new RuntimeException(exception);
@@ -151,6 +161,39 @@ public class SpringAiLlmService implements LlmService {
             }
         }
         throw lastError == null ? new IllegalStateException("LLM call failed") : lastError;
+    }
+
+    private LlmCallException contextOverflowException(Throwable cause) {
+        return new LlmCallException(
+                "CONTEXT_OVERFLOW",
+                "模型上下文超过窗口限制，需要压缩后重试。",
+                cause
+        );
+    }
+
+    private boolean isContextOverflow(Throwable throwable) {
+        Throwable current = throwable;
+        int depth = 0;
+        while (current != null && depth++ < 12) {
+            if (current instanceof LlmCallException llmCallException
+                    && "CONTEXT_OVERFLOW".equals(llmCallException.errorType())) {
+                return true;
+            }
+            String message = current.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase(java.util.Locale.ROOT);
+                if (normalized.contains("context_length_exceeded")
+                        || normalized.contains("context window exceeded")
+                        || normalized.contains("maximum context length")
+                        || normalized.contains("prompt is too long")
+                        || normalized.contains("too many tokens")
+                        || (normalized.contains("context") && normalized.contains("token limit"))) {
+                    return true;
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private void sleepBackoff(int attempt) {

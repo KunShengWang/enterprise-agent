@@ -27,6 +27,11 @@ enterprise-agent:
   max-tool-calls-per-run: 6
   max-input-tokens-per-run: ${AGENT_MAX_INPUT_TOKENS_PER_RUN:24000}
   max-output-tokens-per-run: ${AGENT_MAX_OUTPUT_TOKENS_PER_RUN:8000}
+  model-context-window-tokens: ${AGENT_MODEL_CONTEXT_WINDOW_TOKENS:32000}
+  context-output-reserve-tokens: ${AGENT_CONTEXT_OUTPUT_RESERVE_TOKENS:2000}
+  context-safety-margin-tokens: ${AGENT_CONTEXT_SAFETY_MARGIN_TOKENS:1000}
+  context-summary-max-tokens: ${AGENT_CONTEXT_SUMMARY_MAX_TOKENS:1500}
+  max-context-overflow-retries: ${AGENT_CONTEXT_OVERFLOW_RETRIES:1}
   max-estimated-cost-per-run: ${AGENT_MAX_ESTIMATED_COST_PER_RUN:1.0}
   max-run-duration-millis: ${AGENT_MAX_RUN_DURATION_MILLIS:120000}
   max-tool-execution-attempts: ${AGENT_TOOL_MAX_ATTEMPTS:2}

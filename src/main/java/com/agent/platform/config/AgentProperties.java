@@ -17,6 +17,16 @@ public class AgentProperties {
 
     private long maxOutputTokensPerRun = 8_000;
 
+    private long modelContextWindowTokens = 32_000;
+
+    private long contextOutputReserveTokens = 2_000;
+
+    private long contextSafetyMarginTokens = 1_000;
+
+    private int contextSummaryMaxTokens = 1_500;
+
+    private int maxContextOverflowRetries = 1;
+
     private double maxEstimatedCostPerRun = 1.0;
 
     private long maxRunDurationMillis = 120_000;
@@ -79,6 +89,46 @@ public class AgentProperties {
 
     public void setMaxOutputTokensPerRun(long maxOutputTokensPerRun) {
         this.maxOutputTokensPerRun = maxOutputTokensPerRun;
+    }
+
+    public long getModelContextWindowTokens() {
+        return modelContextWindowTokens;
+    }
+
+    public void setModelContextWindowTokens(long modelContextWindowTokens) {
+        this.modelContextWindowTokens = modelContextWindowTokens;
+    }
+
+    public long getContextOutputReserveTokens() {
+        return contextOutputReserveTokens;
+    }
+
+    public void setContextOutputReserveTokens(long contextOutputReserveTokens) {
+        this.contextOutputReserveTokens = contextOutputReserveTokens;
+    }
+
+    public long getContextSafetyMarginTokens() {
+        return contextSafetyMarginTokens;
+    }
+
+    public void setContextSafetyMarginTokens(long contextSafetyMarginTokens) {
+        this.contextSafetyMarginTokens = contextSafetyMarginTokens;
+    }
+
+    public int getContextSummaryMaxTokens() {
+        return contextSummaryMaxTokens;
+    }
+
+    public void setContextSummaryMaxTokens(int contextSummaryMaxTokens) {
+        this.contextSummaryMaxTokens = contextSummaryMaxTokens;
+    }
+
+    public int getMaxContextOverflowRetries() {
+        return maxContextOverflowRetries;
+    }
+
+    public void setMaxContextOverflowRetries(int maxContextOverflowRetries) {
+        this.maxContextOverflowRetries = maxContextOverflowRetries;
     }
 
     public double getMaxEstimatedCostPerRun() {

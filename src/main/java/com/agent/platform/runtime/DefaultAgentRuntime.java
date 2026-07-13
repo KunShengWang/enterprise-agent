@@ -10,6 +10,7 @@ import com.agent.platform.guardrail.GuardrailDecision;
 import com.agent.platform.guardrail.GuardrailService;
 import com.agent.platform.guardrail.ToolPolicyContext;
 import com.agent.platform.llm.LlmUsage;
+import com.agent.platform.llm.LlmCallException;
 import com.agent.platform.memory.MemoryMessage;
 import com.agent.platform.memory.MemoryService;
 import com.agent.platform.tool.ToolCallResult;
@@ -199,6 +200,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                            boolean usedRag,
                                            AgentEventListener listener) {
         Set<String> toolCallIds = new HashSet<>();
+        int contextOverflowRetries = 0;
         while (true) {
             Optional<AgentStopReason> turnStop = budget.beforeTurn();
             if (turnStop.isPresent()) {
@@ -207,12 +209,18 @@ public class DefaultAgentRuntime implements AgentRuntime {
             }
             budget.recordTurnStarted();
 
+            long contextTokenBudget = contextMessageBudget();
             AgentContextView context = contextManager.project(
                     sessionId,
                     userId,
                     request.question(),
-                    AgentRunLimits.from(properties).maxInputTokens()
+                    contextTokenBudget
             );
+            if (context.omittedMessages() > 0) {
+                context = contextManager.compact(
+                        sessionId, userId, runId, request.question(), contextTokenBudget, "context_budget"
+                );
+            }
             publish(sessionId, userId, runId,
                     context.compacted() ? AgentEventType.CONTEXT_COMPACTED : AgentEventType.CONTEXT_PREPARED,
                     "context projected",
@@ -222,6 +230,13 @@ public class DefaultAgentRuntime implements AgentRuntime {
                             "omittedMessages", context.omittedMessages()
                     ),
                     listener);
+            if (context.estimatedTokens() > contextTokenBudget || context.omittedMessages() > 0) {
+                return finish(
+                        runId, sessionId, userId, AgentRunState.FAILED, AgentStopReason.CONTEXT_OVERFLOW,
+                        "会话上下文无法在保留完整工具调用语义的前提下压缩到模型窗口内。", "",
+                        toolResults, usedTools, usedRag, false, budget, listener
+                );
+            }
 
             Optional<AgentStopReason> modelStop = budget.beforeModelCall();
             if (modelStop.isPresent()) {
@@ -232,22 +247,67 @@ public class DefaultAgentRuntime implements AgentRuntime {
             publish(sessionId, userId, runId, AgentEventType.MODEL_STARTED,
                     "model turn started", Map.of("turn", budget.snapshot().turns()), listener);
             AgentModelTurn modelTurn;
-            try {
-                modelTurn = modelGateway.nextTurn(new AgentModelRequest(
-                        runId,
-                        sessionId,
-                        properties.getDefaultSystemPrompt(),
-                        context.messages(),
-                        capabilityRegistry.listCapabilities(),
-                        request.metadata()
-                ));
-            }
-            catch (RuntimeException modelFailure) {
-                return finish(
-                        runId, sessionId, userId, AgentRunState.FAILED, AgentStopReason.MODEL_ERROR,
-                        "模型调用失败，请稍后重试。", "", toolResults, usedTools, usedRag, false,
-                        budget, listener
-                );
+            while (true) {
+                try {
+                    modelTurn = modelGateway.nextTurn(new AgentModelRequest(
+                            runId,
+                            sessionId,
+                            properties.getDefaultSystemPrompt(),
+                            context.messages(),
+                            capabilityRegistry.listCapabilities(),
+                            request.metadata()
+                    ));
+                    break;
+                }
+                catch (RuntimeException modelFailure) {
+                    if (isContextOverflow(modelFailure)
+                            && contextOverflowRetries < Math.max(0, properties.getMaxContextOverflowRetries())) {
+                        contextOverflowRetries++;
+                        budget.recordModelCall(new LlmUsage(0, 0, 0, 0, 0, "", "context-overflow"), 0);
+                        Optional<AgentStopReason> retryStop = budget.beforeModelCall();
+                        if (retryStop.isPresent()) {
+                            return finishBudgetStop(request, runId, sessionId, userId, retryStop.get(),
+                                    toolResults, usedTools, usedRag, budget, listener);
+                        }
+                        long retryBudget = Math.max(1, contextTokenBudget / 2);
+                        context = contextManager.compact(
+                                sessionId, userId, runId, request.question(), retryBudget,
+                                "provider_context_overflow"
+                        );
+                        publish(sessionId, userId, runId, AgentEventType.CONTEXT_COMPACTED,
+                                "provider rejected context; compacted before bounded retry",
+                                Map.of(
+                                        "retry", contextOverflowRetries,
+                                        "maxRetries", properties.getMaxContextOverflowRetries(),
+                                        "messageCount", context.messages().size(),
+                                        "estimatedTokens", context.estimatedTokens(),
+                                        "omittedMessages", context.omittedMessages()
+                                ), listener);
+                        if (context.estimatedTokens() > retryBudget || context.omittedMessages() > 0) {
+                            return finish(
+                                    runId, sessionId, userId, AgentRunState.FAILED,
+                                    AgentStopReason.CONTEXT_OVERFLOW,
+                                    "模型上下文溢出，压缩后仍无法安全放入上下文窗口。", "",
+                                    toolResults, usedTools, usedRag, false, budget, listener
+                            );
+                        }
+                        publish(sessionId, userId, runId, AgentEventType.MODEL_STARTED,
+                                "model turn retry after context compaction",
+                                Map.of("turn", budget.snapshot().turns(), "contextOverflowRetry", contextOverflowRetries),
+                                listener);
+                        continue;
+                    }
+                    AgentStopReason stopReason = isContextOverflow(modelFailure)
+                            ? AgentStopReason.CONTEXT_OVERFLOW
+                            : AgentStopReason.MODEL_ERROR;
+                    String answer = stopReason == AgentStopReason.CONTEXT_OVERFLOW
+                            ? "模型上下文仍超过窗口限制，已停止本次运行以避免无限重试。"
+                            : "模型调用失败，请稍后重试。";
+                    return finish(
+                            runId, sessionId, userId, AgentRunState.FAILED, stopReason,
+                            answer, "", toolResults, usedTools, usedRag, false, budget, listener
+                    );
+                }
             }
             LlmUsage effectiveUsage = effectiveUsage(modelTurn, context);
             budget.recordModelCall(effectiveUsage, 0);
@@ -534,6 +594,33 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 turn.usage() == null ? "" : turn.usage().model(),
                 "runtime-estimate"
         );
+    }
+
+    private long contextMessageBudget() {
+        long staticTokens = tokenEstimator.estimate(properties.getDefaultSystemPrompt()) + 700;
+        for (ToolDefinition definition : capabilityRegistry.listCapabilities()) {
+            staticTokens += tokenEstimator.estimate(definition.name())
+                    + tokenEstimator.estimate(definition.description())
+                    + tokenEstimator.estimate(definition.inputSchema());
+        }
+        long availableWindow = Math.max(1, properties.getModelContextWindowTokens())
+                - Math.max(0, properties.getContextOutputReserveTokens())
+                - Math.max(0, properties.getContextSafetyMarginTokens())
+                - staticTokens;
+        return Math.max(1, Math.min(properties.getMaxInputTokensPerRun(), availableWindow));
+    }
+
+    private boolean isContextOverflow(Throwable failure) {
+        Throwable current = failure;
+        int depth = 0;
+        while (current != null && depth++ < 12) {
+            if (current instanceof LlmCallException llmCallException
+                    && "CONTEXT_OVERFLOW".equals(llmCallException.errorType())) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private AgentEvent publish(String sessionId,
