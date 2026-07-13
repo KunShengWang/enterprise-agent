@@ -11,6 +11,7 @@ import com.agent.platform.guardrail.GuardrailService;
 import com.agent.platform.guardrail.ToolPolicyContext;
 import com.agent.platform.llm.LlmUsage;
 import com.agent.platform.llm.LlmCallException;
+import com.agent.platform.llm.LlmCostCalculator;
 import com.agent.platform.memory.MemoryMessage;
 import com.agent.platform.memory.MemoryService;
 import com.agent.platform.tool.ToolCallResult;
@@ -61,6 +62,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
     private final AgentRunControlStore runControlStore;
 
     private final MemoryService memoryService;
+    private final LlmCostCalculator costCalculator;
 
     /** 仅保存本实例中正在执行的取消句柄，持久取消事实仍写入 AgentRunControlStore。 */
     private final ConcurrentMap<String, AgentRunBudget> activeBudgets = new ConcurrentHashMap<>();
@@ -76,7 +78,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                ApprovalService approvalService,
                                TokenEstimator tokenEstimator,
                                AgentRunControlStore runControlStore,
-                               MemoryService memoryService) {
+                               MemoryService memoryService,
+                               LlmCostCalculator costCalculator) {
         this.properties = properties;
         this.timelineStore = timelineStore;
         this.runStore = runStore;
@@ -89,6 +92,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         this.tokenEstimator = tokenEstimator;
         this.runControlStore = runControlStore;
         this.memoryService = memoryService;
+        this.costCalculator = costCalculator;
     }
 
     @Override
@@ -459,7 +463,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 }
             }
             LlmUsage effectiveUsage = effectiveUsage(modelTurn, context);
-            budget.recordModelCall(effectiveUsage, 0);
+            double modelCallCost = costCalculator.estimate(effectiveUsage);
+            budget.recordModelCall(effectiveUsage, modelCallCost);
             checkpoint(runId, AgentRunPhase.MODEL_CALL, null,
                     toolResults, usedTools, usedRag, budget);
             publish(sessionId, userId, runId, AgentEventType.MODEL_COMPLETED,
@@ -469,7 +474,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
                             "toolCallCount", modelTurn.toolCalls().size(),
                             "promptTokens", effectiveUsage.promptTokens(),
                             "completionTokens", effectiveUsage.completionTokens(),
-                            "usageSource", effectiveUsage.source()
+                            "usageSource", effectiveUsage.source(),
+                            "estimatedCost", modelCallCost
                     ),
                     listener);
 

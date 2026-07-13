@@ -9,6 +9,7 @@ import com.agent.platform.guardrail.GuardrailDecision;
 import com.agent.platform.guardrail.GuardrailService;
 import com.agent.platform.guardrail.GuardrailStage;
 import com.agent.platform.memory.MemoryService;
+import com.agent.platform.llm.ConfiguredLlmCostCalculator;
 import com.agent.platform.tool.ToolCallRequest;
 import org.junit.jupiter.api.Test;
 
@@ -155,7 +156,8 @@ class DefaultAgentRuntimeStateTests {
             return new DefaultAgentRuntime(
                     properties, timelineStore, runStore, contextManager, modelGateway,
                     capabilityRegistry, toolRuntime, guardrailService, approvalService,
-                    new ConservativeTokenEstimator(), runControlStore, memoryService
+                    new ConservativeTokenEstimator(), runControlStore, memoryService,
+                    new ConfiguredLlmCostCalculator(properties)
             );
         }
     }

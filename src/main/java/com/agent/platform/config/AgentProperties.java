@@ -27,7 +27,9 @@ public class AgentProperties {
 
     private int maxContextOverflowRetries = 1;
 
-    private double maxEstimatedCostPerRun = 1.0;
+    private double maxEstimatedCostPerRun = 0;
+
+    private ModelPricing modelPricing = new ModelPricing();
 
     private long maxRunDurationMillis = 120_000;
 
@@ -139,6 +141,14 @@ public class AgentProperties {
         this.maxEstimatedCostPerRun = maxEstimatedCostPerRun;
     }
 
+    public ModelPricing getModelPricing() {
+        return modelPricing;
+    }
+
+    public void setModelPricing(ModelPricing modelPricing) {
+        this.modelPricing = modelPricing == null ? new ModelPricing() : modelPricing;
+    }
+
     public long getMaxRunDurationMillis() {
         return maxRunDurationMillis;
     }
@@ -193,5 +203,45 @@ public class AgentProperties {
 
     public void setDefaultSystemPrompt(String defaultSystemPrompt) {
         this.defaultSystemPrompt = defaultSystemPrompt;
+    }
+
+    public static class ModelPricing {
+
+        private double inputPerMillionTokens;
+        private double outputPerMillionTokens;
+        private double cacheReadPerMillionTokens;
+        private double cacheWritePerMillionTokens;
+
+        public double getInputPerMillionTokens() {
+            return inputPerMillionTokens;
+        }
+
+        public void setInputPerMillionTokens(double inputPerMillionTokens) {
+            this.inputPerMillionTokens = Math.max(0, inputPerMillionTokens);
+        }
+
+        public double getOutputPerMillionTokens() {
+            return outputPerMillionTokens;
+        }
+
+        public void setOutputPerMillionTokens(double outputPerMillionTokens) {
+            this.outputPerMillionTokens = Math.max(0, outputPerMillionTokens);
+        }
+
+        public double getCacheReadPerMillionTokens() {
+            return cacheReadPerMillionTokens;
+        }
+
+        public void setCacheReadPerMillionTokens(double cacheReadPerMillionTokens) {
+            this.cacheReadPerMillionTokens = Math.max(0, cacheReadPerMillionTokens);
+        }
+
+        public double getCacheWritePerMillionTokens() {
+            return cacheWritePerMillionTokens;
+        }
+
+        public void setCacheWritePerMillionTokens(double cacheWritePerMillionTokens) {
+            this.cacheWritePerMillionTokens = Math.max(0, cacheWritePerMillionTokens);
+        }
     }
 }

@@ -1,6 +1,9 @@
 package com.agent.platform.runtime;
 
 import com.agent.platform.agent.AgentRequest;
+import com.agent.platform.config.AgentProperties;
+import com.agent.platform.llm.ConfiguredLlmCostCalculator;
+import com.agent.platform.llm.LlmUsage;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -49,5 +52,25 @@ class AgentRunBudgetTests {
         assertSame(profile, waiting.executionProfile());
         assertEquals(budget, waiting.budgetSnapshot());
         assertEquals(AgentRunState.WAITING_APPROVAL, waiting.state());
+    }
+
+    @Test
+    void configuredTokenPricesAccumulateAndEnforceCostBudget() {
+        AgentProperties properties = new AgentProperties();
+        properties.getModelPricing().setInputPerMillionTokens(2.0);
+        properties.getModelPricing().setOutputPerMillionTokens(8.0);
+        properties.getModelPricing().setCacheReadPerMillionTokens(0.5);
+        properties.getModelPricing().setCacheWritePerMillionTokens(1.0);
+        ConfiguredLlmCostCalculator calculator = new ConfiguredLlmCostCalculator(properties);
+        LlmUsage usage = new LlmUsage(1_000, 500, 1_500, 200, 100, "model", "provider");
+        double cost = calculator.estimate(usage);
+        AgentRunBudget budget = new AgentRunBudget(
+                new AgentRunLimits(4, 4, 2, 10_000, 10_000, cost, 60_000)
+        );
+
+        budget.recordModelCall(usage, cost);
+
+        assertEquals(0.0056, cost, 0.0000001);
+        assertEquals(AgentStopReason.MODEL_BUDGET_EXHAUSTED, budget.beforeModelCall().orElseThrow());
     }
 }

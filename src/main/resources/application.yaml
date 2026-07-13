@@ -32,7 +32,13 @@ enterprise-agent:
   context-safety-margin-tokens: ${AGENT_CONTEXT_SAFETY_MARGIN_TOKENS:1000}
   context-summary-max-tokens: ${AGENT_CONTEXT_SUMMARY_MAX_TOKENS:1500}
   max-context-overflow-retries: ${AGENT_CONTEXT_OVERFLOW_RETRIES:1}
-  max-estimated-cost-per-run: ${AGENT_MAX_ESTIMATED_COST_PER_RUN:1.0}
+  # Cost limiting is opt-in because provider prices change. Configure both prices and a positive limit.
+  max-estimated-cost-per-run: ${AGENT_MAX_ESTIMATED_COST_PER_RUN:0}
+  model-pricing:
+    input-per-million-tokens: ${LLM_INPUT_COST_PER_MILLION_TOKENS:0}
+    output-per-million-tokens: ${LLM_OUTPUT_COST_PER_MILLION_TOKENS:0}
+    cache-read-per-million-tokens: ${LLM_CACHE_READ_COST_PER_MILLION_TOKENS:0}
+    cache-write-per-million-tokens: ${LLM_CACHE_WRITE_COST_PER_MILLION_TOKENS:0}
   max-run-duration-millis: ${AGENT_MAX_RUN_DURATION_MILLIS:120000}
   max-tool-execution-attempts: ${AGENT_TOOL_MAX_ATTEMPTS:2}
   tool-retry-backoff-millis: ${AGENT_TOOL_RETRY_BACKOFF_MILLIS:150}
