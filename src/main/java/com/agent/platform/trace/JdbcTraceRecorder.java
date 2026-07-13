@@ -6,6 +6,8 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -20,9 +22,12 @@ public class JdbcTraceRecorder implements TraceRecorder {
     private static final String CATEGORY = "trace_run";
 
     private final JdbcAgentStoreSupport store;
+    private final RuntimeTraceProjector runtimeTraceProjector;
 
-    public JdbcTraceRecorder(JdbcAgentStoreSupport store) {
+    public JdbcTraceRecorder(JdbcAgentStoreSupport store,
+                             RuntimeTraceProjector runtimeTraceProjector) {
         this.store = store;
+        this.runtimeTraceProjector = runtimeTraceProjector;
     }
 
     @Override
@@ -148,12 +153,20 @@ public class JdbcTraceRecorder implements TraceRecorder {
 
     @Override
     public Optional<TraceRun> findRun(String traceId) {
-        return store.find(CATEGORY, traceId, TraceRun.class);
+        return runtimeTraceProjector.project(traceId)
+                .or(() -> store.find(CATEGORY, traceId, TraceRun.class));
     }
 
     @Override
     public List<TraceRun> recentRuns(int limit) {
-        return store.recent(CATEGORY, TraceRun.class, limit);
+        int effectiveLimit = Math.max(1, limit);
+        LinkedHashMap<String, TraceRun> byTraceId = new LinkedHashMap<>();
+        runtimeTraceProjector.recent(effectiveLimit).forEach(run -> byTraceId.put(run.traceId(), run));
+        store.recent(CATEGORY, TraceRun.class, effectiveLimit).forEach(run -> byTraceId.putIfAbsent(run.traceId(), run));
+        return byTraceId.values().stream()
+                .sorted(Comparator.comparing(TraceRun::startedAt).reversed())
+                .limit(effectiveLimit)
+                .toList();
     }
 
     @Override

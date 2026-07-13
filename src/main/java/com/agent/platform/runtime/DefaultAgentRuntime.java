@@ -184,7 +184,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         toolResults.add(result);
         publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
                 result.success() ? "approved tool completed" : "approved tool returned failure",
-                toolResultPayload(result), effectiveListener);
+                toolResultPayload(approval.toolCallRequest().requestId(), result), effectiveListener);
         AgentRequest request = claimed.request();
         return executeLoop(request, runId, sessionId, userId, budget, toolResults, usedTools,
                 claimed.usedRag(), effectiveListener);
@@ -372,7 +372,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     toolResults.add(unknown);
                     budget.recordToolCall();
                     publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
-                            "unknown capability returned to model", toolResultPayload(unknown), listener);
+                            "unknown capability returned to model", toolResultPayload(call.toolCallId(), unknown), listener);
                     continue;
                 }
 
@@ -440,7 +440,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 }
                 publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
                         toolResult.success() ? "capability completed" : "capability failure returned to model",
-                        toolResultPayload(toolResult), listener);
+                        toolResultPayload(call.toolCallId(), toolResult), listener);
             }
         }
     }
@@ -645,8 +645,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
         return event;
     }
 
-    private Map<String, Object> toolResultPayload(ToolCallResult result) {
+    private Map<String, Object> toolResultPayload(String toolCallId, ToolCallResult result) {
         Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("toolCallId", toolCallId == null ? "" : toolCallId);
         payload.put("toolName", result.toolName());
         payload.put("success", result.success());
         payload.put("error", result.errorMessage() == null ? "" : result.errorMessage());

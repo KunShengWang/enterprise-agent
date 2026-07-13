@@ -1,10 +1,15 @@
 package com.agent.platform.eval;
 
+import com.agent.platform.agent.AgentRunStatus;
+import com.agent.platform.runtime.AgentRunRecord;
+import com.agent.platform.runtime.AgentRunStore;
 import com.agent.platform.storage.JdbcAgentStoreSupport;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,9 +21,11 @@ public class JdbcEvalEventRecorder implements EvalEventRecorder {
     private static final String CATEGORY = "eval_event";
 
     private final JdbcAgentStoreSupport store;
+    private final AgentRunStore runStore;
 
-    public JdbcEvalEventRecorder(JdbcAgentStoreSupport store) {
+    public JdbcEvalEventRecorder(JdbcAgentStoreSupport store, AgentRunStore runStore) {
         this.store = store;
+        this.runStore = runStore;
     }
 
     @Override
@@ -32,6 +39,26 @@ public class JdbcEvalEventRecorder implements EvalEventRecorder {
 
     @Override
     public List<AgentRunEvalEvent> snapshot() {
-        return store.recent(CATEGORY, AgentRunEvalEvent.class, Integer.MAX_VALUE);
+        LinkedHashMap<String, AgentRunEvalEvent> byTraceId = new LinkedHashMap<>();
+        runStore.recent(10_000).stream()
+                .map(this::fromRuntimeRun)
+                .forEach(event -> byTraceId.put(event.traceId(), event));
+        store.recent(CATEGORY, AgentRunEvalEvent.class, 10_000)
+                .forEach(event -> byTraceId.putIfAbsent(event.traceId(), event));
+        return byTraceId.values().stream()
+                .sorted(Comparator.comparing(AgentRunEvalEvent::createdAt).reversed())
+                .toList();
+    }
+
+    private AgentRunEvalEvent fromRuntimeRun(AgentRunRecord run) {
+        return new AgentRunEvalEvent(
+                run.runId(),
+                run.conversationId(),
+                AgentRunStatus.valueOf(run.state().name()),
+                run.usedTools(),
+                run.usedRag(),
+                run.blockedByGuardrail(),
+                run.updatedAt()
+        );
     }
 }
