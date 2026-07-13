@@ -16,8 +16,11 @@ import com.agent.platform.memory.MemoryService;
 import com.agent.platform.tool.ToolCallResult;
 import com.agent.platform.tool.ToolDefinition;
 import com.agent.platform.workflow.WorkflowNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -27,6 +30,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * 单一模型驱动 Agent Runtime。
@@ -36,6 +41,8 @@ import java.util.UUID;
  */
 @Service
 public class DefaultAgentRuntime implements AgentRuntime {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultAgentRuntime.class);
 
     private static final String DEFAULT_SESSION_ID = "default-conversation";
     private static final String DEFAULT_USER_ID = "anonymous";
@@ -51,8 +58,12 @@ public class DefaultAgentRuntime implements AgentRuntime {
     private final GuardrailService guardrailService;
     private final ApprovalService approvalService;
     private final TokenEstimator tokenEstimator;
+    private final AgentRunControlStore runControlStore;
 
     private final MemoryService memoryService;
+
+    /** 仅保存本实例中正在执行的取消句柄，持久取消事实仍写入 AgentRunControlStore。 */
+    private final ConcurrentMap<String, AgentRunBudget> activeBudgets = new ConcurrentHashMap<>();
 
     public DefaultAgentRuntime(AgentProperties properties,
                                AgentTimelineStore timelineStore,
@@ -64,6 +75,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                GuardrailService guardrailService,
                                ApprovalService approvalService,
                                TokenEstimator tokenEstimator,
+                               AgentRunControlStore runControlStore,
                                MemoryService memoryService) {
         this.properties = properties;
         this.timelineStore = timelineStore;
@@ -75,6 +87,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         this.guardrailService = guardrailService;
         this.approvalService = approvalService;
         this.tokenEstimator = tokenEstimator;
+        this.runControlStore = runControlStore;
         this.memoryService = memoryService;
     }
 
@@ -87,44 +100,50 @@ public class DefaultAgentRuntime implements AgentRuntime {
         String sessionId = normalize(originalRequest.conversationId(), DEFAULT_SESSION_ID);
         String userId = normalize(originalRequest.userId(), DEFAULT_USER_ID);
         String runId = UUID.randomUUID().toString();
-        timelineStore.openSession(sessionId, userId);
-        runStore.create(AgentRunRecord.create(runId, runId, sessionId, originalRequest));
         AgentRunBudget budget = new AgentRunBudget(AgentRunLimits.from(properties));
-        publish(sessionId, userId, runId, AgentEventType.RUN_STARTED,
-                "agent run started", Map.of("question", originalRequest.question()), effectiveListener);
+        acquireRun(sessionId, runId, budget);
+        try {
+            timelineStore.openSession(sessionId, userId);
+            runStore.create(AgentRunRecord.create(runId, runId, sessionId, originalRequest));
+            publish(sessionId, userId, runId, AgentEventType.RUN_STARTED,
+                    "agent run started", Map.of("question", originalRequest.question()), effectiveListener);
 
-        GuardrailDecision inputDecision = guardrailService.checkInput(originalRequest.question());
-        if (inputDecision.action() == GuardrailAction.BLOCK) {
-            return finish(
-                    runId,
-                    sessionId,
-                    userId,
-                    AgentRunState.BLOCKED,
-                    AgentStopReason.GUARDRAIL_BLOCKED,
-                    "请求被输入安全策略拦截：" + inputDecision.reason(),
-                    "",
-                    List.of(),
-                    List.of(),
-                    false,
-                    true,
-                    budget,
-                    effectiveListener
-            );
+            GuardrailDecision inputDecision = guardrailService.checkInput(originalRequest.question());
+            if (inputDecision.action() == GuardrailAction.BLOCK) {
+                return finish(
+                        runId,
+                        sessionId,
+                        userId,
+                        AgentRunState.BLOCKED,
+                        AgentStopReason.GUARDRAIL_BLOCKED,
+                        "请求被输入安全策略拦截：" + inputDecision.reason(),
+                        "",
+                        List.of(),
+                        List.of(),
+                        false,
+                        true,
+                        budget,
+                        effectiveListener
+                );
+            }
+            String safeQuestion = inputDecision.action() == GuardrailAction.REDACT
+                    && inputDecision.safeContent() != null
+                    ? inputDecision.safeContent()
+                    : originalRequest.question();
+            AgentRequest request = new AgentRequest(sessionId, userId, safeQuestion, originalRequest.metadata());
+            if (!safeQuestion.equals(originalRequest.question())) {
+                runStore.update(runId, current -> current.withRequest(request));
+            }
+            timelineStore.appendMessages(sessionId, userId, runId, List.of(
+                    AgentMessageDraft.user(safeQuestion, tokenEstimator.estimate(safeQuestion))
+            ));
+            memoryService.rememberLongTerm(sessionId, userId, new MemoryMessage("user", safeQuestion, Instant.now()));
+            return executeLoop(request, runId, sessionId, userId, budget,
+                    new ArrayList<>(), new ArrayList<>(), false, effectiveListener);
         }
-        String safeQuestion = inputDecision.action() == GuardrailAction.REDACT
-                && inputDecision.safeContent() != null
-                ? inputDecision.safeContent()
-                : originalRequest.question();
-        AgentRequest request = new AgentRequest(sessionId, userId, safeQuestion, originalRequest.metadata());
-        if (!safeQuestion.equals(originalRequest.question())) {
-            runStore.update(runId, current -> current.withRequest(request));
+        finally {
+            releaseRun(sessionId, runId);
         }
-        timelineStore.appendMessages(sessionId, userId, runId, List.of(
-                AgentMessageDraft.user(safeQuestion, tokenEstimator.estimate(safeQuestion))
-        ));
-        memoryService.rememberLongTerm(sessionId, userId, new MemoryMessage("user", safeQuestion, Instant.now()));
-        return executeLoop(request, runId, sessionId, userId, budget,
-                new ArrayList<>(), new ArrayList<>(), false, effectiveListener);
     }
 
     @Override
@@ -140,54 +159,94 @@ public class DefaultAgentRuntime implements AgentRuntime {
         if (approval.status() == ApprovalStatus.REQUESTED) {
             return resultFromStored(stored, AgentStopReason.WAITING_APPROVAL);
         }
-        AgentRunRecord claimed = runStore.claimForResume(runId)
-                .orElseGet(() -> runStore.find(runId).orElse(stored));
-        String sessionId = claimed.conversationId();
-        String userId = normalize(claimed.userId(), DEFAULT_USER_ID);
+        String sessionId = stored.conversationId();
         AgentRunBudget budget = new AgentRunBudget(AgentRunLimits.from(properties));
-        List<ToolCallResult> toolResults = new ArrayList<>(claimed.toolResults());
-        List<String> usedTools = new ArrayList<>(claimed.usedTools());
+        acquireRun(sessionId, runId, budget);
+        try {
+            AgentRunRecord claimed = runStore.claimForResume(runId)
+                    .orElseGet(() -> runStore.find(runId).orElse(stored));
+            String userId = normalize(claimed.userId(), DEFAULT_USER_ID);
+            List<ToolCallResult> toolResults = new ArrayList<>(claimed.toolResults());
+            List<String> usedTools = new ArrayList<>(claimed.usedTools());
+            synchronizeCancellation(runId, budget);
+            Optional<AgentStopReason> resumeStop = budget.beforeTurn();
+            if (resumeStop.isPresent()) {
+                return finishBudgetStop(claimed.request(), runId, sessionId, userId, resumeStop.get(),
+                        toolResults, usedTools, claimed.usedRag(), budget, effectiveListener);
+            }
 
-        ToolDefinition definition = capabilityRegistry.findCapability(approval.toolCallRequest().toolName())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "approved capability no longer exists: " + approval.toolCallRequest().toolName()
-                ));
-        ToolCallResult result;
-        if (approval.status() == ApprovalStatus.REJECTED) {
-            result = new ToolCallResult(
-                    approval.toolCallRequest().toolName(),
-                    false,
-                    "",
-                    "human approval rejected: " + approval.decisionReason(),
-                    Map.of("approvalId", approval.approvalId(), "approvalStatus", approval.status().name())
-            );
-        }
-        else {
-            AgentToolRuntimeResult execution = toolRuntime.executeApproved(
-                    approval,
-                    definition,
-                    ToolPolicyContext.from(runId, sessionId, userId,
-                            claimed.request() == null ? Map.of() : claimed.request().metadata())
-            );
-            if (execution.status() == AgentToolExecutionStatus.MANUAL_REVIEW) {
-                return finish(
-                        runId, sessionId, userId, AgentRunState.MANUAL_REVIEW, AgentStopReason.TOOL_ERROR,
-                        "工具执行状态不确定，需要人工核对。", approval.approvalId(), toolResults, usedTools,
-                        claimed.usedRag(), claimed.blockedByGuardrail(), budget, effectiveListener
+            ToolDefinition definition = capabilityRegistry.findCapability(approval.toolCallRequest().toolName())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "approved capability no longer exists: " + approval.toolCallRequest().toolName()
+                    ));
+            ToolCallResult result;
+            if (approval.status() == ApprovalStatus.REJECTED) {
+                result = new ToolCallResult(
+                        approval.toolCallRequest().toolName(),
+                        false,
+                        "",
+                        "human approval rejected: " + approval.decisionReason(),
+                        Map.of("approvalId", approval.approvalId(), "approvalStatus", approval.status().name())
                 );
             }
-            result = execution.result();
-            budget.recordToolCall();
-            usedTools.add(execution.request().toolName());
+            else {
+                AgentToolRuntimeResult execution = toolRuntime.executeApproved(
+                        approval,
+                        definition,
+                        ToolPolicyContext.from(runId, sessionId, userId,
+                                claimed.request() == null ? Map.of() : claimed.request().metadata())
+                );
+                if (execution.status() == AgentToolExecutionStatus.MANUAL_REVIEW) {
+                    return finish(
+                            runId, sessionId, userId, AgentRunState.MANUAL_REVIEW, AgentStopReason.TOOL_ERROR,
+                            "工具执行状态不确定，需要人工核对。", approval.approvalId(), toolResults, usedTools,
+                            claimed.usedRag(), claimed.blockedByGuardrail(), budget, effectiveListener
+                    );
+                }
+                result = execution.result();
+                budget.recordToolCall();
+                usedTools.add(execution.request().toolName());
+            }
+            appendToolResult(sessionId, userId, runId, approval.toolCallRequest().requestId(), result);
+            toolResults.add(result);
+            publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
+                    result.success() ? "approved tool completed" : "approved tool returned failure",
+                    toolResultPayload(approval.toolCallRequest().requestId(), result), effectiveListener);
+            AgentRequest request = claimed.request();
+            return executeLoop(request, runId, sessionId, userId, budget, toolResults, usedTools,
+                    claimed.usedRag(), effectiveListener);
         }
-        appendToolResult(sessionId, userId, runId, approval.toolCallRequest().requestId(), result);
-        toolResults.add(result);
-        publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
-                result.success() ? "approved tool completed" : "approved tool returned failure",
-                toolResultPayload(approval.toolCallRequest().requestId(), result), effectiveListener);
-        AgentRequest request = claimed.request();
-        return executeLoop(request, runId, sessionId, userId, budget, toolResults, usedTools,
-                claimed.usedRag(), effectiveListener);
+        finally {
+            releaseRun(sessionId, runId);
+        }
+    }
+
+    @Override
+    public boolean cancel(String runId) {
+        if (runId == null || runId.isBlank()) {
+            return false;
+        }
+        String normalizedRunId = runId.trim();
+        AgentRunRecord stored = runStore.find(normalizedRunId).orElse(null);
+        if (stored == null || isTerminal(stored.state())) {
+            return false;
+        }
+        boolean persisted = runControlStore.requestCancellation(normalizedRunId);
+        AgentRunBudget localBudget = activeBudgets.get(normalizedRunId);
+        if (localBudget != null) {
+            localBudget.cancel();
+        }
+        else if (persisted && stored.state() == AgentRunState.WAITING_APPROVAL) {
+            AgentRunBudget cancelledBudget = new AgentRunBudget(AgentRunLimits.from(properties));
+            cancelledBudget.cancel();
+            finishBudgetStop(
+                    stored.request(), stored.runId(), stored.conversationId(),
+                    normalize(stored.userId(), DEFAULT_USER_ID), AgentStopReason.CANCELLED,
+                    stored.toolResults(), stored.usedTools(), stored.usedRag(), cancelledBudget,
+                    AgentEventListener.NOOP
+            );
+        }
+        return persisted;
     }
 
     private AgentRuntimeResult executeLoop(AgentRequest request,
@@ -202,6 +261,14 @@ public class DefaultAgentRuntime implements AgentRuntime {
         Set<String> toolCallIds = new HashSet<>();
         int contextOverflowRetries = 0;
         while (true) {
+            if (!runControlStore.renewSessionLease(sessionId, runId, sessionLeaseDuration())) {
+                return finish(
+                        runId, sessionId, userId, AgentRunState.FAILED, AgentStopReason.INTERNAL_ERROR,
+                        "会话执行租约已丢失，Runtime 已停止以避免并发写入同一时间线。", "",
+                        toolResults, usedTools, usedRag, false, budget, listener
+                );
+            }
+            synchronizeCancellation(runId, budget);
             Optional<AgentStopReason> turnStop = budget.beforeTurn();
             if (turnStop.isPresent()) {
                 return finishBudgetStop(request, runId, sessionId, userId, turnStop.get(),
@@ -238,6 +305,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 );
             }
 
+            synchronizeCancellation(runId, budget);
             Optional<AgentStopReason> modelStop = budget.beforeModelCall();
             if (modelStop.isPresent()) {
                 return finishBudgetStop(request, runId, sessionId, userId, modelStop.get(),
@@ -322,6 +390,13 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     ),
                     listener);
 
+            synchronizeCancellation(runId, budget);
+            Optional<AgentStopReason> asynchronousStop = budget.currentStopReason();
+            if (asynchronousStop.isPresent()) {
+                return finishBudgetStop(request, runId, sessionId, userId, asynchronousStop.get(),
+                        toolResults, usedTools, usedRag, budget, listener);
+            }
+
             if (!modelTurn.hasToolCalls()) {
                 return finishFinalAnswer(request, runId, sessionId, userId, modelTurn.assistantText(),
                         toolResults, usedTools, usedRag, budget, listener);
@@ -342,6 +417,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
             }
 
             for (AgentToolCall rawCall : modelTurn.toolCalls()) {
+                synchronizeCancellation(runId, budget);
                 Optional<AgentStopReason> toolStop = budget.beforeToolCall();
                 if (toolStop.isPresent()) {
                     return finishBudgetStop(request, runId, sessionId, userId, toolStop.get(),
@@ -621,6 +697,40 @@ public class DefaultAgentRuntime implements AgentRuntime {
             current = current.getCause();
         }
         return false;
+    }
+
+    private void acquireRun(String sessionId, String runId, AgentRunBudget budget) {
+        runControlStore.acquireSessionLease(sessionId, runId, sessionLeaseDuration());
+        activeBudgets.put(runId, budget);
+    }
+
+    private void releaseRun(String sessionId, String runId) {
+        activeBudgets.remove(runId);
+        try {
+            runControlStore.releaseSessionLease(sessionId, runId);
+        }
+        catch (RuntimeException exception) {
+            // 租约有过期时间；释放失败不能覆盖已经持久化的 Agent 最终结果。
+            LOGGER.warn("Failed to release Agent session lease for run {}", runId, exception);
+        }
+    }
+
+    private void synchronizeCancellation(String runId, AgentRunBudget budget) {
+        if (runControlStore.cancellationRequested(runId)) {
+            budget.cancel();
+        }
+    }
+
+    private Duration sessionLeaseDuration() {
+        return Duration.ofMillis(Math.max(60_000, properties.getMaxRunDurationMillis() + 60_000));
+    }
+
+    private boolean isTerminal(AgentRunState state) {
+        return state == AgentRunState.COMPLETED
+                || state == AgentRunState.BLOCKED
+                || state == AgentRunState.FAILED
+                || state == AgentRunState.REJECTED
+                || state == AgentRunState.MANUAL_REVIEW;
     }
 
     private AgentEvent publish(String sessionId,

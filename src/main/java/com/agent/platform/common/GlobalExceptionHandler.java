@@ -1,5 +1,6 @@
 package com.agent.platform.common;
 
+import com.agent.platform.runtime.AgentSessionBusyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,6 +15,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> handleBadRequest(Exception exception) {
         return ApiResponse.failure(ErrorCode.BAD_REQUEST, safeMessage(exception));
+    }
+
+    @ExceptionHandler(AgentSessionBusyException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiResponse<Void> handleConflict(AgentSessionBusyException exception) {
+        return ApiResponse.failure(ErrorCode.CONFLICT, safeMessage(exception));
     }
 
     @ExceptionHandler(Exception.class)

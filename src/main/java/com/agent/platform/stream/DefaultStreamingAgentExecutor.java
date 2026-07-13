@@ -13,6 +13,8 @@ import reactor.core.scheduler.Schedulers;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * AgentRuntime 的 SSE 事件适配器，不包含任何独立业务执行逻辑。
@@ -31,9 +33,15 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
     @Override
     public Flux<AgentStreamEvent> stream(AgentRequest request) {
         return Flux.<AgentStreamEvent>create(sink -> {
+                    AtomicReference<String> runId = new AtomicReference<>();
+                    AtomicBoolean cancelled = new AtomicBoolean(false);
                     Disposable task = Schedulers.boundedElastic().schedule(() -> {
                         try {
                             runtime.run(request, event -> {
+                                runId.compareAndSet(null, event.runId());
+                                if (cancelled.get()) {
+                                    runtime.cancel(event.runId());
+                                }
                                 if (!sink.isCancelled()) {
                                     sink.next(toStreamEvent(event));
                                 }
@@ -49,7 +57,14 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                             }
                         }
                     });
-                    sink.onCancel(task::dispose);
+                    sink.onCancel(() -> {
+                        cancelled.set(true);
+                        String activeRunId = runId.get();
+                        if (activeRunId != null && !activeRunId.isBlank()) {
+                            runtime.cancel(activeRunId);
+                        }
+                        task.dispose();
+                    });
                     sink.onDispose(task::dispose);
                 }, FluxSinkOverflowStrategy.buffer())
                 .onBackpressureBuffer(

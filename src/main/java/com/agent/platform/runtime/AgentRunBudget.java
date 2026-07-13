@@ -87,6 +87,10 @@ public final class AgentRunBudget {
         cancelled.set(true);
     }
 
+    public synchronized Optional<AgentStopReason> currentStopReason() {
+        return commonStopReason();
+    }
+
     public synchronized AgentRunBudgetSnapshot snapshot() {
         return new AgentRunBudgetSnapshot(
                 turns,

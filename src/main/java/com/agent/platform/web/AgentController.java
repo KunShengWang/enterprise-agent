@@ -12,6 +12,7 @@ import com.agent.platform.router.IntentRoute;
 import com.agent.platform.router.IntentRouter;
 import com.agent.platform.runtime.AgentRunRecord;
 import com.agent.platform.runtime.AgentRunStore;
+import com.agent.platform.runtime.AgentRuntime;
 import com.agent.platform.stream.AgentStreamEvent;
 import com.agent.platform.stream.StreamingAgentExecutor;
 import jakarta.validation.Valid;
@@ -49,6 +50,7 @@ public class AgentController {
     private final RateLimitService rateLimitService;
 
     private final AgentRunStore agentRunStore;
+    private final AgentRuntime agentRuntime;
 
     public AgentController(AgentExecutor agentExecutor,
                            AgentProperties agentProperties,
@@ -56,7 +58,8 @@ public class AgentController {
                            MemoryService memoryService,
                            StreamingAgentExecutor streamingAgentExecutor,
                            RateLimitService rateLimitService,
-                           AgentRunStore agentRunStore) {
+                           AgentRunStore agentRunStore,
+                           AgentRuntime agentRuntime) {
         this.agentExecutor = agentExecutor;
         this.agentProperties = agentProperties;
         this.intentRouter = intentRouter;
@@ -64,6 +67,7 @@ public class AgentController {
         this.streamingAgentExecutor = streamingAgentExecutor;
         this.rateLimitService = rateLimitService;
         this.agentRunStore = agentRunStore;
+        this.agentRuntime = agentRuntime;
     }
 
     @GetMapping("/health")
@@ -126,6 +130,23 @@ public class AgentController {
     @PostMapping("/runs/{runId}/resume")
     public Mono<ApiResponse<AgentResponse>> resumeRun(@PathVariable String runId) {
         return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.resume(runId)))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @PostMapping("/runs/{runId}/cancel")
+    public Mono<ApiResponse<Map<String, Object>>> cancelRun(@PathVariable String runId) {
+        return Mono.fromSupplier(() -> {
+                    boolean requested = agentRuntime.cancel(runId);
+                    if (!requested) {
+                        return ApiResponse.<Map<String, Object>>failure(
+                                com.agent.platform.common.ErrorCode.NOT_FOUND,
+                                "agent run control not found: " + runId
+                        );
+                    }
+                    return ApiResponse.<Map<String, Object>>success(
+                            Map.<String, Object>of("runId", runId, "cancellationRequested", true)
+                    );
+                })
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
