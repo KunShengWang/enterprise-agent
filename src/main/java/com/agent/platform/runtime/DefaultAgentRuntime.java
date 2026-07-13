@@ -93,20 +93,34 @@ public class DefaultAgentRuntime implements AgentRuntime {
 
     @Override
     public AgentRuntimeResult run(AgentRequest originalRequest, AgentEventListener listener) {
+        return run(originalRequest, defaultExecutionProfile(), listener);
+    }
+
+    @Override
+    public AgentRuntimeResult run(AgentRequest originalRequest,
+                                  AgentExecutionProfile executionProfile,
+                                  AgentEventListener listener) {
         if (originalRequest == null || originalRequest.question() == null || originalRequest.question().isBlank()) {
             throw new IllegalArgumentException("agent request question must not be blank");
         }
+        AgentExecutionProfile profile = executionProfile == null
+                ? defaultExecutionProfile()
+                : executionProfile;
         AgentEventListener effectiveListener = listener == null ? AgentEventListener.NOOP : listener;
         String sessionId = normalize(originalRequest.conversationId(), DEFAULT_SESSION_ID);
         String userId = normalize(originalRequest.userId(), DEFAULT_USER_ID);
         String runId = UUID.randomUUID().toString();
-        AgentRunBudget budget = new AgentRunBudget(AgentRunLimits.from(properties));
+        AgentRunBudget budget = new AgentRunBudget(profile.limits());
         acquireRun(sessionId, runId, budget);
         try {
             timelineStore.openSession(sessionId, userId);
             runStore.create(AgentRunRecord.create(runId, runId, sessionId, originalRequest));
             publish(sessionId, userId, runId, AgentEventType.RUN_STARTED,
-                    "agent run started", Map.of("question", originalRequest.question()), effectiveListener);
+                    "agent run started", Map.of(
+                            "question", originalRequest.question(),
+                            "profile", profile.name(),
+                            "allowedCapabilities", profile.allowedCapabilities()
+                    ), effectiveListener);
 
             GuardrailDecision inputDecision = guardrailService.checkInput(originalRequest.question());
             if (inputDecision.action() == GuardrailAction.BLOCK) {
@@ -137,9 +151,11 @@ public class DefaultAgentRuntime implements AgentRuntime {
             timelineStore.appendMessages(sessionId, userId, runId, List.of(
                     AgentMessageDraft.user(safeQuestion, tokenEstimator.estimate(safeQuestion))
             ));
-            memoryService.rememberLongTerm(sessionId, userId, new MemoryMessage("user", safeQuestion, Instant.now()));
+            if (profile.longTermMemoryEnabled()) {
+                memoryService.rememberLongTerm(sessionId, userId, new MemoryMessage("user", safeQuestion, Instant.now()));
+            }
             return executeLoop(request, runId, sessionId, userId, budget,
-                    new ArrayList<>(), new ArrayList<>(), false, effectiveListener);
+                    new ArrayList<>(), new ArrayList<>(), false, profile, effectiveListener);
         }
         finally {
             releaseRun(sessionId, runId);
@@ -214,7 +230,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     toolResultPayload(approval.toolCallRequest().requestId(), result), effectiveListener);
             AgentRequest request = claimed.request();
             return executeLoop(request, runId, sessionId, userId, budget, toolResults, usedTools,
-                    claimed.usedRag(), effectiveListener);
+                    claimed.usedRag(), defaultExecutionProfile(), effectiveListener);
         }
         finally {
             releaseRun(sessionId, runId);
@@ -257,6 +273,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                            List<ToolCallResult> toolResults,
                                            List<String> usedTools,
                                            boolean usedRag,
+                                           AgentExecutionProfile profile,
                                            AgentEventListener listener) {
         Set<String> toolCallIds = new HashSet<>();
         int contextOverflowRetries = 0;
@@ -276,7 +293,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
             }
             budget.recordTurnStarted();
 
-            long contextTokenBudget = contextMessageBudget();
+            long contextTokenBudget = contextMessageBudget(profile);
             AgentContextView context = contextManager.project(
                     sessionId,
                     userId,
@@ -320,9 +337,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     modelTurn = modelGateway.nextTurn(new AgentModelRequest(
                             runId,
                             sessionId,
-                            properties.getDefaultSystemPrompt(),
+                            profile.systemPrompt(),
                             context.messages(),
-                            capabilityRegistry.listCapabilities(),
+                            capabilitiesFor(profile),
                             request.metadata()
                     ));
                     break;
@@ -457,11 +474,18 @@ public class DefaultAgentRuntime implements AgentRuntime {
                         Map.of("toolCallId", call.toolCallId(), "toolName", call.toolName(), "arguments", call.arguments()),
                         listener);
 
-                Optional<ToolDefinition> definition = capabilityRegistry.findCapability(call.toolName());
+                boolean capabilityAllowed = profile.allows(call.toolName());
+                Optional<ToolDefinition> definition = capabilityAllowed
+                        ? capabilityRegistry.findCapability(call.toolName())
+                        : Optional.empty();
                 if (definition.isEmpty()) {
+                    String errorType = capabilityAllowed ? "UNKNOWN_CAPABILITY" : "CAPABILITY_NOT_ALLOWED";
+                    String errorMessage = capabilityAllowed
+                            ? "unknown capability: " + call.toolName()
+                            : "capability is not allowed by execution profile: " + call.toolName();
                     ToolCallResult unknown = new ToolCallResult(
-                            call.toolName(), false, "", "unknown capability: " + call.toolName(),
-                            Map.of("errorType", "UNKNOWN_CAPABILITY")
+                            call.toolName(), false, "", errorMessage,
+                            Map.of("errorType", errorType, "profile", profile.name())
                     );
                     appendToolResult(sessionId, userId, runId, call.toolCallId(), unknown);
                     toolResults.add(unknown);
@@ -691,9 +715,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
         );
     }
 
-    private long contextMessageBudget() {
-        long staticTokens = tokenEstimator.estimate(properties.getDefaultSystemPrompt()) + 700;
-        for (ToolDefinition definition : capabilityRegistry.listCapabilities()) {
+    private long contextMessageBudget(AgentExecutionProfile profile) {
+        long staticTokens = tokenEstimator.estimate(profile.systemPrompt()) + 700;
+        for (ToolDefinition definition : capabilitiesFor(profile)) {
             staticTokens += tokenEstimator.estimate(definition.name())
                     + tokenEstimator.estimate(definition.description())
                     + tokenEstimator.estimate(definition.inputSchema());
@@ -702,7 +726,26 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 - Math.max(0, properties.getContextOutputReserveTokens())
                 - Math.max(0, properties.getContextSafetyMarginTokens())
                 - staticTokens;
-        return Math.max(1, Math.min(properties.getMaxInputTokensPerRun(), availableWindow));
+        return Math.max(1, Math.min(profile.limits().maxInputTokens(), availableWindow));
+    }
+
+    private List<ToolDefinition> capabilitiesFor(AgentExecutionProfile profile) {
+        return capabilityRegistry.listCapabilities().stream()
+                .filter(definition -> profile.allows(definition.name()))
+                .toList();
+    }
+
+    private AgentExecutionProfile defaultExecutionProfile() {
+        Set<String> capabilities = capabilityRegistry.listCapabilities().stream()
+                .map(ToolDefinition::name)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        return new AgentExecutionProfile(
+                "main-agent",
+                properties.getDefaultSystemPrompt(),
+                capabilities,
+                AgentRunLimits.from(properties),
+                true
+        );
     }
 
     private boolean isContextOverflow(Throwable failure) {

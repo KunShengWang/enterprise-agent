@@ -6,6 +6,10 @@ public interface AgentRuntime {
 
     AgentRuntimeResult run(AgentRequest request, AgentEventListener listener);
 
+    AgentRuntimeResult run(AgentRequest request,
+                           AgentExecutionProfile executionProfile,
+                           AgentEventListener listener);
+
     AgentRuntimeResult resume(String runId, AgentEventListener listener);
 
     /** 持久化取消请求；同实例正在运行时同时触发本地预算取消。 */

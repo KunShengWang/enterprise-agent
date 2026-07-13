@@ -173,6 +173,7 @@ public class RuntimeTraceProjector {
                 case CONTEXT_PREPARED, CONTEXT_COMPACTED -> TraceSpanKind.PROMPT;
                 case POLICY_DECIDED -> TraceSpanKind.GUARDRAIL;
                 case APPROVAL_REQUIRED -> TraceSpanKind.APPROVAL;
+                case SUB_AGENT_STARTED, SUB_AGENT_COMPLETED -> TraceSpanKind.AGENT;
                 case MODEL_FAILED, RUN_FAILED -> TraceSpanKind.ERROR;
                 default -> null;
             };

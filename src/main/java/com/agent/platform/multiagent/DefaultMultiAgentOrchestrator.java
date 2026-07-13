@@ -1,24 +1,16 @@
 package com.agent.platform.multiagent;
 
 import com.agent.platform.agent.AgentRequest;
-import com.agent.platform.llm.LlmService;
-import com.agent.platform.memory.ConversationMemory;
-import com.agent.platform.memory.MemoryService;
-import com.agent.platform.prompt.PromptRequest;
-import com.agent.platform.rag.RagResult;
-import com.agent.platform.rag.RagService;
-import com.agent.platform.router.IntentRoute;
-import com.agent.platform.router.IntentRouter;
-import com.agent.platform.router.IntentType;
-import com.agent.platform.tool.ToolCallPlan;
-import com.agent.platform.tool.ToolCallRequest;
-import com.agent.platform.tool.ToolCallResult;
-import com.agent.platform.tool.ToolDefinition;
-import com.agent.platform.tool.ToolExecutor;
-import com.agent.platform.tool.ToolRegistry;
-import com.agent.platform.tool.ToolCallPlanner;
+import com.agent.platform.runtime.AgentEventDraft;
+import com.agent.platform.runtime.AgentEventType;
+import com.agent.platform.runtime.AgentRunRecord;
+import com.agent.platform.runtime.AgentRunState;
+import com.agent.platform.runtime.AgentRunStore;
+import com.agent.platform.runtime.AgentStopReason;
+import com.agent.platform.runtime.AgentTimelineStore;
+import com.agent.platform.workflow.WorkflowNode;
+import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -26,303 +18,281 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * 基于统一 AgentRuntime 的隔离式 Sub-Agent 编排器。
+ *
+ * <p>编排器只负责任务生命周期和结果汇合；执行配置、结构化协议和子 Agent 运行分别由
+ * ProfileFactory、Protocol、Runner 承担，避免重新形成另一个巨型 Executor。</p>
+ */
 @Service
 public class DefaultMultiAgentOrchestrator implements MultiAgentOrchestrator {
 
-    private final MemoryService memoryService;
-    private final IntentRouter intentRouter;
-    private final RagService ragService;
-    private final ToolRegistry toolRegistry;
-    private final ToolCallPlanner toolCallPlanner;
-    private final ToolExecutor toolExecutor;
-    private final LlmService llmService;
-    private final ObjectMapper objectMapper;
+    private static final int MAX_SPECIALISTS = 2;
+    private static final long SPECIALIST_TIMEOUT_SECONDS = 60;
 
-    public DefaultMultiAgentOrchestrator(MemoryService memoryService,
-                                         IntentRouter intentRouter,
-                                         RagService ragService,
-                                         ToolRegistry toolRegistry,
-                                         ToolCallPlanner toolCallPlanner,
-                                         ToolExecutor toolExecutor,
-                                         LlmService llmService,
-                                         ObjectMapper objectMapper) {
-        this.memoryService = memoryService;
-        this.intentRouter = intentRouter;
-        this.ragService = ragService;
-        this.toolRegistry = toolRegistry;
-        this.toolCallPlanner = toolCallPlanner;
-        this.toolExecutor = toolExecutor;
-        this.llmService = llmService;
-        this.objectMapper = objectMapper;
+    private final AgentRunStore runStore;
+    private final AgentTimelineStore timelineStore;
+    private final SubAgentRunner subAgentRunner;
+    private final SubAgentProfileFactory profileFactory;
+    private final SubAgentProtocol protocol;
+    private final ThreadPoolExecutor specialistExecutor;
+
+    public DefaultMultiAgentOrchestrator(AgentRunStore runStore,
+                                         AgentTimelineStore timelineStore,
+                                         SubAgentRunner subAgentRunner,
+                                         SubAgentProfileFactory profileFactory,
+                                         SubAgentProtocol protocol) {
+        this.runStore = runStore;
+        this.timelineStore = timelineStore;
+        this.subAgentRunner = subAgentRunner;
+        this.profileFactory = profileFactory;
+        this.protocol = protocol;
+        AtomicInteger sequence = new AtomicInteger();
+        this.specialistExecutor = new ThreadPoolExecutor(
+                MAX_SPECIALISTS,
+                MAX_SPECIALISTS,
+                30,
+                TimeUnit.SECONDS,
+                new ArrayBlockingQueue<>(8),
+                runnable -> {
+                    Thread thread = new Thread(runnable, "sub-agent-" + sequence.incrementAndGet());
+                    thread.setDaemon(true);
+                    return thread;
+                },
+                new ThreadPoolExecutor.AbortPolicy()
+        );
+        this.specialistExecutor.allowCoreThreadTimeOut(true);
     }
 
     @Override
     public MultiAgentRunResponse execute(AgentRequest request) {
+        validate(request);
         Instant startedAt = Instant.now();
-        String runId = UUID.randomUUID().toString();
-        String conversationId = request.conversationId() == null || request.conversationId().isBlank()
-                ? "multi-agent-" + runId
-                : request.conversationId();
-        ConversationMemory memory = memoryService.load(conversationId, request.userId(), request.question());
-        IntentRoute route = intentRouter.route(request, memory);
-        List<MultiAgentTask> tasks = planTasks(route, request);
-        List<MultiAgentMessage> messages = new ArrayList<>();
-        messages.add(message(MultiAgentRole.PLANNER, "planner", "route=" + route.type() + ", reason=" + route.reason(), Map.of("slots", route.slots())));
+        String coordinatorRunId = UUID.randomUUID().toString();
+        String parentConversationId = normalize(request.conversationId(), "multi-agent");
+        String coordinatorSessionId = parentConversationId + ":multi:" + coordinatorRunId;
+        String userId = normalize(request.userId(), "anonymous");
+        AgentRequest coordinatorRequest = new AgentRequest(
+                coordinatorSessionId, userId, request.question(), request.metadata()
+        );
+        openCoordinator(coordinatorRunId, coordinatorSessionId, parentConversationId, userId, coordinatorRequest);
 
-        boolean shouldRunRag = tasks.stream().anyMatch(task -> task.role() == MultiAgentRole.RAG_WORKER);
-        boolean shouldRunTool = tasks.stream().anyMatch(task -> task.role() == MultiAgentRole.TOOL_WORKER);
-        CompletableFuture<RagWorkerResult> ragFuture = shouldRunRag
-                ? CompletableFuture.supplyAsync(() -> runRagWorker(request))
-                : CompletableFuture.completedFuture(new RagWorkerResult(RagResult.empty(request.question()), message(MultiAgentRole.RAG_WORKER, "rag", "rag worker skipped", Map.of("skipped", true))));
-        CompletableFuture<ToolWorkerResult> toolFuture = shouldRunTool
-                ? CompletableFuture.supplyAsync(() -> runToolWorker(request, memory, route))
-                : CompletableFuture.completedFuture(new ToolWorkerResult(List.of(), message(MultiAgentRole.TOOL_WORKER, "tool", "tool worker skipped", Map.of("skipped", true))));
-        CompletableFuture.allOf(ragFuture, toolFuture).join();
-        RagWorkerResult ragWorkerResult = ragFuture.join();
-        ToolWorkerResult toolWorkerResult = toolFuture.join();
-        RagResult ragResult = ragWorkerResult.ragResult();
-        List<ToolCallResult> toolResults = toolWorkerResult.toolResults();
-        if (shouldRunRag) {
-            messages.add(ragWorkerResult.message());
+        try {
+            SubAgentExecutionResult planner = subAgentRunner.run(
+                    coordinatorRunId,
+                    coordinatorSessionId,
+                    userId,
+                    "planner",
+                    MultiAgentRole.PLANNER,
+                    protocol.plannerInstruction(request.question()),
+                    profileFactory.planner()
+            );
+            List<MultiAgentTask> specialistTasks = protocol.parsePlannerTasks(planner.answer(), request.question());
+            List<SubAgentExecutionResult> specialists = runSpecialists(
+                    coordinatorRunId, coordinatorSessionId, userId, request.question(), specialistTasks
+            );
+            SubAgentExecutionResult reviewer = subAgentRunner.run(
+                    coordinatorRunId,
+                    coordinatorSessionId,
+                    userId,
+                    "reviewer",
+                    MultiAgentRole.REVIEWER,
+                    protocol.reviewerInstruction(request.question(), specialists),
+                    profileFactory.reviewer()
+            );
+            MultiAgentReviewResult review = protocol.parseReview(reviewer.answer(), specialists);
+
+            List<MultiAgentTask> tasks = responseTasks(planner, specialistTasks, reviewer);
+            List<MultiAgentMessage> messages = new ArrayList<>();
+            messages.add(planner.message());
+            specialists.forEach(result -> messages.add(result.message()));
+            messages.add(reviewer.message());
+            Map<String, Object> metrics = metrics(messages, specialists, review);
+            finishCoordinator(coordinatorRunId, coordinatorSessionId, userId, review, specialistTasks, metrics);
+
+            Instant finishedAt = Instant.now();
+            return new MultiAgentRunResponse(
+                    coordinatorRunId,
+                    parentConversationId,
+                    request.question(),
+                    review.finalAnswer(),
+                    tasks,
+                    messages,
+                    startedAt,
+                    finishedAt,
+                    Math.max(0, finishedAt.toEpochMilli() - startedAt.toEpochMilli()),
+                    metrics
+            );
         }
-        if (shouldRunTool) {
-            messages.add(toolWorkerResult.message());
+        catch (RuntimeException exception) {
+            failCoordinator(coordinatorRunId, coordinatorSessionId, userId, exception);
+            throw exception;
         }
-        MultiAgentReviewResult review = reviewerAnswer(request, messages, ragResult, toolResults);
-        messages.add(message(MultiAgentRole.REVIEWER, "reviewer", review.finalAnswer(), Map.of(
-                "approved", review.approved(),
-                "confidence", review.confidence(),
-                "conflictDetected", review.conflictDetected(),
-                "conflictReason", review.conflictReason(),
-                "evidence", review.evidence()
-        )));
-        Instant finishedAt = Instant.now();
+    }
+
+    private List<SubAgentExecutionResult> runSpecialists(String coordinatorRunId,
+                                                         String coordinatorSessionId,
+                                                         String userId,
+                                                         String question,
+                                                         List<MultiAgentTask> tasks) {
+        List<Callable<SubAgentExecutionResult>> calls = tasks.stream()
+                .limit(MAX_SPECIALISTS)
+                .map(task -> (Callable<SubAgentExecutionResult>) () -> subAgentRunner.run(
+                        coordinatorRunId,
+                        coordinatorSessionId,
+                        userId,
+                        task.taskId(),
+                        task.role(),
+                        "用户问题：" + question + "\n你的专项任务：" + task.instruction(),
+                        profileFactory.specialist(task.role())
+                ))
+                .toList();
+        try {
+            List<Future<SubAgentExecutionResult>> futures = specialistExecutor.invokeAll(
+                    calls, SPECIALIST_TIMEOUT_SECONDS, TimeUnit.SECONDS
+            );
+            List<SubAgentExecutionResult> results = new ArrayList<>();
+            for (int index = 0; index < futures.size(); index++) {
+                Future<SubAgentExecutionResult> future = futures.get(index);
+                MultiAgentTask task = tasks.get(index);
+                if (future.isCancelled()) {
+                    results.add(subAgentRunner.timeout(task));
+                    continue;
+                }
+                try {
+                    results.add(future.get());
+                }
+                catch (Exception exception) {
+                    results.add(subAgentRunner.failure(task, exception.getCause()));
+                }
+            }
+            return List.copyOf(results);
+        }
+        catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("specialist execution interrupted", exception);
+        }
+    }
+
+    private void openCoordinator(String runId,
+                                 String sessionId,
+                                 String parentConversationId,
+                                 String userId,
+                                 AgentRequest request) {
+        timelineStore.openSession(sessionId, userId);
+        runStore.create(AgentRunRecord.create(runId, runId, sessionId, request));
+        appendEvent(sessionId, userId, runId, AgentEventType.RUN_STARTED,
+                "multi-agent coordinator started", Map.of("parentConversationId", parentConversationId));
+    }
+
+    private void finishCoordinator(String runId,
+                                   String sessionId,
+                                   String userId,
+                                   MultiAgentReviewResult review,
+                                   List<MultiAgentTask> specialistTasks,
+                                   Map<String, Object> metrics) {
+        boolean usedRag = specialistTasks.stream().anyMatch(task -> task.role() == MultiAgentRole.RAG_WORKER);
+        runStore.update(runId, current -> current.finished(
+                AgentRunState.COMPLETED,
+                WorkflowNode.FINISH,
+                review.finalAnswer(),
+                "",
+                List.of(),
+                List.of(),
+                usedRag,
+                false
+        ));
+        appendEvent(sessionId, userId, runId, AgentEventType.RUN_COMPLETED,
+                "multi-agent coordinator completed",
+                Map.of(
+                        "state", AgentRunState.COMPLETED.name(),
+                        "stopReason", AgentStopReason.COMPLETED.name(),
+                        "metrics", metrics
+                ));
+    }
+
+    private void failCoordinator(String runId,
+                                 String sessionId,
+                                 String userId,
+                                 RuntimeException exception) {
+        runStore.update(runId, current -> current.finished(
+                AgentRunState.FAILED,
+                WorkflowNode.FAILED,
+                "Multi-Agent 编排失败，请稍后重试。",
+                exception.getClass().getSimpleName(),
+                List.of(),
+                List.of(),
+                false,
+                false
+        ));
+        appendEvent(sessionId, userId, runId, AgentEventType.RUN_FAILED,
+                "multi-agent coordinator failed",
+                Map.of(
+                        "state", AgentRunState.FAILED.name(),
+                        "stopReason", AgentStopReason.INTERNAL_ERROR.name(),
+                        "errorType", exception.getClass().getSimpleName()
+                ));
+    }
+
+    private List<MultiAgentTask> responseTasks(SubAgentExecutionResult planner,
+                                               List<MultiAgentTask> specialists,
+                                               SubAgentExecutionResult reviewer) {
+        List<MultiAgentTask> tasks = new ArrayList<>();
+        tasks.add(new MultiAgentTask("planner", MultiAgentRole.PLANNER,
+                "根据用户问题生成受约束的 specialist 任务", Map.of("childRunId", planner.childRunId())));
+        tasks.addAll(specialists);
+        tasks.add(new MultiAgentTask("reviewer", MultiAgentRole.REVIEWER,
+                "只基于 specialist 摘要审查冲突并生成最终回答",
+                Map.of("childRunId", reviewer.childRunId())));
+        return List.copyOf(tasks);
+    }
+
+    private Map<String, Object> metrics(List<MultiAgentMessage> messages,
+                                        List<SubAgentExecutionResult> specialists,
+                                        MultiAgentReviewResult review) {
+        List<String> childRunIds = messages.stream()
+                .map(message -> String.valueOf(message.metadata().getOrDefault("childRunId", "")))
+                .filter(value -> !value.isBlank())
+                .toList();
         Map<String, Object> metrics = new LinkedHashMap<>();
-        metrics.put("messageCount", messages.size());
-        metrics.put("taskCount", tasks.size());
-        metrics.put("route", route.type().name());
-        metrics.put("workerMode", "parallel");
+        metrics.put("executionModel", "isolated-sub-agent-runtime");
+        metrics.put("childRunIds", childRunIds);
+        metrics.put("specialistCount", specialists.size());
         metrics.put("reviewApproved", review.approved());
         metrics.put("reviewConfidence", review.confidence());
         metrics.put("conflictDetected", review.conflictDetected());
-        return new MultiAgentRunResponse(
-                runId,
-                conversationId,
-                request.question(),
-                review.finalAnswer(),
-                tasks,
-                messages,
-                startedAt,
-                finishedAt,
-                Math.max(0, finishedAt.toEpochMilli() - startedAt.toEpochMilli()),
-                metrics
-        );
+        metrics.put("fullChildContextMerged", false);
+        return Map.copyOf(metrics);
     }
 
-    private List<MultiAgentTask> planTasks(IntentRoute route, AgentRequest request) {
-        List<MultiAgentTask> tasks = new ArrayList<>();
-        tasks.add(new MultiAgentTask("planner", MultiAgentRole.PLANNER, "拆解用户问题并决定子 Agent 分工", Map.of("question", request.question())));
-        if (route.type() == IntentType.RAG) {
-            tasks.add(new MultiAgentTask("rag", MultiAgentRole.RAG_WORKER, "检索知识库证据并返回来源", Map.of()));
-        }
-        else if (route.type() == IntentType.TOOL) {
-            tasks.add(new MultiAgentTask("rag", MultiAgentRole.RAG_WORKER, "并行检索相关知识库背景，辅助 Reviewer 判断工具结果", Map.of("optional", true)));
-            tasks.add(new MultiAgentTask("tool", MultiAgentRole.TOOL_WORKER, "选择并执行合适工具", Map.of()));
-        }
-        else if (route.type() == IntentType.CHAT) {
-            tasks.add(new MultiAgentTask("rag", MultiAgentRole.RAG_WORKER, "必要时补充知识库背景", Map.of("optional", true)));
-        }
-        tasks.add(new MultiAgentTask("reviewer", MultiAgentRole.REVIEWER, "检查子结果并聚合最终回答", Map.of()));
-        return tasks;
+    private void appendEvent(String sessionId,
+                             String userId,
+                             String runId,
+                             AgentEventType type,
+                             String content,
+                             Map<String, Object> payload) {
+        timelineStore.appendEvent(sessionId, userId, runId, new AgentEventDraft(type, content, payload));
     }
 
-    private RagWorkerResult runRagWorker(AgentRequest request) {
-        long startNanos = System.nanoTime();
-        try {
-            RagResult ragResult = ragService.retrieve(request.question(), 3);
-            return new RagWorkerResult(
-                    ragResult,
-                    message(MultiAgentRole.RAG_WORKER, "rag", "retrieved documents=" + ragResult.documents().size(), Map.of(
-                            "enoughEvidence", ragResult.enoughEvidence(),
-                            "durationMs", elapsedMs(startNanos),
-                            "parallel", true
-                    ))
-            );
-        }
-        catch (RuntimeException exception) {
-            return new RagWorkerResult(
-                    RagResult.empty(request.question()),
-                    message(MultiAgentRole.RAG_WORKER, "rag", "rag worker failed: " + exception.getMessage(), Map.of(
-                            "error", exception.getClass().getSimpleName(),
-                            "durationMs", elapsedMs(startNanos),
-                            "parallel", true
-                    ))
-            );
+    private void validate(AgentRequest request) {
+        if (request == null || request.question() == null || request.question().isBlank()) {
+            throw new IllegalArgumentException("multi-agent question must not be blank");
         }
     }
 
-    private ToolWorkerResult runToolWorker(AgentRequest request, ConversationMemory memory, IntentRoute route) {
-        long startNanos = System.nanoTime();
-        try {
-            List<ToolDefinition> tools = toolRegistry.listTools();
-            ToolCallPlan plan = toolCallPlanner.plan(request, memory, route, tools, List.of());
-            if (plan.shouldCallTool()) {
-                ToolCallResult result = toolExecutor.execute(new ToolCallRequest(plan.toolName(), UUID.randomUUID().toString(), plan.arguments()));
-                return new ToolWorkerResult(
-                        List.of(result),
-                        message(MultiAgentRole.TOOL_WORKER, "tool", "tool=" + plan.toolName() + ", success=" + result.success(), Map.of(
-                                "result", result.content(),
-                                "durationMs", elapsedMs(startNanos),
-                                "parallel", true
-                        ))
-                );
-            }
-            return new ToolWorkerResult(
-                    List.of(),
-                    message(MultiAgentRole.TOOL_WORKER, "tool", "no tool call: " + plan.reason(), Map.of(
-                            "durationMs", elapsedMs(startNanos),
-                            "parallel", true
-                    ))
-            );
-        }
-        catch (RuntimeException exception) {
-            return new ToolWorkerResult(
-                    List.of(),
-                    message(MultiAgentRole.TOOL_WORKER, "tool", "tool worker failed: " + exception.getMessage(), Map.of(
-                            "error", exception.getClass().getSimpleName(),
-                            "durationMs", elapsedMs(startNanos),
-                            "parallel", true
-                    ))
-            );
-        }
+    private String normalize(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
     }
 
-    private MultiAgentReviewResult reviewerAnswer(AgentRequest request,
-                                                  List<MultiAgentMessage> messages,
-                                                  RagResult ragResult,
-                                                  List<ToolCallResult> toolResults) {
-        List<String> contextBlocks = new ArrayList<>();
-        messages.forEach(message -> contextBlocks.add(message.role() + ": " + message.content()));
-        ragResult.documents().forEach(document -> contextBlocks.add("RAG: " + document.title() + " score=" + document.score() + " " + document.content()));
-        toolResults.forEach(result -> contextBlocks.add("Tool: " + result.toolName() + " success=" + result.success() + " " + result.content()));
-        contextBlocks.add("Reviewer must output JSON only: {\"approved\":true,\"confidence\":0.0,\"conflictDetected\":false,\"conflictReason\":\"\",\"evidence\":[\"evidence\"],\"finalAnswer\":\"final Chinese answer\"}");
-        String reviewText = llmService.complete(new PromptRequest(
-                "你是 Multi-Agent Reviewer。请综合 Planner、Worker 和工具/检索结果，给出简洁中文最终回答；资料不足时明确说明。",
-                "用户问题：" + request.question(),
-                contextBlocks,
-                Map.of("mode", "multi-agent")
-        ));
-        return parseReview(reviewText, ragResult, toolResults);
-    }
-
-    private MultiAgentReviewResult parseReview(String reviewText, RagResult ragResult, List<ToolCallResult> toolResults) {
-        boolean deterministicConflict = deterministicConflict(ragResult, toolResults);
-        try {
-            Map<?, ?> raw = objectMapper.readValue(extractJsonObject(reviewText), Map.class);
-            return new MultiAgentReviewResult(
-                    booleanValue(raw.get("approved"), true),
-                    doubleValue(raw.get("confidence"), 0.6),
-                    booleanValue(raw.get("conflictDetected"), deterministicConflict),
-                    stringValue(raw.get("conflictReason"), ""),
-                    stringList(raw.get("evidence")),
-                    stringValue(raw.get("finalAnswer"), reviewText)
-            );
-        }
-        catch (RuntimeException ignored) {
-            return new MultiAgentReviewResult(
-                    true,
-                    0.5,
-                    deterministicConflict,
-                    deterministicConflict ? "worker result contains failed tool result and retrieved evidence" : "",
-                    fallbackEvidence(ragResult, toolResults),
-                    reviewText
-            );
-        }
-    }
-
-    private boolean deterministicConflict(RagResult ragResult, List<ToolCallResult> toolResults) {
-        boolean hasRagEvidence = ragResult != null && !ragResult.documents().isEmpty();
-        boolean hasFailedTool = toolResults != null && toolResults.stream().anyMatch(result -> !result.success());
-        return hasRagEvidence && hasFailedTool;
-    }
-
-    private List<String> fallbackEvidence(RagResult ragResult, List<ToolCallResult> toolResults) {
-        List<String> evidence = new ArrayList<>();
-        if (ragResult != null) {
-            ragResult.documents().stream()
-                    .limit(3)
-                    .forEach(document -> evidence.add("RAG:" + document.title() + ", score=" + document.score()));
-        }
-        if (toolResults != null) {
-            toolResults.forEach(result -> evidence.add("Tool:" + result.toolName() + ", success=" + result.success()));
-        }
-        return evidence;
-    }
-
-    private String extractJsonObject(String text) {
-        if (text == null) {
-            throw new IllegalArgumentException("model output is empty");
-        }
-        int start = text.indexOf('{');
-        int end = text.lastIndexOf('}');
-        if (start < 0 || end <= start) {
-            throw new IllegalArgumentException("model output does not contain JSON object");
-        }
-        return text.substring(start, end + 1);
-    }
-
-    private boolean booleanValue(Object value, boolean defaultValue) {
-        if (value instanceof Boolean bool) {
-            return bool;
-        }
-        if (value instanceof String text) {
-            return Boolean.parseBoolean(text);
-        }
-        return defaultValue;
-    }
-
-    private double doubleValue(Object value, double defaultValue) {
-        if (value instanceof Number number) {
-            return number.doubleValue();
-        }
-        if (value instanceof String text) {
-            try {
-                return Double.parseDouble(text);
-            }
-            catch (NumberFormatException ignored) {
-                return defaultValue;
-            }
-        }
-        return defaultValue;
-    }
-
-    private String stringValue(Object value, String defaultValue) {
-        return value == null ? defaultValue : String.valueOf(value);
-    }
-
-    private List<String> stringList(Object value) {
-        if (!(value instanceof List<?> rawList)) {
-            return List.of();
-        }
-        return rawList.stream()
-                .filter(item -> item != null)
-                .map(String::valueOf)
-                .toList();
-    }
-
-    private MultiAgentMessage message(MultiAgentRole role, String taskId, String content, Map<String, Object> metadata) {
-        return new MultiAgentMessage(role, taskId, content, Instant.now(), metadata);
-    }
-
-    private long elapsedMs(long startNanos) {
-        return (System.nanoTime() - startNanos) / 1_000_000;
-    }
-
-    private record RagWorkerResult(RagResult ragResult, MultiAgentMessage message) {
-    }
-
-    private record ToolWorkerResult(List<ToolCallResult> toolResults, MultiAgentMessage message) {
+    @PreDestroy
+    public void shutdownExecutor() {
+        specialistExecutor.shutdownNow();
     }
 }
