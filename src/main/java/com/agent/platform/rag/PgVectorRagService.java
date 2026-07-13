@@ -8,11 +8,10 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 @Service
 public class PgVectorRagService implements RagService, RagCacheOperations {
@@ -27,22 +26,20 @@ public class PgVectorRagService implements RagService, RagCacheOperations {
 
     private final RagRunRecorder ragRunRecorder;
 
-    private final ConcurrentMap<String, CachedRagResult> cache = new ConcurrentHashMap<>();
-
-    private final AtomicLong cacheHits = new AtomicLong();
-
-    private final AtomicLong cacheMisses = new AtomicLong();
+    private final JdbcRagCacheStore cacheStore;
 
     public PgVectorRagService(RagProperties ragProperties,
                               EmbeddingClient embeddingClient,
                               PgVectorRagRepository repository,
                               RagReranker ragReranker,
-                              RagRunRecorder ragRunRecorder) {
+                              RagRunRecorder ragRunRecorder,
+                              JdbcRagCacheStore cacheStore) {
         this.ragProperties = ragProperties;
         this.embeddingClient = embeddingClient;
         this.repository = repository;
         this.ragReranker = ragReranker;
         this.ragRunRecorder = ragRunRecorder;
+        this.cacheStore = cacheStore;
     }
 
     @Override
@@ -61,7 +58,7 @@ public class PgVectorRagService implements RagService, RagCacheOperations {
             ragRunRecorder.record(cached);
             return cached;
         }
-        cacheMisses.incrementAndGet();
+        cacheStore.recordMiss();
         // 把问题向量化
         double[] queryEmbedding = embeddingClient.embed(query);
         List<RetrievedDocument> documents = retrieveDocuments(
@@ -87,25 +84,12 @@ public class PgVectorRagService implements RagService, RagCacheOperations {
 
     @Override
     public RagCacheStats cacheStats() {
-        long hits = cacheHits.get();
-        long misses = cacheMisses.get();
-        long total = hits + misses;
-        return new RagCacheStats(
-                ragProperties.getCache().isEnabled(),
-                cache.size(),
-                hits,
-                misses,
-                total == 0 ? 0 : (double) hits / total,
-                Math.max(1, ragProperties.getCache().getTtlSeconds()),
-                Math.max(1, ragProperties.getCache().getMaxEntries())
-        );
+        return cacheStore.stats();
     }
 
     @Override
     public void clearCache() {
-        cache.clear();
-        cacheHits.set(0);
-        cacheMisses.set(0);
+        cacheStore.clear();
     }
 
     private List<RetrievedDocument> retrieveDocuments(String query,
@@ -194,25 +178,19 @@ public class PgVectorRagService implements RagService, RagCacheOperations {
         if (!ragProperties.getCache().isEnabled()) {
             return null;
         }
-        CachedRagResult cached = cache.get(cacheKey);
+        RagResult cached = cacheStore.find(cacheKey).orElse(null);
         if (cached == null) {
             return null;
         }
-        if (cached.expired()) {
-            cache.remove(cacheKey);
-            return null;
-        }
-        cacheHits.incrementAndGet();
-        RagResult result = cached.result();
         return new RagResult(
-                result.query(),
-                result.documents(),
-                result.enoughEvidence(),
-                result.requestedTopK(),
-                result.effectiveTopK(),
-                result.minSimilarity(),
+                cached.query(),
+                cached.documents(),
+                cached.enoughEvidence(),
+                cached.requestedTopK(),
+                cached.effectiveTopK(),
+                cached.minSimilarity(),
                 elapsedMs(startNanos),
-                result.retrievalMode() + ":cache-hit"
+                cached.retrievalMode() + ":cache-hit"
         );
     }
 
@@ -220,27 +198,12 @@ public class PgVectorRagService implements RagService, RagCacheOperations {
         if (!ragProperties.getCache().isEnabled() || result == null) {
             return;
         }
-        long ttlMillis = Math.max(1, ragProperties.getCache().getTtlSeconds()) * 1000;
-        cache.put(cacheKey, new CachedRagResult(result, System.currentTimeMillis() + ttlMillis));
-        trimCache();
-    }
-
-    private void trimCache() {
-        int maxEntries = Math.max(1, ragProperties.getCache().getMaxEntries());
-        if (cache.size() <= maxEntries) {
-            return;
-        }
-        cache.entrySet()
-                .stream()
-                .sorted(Map.Entry.comparingByValue(Comparator.comparingLong(CachedRagResult::expiresAtMillis)))
-                .limit(Math.max(1, cache.size() - maxEntries))
-                .map(Map.Entry::getKey)
-                .forEach(cache::remove);
+        cacheStore.save(cacheKey, result);
     }
 
     private String cacheKey(String query, int effectiveTopK, double minSimilarity) {
-        String normalizedQuery = query == null ? "" : query.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
-        return String.join("|",
+        String normalizedQuery = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT).replaceAll("\\s+", " ");
+        String material = String.join("|",
                 normalizedQuery,
                 "topK=" + effectiveTopK,
                 "min=" + minSimilarity,
@@ -249,6 +212,13 @@ public class PgVectorRagService implements RagService, RagCacheOperations {
                 "vw=" + ragProperties.getHybrid().getVectorWeight(),
                 "kw=" + ragProperties.getHybrid().getKeywordWeight()
         );
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(material.getBytes(StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(digest);
+        }
+        catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
     }
 
     private static class HybridCandidate {
@@ -258,10 +228,4 @@ public class PgVectorRagService implements RagService, RagCacheOperations {
         private RetrievedDocument keywordDocument;
     }
 
-    private record CachedRagResult(RagResult result, long expiresAtMillis) {
-
-        boolean expired() {
-            return System.currentTimeMillis() > expiresAtMillis;
-        }
-    }
 }

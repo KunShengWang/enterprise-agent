@@ -22,16 +22,20 @@ public class PgVectorKnowledgeIngestionService implements KnowledgeIngestionServ
 
     private final PgVectorRagRepository repository;
 
+    private final RagCacheOperations cacheOperations;
+
     public PgVectorKnowledgeIngestionService(RagProperties ragProperties,
                                              LocalDocumentLoader documentLoader,
                                              TextChunker textChunker,
                                              EmbeddingClient embeddingClient,
-                                             PgVectorRagRepository repository) {
+                                             PgVectorRagRepository repository,
+                                             RagCacheOperations cacheOperations) {
         this.ragProperties = ragProperties;
         this.documentLoader = documentLoader;
         this.textChunker = textChunker;
         this.embeddingClient = embeddingClient;
         this.repository = repository;
+        this.cacheOperations = cacheOperations;
     }
 
     /**
@@ -63,6 +67,9 @@ public class PgVectorKnowledgeIngestionService implements KnowledgeIngestionServ
         long embeddingDurationMs = elapsedMs(embeddingStartNanos);
         long databaseStartNanos = System.nanoTime();
         RagSaveReport saveReport = repository.replaceBySources(new ArrayList<>(chunksBySource.keySet()), embeddedChunks);// 删除旧 chunks，写入新 chunks 到 pgvector
+        if (saveReport.deletedChunks() > 0 || saveReport.savedChunks() > 0) {
+            cacheOperations.clearCache();
+        }
         long databaseDurationMs = elapsedMs(databaseStartNanos);
         return new IngestionReport(
                 "pgvector",
