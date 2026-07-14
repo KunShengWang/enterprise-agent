@@ -89,7 +89,7 @@ sequenceDiagram
 - 本地工单工具；
 - 可选 MCP 工具。
 
-执行前依次经过 Profile 白名单、能力存在性、JSON Schema 参数校验、Tool Policy 和审批。写工具使用 `toolCallId/requestId` 持久化执行声明；不确定副作用不会盲目重试，而是进入 `MANUAL_REVIEW`。
+执行前依次经过 Profile 白名单、能力存在性、JSON Schema 参数校验、Tool Policy 和审批。模型返回的 ToolCall ID 只作为追踪信息，Runtime 会为每次工具请求生成全局执行 ID，并用它作为时间线配对键和持久化幂等键；存储层同时拒绝跨 Run 复用同一执行 ID。不确定副作用不会盲目重试，而是进入 `MANUAL_REVIEW`。
 
 ## 5. 同步与 SSE
 

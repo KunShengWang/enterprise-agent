@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -34,6 +35,22 @@ import static org.mockito.Mockito.when;
 
 @SuppressWarnings("unchecked")
 class DefaultAgentRuntimeStateTests {
+
+    @Test
+    void repeatedModelToolCallIdsReceiveDifferentRuntimeExecutionIds() {
+        Fixture fixture = new Fixture();
+        AgentToolCall modelCall = new AgentToolCall(
+                "call-1", "ticket_close", Map.of("id", "T1"), "close ticket"
+        );
+
+        AgentToolCall firstRunCall = fixture.runtime().assignExecutionId(modelCall);
+        AgentToolCall secondRunCall = fixture.runtime().assignExecutionId(modelCall);
+
+        assertNotEquals(modelCall.toolCallId(), firstRunCall.toolCallId());
+        assertNotEquals(firstRunCall.toolCallId(), secondRunCall.toolCallId());
+        assertEquals(modelCall.toolName(), firstRunCall.toolName());
+        assertEquals(modelCall.arguments(), firstRunCall.arguments());
+    }
 
     @Test
     void failedResumeClaimReturnsCurrentStateWithoutExecutingTool() {

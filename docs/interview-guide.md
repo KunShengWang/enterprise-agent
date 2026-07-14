@@ -62,7 +62,7 @@
 - 审批后 claim 同一个 Run，执行或写入拒绝 ToolResult，再继续同一个 Agent Loop。
 - Profile、能力白名单、累计 Token/成本与剩余执行时长都随 Run 持久化；审批等待不消耗执行预算，Approval 则有独立有效期，恢复不会重新获得预算或默认权限。
 - 同一个 Run 的每次执行使用唯一 leaseOwnerId；claim 失败者不能继续工具执行。
-- 工具执行按 toolCallId/requestId 声明；已完成调用返回持久化结果。
+- 模型提供的 ToolCall ID 只用于追踪；Runtime 生成全局执行 ID 作为消息配对和工具幂等键，存储层额外拒绝跨 Run 复用；已完成调用返回持久化结果。
 - 对“远端可能成功但本地超时”的不确定状态进入 `MANUAL_REVIEW`，不自动重复副作用。
 - 崩溃恢复时先按 pending `requestId` 查询工具执行记录：`SUCCEEDED/FAILED` 复用持久化结果并继续规划，只有 `RUNNING/UNKNOWN/MANUAL_REVIEW` 才人工核对。
 

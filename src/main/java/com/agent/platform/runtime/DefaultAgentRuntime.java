@@ -24,7 +24,6 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -343,7 +342,6 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                            boolean usedRag,
                                            AgentExecutionProfile profile,
                                            AgentEventListener listener) {
-        Set<String> toolCallIds = new HashSet<>();
         int contextOverflowRetries = 0;
         while (true) {
             if (!runControlStore.renewSessionLease(sessionId, leaseOwnerId, sessionLeaseDuration())) {
@@ -535,7 +533,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     return finishBudgetStop(request, runId, sessionId, userId, toolStop.get(),
                             toolResults, usedTools, usedRag, budget, listener);
                 }
-                AgentToolCall call = uniqueToolCall(rawCall, toolCallIds);
+                String modelToolCallId = rawCall.toolCallId();
+                AgentToolCall call = assignExecutionId(rawCall);
                 ToolCallRequest checkpointCall = new ToolCallRequest(
                         call.toolName(), call.toolCallId(), call.arguments()
                 );
@@ -546,13 +545,18 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                 call.toolCallId(),
                                 call.toolName(),
                                 call.arguments(),
-                                Map.of("reason", call.reason()),
+                                Map.of("reason", call.reason(), "modelToolCallId", modelToolCallId),
                                 tokenEstimator.estimate(String.valueOf(call.arguments()))
                         )
                 ));
                 publish(sessionId, userId, runId, AgentEventType.TOOL_REQUESTED,
                         "model requested capability",
-                        Map.of("toolCallId", call.toolCallId(), "toolName", call.toolName(), "arguments", call.arguments()),
+                        Map.of(
+                                "toolCallId", call.toolCallId(),
+                                "modelToolCallId", modelToolCallId,
+                                "toolName", call.toolName(),
+                                "arguments", call.arguments()
+                        ),
                         listener);
 
                 boolean capabilityAllowed = profile.allows(call.toolName());
@@ -953,14 +957,13 @@ public class DefaultAgentRuntime implements AgentRuntime {
         return projected;
     }
 
-    private AgentToolCall uniqueToolCall(AgentToolCall call, Set<String> usedIds) {
-        if (usedIds.add(call.toolCallId())) {
-            return call;
-        }
-        String replacement = UUID.randomUUID().toString();
-        usedIds.add(replacement);
-        return new AgentToolCall(replacement, call.toolName(), call.arguments(),
-                call.reason() + " [runtime replaced duplicate id " + call.toolCallId() + "]");
+    AgentToolCall assignExecutionId(AgentToolCall modelCall) {
+        return new AgentToolCall(
+                UUID.randomUUID().toString(),
+                modelCall.toolName(),
+                modelCall.arguments(),
+                modelCall.reason()
+        );
     }
 
     private LlmUsage effectiveUsage(AgentModelTurn turn, AgentContextView context) {

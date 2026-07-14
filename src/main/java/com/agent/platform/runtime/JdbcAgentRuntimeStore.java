@@ -166,6 +166,12 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
                     connection.commit();
                     return ToolExecutionClaim.acquired();
                 }
+                if (!runId.equals(current.runId())) {
+                    connection.commit();
+                    return ToolExecutionClaim.crossRunConflict(
+                            "tool execution id already belongs to another run"
+                    );
+                }
                 if (current.state() == ToolExecutionState.SUCCEEDED) {
                     connection.commit();
                     return ToolExecutionClaim.existing(current, "toolCallId already succeeded");

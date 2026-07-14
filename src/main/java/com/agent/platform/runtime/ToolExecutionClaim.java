@@ -16,4 +16,8 @@ public record ToolExecutionClaim(
     public static ToolExecutionClaim existing(ToolExecutionRecord record, String reason) {
         return new ToolExecutionClaim(false, record.state(), record.result(), reason);
     }
+
+    public static ToolExecutionClaim crossRunConflict(String reason) {
+        return new ToolExecutionClaim(false, ToolExecutionState.MANUAL_REVIEW, null, reason);
+    }
 }
