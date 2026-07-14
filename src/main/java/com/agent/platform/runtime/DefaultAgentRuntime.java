@@ -52,6 +52,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
     private final AgentProperties properties;
     private final AgentTimelineStore timelineStore;
     private final AgentRunStore runStore;
+    private final ToolExecutionStore toolExecutionStore;
     private final AgentContextManager contextManager;
     private final AgentModelGateway modelGateway;
     private final AgentCapabilityRegistry capabilityRegistry;
@@ -71,6 +72,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
     public DefaultAgentRuntime(AgentProperties properties,
                                AgentTimelineStore timelineStore,
                                AgentRunStore runStore,
+                               ToolExecutionStore toolExecutionStore,
                                AgentContextManager contextManager,
                                AgentModelGateway modelGateway,
                                AgentCapabilityRegistry capabilityRegistry,
@@ -85,6 +87,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         this.properties = properties;
         this.timelineStore = timelineStore;
         this.runStore = runStore;
+        this.toolExecutionStore = toolExecutionStore;
         this.contextManager = contextManager;
         this.modelGateway = modelGateway;
         this.capabilityRegistry = capabilityRegistry;
@@ -672,19 +675,16 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 return resultFromStored(current, inferStoredStopReason(current));
             }
             AgentRunRecord claimed = runStore.update(runId, AgentRunRecord::claimedForRecovery);
-            if (claimed.phase() == AgentRunPhase.EXECUTING_TOOL) {
-                return finish(
-                        runId, sessionId, userId, AgentRunState.MANUAL_REVIEW, AgentStopReason.TOOL_ERROR,
-                        "进程在工具执行检查点中断，副作用结果不确定，需要人工核对。", claimed.approvalId(),
-                        claimed.toolResults(), claimed.usedTools(), claimed.usedRag(),
-                        claimed.blockedByGuardrail(), budget, listener
-                );
-            }
             publish(sessionId, userId, runId, AgentEventType.RUN_RESUMED,
                     "stale running checkpoint recovered", Map.of(
                             "phase", claimed.phase().name(),
                             "resumeCount", claimed.resumeCount()
                     ), listener);
+            if (claimed.phase() == AgentRunPhase.EXECUTING_TOOL) {
+                return recoverExecutingTool(
+                        claimed, leaseOwnerId, sessionId, userId, budget, profile, listener
+                );
+            }
             return executeLoop(
                     claimed.request(), runId, leaseOwnerId, sessionId, userId, budget,
                     new ArrayList<>(claimed.toolResults()), new ArrayList<>(claimed.usedTools()),
@@ -702,6 +702,82 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 releaseRun(sessionId, runId, leaseOwnerId);
             }
         }
+    }
+
+    private AgentRuntimeResult recoverExecutingTool(AgentRunRecord claimed,
+                                                     String leaseOwnerId,
+                                                     String sessionId,
+                                                     String userId,
+                                                     AgentRunBudget budget,
+                                                     AgentExecutionProfile profile,
+                                                     AgentEventListener listener) {
+        ToolCallRequest pending = claimed.pendingToolCall();
+        ToolExecutionRecord execution = pending == null
+                ? null
+                : toolExecutionStore.findToolExecution(pending.requestId()).orElse(null);
+        if (!hasCertainPersistedResult(claimed.runId(), pending, execution)) {
+            String executionState = execution == null ? "UNKNOWN" : execution.state().name();
+            return finish(
+                    claimed.runId(), sessionId, userId, AgentRunState.MANUAL_REVIEW, AgentStopReason.TOOL_ERROR,
+                    "工具执行检查点结果不确定，需要人工核对：" + executionState,
+                    claimed.approvalId(), claimed.toolResults(), claimed.usedTools(), claimed.usedRag(),
+                    claimed.blockedByGuardrail(), budget, listener
+            );
+        }
+
+        ToolCallResult rawResult = execution.result();
+        ToolCallResult projectedResult = toolResultProjector.project(pending.requestId(), rawResult, true);
+        if (!timelineContainsToolResult(sessionId, claimed.runId(), pending.requestId())) {
+            projectedResult = appendToolResult(
+                    sessionId, userId, claimed.runId(), pending.requestId(), rawResult, true
+            );
+        }
+
+        List<ToolCallResult> toolResults = new ArrayList<>(claimed.toolResults());
+        toolResults.add(projectedResult);
+        List<String> usedTools = new ArrayList<>(claimed.usedTools());
+        usedTools.add(pending.toolName());
+        boolean usedRag = claimed.usedRag()
+                || (DefaultAgentCapabilityRegistry.KNOWLEDGE_SEARCH.equals(pending.toolName()) && rawResult.success());
+        budget.recordToolCall();
+        checkpoint(claimed.runId(), AgentRunPhase.CONTEXT_PREPARATION, null,
+                toolResults, usedTools, usedRag, budget);
+
+        Map<String, Object> eventPayload = new LinkedHashMap<>(
+                toolResultPayload(pending.requestId(), rawResult)
+        );
+        eventPayload.put("recoveredFromToolExecutionStore", true);
+        eventPayload.put("persistedExecutionState", execution.state().name());
+        publish(sessionId, userId, claimed.runId(), AgentEventType.TOOL_COMPLETED,
+                rawResult.success() ? "persisted tool success recovered" : "persisted tool failure recovered",
+                Map.copyOf(eventPayload), listener);
+
+        return executeLoop(
+                claimed.request(), claimed.runId(), leaseOwnerId, sessionId, userId, budget,
+                toolResults, usedTools, usedRag, profile, listener
+        );
+    }
+
+    private boolean hasCertainPersistedResult(String runId,
+                                              ToolCallRequest pending,
+                                              ToolExecutionRecord execution) {
+        if (pending == null || execution == null || execution.result() == null) {
+            return false;
+        }
+        if (!runId.equals(execution.runId())
+                || !pending.requestId().equals(execution.toolCallId())
+                || !pending.toolName().equals(execution.toolName())) {
+            return false;
+        }
+        return (execution.state() == ToolExecutionState.SUCCEEDED && execution.result().success())
+                || (execution.state() == ToolExecutionState.FAILED && !execution.result().success());
+    }
+
+    private boolean timelineContainsToolResult(String sessionId, String runId, String toolCallId) {
+        return timelineStore.loadMessages(sessionId, MAX_RETURNED_EVENTS).stream()
+                .anyMatch(message -> message.isToolResult()
+                        && runId.equals(message.runId())
+                        && toolCallId.equals(message.toolCallId()));
     }
 
     private void checkpoint(String runId,

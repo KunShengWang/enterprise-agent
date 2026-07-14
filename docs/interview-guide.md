@@ -64,6 +64,7 @@
 - 同一个 Run 的每次执行使用唯一 leaseOwnerId；claim 失败者不能继续工具执行。
 - 工具执行按 toolCallId/requestId 声明；已完成调用返回持久化结果。
 - 对“远端可能成功但本地超时”的不确定状态进入 `MANUAL_REVIEW`，不自动重复副作用。
+- 崩溃恢复时先按 pending `requestId` 查询工具执行记录：`SUCCEEDED/FAILED` 复用持久化结果并继续规划，只有 `RUNNING/UNKNOWN/MANUAL_REVIEW` 才人工核对。
 
 ## 故事五：为什么规则没有全部删除
 
@@ -104,7 +105,7 @@
 - 没有内建身份认证和租户管理后台，管理 API 需要外部网关保护。
 - 模型工具协议目前是 JSON Gateway，不是各 Provider 原生 Tool Calling Adapter。
 - SSE 是 Runtime 事件级，未实现结构化 JSON 的逐 Token 增量解析。
-- 已有少量 Runtime 核心状态测试覆盖预算/Profile 续接、并发 claim、异常收敛、工具检查点、SSE 心跳和 ToolResult 边界；仍不应声称完善测试体系。
+- 已有少量 Runtime 核心状态测试覆盖预算/Profile 续接、并发 claim、异常收敛、确定与不确定工具检查点、SSE 心跳和 ToolResult 边界；仍不应声称完善测试体系。
 - PDF/DOCX 等二进制文档解析尚未实现。
 
 主动说清边界通常比堆叠“大厂级、生产级、全链路”更可信。

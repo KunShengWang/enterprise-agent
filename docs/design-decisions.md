@@ -60,7 +60,7 @@
 
 决定：Run 持久化 ExecutionProfile、BudgetSnapshot 与 Phase；审批恢复采用原子 claim，崩溃恢复依赖唯一 leaseOwnerId 和过期租约。
 
-原因：恢复不能获得新的权限或预算；工具副作用检查点无法证明结果时必须进入人工核对。
+原因：恢复不能获得新的权限或预算；工具副作用检查点先查询持久化执行记录，确定成功或失败时复用结果继续规划，只有无法证明结果时才进入人工核对。
 
 ## ADR-10：SSE 是可丢传输，PostgreSQL Event 才是事实
 

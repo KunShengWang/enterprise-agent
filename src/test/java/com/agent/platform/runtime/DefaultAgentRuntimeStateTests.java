@@ -10,7 +10,9 @@ import com.agent.platform.guardrail.GuardrailService;
 import com.agent.platform.guardrail.GuardrailStage;
 import com.agent.platform.memory.MemoryService;
 import com.agent.platform.llm.ConfiguredLlmCostCalculator;
+import com.agent.platform.llm.LlmUsage;
 import com.agent.platform.tool.ToolCallRequest;
+import com.agent.platform.tool.ToolCallResult;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -127,10 +129,56 @@ class DefaultAgentRuntimeStateTests {
         verify(fixture.toolRuntime, never()).execute(anyString(), anyString(), anyString(), any(), any(), any());
     }
 
+    @Test
+    void persistedSuccessfulToolResultIsReusedWithoutDuplicateTimelineMessage() {
+        Fixture fixture = new Fixture();
+        ToolCallResult result = new ToolCallResult(
+                "ticket_close", true, "closed", "", Map.of("source", "persisted")
+        );
+        AgentMessage existingResult = new AgentMessage(
+                "message-1", "session-1", "run-1", 2, AgentMessageType.TOOL_RESULT,
+                "closed", "call-1", "ticket_close", Map.of(), Map.of("success", true), 2, Instant.now()
+        );
+        when(fixture.timelineStore.loadMessages("session-1", 10_000)).thenReturn(List.of(existingResult));
+
+        AgentRuntimeResult recovered = fixture.recoverCertainToolExecution(ToolExecutionState.SUCCEEDED, result);
+
+        assertEquals(AgentRunState.COMPLETED, recovered.state());
+        assertEquals(1, fixture.persisted.get().toolResults().size());
+        assertEquals(true, fixture.persisted.get().toolResults().get(0).success());
+        assertEquals(1, fixture.persisted.get().budgetSnapshot().toolCalls());
+        verify(fixture.timelineStore, never()).appendMessages(
+                anyString(), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.argThat(messages -> messages.stream()
+                        .anyMatch(message -> message.type() == AgentMessageType.TOOL_RESULT))
+        );
+        verify(fixture.toolRuntime, never()).execute(anyString(), anyString(), anyString(), any(), any(), any());
+    }
+
+    @Test
+    void persistedFailedToolResultIsReturnedToModelForReplanning() {
+        Fixture fixture = new Fixture();
+        ToolCallResult result = new ToolCallResult(
+                "ticket_close", false, "", "remote rejected close", Map.of("source", "persisted")
+        );
+
+        AgentRuntimeResult recovered = fixture.recoverCertainToolExecution(ToolExecutionState.FAILED, result);
+
+        assertEquals(AgentRunState.COMPLETED, recovered.state());
+        assertEquals(1, fixture.persisted.get().toolResults().size());
+        assertEquals(false, fixture.persisted.get().toolResults().get(0).success());
+        assertEquals("remote rejected close", fixture.persisted.get().toolResults().get(0).errorMessage());
+        assertEquals(1, fixture.persisted.get().budgetSnapshot().toolCalls());
+        verify(fixture.modelGateway).nextTurn(any());
+        verify(fixture.toolRuntime, never()).execute(anyString(), anyString(), anyString(), any(), any(), any());
+    }
+
     private static final class Fixture {
         private final AgentProperties properties = new AgentProperties();
+        private final AtomicReference<AgentRunRecord> persisted = new AtomicReference<>();
         private final AgentTimelineStore timelineStore = mock(AgentTimelineStore.class);
         private final AgentRunStore runStore = mock(AgentRunStore.class);
+        private final ToolExecutionStore toolExecutionStore = mock(ToolExecutionStore.class);
         private final AgentContextManager contextManager = mock(AgentContextManager.class);
         private final AgentModelGateway modelGateway = mock(AgentModelGateway.class);
         private final AgentCapabilityRegistry capabilityRegistry = mock(AgentCapabilityRegistry.class);
@@ -144,6 +192,8 @@ class DefaultAgentRuntimeStateTests {
             when(capabilityRegistry.listCapabilities()).thenReturn(List.of());
             when(guardrailService.checkInput(anyString()))
                     .thenReturn(GuardrailDecision.allow(GuardrailStage.INPUT, "ok"));
+            when(guardrailService.checkOutput(anyString()))
+                    .thenReturn(GuardrailDecision.allow(GuardrailStage.OUTPUT, "ok"));
             when(runControlStore.renewSessionLease(anyString(), anyString(), any())).thenReturn(true);
             when(runControlStore.cancellationRequested(anyString())).thenReturn(false);
             when(timelineStore.loadEvents(anyString(), anyInt())).thenReturn(List.of());
@@ -156,11 +206,49 @@ class DefaultAgentRuntimeStateTests {
 
         private DefaultAgentRuntime runtime() {
             return new DefaultAgentRuntime(
-                    properties, timelineStore, runStore, contextManager, modelGateway,
+                    properties, timelineStore, runStore, toolExecutionStore, contextManager, modelGateway,
                     capabilityRegistry, toolRuntime, guardrailService, approvalService,
                     new ConservativeTokenEstimator(), runControlStore, memoryService,
                     new ConfiguredLlmCostCalculator(properties), new ToolResultProjector(properties)
             );
+        }
+
+        private AgentRuntimeResult recoverCertainToolExecution(ToolExecutionState state, ToolCallResult result) {
+            AgentRunLimits limits = AgentRunLimits.from(properties);
+            AgentExecutionProfile profile = new AgentExecutionProfile(
+                    "restricted", "prompt", Set.of("ticket_close"), limits, false
+            );
+            AgentRunBudget budget = new AgentRunBudget(limits);
+            ToolCallRequest pending = new ToolCallRequest("ticket_close", "call-1", Map.of("id", "T1"));
+            persisted.set(
+                    AgentRunRecord.create(
+                                    "run-1", "run-1", "session-1",
+                                    new AgentRequest("session-1", "user-1", "close ticket", Map.of()),
+                                    profile, budget.snapshot())
+                            .checkpoint(AgentRunPhase.EXECUTING_TOOL, pending, List.of(), List.of(), false,
+                                    budget.snapshot())
+            );
+            when(runStore.find("run-1")).thenAnswer(invocation -> Optional.ofNullable(persisted.get()));
+            when(runStore.update(anyString(), any())).thenAnswer(invocation -> {
+                java.util.function.UnaryOperator<AgentRunRecord> updater = invocation.getArgument(1);
+                AgentRunRecord updated = updater.apply(persisted.get());
+                persisted.set(updated);
+                return updated;
+            });
+            Instant now = Instant.now();
+            when(toolExecutionStore.findToolExecution("call-1")).thenReturn(Optional.of(
+                    new ToolExecutionRecord(
+                            "call-1", "run-1", "ticket_close", state, pending, result,
+                            1, result.errorMessage(), now, now
+                    )
+            ));
+            when(contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+                    .thenReturn(new AgentContextView(List.of(), 0, 0, false));
+            when(modelGateway.nextTurn(any())).thenReturn(new AgentModelTurn(
+                    "replanned answer", List.of(), "replanned answer",
+                    new LlmUsage(10, 5, 15, 0, 0, "test-model", "test"), "stop"
+            ));
+            return runtime().resume("run-1", AgentEventListener.NOOP);
         }
     }
 }
