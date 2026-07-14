@@ -1,0 +1,144 @@
+export interface ApiResponse<T> {
+  success: boolean
+  code: string
+  message: string
+  data: T
+}
+
+export interface AgentRequest {
+  conversationId: string
+  userId: string
+  question: string
+  metadata: Record<string, unknown>
+}
+
+export interface AgentStreamEvent {
+  eventId: string
+  traceId: string
+  conversationId: string
+  sequence: number
+  type: string
+  content: string
+  createdAt: string
+  metadata: Record<string, unknown>
+}
+
+export interface AgentRunBudgetSnapshot {
+  turns: number
+  modelCalls: number
+  toolCalls: number
+  inputTokens: number
+  outputTokens: number
+  estimatedCost: number
+  startedAt: string
+  deadline: string
+  cancelled: boolean
+  remainingExecutionMillis: number
+  executionPaused: boolean
+}
+
+export interface ToolCallRequest {
+  toolName: string
+  requestId: string
+  arguments: Record<string, unknown>
+}
+
+export interface ToolCallResult {
+  toolName: string
+  success: boolean
+  content: string
+  errorMessage: string
+  metadata: Record<string, unknown>
+}
+
+export interface AgentExecutionProfile {
+  name: string
+  systemPrompt: string
+  allowedCapabilities: string[]
+  limits: Record<string, unknown>
+  longTermMemoryEnabled: boolean
+}
+
+export interface AgentRunRecord {
+  runId: string
+  traceId: string
+  conversationId: string
+  userId: string
+  request: AgentRequest
+  executionProfile: AgentExecutionProfile | null
+  budgetSnapshot: AgentRunBudgetSnapshot | null
+  state: string
+  phase: string
+  approvalId: string
+  pendingToolCall: ToolCallRequest | null
+  toolResults: ToolCallResult[]
+  usedTools: string[]
+  usedRag: boolean
+  blockedByGuardrail: boolean
+  answer: string
+  failureReason: string
+  resumeCount: number
+  version: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AgentEvent {
+  eventId: string
+  runId: string
+  sessionId: string
+  sequence: number
+  type: string
+  content: string
+  payload: Record<string, unknown>
+  createdAt: string
+}
+
+export interface AgentResponse {
+  runId: string
+  conversationId: string
+  status: string
+  answer: string
+  approvalId: string
+  steps: Array<Record<string, unknown>>
+  trace: Record<string, unknown>
+}
+
+export interface ApprovalRecord {
+  approvalId: string
+  runId: string
+  conversationId: string
+  toolCallRequest: ToolCallRequest
+  reason: string
+  status: string
+  reviewer: string
+  decisionReason: string
+  createdAt: string
+  expiresAt: string
+  decidedAt: string | null
+}
+
+export interface ApprovalDecision {
+  approvalId: string
+  status: string
+  reviewer: string
+  reason: string
+  decidedAt: string
+  approved: boolean
+  pending: boolean
+}
+
+export interface ToolDefinition {
+  name: string
+  description: string
+  inputSchema: Record<string, unknown>
+  riskLevel: string
+  source?: string
+  [key: string]: unknown
+}
+
+export interface SkillDefinition {
+  name: string
+  description: string
+  [key: string]: unknown
+}
