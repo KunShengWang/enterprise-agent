@@ -142,3 +142,62 @@ export interface SkillDefinition {
   description: string
   [key: string]: unknown
 }
+
+export interface RetrievedDocument {
+  documentId: string
+  title: string
+  content: string
+  score: number
+  metadata: Record<string, unknown>
+}
+
+export interface RagResult {
+  query: string
+  documents: RetrievedDocument[]
+  enoughEvidence: boolean
+  requestedTopK: number
+  effectiveTopK: number
+  minSimilarity: number
+  durationMs: number
+  retrievalMode: string
+}
+
+export interface MemorySearchResult {
+  type: string
+  id: string
+  content: string
+  score: number
+  metadata: Record<string, unknown>
+}
+
+export interface UserProfileItem {
+  key: string
+  value: string
+  source: string
+  updatedAt: string
+  [key: string]: unknown
+}
+
+export interface UserProfile {
+  userId: string
+  items: UserProfileItem[]
+  updatedAt: string | null
+}
+
+export interface TraceRun {
+  traceId: string
+  conversationId: string
+  question: string
+  status: string
+  startedAt: string
+  endedAt: string
+  durationMs: number
+  failureReason: string
+  estimatedPromptTokens: number
+  estimatedCompletionTokens: number
+  estimatedCost: number
+  spans: Array<Record<string, unknown>>
+  events: Array<Record<string, unknown>>
+  replayEvents: Array<Record<string, unknown>>
+  metrics: Record<string, unknown>
+}
