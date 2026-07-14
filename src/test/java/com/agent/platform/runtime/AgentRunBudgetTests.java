@@ -13,6 +13,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AgentRunBudgetTests {
 
@@ -27,8 +28,34 @@ class AgentRunBudgetTests {
 
         AgentRunBudget restored = new AgentRunBudget(limits, persisted);
 
-        assertEquals(persisted, restored.snapshot());
+        AgentRunBudgetSnapshot restoredSnapshot = restored.snapshot();
+        assertEquals(persisted.turns(), restoredSnapshot.turns());
+        assertEquals(persisted.modelCalls(), restoredSnapshot.modelCalls());
+        assertEquals(persisted.deadline(), restoredSnapshot.deadline());
         assertEquals(AgentStopReason.MODEL_BUDGET_EXHAUSTED, restored.beforeModelCall().orElseThrow());
+    }
+
+    @Test
+    void pausedExecutionBudgetSurvivesApprovalWaitAndGetsANewDeadlineOnResume() {
+        AgentRunLimits limits = new AgentRunLimits(8, 4, 3, 1_000, 500, 1.0, 60_000);
+        AgentRunBudgetSnapshot pausedSnapshot = new AgentRunBudgetSnapshot(
+                2, 1, 0, 100, 20, 0.01,
+                Instant.now().minusSeconds(3_600),
+                Instant.now().minusSeconds(3_500),
+                false,
+                30_000,
+                true
+        );
+
+        AgentRunBudget restored = new AgentRunBudget(limits, pausedSnapshot);
+
+        assertTrue(restored.beforeTurn().isEmpty());
+        assertTrue(restored.snapshot().executionPaused());
+        restored.resumeExecution();
+        AgentRunBudgetSnapshot resumed = restored.snapshot();
+        assertTrue(!resumed.executionPaused());
+        assertTrue(resumed.deadline().isAfter(Instant.now().plusSeconds(25)));
+        assertTrue(restored.beforeTurn().isEmpty());
     }
 
     @Test

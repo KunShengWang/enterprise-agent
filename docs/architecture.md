@@ -99,7 +99,7 @@ sequenceDiagram
 
 ## 6. 恢复检查点
 
-Run 持久化原始 `AgentExecutionProfile`、累计 `BudgetSnapshot`、当前 Phase、pending ToolCall 和已完成结果。审批恢复采用数据库原子 claim；普通未处理异常收敛为 `FAILED/INTERNAL_ERROR`。进程直接退出后，新的执行尝试只能在旧租约过期后接管：Context/Model 检查点继续循环，工具执行检查点因副作用结果不确定进入 `MANUAL_REVIEW`。
+Run 持久化原始 `AgentExecutionProfile`、累计 `BudgetSnapshot`、当前 Phase、pending ToolCall 和已完成结果。进入人工审批时会冻结剩余 Agent 执行时长，审批等待时间不计入 Run 执行预算；Approval 使用独立的可配置有效期（默认 24 小时）。审批恢复采用数据库原子 claim；普通未处理异常收敛为 `FAILED/INTERNAL_ERROR`。进程直接退出后，新的执行尝试只能在旧租约过期后接管。
 
 ## 7. Sub-Agent
 

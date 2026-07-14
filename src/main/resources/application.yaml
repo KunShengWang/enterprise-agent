@@ -40,6 +40,7 @@ enterprise-agent:
     cache-read-per-million-tokens: ${LLM_CACHE_READ_COST_PER_MILLION_TOKENS:0}
     cache-write-per-million-tokens: ${LLM_CACHE_WRITE_COST_PER_MILLION_TOKENS:0}
   max-run-duration-millis: ${AGENT_MAX_RUN_DURATION_MILLIS:120000}
+  approval-ttl-seconds: ${AGENT_APPROVAL_TTL_SECONDS:86400}
   max-tool-execution-attempts: ${AGENT_TOOL_MAX_ATTEMPTS:2}
   tool-retry-backoff-millis: ${AGENT_TOOL_RETRY_BACKOFF_MILLIS:150}
   replan-after-tool-failure: ${AGENT_TOOL_REPLAN_AFTER_FAILURE:true}

@@ -60,7 +60,7 @@
 
 - Run 在 `WAITING_APPROVAL` 时保存 pending ToolCall、已完成结果和使用工具。
 - 审批后 claim 同一个 Run，执行或写入拒绝 ToolResult，再继续同一个 Agent Loop。
-- Profile、能力白名单、累计 Token/成本与截止时间都随 Run 持久化，恢复不会重新获得预算或默认权限。
+- Profile、能力白名单、累计 Token/成本与剩余执行时长都随 Run 持久化；审批等待不消耗执行预算，Approval 则有独立有效期，恢复不会重新获得预算或默认权限。
 - 同一个 Run 的每次执行使用唯一 leaseOwnerId；claim 失败者不能继续工具执行。
 - 工具执行按 toolCallId/requestId 声明；已完成调用返回持久化结果。
 - 对“远端可能成功但本地超时”的不确定状态进入 `MANUAL_REVIEW`，不自动重复副作用。

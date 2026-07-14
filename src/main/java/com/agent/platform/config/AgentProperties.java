@@ -33,6 +33,8 @@ public class AgentProperties {
 
     private long maxRunDurationMillis = 120_000;
 
+    private long approvalTtlSeconds = 86_400;
+
     private int maxToolExecutionAttempts = 2;
 
     private long toolRetryBackoffMillis = 150;
@@ -159,6 +161,14 @@ public class AgentProperties {
 
     public void setMaxRunDurationMillis(long maxRunDurationMillis) {
         this.maxRunDurationMillis = maxRunDurationMillis;
+    }
+
+    public long getApprovalTtlSeconds() {
+        return approvalTtlSeconds;
+    }
+
+    public void setApprovalTtlSeconds(long approvalTtlSeconds) {
+        this.approvalTtlSeconds = Math.max(1, approvalTtlSeconds);
     }
 
     public int getMaxToolExecutionAttempts() {

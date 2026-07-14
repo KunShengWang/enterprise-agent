@@ -13,7 +13,9 @@ public final class AgentRunBudget {
 
     private final AgentRunLimits limits;
     private final Instant startedAt;
-    private final Instant deadline;
+    private Instant deadline;
+    private long remainingExecutionMillis;
+    private boolean executionPaused;
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
 
     private int turns;
@@ -34,9 +36,21 @@ public final class AgentRunBudget {
         this.limits = limits;
         Instant now = Instant.now();
         this.startedAt = snapshot == null || snapshot.startedAt() == null ? now : snapshot.startedAt();
-        this.deadline = snapshot == null || snapshot.deadline() == null
-                ? this.startedAt.plusMillis(limits.maxRunDurationMillis())
-                : snapshot.deadline();
+        if (snapshot == null) {
+            this.remainingExecutionMillis = limits.maxRunDurationMillis();
+            this.deadline = now.plusMillis(remainingExecutionMillis);
+        }
+        else if (snapshot.executionPaused()) {
+            this.remainingExecutionMillis = restoredPausedRemaining(snapshot);
+            this.deadline = now.plusMillis(remainingExecutionMillis);
+            this.executionPaused = true;
+        }
+        else {
+            this.deadline = snapshot.deadline() == null
+                    ? now.plusMillis(limits.maxRunDurationMillis())
+                    : snapshot.deadline();
+            this.remainingExecutionMillis = remainingUntil(this.deadline, now);
+        }
         if (snapshot != null) {
             this.turns = Math.max(0, snapshot.turns());
             this.modelCalls = Math.max(0, snapshot.modelCalls());
@@ -103,11 +117,28 @@ public final class AgentRunBudget {
         cancelled.set(true);
     }
 
+    public synchronized void pauseExecution() {
+        if (!executionPaused) {
+            remainingExecutionMillis = remainingUntil(deadline, Instant.now());
+            executionPaused = true;
+        }
+    }
+
+    public synchronized void resumeExecution() {
+        if (executionPaused) {
+            deadline = Instant.now().plusMillis(remainingExecutionMillis);
+            executionPaused = false;
+        }
+    }
+
     public synchronized Optional<AgentStopReason> currentStopReason() {
         return commonStopReason();
     }
 
     public synchronized AgentRunBudgetSnapshot snapshot() {
+        long remaining = executionPaused
+                ? remainingExecutionMillis
+                : remainingUntil(deadline, Instant.now());
         return new AgentRunBudgetSnapshot(
                 turns,
                 modelCalls,
@@ -117,7 +148,9 @@ public final class AgentRunBudget {
                 estimatedCost,
                 startedAt,
                 deadline,
-                cancelled.get()
+                cancelled.get(),
+                remaining,
+                executionPaused
         );
     }
 
@@ -125,9 +158,20 @@ public final class AgentRunBudget {
         if (cancelled.get()) {
             return Optional.of(AgentStopReason.CANCELLED);
         }
-        if (!Instant.now().isBefore(deadline)) {
+        if (!executionPaused && !Instant.now().isBefore(deadline)) {
             return Optional.of(AgentStopReason.TIMEOUT);
         }
         return Optional.empty();
+    }
+
+    private long restoredPausedRemaining(AgentRunBudgetSnapshot snapshot) {
+        return Math.min(
+                Math.max(0, snapshot.remainingExecutionMillis()),
+                limits.maxRunDurationMillis()
+        );
+    }
+
+    private long remainingUntil(Instant targetDeadline, Instant now) {
+        return Math.max(0, targetDeadline.toEpochMilli() - now.toEpochMilli());
     }
 }

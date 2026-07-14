@@ -220,6 +220,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
             String userId = normalize(claimed.userId(), DEFAULT_USER_ID);
             List<ToolCallResult> toolResults = new ArrayList<>(claimed.toolResults());
             List<String> usedTools = new ArrayList<>(claimed.usedTools());
+            budget.resumeExecution();
             synchronizeCancellation(runId, budget);
             Optional<AgentStopReason> resumeStop = budget.beforeTurn();
             if (resumeStop.isPresent()) {
@@ -227,21 +228,24 @@ public class DefaultAgentRuntime implements AgentRuntime {
                         toolResults, usedTools, claimed.usedRag(), budget, effectiveListener);
             }
 
-            ToolDefinition definition = capabilityRegistry.findCapability(approval.toolCallRequest().toolName())
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "approved capability no longer exists: " + approval.toolCallRequest().toolName()
-                    ));
             ToolCallResult result;
-            if (approval.status() == ApprovalStatus.REJECTED) {
+            if (approval.status() == ApprovalStatus.REJECTED || approval.status() == ApprovalStatus.EXPIRED) {
+                String approvalError = approval.status() == ApprovalStatus.EXPIRED
+                        ? "human approval expired"
+                        : "human approval rejected: " + approval.decisionReason();
                 result = new ToolCallResult(
                         approval.toolCallRequest().toolName(),
                         false,
                         "",
-                        "human approval rejected: " + approval.decisionReason(),
+                        approvalError,
                         Map.of("approvalId", approval.approvalId(), "approvalStatus", approval.status().name())
                 );
             }
             else {
+                ToolDefinition definition = capabilityRegistry.findCapability(approval.toolCallRequest().toolName())
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "approved capability no longer exists: " + approval.toolCallRequest().toolName()
+                        ));
                 AgentToolRuntimeResult execution = toolRuntime.executeApproved(
                         approval,
                         definition,
@@ -590,6 +594,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                         ),
                         listener);
                 if (execution.status() == AgentToolExecutionStatus.WAITING_APPROVAL) {
+                    budget.pauseExecution();
                     List<ToolCallResult> persistedToolResults = List.copyOf(toolResults);
                     List<String> persistedUsedTools = List.copyOf(usedTools);
                     boolean ragUsedAtPause = usedRag;
@@ -1038,7 +1043,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 "outputTokens", budget.outputTokens(),
                 "estimatedCost", budget.estimatedCost(),
                 "deadline", budget.deadline().toString(),
-                "cancelled", budget.cancelled()
+                "cancelled", budget.cancelled(),
+                "remainingExecutionMillis", budget.remainingExecutionMillis(),
+                "executionPaused", budget.executionPaused()
         );
     }
 
