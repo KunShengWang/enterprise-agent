@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -113,6 +114,13 @@ public class LocalApprovalService implements ApprovalService {
     @Override
     public Optional<ApprovalRecord> find(String approvalId) {
         return approvalStore.find(approvalId).map(this::expireIfNecessary);
+    }
+
+    @Override
+    public List<ApprovalRecord> recent(int limit) {
+        return approvalStore.recent(limit).stream()
+                .map(this::expireIfNecessary)
+                .toList();
     }
 
     private ApprovalRecord expireIfNecessary(ApprovalRecord current) {

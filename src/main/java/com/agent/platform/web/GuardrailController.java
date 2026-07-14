@@ -3,7 +3,6 @@ package com.agent.platform.web;
 import com.agent.platform.approval.ApprovalDecision;
 import com.agent.platform.approval.ApprovalRecord;
 import com.agent.platform.approval.ApprovalService;
-import com.agent.platform.approval.ApprovalStore;
 import com.agent.platform.common.ApiResponse;
 import com.agent.platform.common.ErrorCode;
 import com.agent.platform.guardrail.GuardrailAuditRecord;
@@ -31,17 +30,13 @@ public class GuardrailController {
 
     private final GuardrailAuditRecorder auditRecorder;
 
-    private final ApprovalStore approvalStore;
-
     private final ApprovalService approvalService;
 
     public GuardrailController(GuardrailService guardrailService,
                                GuardrailAuditRecorder auditRecorder,
-                               ApprovalStore approvalStore,
                                ApprovalService approvalService) {
         this.guardrailService = guardrailService;
         this.auditRecorder = auditRecorder;
-        this.approvalStore = approvalStore;
         this.approvalService = approvalService;
     }
 
@@ -62,12 +57,12 @@ public class GuardrailController {
 
     @GetMapping("/approvals")
     public Mono<ApiResponse<List<ApprovalRecord>>> approvals(@RequestParam(defaultValue = "50") int limit) {
-        return Mono.fromSupplier(() -> ApiResponse.success(approvalStore.recent(limit)));
+        return Mono.fromSupplier(() -> ApiResponse.success(approvalService.recent(limit)));
     }
 
     @GetMapping("/approvals/{approvalId}")
     public Mono<ApiResponse<ApprovalRecord>> approval(@PathVariable String approvalId) {
-        return Mono.fromSupplier(() -> approvalStore.find(approvalId)
+        return Mono.fromSupplier(() -> approvalService.find(approvalId)
                 .map(ApiResponse::success)
                 .orElseGet(() -> ApiResponse.failure(ErrorCode.NOT_FOUND, "approval not found: " + approvalId)));
     }

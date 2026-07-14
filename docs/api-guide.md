@@ -61,6 +61,8 @@ GET /api/agent/guardrails/approvals
 GET /api/agent/guardrails/approvals/{approvalId}
 ```
 
+单条与列表查询都经过 `ApprovalService` 的生命周期收敛；超过 `expiresAt` 但仍持久化为 `REQUESTED` 的记录会先通过数据库 CAS 转为 `EXPIRED`，再返回给客户端。
+
 审批：
 
 ```http

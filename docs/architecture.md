@@ -101,6 +101,8 @@ sequenceDiagram
 
 Run 持久化原始 `AgentExecutionProfile`、累计 `BudgetSnapshot`、当前 Phase、pending ToolCall 和已完成结果。进入人工审批时会冻结剩余 Agent 执行时长，审批等待时间不计入 Run 执行预算；Approval 使用独立的可配置有效期（默认 24 小时）。审批决定通过数据库同时检查 `status=REQUESTED` 与 `expiresAt>decisionTime`，过期迁移检查 `status=REQUESTED` 与 `expiresAt<=checkedAt`，因此并发批准、拒绝和过期不会互相覆盖，也不存在“读取时有效、更新时已过期”仍批准成功的窗口。审批恢复采用数据库原子 claim；普通未处理异常收敛为 `FAILED/INTERNAL_ERROR`。进程直接退出后，新的执行尝试只能在旧租约过期后接管。若中断点为 `EXECUTING_TOOL`，Runtime 会按 pending `requestId` 查询 `ToolExecutionStore`：确定的 `SUCCEEDED/FAILED` 结果被复用并继续 Agent Loop，`RUNNING/UNKNOWN/MANUAL_REVIEW` 才进入人工核对；时间线已有同一 ToolResult 时不会重复追加。
 
+审批的单条与列表 HTTP 查询统一经过 `ApprovalService`，不会绕过上述过期迁移直接暴露存储层的陈旧 `REQUESTED` 状态。
+
 ## 7. Sub-Agent
 
 Planner、Specialist、Reviewer 都通过同一个 Runtime 运行，但使用独立 `AgentExecutionProfile`：

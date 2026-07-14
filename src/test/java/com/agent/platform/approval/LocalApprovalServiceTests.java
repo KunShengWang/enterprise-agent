@@ -119,6 +119,25 @@ class LocalApprovalServiceTests {
         assertEquals(ApprovalStatus.EXPIRED, persisted.get().status());
     }
 
+    @Test
+    void recentApprovalsAlsoConvergeExpiredRequestedRecords() {
+        AgentProperties properties = new AgentProperties();
+        properties.setApprovalTtlSeconds(60);
+        AtomicReference<ApprovalRecord> persisted = new AtomicReference<>();
+        LocalApprovalService service = new LocalApprovalService(new TestApprovalStore(persisted), properties);
+        service.requestApproval(new ApprovalRequest(
+                "approval-1", "run-1", "session-1",
+                new ToolCallRequest("ticket_close", "execution-1", Map.of()),
+                "high risk", Instant.now().minusSeconds(120)
+        ));
+
+        List<ApprovalRecord> approvals = service.recent(10);
+
+        assertEquals(1, approvals.size());
+        assertEquals(ApprovalStatus.EXPIRED, approvals.get(0).status());
+        assertEquals(ApprovalStatus.EXPIRED, persisted.get().status());
+    }
+
     private DecisionAttempt decideAfter(CountDownLatch start,
                                         LocalApprovalService service,
                                         boolean approved,
