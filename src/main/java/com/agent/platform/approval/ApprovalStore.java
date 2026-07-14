@@ -7,6 +7,8 @@ public interface ApprovalStore {
 
     void save(ApprovalRecord record);
 
+    boolean transition(String approvalId, ApprovalStatus expectedStatus, ApprovalRecord nextRecord);
+
     Optional<ApprovalRecord> find(String approvalId);
 
     List<ApprovalRecord> recent(int limit);

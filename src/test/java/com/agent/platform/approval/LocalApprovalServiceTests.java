@@ -8,6 +8,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -54,11 +59,80 @@ class LocalApprovalServiceTests {
                 () -> service.decide("approval-1", true, "reviewer", "late approval"));
     }
 
+    @Test
+    void conflictingConcurrentDecisionsCannotOverwriteTheWinner() throws Exception {
+        AgentProperties properties = new AgentProperties();
+        AtomicReference<ApprovalRecord> persisted = new AtomicReference<>();
+        LocalApprovalService service = new LocalApprovalService(new TestApprovalStore(persisted), properties);
+        service.requestApproval(new ApprovalRequest(
+                "approval-1", "run-1", "session-1",
+                new ToolCallRequest("ticket_close", "call-1", Map.of()),
+                "high risk", Instant.now()
+        ));
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<DecisionAttempt> approve = executor.submit(
+                    () -> decideAfter(start, service, true, "approve-reviewer")
+            );
+            Future<DecisionAttempt> reject = executor.submit(
+                    () -> decideAfter(start, service, false, "reject-reviewer")
+            );
+            start.countDown();
+
+            DecisionAttempt first = approve.get(5, TimeUnit.SECONDS);
+            DecisionAttempt second = reject.get(5, TimeUnit.SECONDS);
+            List<DecisionAttempt> attempts = List.of(first, second);
+            List<DecisionAttempt> winners = attempts.stream().filter(DecisionAttempt::success).toList();
+
+            assertEquals(1, winners.size());
+            assertEquals(winners.get(0).status(), persisted.get().status());
+            assertEquals(winners.get(0).reviewer(), persisted.get().reviewer());
+        }
+        finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private DecisionAttempt decideAfter(CountDownLatch start,
+                                        LocalApprovalService service,
+                                        boolean approved,
+                                        String reviewer) throws InterruptedException {
+        start.await();
+        try {
+            ApprovalDecision decision = service.decide("approval-1", approved, reviewer, "decision");
+            return new DecisionAttempt(true, decision.status(), decision.reviewer());
+        }
+        catch (IllegalArgumentException alreadyDecided) {
+            return new DecisionAttempt(false, null, "");
+        }
+    }
+
+    private record DecisionAttempt(boolean success, ApprovalStatus status, String reviewer) {
+    }
+
     private record TestApprovalStore(AtomicReference<ApprovalRecord> record) implements ApprovalStore {
 
         @Override
         public void save(ApprovalRecord approvalRecord) {
             record.set(approvalRecord);
+        }
+
+        @Override
+        public boolean transition(String approvalId,
+                                  ApprovalStatus expectedStatus,
+                                  ApprovalRecord nextRecord) {
+            while (true) {
+                ApprovalRecord current = record.get();
+                if (current == null
+                        || !current.approvalId().equals(approvalId)
+                        || current.status() != expectedStatus) {
+                    return false;
+                }
+                if (record.compareAndSet(current, nextRecord)) {
+                    return true;
+                }
+            }
         }
 
         @Override

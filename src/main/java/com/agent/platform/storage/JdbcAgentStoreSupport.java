@@ -80,6 +80,44 @@ public class JdbcAgentStoreSupport {
         }
     }
 
+    public boolean updateIfJsonFieldEquals(String category,
+                                           String key,
+                                           String field,
+                                           String expectedValue,
+                                           Object nextValue,
+                                           Instant updatedAt) {
+        if (category == null || category.isBlank()
+                || key == null || key.isBlank()
+                || field == null || field.isBlank()
+                || expectedValue == null
+                || nextValue == null) {
+            return false;
+        }
+        ensureSchema();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE agent_store_record
+                     SET record_json = ?, updated_at = ?
+                     WHERE category = ?
+                       AND record_key = ?
+                       AND jsonb_extract_path_text(record_json::jsonb, ?) = ?
+                     """)) {
+            statement.setString(1, toJson(nextValue));
+            statement.setTimestamp(2, Timestamp.from(updatedAt == null ? Instant.now() : updatedAt));
+            statement.setString(3, category);
+            statement.setString(4, key.trim());
+            statement.setString(5, field);
+            statement.setString(6, expectedValue);
+            return statement.executeUpdate() == 1;
+        }
+        catch (SQLException exception) {
+            throw new AgentStorageException(
+                    "Failed conditional update for agent store record: " + category + "/" + key,
+                    exception
+            );
+        }
+    }
+
     /**
      * 读取数据库中最近的几条数据，类似是 type 确定的，会进行反序列化
      */

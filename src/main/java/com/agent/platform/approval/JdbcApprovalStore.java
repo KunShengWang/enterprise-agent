@@ -30,6 +30,24 @@ public class JdbcApprovalStore implements ApprovalStore {
     }
 
     @Override
+    public boolean transition(String approvalId,
+                              ApprovalStatus expectedStatus,
+                              ApprovalRecord nextRecord) {
+        if (approvalId == null || approvalId.isBlank() || expectedStatus == null || nextRecord == null) {
+            return false;
+        }
+        Instant updatedAt = nextRecord.decidedAt() == null ? Instant.now() : nextRecord.decidedAt();
+        return store.updateIfJsonFieldEquals(
+                CATEGORY,
+                approvalId,
+                "status",
+                expectedStatus.name(),
+                nextRecord,
+                updatedAt
+        );
+    }
+
+    @Override
     public Optional<ApprovalRecord> find(String approvalId) {
         return store.find(CATEGORY, approvalId, ApprovalRecord.class);
     }

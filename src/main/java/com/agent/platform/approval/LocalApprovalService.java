@@ -76,13 +76,28 @@ public class LocalApprovalService implements ApprovalService {
                 current.expiresAt(),
                 decidedAt
         );
-        approvalStore.save(decided);
+        if (!approvalStore.transition(current.approvalId(), ApprovalStatus.REQUESTED, decided)) {
+            ApprovalRecord winner = approvalStore.find(current.approvalId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "approval disappeared during decision: " + current.approvalId()
+                    ));
+            if (winner.status() == targetStatus) {
+                return toDecision(winner);
+            }
+            throw new IllegalArgumentException(
+                    "approval already decided as " + winner.status() + ": " + current.approvalId()
+            );
+        }
+        return toDecision(decided);
+    }
+
+    private ApprovalDecision toDecision(ApprovalRecord record) {
         return new ApprovalDecision(
-                decided.approvalId(),
-                decided.status(),
-                decided.reviewer(),
-                decided.decisionReason(),
-                decidedAt
+                record.approvalId(),
+                record.status(),
+                record.reviewer(),
+                record.decisionReason(),
+                record.decidedAt()
         );
     }
 
@@ -100,7 +115,9 @@ public class LocalApprovalService implements ApprovalService {
                 current.reason(), ApprovalStatus.EXPIRED, "system", "approval expired",
                 current.createdAt(), current.expiresAt(), Instant.now()
         );
-        approvalStore.save(expired);
-        return expired;
+        if (approvalStore.transition(current.approvalId(), ApprovalStatus.REQUESTED, expired)) {
+            return expired;
+        }
+        return approvalStore.find(current.approvalId()).orElse(current);
     }
 }
