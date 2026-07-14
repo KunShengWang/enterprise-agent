@@ -106,6 +106,7 @@ curl.exe -N -X POST "http://localhost:8080/api/agent/runs/events" `
 - [当前架构](docs/architecture.md)
 - [构建与运行](docs/build-and-run.md)
 - [API 使用](docs/api-guide.md)
+- [Vue Agent 学习控制台](docs/frontend-learning-console.md)
 - [学习顺序](docs/learning-guide.md)
 - [面试讲法](docs/interview-guide.md)
 - [设计决策](docs/design-decisions.md)
