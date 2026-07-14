@@ -1,8 +1,10 @@
 package com.agent.platform.approval;
 
 import com.agent.platform.config.AgentProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -11,15 +13,22 @@ public class LocalApprovalService implements ApprovalService {
 
     private final ApprovalStore approvalStore;
     private final AgentProperties properties;
+    private final Clock clock;
 
+    @Autowired
     public LocalApprovalService(ApprovalStore approvalStore, AgentProperties properties) {
+        this(approvalStore, properties, Clock.systemUTC());
+    }
+
+    LocalApprovalService(ApprovalStore approvalStore, AgentProperties properties, Clock clock) {
         this.approvalStore = approvalStore;
         this.properties = properties;
+        this.clock = clock;
     }
 
     @Override
     public ApprovalDecision requestApproval(ApprovalRequest request) {
-        Instant createdAt = request.createdAt() == null ? Instant.now() : request.createdAt();
+        Instant createdAt = request.createdAt() == null ? clock.instant() : request.createdAt();
         ApprovalRecord requested = new ApprovalRecord(
                 request.approvalId(),
                 request.runId(),
@@ -62,7 +71,7 @@ public class LocalApprovalService implements ApprovalService {
                     "approval already decided as " + current.status() + ": " + approvalId
             );
         }
-        Instant decidedAt = Instant.now();
+        Instant decidedAt = clock.instant();
         ApprovalRecord decided = new ApprovalRecord(
                 current.approvalId(),
                 current.runId(),
@@ -76,8 +85,8 @@ public class LocalApprovalService implements ApprovalService {
                 current.expiresAt(),
                 decidedAt
         );
-        if (!approvalStore.transition(current.approvalId(), ApprovalStatus.REQUESTED, decided)) {
-            ApprovalRecord winner = approvalStore.find(current.approvalId())
+        if (!approvalStore.decideIfRequestedAndNotExpired(current.approvalId(), decided, decidedAt)) {
+            ApprovalRecord winner = find(current.approvalId())
                     .orElseThrow(() -> new IllegalStateException(
                             "approval disappeared during decision: " + current.approvalId()
                     ));
@@ -107,15 +116,16 @@ public class LocalApprovalService implements ApprovalService {
     }
 
     private ApprovalRecord expireIfNecessary(ApprovalRecord current) {
-        if (current.status() != ApprovalStatus.REQUESTED || Instant.now().isBefore(current.expiresAt())) {
+        Instant checkedAt = clock.instant();
+        if (current.status() != ApprovalStatus.REQUESTED || checkedAt.isBefore(current.expiresAt())) {
             return current;
         }
         ApprovalRecord expired = new ApprovalRecord(
                 current.approvalId(), current.runId(), current.conversationId(), current.toolCallRequest(),
                 current.reason(), ApprovalStatus.EXPIRED, "system", "approval expired",
-                current.createdAt(), current.expiresAt(), Instant.now()
+                current.createdAt(), current.expiresAt(), checkedAt
         );
-        if (approvalStore.transition(current.approvalId(), ApprovalStatus.REQUESTED, expired)) {
+        if (approvalStore.expireIfRequested(current.approvalId(), expired, checkedAt)) {
             return expired;
         }
         return approvalStore.find(current.approvalId()).orElse(current);

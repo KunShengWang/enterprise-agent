@@ -12,6 +12,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -80,34 +82,68 @@ public class JdbcAgentStoreSupport {
         }
     }
 
-    public boolean updateIfJsonFieldEquals(String category,
-                                           String key,
-                                           String field,
-                                           String expectedValue,
-                                           Object nextValue,
-                                           Instant updatedAt) {
+    public boolean updateIfJsonFieldEqualsAndInstantAfter(String category,
+                                                          String key,
+                                                          String field,
+                                                          String expectedValue,
+                                                          String instantField,
+                                                          Instant threshold,
+                                                          Object nextValue,
+                                                          Instant updatedAt) {
+        return updateIfJsonFieldEqualsAndInstantCompared(
+                category, key, field, expectedValue, instantField, threshold, nextValue, updatedAt, ">"
+        );
+    }
+
+    public boolean updateIfJsonFieldEqualsAndInstantAtOrBefore(String category,
+                                                               String key,
+                                                               String field,
+                                                               String expectedValue,
+                                                               String instantField,
+                                                               Instant threshold,
+                                                               Object nextValue,
+                                                               Instant updatedAt) {
+        return updateIfJsonFieldEqualsAndInstantCompared(
+                category, key, field, expectedValue, instantField, threshold, nextValue, updatedAt, "<="
+        );
+    }
+
+    private boolean updateIfJsonFieldEqualsAndInstantCompared(String category,
+                                                               String key,
+                                                               String field,
+                                                               String expectedValue,
+                                                               String instantField,
+                                                               Instant threshold,
+                                                               Object nextValue,
+                                                               Instant updatedAt,
+                                                               String comparisonOperator) {
         if (category == null || category.isBlank()
                 || key == null || key.isBlank()
                 || field == null || field.isBlank()
+                || instantField == null || instantField.isBlank()
                 || expectedValue == null
+                || threshold == null
                 || nextValue == null) {
             return false;
         }
         ensureSchema();
         try (Connection connection = openConnection();
-             PreparedStatement statement = connection.prepareStatement("""
+             PreparedStatement statement = connection.prepareStatement(("""
                      UPDATE agent_store_record
                      SET record_json = ?, updated_at = ?
                      WHERE category = ?
                        AND record_key = ?
                        AND jsonb_extract_path_text(record_json::jsonb, ?) = ?
-                     """)) {
+                       AND jsonb_extract_path_text(record_json::jsonb, ?)::timestamptz %s ?
+                     """).formatted(comparisonOperator))) {
             statement.setString(1, toJson(nextValue));
             statement.setTimestamp(2, Timestamp.from(updatedAt == null ? Instant.now() : updatedAt));
             statement.setString(3, category);
             statement.setString(4, key.trim());
             statement.setString(5, field);
             statement.setString(6, expectedValue);
+            statement.setString(7, instantField);
+            statement.setObject(8, OffsetDateTime.ofInstant(threshold, ZoneOffset.UTC));
             return statement.executeUpdate() == 1;
         }
         catch (SQLException exception) {

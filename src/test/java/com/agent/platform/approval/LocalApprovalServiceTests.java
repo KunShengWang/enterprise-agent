@@ -4,7 +4,9 @@ import com.agent.platform.config.AgentProperties;
 import com.agent.platform.tool.ToolCallRequest;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -14,6 +16,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -94,6 +97,28 @@ class LocalApprovalServiceTests {
         }
     }
 
+    @Test
+    void decisionCannotSucceedWhenApprovalExpiresBetweenReadAndDatabaseCas() {
+        Instant beforeExpiry = Instant.parse("2026-07-14T06:00:00Z");
+        Instant expiresAt = beforeExpiry.plusSeconds(1);
+        Instant afterExpiry = beforeExpiry.plusSeconds(2);
+        AtomicReference<ApprovalRecord> persisted = new AtomicReference<>(new ApprovalRecord(
+                "approval-1", "run-1", "session-1",
+                new ToolCallRequest("ticket_close", "execution-1", Map.of()),
+                "high risk", ApprovalStatus.REQUESTED, "", "",
+                beforeExpiry.minusSeconds(10), expiresAt, null
+        ));
+        LocalApprovalService service = new LocalApprovalService(
+                new TestApprovalStore(persisted),
+                new AgentProperties(),
+                new SequenceClock(beforeExpiry, afterExpiry, afterExpiry)
+        );
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.decide("approval-1", true, "reviewer", "too late"));
+        assertEquals(ApprovalStatus.EXPIRED, persisted.get().status());
+    }
+
     private DecisionAttempt decideAfter(CountDownLatch start,
                                         LocalApprovalService service,
                                         boolean approved,
@@ -119,17 +144,36 @@ class LocalApprovalServiceTests {
         }
 
         @Override
-        public boolean transition(String approvalId,
-                                  ApprovalStatus expectedStatus,
-                                  ApprovalRecord nextRecord) {
+        public boolean decideIfRequestedAndNotExpired(String approvalId,
+                                                      ApprovalRecord nextRecord,
+                                                      Instant decisionTime) {
             while (true) {
                 ApprovalRecord current = record.get();
                 if (current == null
                         || !current.approvalId().equals(approvalId)
-                        || current.status() != expectedStatus) {
+                        || current.status() != ApprovalStatus.REQUESTED
+                        || !current.expiresAt().isAfter(decisionTime)) {
                     return false;
                 }
                 if (record.compareAndSet(current, nextRecord)) {
+                    return true;
+                }
+            }
+        }
+
+        @Override
+        public boolean expireIfRequested(String approvalId,
+                                         ApprovalRecord expiredRecord,
+                                         Instant expirationCheckTime) {
+            while (true) {
+                ApprovalRecord current = record.get();
+                if (current == null
+                        || !current.approvalId().equals(approvalId)
+                        || current.status() != ApprovalStatus.REQUESTED
+                        || current.expiresAt().isAfter(expirationCheckTime)) {
+                    return false;
+                }
+                if (record.compareAndSet(current, expiredRecord)) {
                     return true;
                 }
             }
@@ -144,6 +188,32 @@ class LocalApprovalServiceTests {
         @Override
         public List<ApprovalRecord> recent(int limit) {
             return record.get() == null ? List.of() : List.of(record.get());
+        }
+    }
+
+    private static final class SequenceClock extends Clock {
+
+        private final List<Instant> instants;
+        private final AtomicInteger index = new AtomicInteger();
+
+        private SequenceClock(Instant... instants) {
+            this.instants = List.of(instants);
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneId.of("UTC");
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            int current = Math.min(index.getAndIncrement(), instants.size() - 1);
+            return instants.get(current);
         }
     }
 }

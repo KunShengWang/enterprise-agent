@@ -25,15 +25,38 @@ class JdbcApprovalStoreTests {
                 "high risk", ApprovalStatus.APPROVED, "reviewer", "approved",
                 now.minusSeconds(10), now.plusSeconds(60), now
         );
-        when(support.updateIfJsonFieldEquals(
-                "approval", "approval-1", "status", "REQUESTED", decided, now
+        when(support.updateIfJsonFieldEqualsAndInstantAfter(
+                "approval", "approval-1", "status", "REQUESTED", "expiresAt", now, decided, now
         )).thenReturn(true);
 
-        boolean transitioned = store.transition("approval-1", ApprovalStatus.REQUESTED, decided);
+        boolean transitioned = store.decideIfRequestedAndNotExpired("approval-1", decided, now);
 
         assertTrue(transitioned);
-        verify(support).updateIfJsonFieldEquals(
-                "approval", "approval-1", "status", "REQUESTED", decided, now
+        verify(support).updateIfJsonFieldEqualsAndInstantAfter(
+                "approval", "approval-1", "status", "REQUESTED", "expiresAt", now, decided, now
+        );
+    }
+
+    @Test
+    void expiryTransitionRequiresRequestedStatusAndElapsedExpiry() {
+        JdbcAgentStoreSupport support = mock(JdbcAgentStoreSupport.class);
+        JdbcApprovalStore store = new JdbcApprovalStore(support);
+        Instant now = Instant.now();
+        ApprovalRecord expired = new ApprovalRecord(
+                "approval-1", "run-1", "session-1",
+                new ToolCallRequest("ticket_close", "execution-1", Map.of()),
+                "high risk", ApprovalStatus.EXPIRED, "system", "approval expired",
+                now.minusSeconds(120), now.minusSeconds(60), now
+        );
+        when(support.updateIfJsonFieldEqualsAndInstantAtOrBefore(
+                "approval", "approval-1", "status", "REQUESTED", "expiresAt", now, expired, now
+        )).thenReturn(true);
+
+        boolean transitioned = store.expireIfRequested("approval-1", expired, now);
+
+        assertTrue(transitioned);
+        verify(support).updateIfJsonFieldEqualsAndInstantAtOrBefore(
+                "approval", "approval-1", "status", "REQUESTED", "expiresAt", now, expired, now
         );
     }
 }

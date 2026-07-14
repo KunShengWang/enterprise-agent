@@ -32,7 +32,7 @@
 
 - 已验证 `mvn clean test`、Spring Context 启动和现有测试通过。
 - 最终 HTTP 冒烟以 Mock ChatModel 验证 Runtime/数据库/同步/SSE 连接，不代表真实 DeepSeek ToolCall 质量。
-- 已有 19 个测试覆盖 Spring Context、预算/Profile 续接、审批有效期与并发决定、原子恢复、跨 Run 工具执行 ID 隔离、确定与不确定工具检查点、SSE 心跳和 ToolResult 边界；尚无多实例 PostgreSQL 故障注入与上下文溢出系统测试，因此不要声称“完善的测试体系”。
+- 已有 21 个测试覆盖 Spring Context、预算/Profile 续接、审批有效期与并发决定、审批过期 CAS 边界、原子恢复、跨 Run 工具执行 ID 隔离、确定与不确定工具检查点、SSE 心跳和 ToolResult 边界；尚无多实例 PostgreSQL 故障注入与上下文溢出系统测试，因此不要声称“完善的测试体系”。
 
 ## 可以继续做，但只有拿到证据后再写简历
 

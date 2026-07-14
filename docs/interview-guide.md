@@ -60,7 +60,7 @@
 
 - Run 在 `WAITING_APPROVAL` 时保存 pending ToolCall、已完成结果和使用工具。
 - 审批后 claim 同一个 Run，执行或写入拒绝 ToolResult，再继续同一个 Agent Loop。
-- 审批决定通过数据库 `status=REQUESTED` 条件更新完成；批准、拒绝和过期只有一个状态迁移能成功，失败方读取胜出结果，不能后写覆盖。
+- 审批决定通过数据库同时检查 `status=REQUESTED` 和 `expiresAt>decisionTime`；批准、拒绝和过期只有一个状态迁移能成功，失败方读取胜出结果，既不能后写覆盖，也不能在 CAS 时刻批准已过期请求。
 - Profile、能力白名单、累计 Token/成本与剩余执行时长都随 Run 持久化；审批等待不消耗执行预算，Approval 则有独立有效期，恢复不会重新获得预算或默认权限。
 - 同一个 Run 的每次执行使用唯一 leaseOwnerId；claim 失败者不能继续工具执行。
 - 模型提供的 ToolCall ID 只用于追踪；Runtime 生成全局执行 ID 作为消息配对和工具幂等键，存储层额外拒绝跨 Run 复用；已完成调用返回持久化结果。

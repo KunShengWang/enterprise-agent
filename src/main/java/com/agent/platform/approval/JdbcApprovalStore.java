@@ -30,19 +30,42 @@ public class JdbcApprovalStore implements ApprovalStore {
     }
 
     @Override
-    public boolean transition(String approvalId,
-                              ApprovalStatus expectedStatus,
-                              ApprovalRecord nextRecord) {
-        if (approvalId == null || approvalId.isBlank() || expectedStatus == null || nextRecord == null) {
+    public boolean decideIfRequestedAndNotExpired(String approvalId,
+                                                  ApprovalRecord nextRecord,
+                                                  Instant decisionTime) {
+        if (approvalId == null || approvalId.isBlank() || nextRecord == null || decisionTime == null) {
             return false;
         }
         Instant updatedAt = nextRecord.decidedAt() == null ? Instant.now() : nextRecord.decidedAt();
-        return store.updateIfJsonFieldEquals(
+        return store.updateIfJsonFieldEqualsAndInstantAfter(
                 CATEGORY,
                 approvalId,
                 "status",
-                expectedStatus.name(),
+                ApprovalStatus.REQUESTED.name(),
+                "expiresAt",
+                decisionTime,
                 nextRecord,
+                updatedAt
+        );
+    }
+
+    @Override
+    public boolean expireIfRequested(String approvalId,
+                                     ApprovalRecord expiredRecord,
+                                     Instant expirationCheckTime) {
+        if (approvalId == null || approvalId.isBlank()
+                || expiredRecord == null || expirationCheckTime == null) {
+            return false;
+        }
+        Instant updatedAt = expiredRecord.decidedAt() == null ? Instant.now() : expiredRecord.decidedAt();
+        return store.updateIfJsonFieldEqualsAndInstantAtOrBefore(
+                CATEGORY,
+                approvalId,
+                "status",
+                ApprovalStatus.REQUESTED.name(),
+                "expiresAt",
+                expirationCheckTime,
+                expiredRecord,
                 updatedAt
         );
     }
