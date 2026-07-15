@@ -34,9 +34,9 @@ onMounted(checkHealth)
         <button class="icon-button mobile-menu" type="button" aria-label="打开导航" @click="sidebarOpen = true">
           ☰
         </button>
-        <div>
-          <p class="eyebrow">ENTERPRISE AGENT / LEARNING CONSOLE</p>
+        <div class="topbar-title">
           <h1>{{ pageTitle }}</h1>
+          <span>Enterprise Agent</span>
         </div>
         <button class="health-pill" type="button" title="重新检测后端" @click="checkHealth">
           <span class="status-dot" :class="backendOnline ? 'is-online' : 'is-offline'" />

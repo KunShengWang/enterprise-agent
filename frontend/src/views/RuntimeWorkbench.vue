@@ -19,6 +19,7 @@ const reviewer = ref('student-reviewer')
 const decisionReason = ref('已确认本次工具调用参数与影响范围')
 const startedAt = ref(0)
 const now = ref(Date.now())
+const submittedQuestion = ref('')
 let clock: number | undefined
 
 const examples = [
@@ -47,6 +48,12 @@ const elapsed = computed(() => {
 
 const sequence = computed(() => Math.max(0, ...stream.events.value.map((event) => event.sequence)))
 const budget = computed(() => stream.runRecord.value?.budgetSnapshot)
+const hasConversation = computed(() => Boolean(
+  submittedQuestion.value
+  || stream.runId.value
+  || stream.events.value.length
+  || stream.answer.value,
+))
 const stages = computed(() => {
   const types = new Set(stream.events.value.map((event) => event.type))
   const ended = ['run_completed', 'run_failed', 'run_cancelled'].some((type) => types.has(type))
@@ -89,7 +96,15 @@ async function submit() {
     question: question.value.trim(),
     metadata,
   }
+  submittedQuestion.value = request.question
   await stream.start(request)
+}
+
+function resetWorkbench() {
+  stream.reset()
+  submittedQuestion.value = ''
+  startedAt.value = 0
+  formError.value = ''
 }
 
 async function decide(approved: boolean) {
@@ -129,72 +144,122 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="workbench-layout">
-    <section class="task-panel panel">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">TASK INPUT</p>
-          <h2>给 Runtime 一个任务</h2>
+  <div class="codex-workbench">
+    <section class="conversation-panel panel">
+      <header class="conversation-toolbar">
+        <div class="conversation-title">
+          <span class="assistant-avatar">✦</span>
+          <div>
+            <strong>Enterprise Agent</strong>
+            <small>模型驱动的 Runtime 会话</small>
+          </div>
         </div>
         <StatusBadge :value="currentState" />
+      </header>
+
+      <div class="conversation-scroll">
+        <div v-if="!hasConversation" class="conversation-welcome">
+          <span class="welcome-mark">✦</span>
+          <h2>今天想让 Agent 做什么？</h2>
+          <p>发送任务后，回答会留在正文中；上下文、模型决策、工具和审批过程会同步出现在右侧。</p>
+        </div>
+
+        <article v-if="submittedQuestion" class="chat-turn user-turn">
+          <div class="turn-avatar">你</div>
+          <div class="turn-content">
+            <span class="turn-role">YOU</span>
+            <p>{{ submittedQuestion }}</p>
+          </div>
+        </article>
+
+        <article v-if="hasConversation" class="chat-turn assistant-turn">
+          <div class="turn-avatar">✦</div>
+          <div class="turn-content">
+            <div class="assistant-heading">
+              <span class="turn-role">AGENT</span>
+              <span v-if="stream.running.value" class="live-indicator"><i /> WORKING</span>
+            </div>
+            <div v-if="stream.answer.value" class="answer-content">{{ stream.answer.value }}</div>
+            <div v-else-if="stream.running.value" class="assistant-thinking">
+              <span /><span /><span />
+              <p>正在读取上下文并执行任务…</p>
+            </div>
+            <div v-else class="answer-empty">
+              <p>Runtime 尚未返回最终回答。你可以在右侧查看它停在了哪个阶段。</p>
+            </div>
+
+            <div v-if="budget" class="budget-grid">
+              <div><span>Turns</span><strong>{{ budget.turns }}</strong></div>
+              <div><span>Model calls</span><strong>{{ budget.modelCalls }}</strong></div>
+              <div><span>Tool calls</span><strong>{{ budget.toolCalls }}</strong></div>
+              <div><span>Tokens</span><strong>{{ budget.inputTokens + budget.outputTokens }}</strong></div>
+              <div><span>Cost</span><strong>{{ budget.estimatedCost.toFixed(6) }}</strong></div>
+            </div>
+
+            <JsonViewer v-if="stream.runRecord.value" :value="stream.runRecord.value" label="查看完整 RunRecord" />
+          </div>
+        </article>
       </div>
 
-      <div class="example-row">
-        <button v-for="example in examples" :key="example.label" type="button" @click="question = example.value">
-          {{ example.label }}
-        </button>
-      </div>
+      <div class="composer-area">
+        <div class="example-row">
+          <button v-for="example in examples" :key="example.label" type="button" :disabled="stream.running.value" @click="question = example.value">
+            {{ example.label }}
+          </button>
+        </div>
 
-      <label class="field-label" for="question">用户问题</label>
-      <textarea id="question" v-model="question" rows="7" :disabled="stream.running.value" placeholder="输入一个可以触发 RAG、Tool 或审批的任务…" />
+        <div v-if="showAdvanced" class="advanced-grid">
+          <label>
+            <span>conversationId</span>
+            <input v-model="conversationId" :disabled="stream.running.value" />
+          </label>
+          <label>
+            <span>userId</span>
+            <input v-model="userId" :disabled="stream.running.value" />
+          </label>
+          <label class="metadata-field">
+            <span>metadata JSON</span>
+            <textarea v-model="metadataText" rows="4" :disabled="stream.running.value" spellcheck="false" />
+          </label>
+        </div>
 
-      <button class="advanced-toggle" type="button" @click="showAdvanced = !showAdvanced">
-        <span>{{ showAdvanced ? '−' : '+' }}</span> 请求上下文
-      </button>
-      <div v-if="showAdvanced" class="advanced-grid">
-        <label>
-          <span>conversationId</span>
-          <input v-model="conversationId" :disabled="stream.running.value" />
-        </label>
-        <label>
-          <span>userId</span>
-          <input v-model="userId" :disabled="stream.running.value" />
-        </label>
-        <label class="metadata-field">
-          <span>metadata JSON</span>
-          <textarea v-model="metadataText" rows="5" :disabled="stream.running.value" spellcheck="false" />
-        </label>
-      </div>
-
-      <p v-if="formError" class="inline-error">{{ formError }}</p>
-      <div class="action-row">
-        <button v-if="!stream.running.value" class="primary-button" type="button" @click="submit">
-          <span>▶</span> 启动 Agent Run
-        </button>
-        <button v-else class="danger-button" type="button" @click="stream.cancel">
-          <span>■</span> 取消当前 Run
-        </button>
-        <button class="secondary-button" type="button" :disabled="stream.running.value" @click="stream.reset">
-          清空观察台
-        </button>
-      </div>
-
-      <div class="learning-note">
-        <strong>这里发送了什么？</strong>
-        <p><code>POST /api/agent/runs/events</code> 返回 SSE。每个事件先由 Runtime 落库，再转发到当前页面。</p>
+        <p v-if="formError" class="inline-error">{{ formError }}</p>
+        <div class="composer-box">
+          <textarea
+            id="question"
+            v-model="question"
+            rows="3"
+            :disabled="stream.running.value"
+            aria-label="发送给 Agent 的任务"
+            placeholder="给 Agent 一个任务…"
+            @keydown.ctrl.enter.prevent="submit"
+          />
+          <div class="composer-toolbar">
+            <button class="composer-option" type="button" @click="showAdvanced = !showAdvanced">
+              <span>{{ showAdvanced ? '−' : '+' }}</span> 上下文
+            </button>
+            <code>POST /api/agent/runs/events</code>
+            <button v-if="stream.running.value" class="stop-button" type="button" aria-label="停止当前 Run" @click="stream.cancel">■</button>
+            <button v-else class="send-button" type="button" aria-label="发送任务" @click="submit">↑</button>
+          </div>
+        </div>
+        <div class="composer-footer">
+          <span>Ctrl + Enter 发送 · SSE 实时接收</span>
+          <button type="button" :disabled="stream.running.value" @click="resetWorkbench">新建会话</button>
+        </div>
       </div>
     </section>
 
-    <section class="runtime-panel panel">
-      <div class="runtime-toolbar">
+    <aside class="execution-panel panel">
+      <div class="execution-header">
         <div>
-          <p class="eyebrow">LIVE RUNTIME</p>
-          <h2>执行过程</h2>
+          <p class="eyebrow">RUNTIME ACTIVITY</p>
+          <h2>执行详情</h2>
         </div>
         <div class="runtime-metrics">
           <span><small>SEQ</small>{{ sequence }}</span>
           <span><small>EVENTS</small>{{ stream.persistedEvents.value.length }}</span>
-          <span><small>ELAPSED</small>{{ elapsed }}</span>
+          <span><small>TIME</small>{{ elapsed }}</span>
         </div>
       </div>
 
@@ -232,31 +297,6 @@ onBeforeUnmount(() => {
       </div>
 
       <EventTimeline :events="stream.events.value" :active="stream.running.value" />
-    </section>
-
-    <section class="answer-panel panel">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">ASSISTANT OUTPUT</p>
-          <h2>最终回答</h2>
-        </div>
-        <span v-if="stream.running.value" class="live-indicator"><i /> LIVE</span>
-      </div>
-      <div v-if="stream.answer.value" class="answer-content">{{ stream.answer.value }}</div>
-      <div v-else class="answer-empty">
-        <span>⌁</span>
-        <p>模型产生最终文本后会显示在这里。若 Runtime 发布 <code>model_delta</code>，页面会逐段追加。</p>
-      </div>
-
-      <div v-if="budget" class="budget-grid">
-        <div><span>Turns</span><strong>{{ budget.turns }}</strong></div>
-        <div><span>Model calls</span><strong>{{ budget.modelCalls }}</strong></div>
-        <div><span>Tool calls</span><strong>{{ budget.toolCalls }}</strong></div>
-        <div><span>Tokens</span><strong>{{ budget.inputTokens + budget.outputTokens }}</strong></div>
-        <div><span>Cost</span><strong>{{ budget.estimatedCost.toFixed(6) }}</strong></div>
-      </div>
-
-      <JsonViewer v-if="stream.runRecord.value" :value="stream.runRecord.value" label="查看完整 RunRecord" />
-    </section>
+    </aside>
   </div>
 </template>
