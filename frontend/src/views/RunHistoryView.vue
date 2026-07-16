@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { agentApi } from '../api/agent'
 import EventTimeline from '../components/EventTimeline.vue'
 import JsonViewer from '../components/JsonViewer.vue'
@@ -8,6 +9,7 @@ import StatusBadge from '../components/StatusBadge.vue'
 import type { AgentEvent, AgentRunRecord, AgentStreamEvent } from '../types/agent'
 
 const runs = ref<AgentRunRecord[]>([])
+const router = useRouter()
 const selectedRun = ref<AgentRunRecord | null>(null)
 const events = ref<AgentEvent[]>([])
 const executions = ref<Array<Record<string, unknown>>>([])
@@ -86,16 +88,9 @@ async function cancelSelected() {
   await loadRuns()
 }
 
-async function resumeSelected() {
+function openInWorkbench() {
   if (!selectedRun.value) return
-  detailLoading.value = true
-  try {
-    await agentApi.resumeRun(selectedRun.value.runId)
-    await selectRun(selectedRun.value)
-    await loadRuns()
-  } finally {
-    detailLoading.value = false
-  }
+  void router.push({ name: 'runtime', query: { runId: selectedRun.value.runId } })
 }
 
 onMounted(() => loadRuns(false))
@@ -106,7 +101,7 @@ onMounted(() => loadRuns(false))
     <PageIntro
       kicker="PERSISTED RUNS"
       title="从状态记录回放一条 Agent 执行"
-      description="SSE 是实时投影，PostgreSQL 中的 RunRecord 与 AgentEvent 才是事实源。选择任意 Run，对照阶段、预算、工具结果和事件序号。"
+      description="这里负责检索和检查持久化事实；需要审批、恢复或继续执行时，统一回到 Agent 运行台处理同一个 Run。"
       :endpoints="['GET /api/agent/runs', 'GET /api/agent/runs/{runId}', 'GET /api/agent/runs/{runId}/events']"
     >
       <button class="secondary-button" type="button" :disabled="loading" @click="loadRuns()">刷新列表</button>
@@ -168,7 +163,9 @@ onMounted(() => loadRuns(false))
 
           <div class="detail-actions">
             <button v-if="selectedRun.state === 'RUNNING'" class="danger-button" type="button" @click="cancelSelected">请求取消</button>
-            <button v-if="selectedRun.state === 'WAITING_APPROVAL'" class="primary-button" type="button" @click="resumeSelected">检查审批并恢复</button>
+            <button class="primary-button" type="button" @click="openInWorkbench">
+              {{ selectedRun.state === 'WAITING_APPROVAL' ? '进入运行台审批' : '在运行台打开' }}
+            </button>
           </div>
 
           <div v-if="selectedRun.answer" class="record-answer"><span>FINAL ANSWER</span>{{ selectedRun.answer }}</div>

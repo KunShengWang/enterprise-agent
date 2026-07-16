@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { agentApi } from '../api/agent'
 import { ApiError } from '../api/http'
-import { streamAgentEvents } from '../api/stream'
+import { resumeAgentEvents, streamAgentEvents } from '../api/stream'
 import type { AgentEvent, AgentRequest, AgentRunRecord, AgentStreamEvent } from '../types/agent'
 
 const terminalTypes = new Set(['run_completed', 'run_failed', 'run_cancelled', 'transport_error'])
@@ -89,8 +89,8 @@ export function useAgentStream() {
         agentApi.runEvents(runId.value),
       ])
       runRecord.value = record
-      approvalId.value = record.approvalId || approvalId.value
-      if (!answer.value && record.answer) {
+      approvalId.value = record.state === 'WAITING_APPROVAL' ? record.approvalId : ''
+      if (record.answer) {
         answer.value = record.answer
       }
       const heartbeatEvents = events.value.filter((event) => event.metadata?.persisted === false)
@@ -105,16 +105,15 @@ export function useAgentStream() {
     }
   }
 
-  async function start(request: AgentRequest) {
-    reset()
+  async function consume(streamer: (signal: AbortSignal) => Promise<void>) {
+    if (running.value) return
+    error.value = ''
     running.value = true
+    connected.value = false
     controller = new AbortController()
 
     try {
-      await streamAgentEvents(request, {
-        signal: controller.signal,
-        onEvent: acceptEvent,
-      })
+      await streamer(controller.signal)
     } catch (reason) {
       if (reason instanceof DOMException && reason.name === 'AbortError') {
         error.value = '已停止接收事件，并向 Runtime 请求取消当前 Run。'
@@ -129,6 +128,28 @@ export function useAgentStream() {
       controller = null
       await refreshStoredRun()
     }
+  }
+
+  async function start(request: AgentRequest) {
+    reset()
+    await consume((signal) => streamAgentEvents(request, {
+      signal,
+      onEvent: acceptEvent,
+    }))
+  }
+
+  async function resume() {
+    if (!runId.value) {
+      error.value = '当前没有可以恢复的 Run。'
+      return
+    }
+    if (runRecord.value?.state === 'WAITING_APPROVAL') {
+      answer.value = ''
+    }
+    await consume((signal) => resumeAgentEvents(runId.value, {
+      signal,
+      onEvent: acceptEvent,
+    }))
   }
 
   async function cancel() {
@@ -150,6 +171,7 @@ export function useAgentStream() {
     approvalId.value = run.approvalId
     answer.value = run.answer
     events.value = storedEvents.map(fromStoredEvent)
+    hasModelDelta.value = events.value.some((event) => event.type === 'model_delta')
   }
 
   async function refresh() {
@@ -171,6 +193,7 @@ export function useAgentStream() {
     lastEvent,
     terminal,
     start,
+    resume,
     cancel,
     reset,
     refresh,

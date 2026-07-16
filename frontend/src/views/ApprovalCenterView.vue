@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { agentApi } from '../api/agent'
 import JsonViewer from '../components/JsonViewer.vue'
 import PageIntro from '../components/PageIntro.vue'
@@ -7,15 +8,11 @@ import StatusBadge from '../components/StatusBadge.vue'
 import type { ApprovalRecord } from '../types/agent'
 
 const approvals = ref<ApprovalRecord[]>([])
+const router = useRouter()
 const selected = ref<ApprovalRecord | null>(null)
 const filter = ref('ALL')
-const reviewer = ref('student-reviewer')
-const reason = ref('已核对工具参数、权限边界和副作用范围')
-const resumeAfterApprove = ref(true)
 const loading = ref(false)
-const deciding = ref(false)
 const error = ref('')
-const resultMessage = ref('')
 
 const filtered = computed(() => approvals.value.filter((item) => filter.value === 'ALL' || item.status === filter.value))
 const pendingCount = computed(() => approvals.value.filter((item) => item.status === 'REQUESTED').length)
@@ -39,29 +36,13 @@ async function load() {
   }
 }
 
-async function decide(approved: boolean) {
+function openInWorkbench() {
   if (!selected.value) return
-  deciding.value = true
-  error.value = ''
-  resultMessage.value = ''
-  try {
-    const decision = await agentApi.decideApproval(
-      selected.value.approvalId,
-      approved,
-      reviewer.value.trim() || 'learning-console',
-      reason.value.trim(),
-    )
-    resultMessage.value = `审批已原子更新为 ${decision.status}`
-    if (approved && resumeAfterApprove.value && selected.value.runId) {
-      const response = await agentApi.resumeRun(selected.value.runId)
-      resultMessage.value += `，Run 已恢复并收敛为 ${response.status}`
-    }
-    await load()
-  } catch (reasonValue) {
-    error.value = reasonValue instanceof Error ? reasonValue.message : '审批失败'
-  } finally {
-    deciding.value = false
+  if (!selected.value.runId) {
+    error.value = '这条旧审批记录没有关联 Run ID，无法进入运行台。'
+    return
   }
+  void router.push({ name: 'runtime', query: { runId: selected.value.runId } })
 }
 
 onMounted(load)
@@ -72,15 +53,14 @@ onMounted(load)
     <PageIntro
       kicker="HUMAN IN THE LOOP"
       title="把高风险工具停在执行之前"
-      description="Runtime 先做 Tool Policy 判定，再创建审批。审批决定通过数据库 CAS 保证只能从 REQUESTED 迁移一次；批准后可从原预算和 Profile 恢复。"
-      :endpoints="['GET /api/agent/guardrails/approvals', 'POST /api/agent/guardrails/approvals/{approvalId}/decide', 'POST /api/agent/runs/{runId}/resume']"
+      description="审批中心用于检索待办和查看审计记录；实际批准、拒绝与流式恢复统一回到对应 Run 的 Agent 运行台完成。"
+      :endpoints="['GET /api/agent/guardrails/approvals', 'GET /api/agent/guardrails/approvals/{approvalId}', 'GET /api/agent/runs/{runId}']"
     >
       <div class="counter-chip"><strong>{{ pendingCount }}</strong><span>待审批</span></div>
       <button class="secondary-button" type="button" :disabled="loading" @click="load">刷新</button>
     </PageIntro>
 
     <p v-if="error" class="inline-error">{{ error }}</p>
-    <p v-if="resultMessage" class="inline-success">{{ resultMessage }}</p>
 
     <div class="approval-layout">
       <section class="panel approval-list-panel">
@@ -124,18 +104,16 @@ onMounted(load)
           <JsonViewer :value="selected.toolCallRequest" :collapsed="false" label="ToolCall 参数" />
 
           <div v-if="selected.status === 'REQUESTED'" class="decision-form">
-            <label>审批人<input v-model="reviewer" /></label>
-            <label>决策理由<textarea v-model="reason" rows="3" /></label>
-            <label class="checkbox-row"><input v-model="resumeAfterApprove" type="checkbox" />批准后立即调用 Runtime resume</label>
+            <p>这条 Run 尚未执行高风险工具。进入运行台后，可以在同一条事件时间线中完成审批并继续执行。</p>
             <div class="action-row">
-              <button class="primary-button" type="button" :disabled="deciding" @click="decide(true)">批准</button>
-              <button class="danger-button" type="button" :disabled="deciding" @click="decide(false)">拒绝</button>
+              <button class="primary-button" type="button" @click="openInWorkbench">进入运行台处理</button>
             </div>
           </div>
           <div v-else class="decision-result">
             <span>最终决策</span>
             <strong>{{ selected.status }}</strong>
             <p>{{ selected.reviewer || '—' }} · {{ selected.decisionReason || '未填写理由' }}</p>
+            <button class="secondary-button" type="button" @click="openInWorkbench">在运行台查看完整 Run</button>
           </div>
         </template>
       </section>

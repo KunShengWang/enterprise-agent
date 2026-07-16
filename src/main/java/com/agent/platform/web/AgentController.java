@@ -123,6 +123,11 @@ public class AgentController {
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
+    @PostMapping(value = "/runs/{runId}/resume/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<AgentStreamEvent> resumeRunEvents(@PathVariable String runId) {
+        return streamingAgentExecutor.resume(runId);
+    }
+
     @PostMapping("/runs/{runId}/cancel")
     public Mono<ApiResponse<Map<String, Object>>> cancelRun(@PathVariable String runId) {
         return Mono.fromSupplier(() -> {

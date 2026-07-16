@@ -6,4 +6,6 @@ import reactor.core.publisher.Flux;
 public interface StreamingAgentExecutor {
 
     Flux<AgentStreamEvent> stream(AgentRequest request);
+
+    Flux<AgentStreamEvent> resume(String runId);
 }

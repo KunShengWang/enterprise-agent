@@ -60,9 +60,11 @@ RUN_STARTED
 -> RUN_COMPLETED / RUN_FAILED / RUN_CANCELLED
 ```
 
-页面使用 `POST /api/agent/runs/events`，通过 `fetch + ReadableStream` 解析 POST SSE。每条业务事件都带有持久化 `sequence`。
+页面首次执行使用 `POST /api/agent/runs/events`；审批后使用 `POST /api/agent/runs/{runId}/resume/events`。两条接口都通过 `fetch + ReadableStream` 解析 POST SSE，并汇入同一个 Run 工作区和同一条持久化 `sequence` 时间线。
 
 注意：当前 `JsonAgentModelGateway` 使用结构化整轮模型调用，Runtime 尚未发布真正的逐 Token `MODEL_DELTA`。所以现在实时流式的是执行事件，最终文本主要在 `RUN_COMPLETED` 中收口；前端已经兼容未来的 `MODEL_DELTA`，但不会把客户端打字机动画伪装成模型原生流式。
+
+运行台 URL 会保存 `runId`。刷新页面或从 Run 历史、审批中心进入时，前端会先读取 `AgentRunRecord + AgentEvent` 恢复工作区；若状态为 `WAITING_APPROVAL`，可直接在右侧审批卡片中决定并继续流式执行。
 
 ### 2. Run 历史与回放
 
@@ -76,12 +78,13 @@ RUN_STARTED
 
 ### 3. 审批中心
 
-使用运行台中的“触发审批”示例，观察高风险 ToolCall 如何暂停。随后在审批中心：
+使用运行台中的“触发审批”示例，观察高风险 ToolCall 如何暂停。审批中心只负责定位待办和查看审计信息：
 
 1. 查看工具名、参数、原因与有效期。
-2. 批准或拒绝。
-3. 批准时调用 `/runs/{runId}/resume`。
-4. 回到 Run 历史确认预算、Profile 和事件序号连续。
+2. 点击“进入运行台处理”回到对应 `runId`。
+3. 在运行台填写审批人与理由，并批准或拒绝。
+4. 前端调用 `/runs/{runId}/resume/events`，继续接收审批后的工具与模型事件。
+5. 刷新页面或回到 Run 历史，确认预算、Profile 和事件序号连续。
 
 ### 4. 能力地图
 

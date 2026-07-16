@@ -3,6 +3,7 @@ package com.agent.platform.stream;
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.config.AgentProperties;
 import com.agent.platform.runtime.AgentEvent;
+import com.agent.platform.runtime.AgentEventListener;
 import com.agent.platform.runtime.AgentRuntime;
 import org.springframework.stereotype.Service;
 import reactor.core.Disposable;
@@ -16,6 +17,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 /**
  * AgentRuntime 的 SSE 事件适配器，不包含任何独立业务执行逻辑。
@@ -33,20 +35,49 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
 
     @Override
     public Flux<AgentStreamEvent> stream(AgentRequest request) {
-        AtomicReference<String> runId = new AtomicReference<>();
+        return streamExecution(
+                "",
+                sessionId(request),
+                listener -> runtime.run(request, listener)
+        );
+    }
+
+    @Override
+    public Flux<AgentStreamEvent> resume(String runId) {
+        if (runId == null || runId.isBlank()) {
+            return Flux.error(new IllegalArgumentException("runId must not be blank"));
+        }
+        String normalizedRunId = runId.trim();
+        return streamExecution(
+                normalizedRunId,
+                "",
+                listener -> runtime.resume(normalizedRunId, listener)
+        );
+    }
+
+    private Flux<AgentStreamEvent> streamExecution(String initialRunId,
+                                                    String initialSessionId,
+                                                    Consumer<AgentEventListener> invocation) {
+        AtomicReference<String> runId = new AtomicReference<>(initialRunId);
+        AtomicReference<String> sessionId = new AtomicReference<>(initialSessionId);
         AtomicLong lastSequence = new AtomicLong(0);
         Flux<AgentStreamEvent> source = Flux.<AgentStreamEvent>create(sink -> {
                     AtomicBoolean cancelled = new AtomicBoolean(false);
                     long heartbeatSeconds = Math.max(1, properties.getStreamHeartbeatSeconds());
                     Disposable heartbeat = Schedulers.parallel().schedulePeriodically(() -> {
                         if (!sink.isCancelled()) {
-                            sink.next(heartbeatEvent(request, runId.get(), lastSequence.get()));
+                            sink.next(heartbeatEvent(runId.get(), sessionId.get(), lastSequence.get()));
                         }
                     }, heartbeatSeconds, heartbeatSeconds, java.util.concurrent.TimeUnit.SECONDS);
                     Disposable task = Schedulers.boundedElastic().schedule(() -> {
                         try {
-                            runtime.run(request, event -> {
-                                runId.compareAndSet(null, event.runId());
+                            invocation.accept(event -> {
+                                if (event.runId() != null && !event.runId().isBlank()) {
+                                    runId.set(event.runId());
+                                }
+                                if (event.sessionId() != null && !event.sessionId().isBlank()) {
+                                    sessionId.set(event.sessionId());
+                                }
                                 lastSequence.accumulateAndGet(event.sequence(), Math::max);
                                 if (cancelled.get()) {
                                     runtime.cancel(event.runId());
@@ -61,7 +92,12 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                         }
                         catch (RuntimeException exception) {
                             if (!sink.isCancelled()) {
-                                sink.next(errorEvent(request, exception));
+                                sink.next(errorEvent(
+                                        runId.get(),
+                                        sessionId.get(),
+                                        lastSequence.get(),
+                                        exception
+                                ));
                                 sink.complete();
                             }
                         }
@@ -88,7 +124,9 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                         Math.max(16, properties.getStreamBackpressureBufferSize()),
                         BufferOverflowStrategy.ERROR
                 )
-                .onErrorResume(error -> Flux.just(gapEvent(request, runId.get(), lastSequence.get(), error)));
+                .onErrorResume(error -> Flux.just(
+                        gapEvent(runId.get(), sessionId.get(), lastSequence.get(), error)
+                ));
     }
 
     private AgentStreamEvent toStreamEvent(AgentEvent event) {
@@ -104,27 +142,30 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
         );
     }
 
-    private AgentStreamEvent errorEvent(AgentRequest request, RuntimeException exception) {
-        String sessionId = request == null || request.conversationId() == null || request.conversationId().isBlank()
-                ? "default-conversation"
-                : request.conversationId().trim();
+    private AgentStreamEvent errorEvent(String runId,
+                                        String sessionId,
+                                        long sequence,
+                                        RuntimeException exception) {
         return new AgentStreamEvent(
                 UUID.randomUUID().toString(),
-                "",
-                sessionId,
-                0,
+                normalize(runId),
+                normalize(sessionId),
+                sequence,
                 "transport_error",
                 "Agent Runtime 事件流异常终止。",
                 Instant.now(),
-                Map.of("errorType", exception.getClass().getSimpleName())
+                Map.of(
+                        "persisted", false,
+                        "errorType", exception.getClass().getSimpleName()
+                )
         );
     }
 
-    private AgentStreamEvent heartbeatEvent(AgentRequest request, String runId, long sequence) {
+    private AgentStreamEvent heartbeatEvent(String runId, String sessionId, long sequence) {
         return new AgentStreamEvent(
                 UUID.randomUUID().toString(),
-                runId == null ? "" : runId,
-                sessionId(request),
+                normalize(runId),
+                normalize(sessionId),
                 sequence,
                 "heartbeat",
                 "keep-alive",
@@ -133,11 +174,14 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
         );
     }
 
-    private AgentStreamEvent gapEvent(AgentRequest request, String runId, long sequence, Throwable error) {
+    private AgentStreamEvent gapEvent(String runId,
+                                      String sessionId,
+                                      long sequence,
+                                      Throwable error) {
         return new AgentStreamEvent(
                 UUID.randomUUID().toString(),
-                runId == null ? "" : runId,
-                sessionId(request),
+                normalize(runId),
+                normalize(sessionId),
                 sequence,
                 "stream_gap",
                 "SSE 消费速度不足，事件流已终止，请按持久化序号重新加载。",
@@ -155,5 +199,9 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
         return request == null || request.conversationId() == null || request.conversationId().isBlank()
                 ? "default-conversation"
                 : request.conversationId().trim();
+    }
+
+    private String normalize(String value) {
+        return value == null ? "" : value.trim();
     }
 }

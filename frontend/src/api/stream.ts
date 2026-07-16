@@ -24,14 +24,18 @@ function parseEventBlock(block: string): AgentStreamEvent | null {
   }
 }
 
-export async function streamAgentEvents(request: AgentRequest, options: StreamOptions): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/agent/runs/events`, {
+async function consumeAgentStream(path: string, options: StreamOptions, body?: unknown): Promise<void> {
+  const headers: Record<string, string> = {
+    Accept: 'text/event-stream',
+  }
+  if (body !== undefined) {
+    headers['Content-Type'] = 'application/json'
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'POST',
-    headers: {
-      Accept: 'text/event-stream',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(request),
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
     signal: options.signal,
   })
 
@@ -80,4 +84,15 @@ export async function streamAgentEvents(request: AgentRequest, options: StreamOp
       options.onEvent(event)
     }
   }
+}
+
+export async function streamAgentEvents(request: AgentRequest, options: StreamOptions): Promise<void> {
+  await consumeAgentStream('/api/agent/runs/events', options, request)
+}
+
+export async function resumeAgentEvents(runId: string, options: StreamOptions): Promise<void> {
+  await consumeAgentStream(
+    `/api/agent/runs/${encodeURIComponent(runId)}/resume/events`,
+    options,
+  )
 }

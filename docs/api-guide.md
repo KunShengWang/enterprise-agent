@@ -82,6 +82,15 @@ Content-Type: application/json
 POST /api/agent/runs/{runId}/resume
 ```
 
+若调用方需要把审批后的执行过程继续展示在原事件时间线中，使用结构化 SSE 恢复接口：
+
+```http
+POST /api/agent/runs/{runId}/resume/events
+Accept: text/event-stream
+```
+
+该接口只是 `AgentRuntime.resume(runId, listener)` 的流式适配，不包含另一套恢复逻辑。初次执行与恢复执行产生的持久化事件共享同一个 `runId` 和递增 `sequence`。
+
 恢复不是重新执行整个问题。Runtime 会原子 claim 等待中的 Run，从持久化 Profile 与 BudgetSnapshot 继续；抢占失败者只返回当前状态。对租约已过期的 `RUNNING` Run，Context/Model 检查点可以继续，处于工具副作用检查点时转入人工核对。
 
 ## 4. RAG

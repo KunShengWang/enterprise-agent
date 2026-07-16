@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { agentApi } from '../api/agent'
 import EventTimeline from '../components/EventTimeline.vue'
 import JsonViewer from '../components/JsonViewer.vue'
@@ -8,6 +9,8 @@ import { useAgentStream } from '../composables/useAgentStream'
 import type { AgentRequest } from '../types/agent'
 
 const stream = useAgentStream()
+const route = useRoute()
+const router = useRouter()
 const conversationId = ref(`learn-${new Date().toISOString().slice(0, 10)}`)
 const userId = ref('student-001')
 const question = ref('发布失败时应该先检查什么？请结合知识库给出排查顺序。')
@@ -17,6 +20,7 @@ const formError = ref('')
 const decisionBusy = ref(false)
 const reviewer = ref('student-reviewer')
 const decisionReason = ref('已确认本次工具调用参数与影响范围')
+const loadingRun = ref(false)
 const startedAt = ref(0)
 const now = ref(Date.now())
 const submittedQuestion = ref('')
@@ -25,13 +29,13 @@ let clock: number | undefined
 const examples = [
   { label: '知识库问答', value: '发布失败时应该先检查什么？请结合知识库给出排查顺序。' },
   { label: '普通对话', value: '请用三句话解释统一 Agent Loop 为什么比固定路由更重要。' },
-  { label: '工具调用', value: '请查询工单 TICKET-1001 的当前状态。' },
-  { label: '触发审批', value: '请把工单 TICKET-1001 的优先级修改为 P1。' },
+  { label: '工具调用', value: '请查询工单 T1001 的当前状态。' },
+  { label: '触发审批', value: '请把工单 T1001 的优先级修改为 P1。' },
 ]
 
 const currentState = computed(() => {
-  if (stream.runRecord.value?.state) return stream.runRecord.value.state
   if (stream.running.value) return 'RUNNING'
+  if (stream.runRecord.value?.state) return stream.runRecord.value.state
   if (stream.approvalId.value) return 'WAITING_APPROVAL'
   const type = stream.lastEvent.value?.type
   if (type === 'run_completed') return 'COMPLETED'
@@ -105,6 +109,7 @@ function resetWorkbench() {
   submittedQuestion.value = ''
   startedAt.value = 0
   formError.value = ''
+  void router.replace({ name: 'runtime' })
 }
 
 async function decide(approved: boolean) {
@@ -118,12 +123,40 @@ async function decide(approved: boolean) {
       reviewer.value.trim() || 'learning-console',
       decisionReason.value.trim(),
     )
-    await agentApi.resumeRun(stream.runId.value)
-    await stream.refresh()
+    await stream.resume()
   } catch (error) {
     formError.value = error instanceof Error ? error.message : '审批或恢复失败'
   } finally {
     decisionBusy.value = false
+  }
+}
+
+function routeRunId(value: unknown) {
+  if (Array.isArray(value)) {
+    return String(value[0] ?? '').trim()
+  }
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+async function openPersistedRun(targetRunId: string) {
+  loadingRun.value = true
+  formError.value = ''
+  try {
+    const [run, events] = await Promise.all([
+      agentApi.findRun(targetRunId),
+      agentApi.runEvents(targetRunId, -1, 1000),
+    ])
+    await stream.hydrate(run, events)
+    submittedQuestion.value = run.request?.question ?? ''
+    conversationId.value = run.conversationId
+    userId.value = run.userId
+    question.value = run.request?.question ?? ''
+    metadataText.value = JSON.stringify(run.request?.metadata ?? {}, null, 2)
+    startedAt.value = 0
+  } catch (error) {
+    formError.value = error instanceof Error ? error.message : '加载持久化 Run 失败'
+  } finally {
+    loadingRun.value = false
   }
 }
 
@@ -132,6 +165,24 @@ async function copyRunId() {
     await window.navigator.clipboard.writeText(stream.runId.value)
   }
 }
+
+watch(
+  () => route.query.runId,
+  (value) => {
+    const targetRunId = routeRunId(value)
+    if (!targetRunId || targetRunId === stream.runId.value || stream.running.value) return
+    void openPersistedRun(targetRunId)
+  },
+  { immediate: true },
+)
+
+watch(
+  () => stream.runId.value,
+  (value) => {
+    if (!value || routeRunId(route.query.runId) === value) return
+    void router.replace({ name: 'runtime', query: { runId: value } })
+  },
+)
 
 onMounted(() => {
   clock = window.setInterval(() => { now.value = Date.now() }, 100)
@@ -203,7 +254,7 @@ onBeforeUnmount(() => {
 
       <div class="composer-area">
         <div class="example-row">
-          <button v-for="example in examples" :key="example.label" type="button" :disabled="stream.running.value" @click="question = example.value">
+          <button v-for="example in examples" :key="example.label" type="button" :disabled="stream.running.value || loadingRun" @click="question = example.value">
             {{ example.label }}
           </button>
         </div>
@@ -229,7 +280,7 @@ onBeforeUnmount(() => {
             id="question"
             v-model="question"
             rows="3"
-            :disabled="stream.running.value"
+            :disabled="stream.running.value || loadingRun"
             aria-label="发送给 Agent 的任务"
             placeholder="给 Agent 一个任务…"
             @keydown.ctrl.enter.prevent="submit"
@@ -240,12 +291,12 @@ onBeforeUnmount(() => {
             </button>
             <code>POST /api/agent/runs/events</code>
             <button v-if="stream.running.value" class="stop-button" type="button" aria-label="停止当前 Run" @click="stream.cancel">■</button>
-            <button v-else class="send-button" type="button" aria-label="发送任务" @click="submit">↑</button>
+            <button v-else class="send-button" type="button" :disabled="loadingRun" aria-label="发送任务" @click="submit">↑</button>
           </div>
         </div>
         <div class="composer-footer">
           <span>Ctrl + Enter 发送 · SSE 实时接收</span>
-          <button type="button" :disabled="stream.running.value" @click="resetWorkbench">新建会话</button>
+          <button type="button" :disabled="stream.running.value || loadingRun" @click="resetWorkbench">新建会话</button>
         </div>
       </div>
     </section>
@@ -291,7 +342,7 @@ onBeforeUnmount(() => {
         <label>审批人<input v-model="reviewer" /></label>
         <label>决策理由<input v-model="decisionReason" /></label>
         <div class="approval-actions">
-          <button class="primary-button" type="button" :disabled="decisionBusy" @click="decide(true)">批准并恢复</button>
+          <button class="primary-button" type="button" :disabled="decisionBusy" @click="decide(true)">批准并继续执行</button>
           <button class="danger-button" type="button" :disabled="decisionBusy" @click="decide(false)">拒绝并结束</button>
         </div>
       </div>

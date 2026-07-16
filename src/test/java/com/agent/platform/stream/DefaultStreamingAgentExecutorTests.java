@@ -19,7 +19,9 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class DefaultStreamingAgentExecutorTests {
@@ -53,5 +55,37 @@ class DefaultStreamingAgentExecutorTests {
                 event.type().equals("heartbeat")
                         && event.sequence() == 42
                         && Boolean.FALSE.equals(event.metadata().get("persisted"))));
+    }
+
+    @Test
+    void resumesExistingRunThroughTheSameStructuredEventStream() {
+        AgentRuntime runtime = mock(AgentRuntime.class);
+        AgentProperties properties = new AgentProperties();
+        when(runtime.resume(eq("run-1"), any(AgentEventListener.class))).thenAnswer(invocation -> {
+            AgentEventListener listener = invocation.getArgument(1);
+            listener.onEvent(new AgentEvent(
+                    "event-43", "run-1", "session-1", 43,
+                    AgentEventType.TOOL_COMPLETED, "approved tool completed", Map.of(), Instant.now()
+            ));
+            listener.onEvent(new AgentEvent(
+                    "event-44", "run-1", "session-1", 44,
+                    AgentEventType.RUN_COMPLETED, "done", Map.of(), Instant.now()
+            ));
+            return new AgentRuntimeResult(
+                    "run-1", "session-1", AgentRunState.COMPLETED, AgentStopReason.COMPLETED,
+                    "done", "", null, List.of()
+            );
+        });
+        DefaultStreamingAgentExecutor executor = new DefaultStreamingAgentExecutor(runtime, properties);
+
+        List<AgentStreamEvent> events = executor.resume("run-1")
+                .collectList()
+                .block(Duration.ofSeconds(2));
+
+        assertEquals(List.of("tool_completed", "run_completed"),
+                events.stream().map(AgentStreamEvent::type).toList());
+        assertTrue(events.stream().allMatch(event ->
+                event.traceId().equals("run-1") && event.conversationId().equals("session-1")));
+        verify(runtime).resume(eq("run-1"), any(AgentEventListener.class));
     }
 }
