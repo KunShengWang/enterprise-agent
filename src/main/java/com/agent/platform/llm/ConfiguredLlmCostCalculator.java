@@ -19,6 +19,7 @@ public class ConfiguredLlmCostCalculator implements LlmCostCalculator {
         if (usage == null) {
             return 0;
         }
+        // 从配置读价格（每百万 token 多少钱）
         AgentProperties.ModelPricing pricing = properties.getModelPricing();
         long cacheRead = Math.max(0, usage.cacheReadInputTokens());
         long cacheWrite = Math.max(0, usage.cacheWriteInputTokens());

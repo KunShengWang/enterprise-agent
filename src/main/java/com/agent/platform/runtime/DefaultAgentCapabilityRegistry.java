@@ -20,6 +20,7 @@ public class DefaultAgentCapabilityRegistry implements AgentCapabilityRegistry {
 
     public static final String SKILL_CATALOG = "skill_catalog";
 
+    // TODO 这块为什么采取这种形式，而不是使用 Spring AI 提供的配置类注册工具的方式 ToolCallback
     private static final ToolDefinition KNOWLEDGE_SEARCH_DEFINITION = new ToolDefinition(
             KNOWLEDGE_SEARCH,
             "Search the enterprise knowledge base. Use when the answer depends on internal policies, procedures or troubleshooting documents.",
@@ -46,6 +47,10 @@ public class DefaultAgentCapabilityRegistry implements AgentCapabilityRegistry {
         this.toolRegistry = toolRegistry;
     }
 
+    /**
+     * 列出 agent 的能力，也就是 agent 能访问的工具
+     * 包括本地定义的工具和 mcp 提供的工具
+     */
     @Override
     public List<ToolDefinition> listCapabilities() {
         List<ToolDefinition> capabilities = new ArrayList<>();

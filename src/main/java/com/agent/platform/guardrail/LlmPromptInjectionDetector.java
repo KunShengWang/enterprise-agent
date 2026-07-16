@@ -32,8 +32,13 @@ public class LlmPromptInjectionDetector implements PromptInjectionDetector {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 检测用户输入是否是不安全的操作
+     * 对输入内容的关键词 + 正则 + LLM 的双重检查
+     */
     @Override
     public GuardrailDecision detect(String input) {
+        // 关键词 + 正则的检查
         GuardrailDecision deterministic = deterministicDetector.detect(input);
         if (input == null || input.isBlank()) {
             return deterministic;

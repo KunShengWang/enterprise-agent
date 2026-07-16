@@ -28,6 +28,9 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
         this.properties = properties;
     }
 
+    /**
+     * 获取 session 租赁，防止同一 session 被多个 run 并发执行
+     */
     @Override
     public void acquireSessionLease(String sessionId,
                                     String runId,
@@ -37,32 +40,42 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
         Instant now = Instant.now();
         Instant leaseUntil = now.plus(normalizeDuration(leaseDuration));
         try (Connection connection = openConnection()) {
+            // 开启事务
             connection.setAutoCommit(false);
             try {
+                // ① 注册 run control（就是这段 SQL） 建控制记录
                 registerRunControl(connection, sessionId, runId, now);
+                /*
+                    ② 抢 session 租约 — 防止并发冲突
+                    租约获取有四种情况：
+                    1、无记录，直接插入，获取租约
+                    2、有记录，满足条件一，是同一个 owner，续约
+                    3、有记录，满足条件二，租约已经过期，抢走租约
+                    4、有记录，其他人还持有，不能获取租约，抛异常
+                 */
                 try (PreparedStatement statement = connection.prepareStatement("""
                         INSERT INTO agent_session_lease(session_id, owner_run_id, lease_until, updated_at)
                         VALUES (?, ?, ?, ?)
                         ON CONFLICT(session_id) DO UPDATE SET
-                            owner_run_id = EXCLUDED.owner_run_id,
-                            lease_until = EXCLUDED.lease_until,
+                            owner_run_id = EXCLUDED.owner_run_id, -- 换成新的持有者
+                            lease_until = EXCLUDED.lease_until, -- 换成新的过期时间
                             updated_at = EXCLUDED.updated_at
-                        WHERE agent_session_lease.owner_run_id = EXCLUDED.owner_run_id
-                           OR agent_session_lease.lease_until <= EXCLUDED.updated_at
-                        RETURNING owner_run_id
+                        WHERE agent_session_lease.owner_run_id = EXCLUDED.owner_run_id -- 同一个 session 的 owner
+                           OR agent_session_lease.lease_until <= EXCLUDED.updated_at -- 租约过期
+                        RETURNING owner_run_id -- 返回更新后的持有者 ID
                         """)) {
                     statement.setString(1, sessionId);
                     statement.setString(2, leaseOwnerId);
                     statement.setTimestamp(3, Timestamp.from(leaseUntil));
                     statement.setTimestamp(4, Timestamp.from(now));
                     try (ResultSet resultSet = statement.executeQuery()) {
-                        if (!resultSet.next()) {
+                        if (!resultSet.next()) {// ← RETURNING 没返回任何行
                             connection.rollback();
-                            throw new AgentSessionBusyException(sessionId);
+                            throw new AgentSessionBusyException(sessionId);// 租约被占
                         }
                     }
                 }
-                connection.commit();
+                connection.commit();// ①② 原子提交
             }
             catch (RuntimeException | SQLException exception) {
                 rollbackQuietly(connection);
@@ -74,6 +87,9 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
         }
     }
 
+    /**
+     * 更新 session 租约
+     */
     @Override
     public boolean renewSessionLease(String sessionId, String leaseOwnerId, Duration leaseDuration) {
         ensureSchema();
@@ -95,6 +111,9 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
         }
     }
 
+    /**
+     * 释放 session 租约
+     */
     @Override
     public void releaseSessionLease(String sessionId, String leaseOwnerId) {
         ensureSchema();
@@ -129,6 +148,9 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
         }
     }
 
+    /**
+     * 查看是否有 agent 的取消请求
+     */
     @Override
     public boolean cancellationRequested(String runId) {
         ensureSchema();

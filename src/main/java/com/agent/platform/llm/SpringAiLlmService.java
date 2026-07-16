@@ -174,13 +174,17 @@ public class SpringAiLlmService implements LlmService {
      * 调用 LLM 并在 LLM 调用失败时进行有限次重试
      */
     private ChatResponse callWithRetry(Prompt prompt) {
+        // LLM 调用最大重试次数
         int maxAttempts = Math.max(1, resilienceProperties.getLlm().getMaxAttempts());
         RuntimeException lastError = null;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            // 熔断检测器，如果处于熔断阶段，直接抛异常
             assertCircuitClosed();
             Future<ChatResponse> future = null;
             try {
+                // 异步调用是因为要使用 future.get() 的超时控制
                 future = callExecutor.submit(() -> requireChatModel().call(prompt));
+                // 5 秒到了还没返回 → 抛 TimeoutException → 走重试逻辑
                 ChatResponse response = future.get(
                         Math.max(1000, resilienceProperties.getLlm().getTimeoutMillis()),
                         TimeUnit.MILLISECONDS
@@ -190,6 +194,7 @@ public class SpringAiLlmService implements LlmService {
                 return response;
             }
             catch (TimeoutException exception) {
+                // 取消异步调用
                 cancelFuture(future);
                 lastError = new LlmCallException(
                         "MODEL_TIMEOUT",
@@ -227,6 +232,7 @@ public class SpringAiLlmService implements LlmService {
             }
             sleepBackoff(attempt);
         }
+        // 熔断计数器 +1
         recordCircuitFailure();
         throw lastError == null ? new IllegalStateException("LLM call failed") : lastError;
     }
@@ -282,9 +288,14 @@ public class SpringAiLlmService implements LlmService {
         }
     }
 
+    /**
+     * 熔断检测器，如果处于熔断阶段，直接抛异常
+     */
     private void assertCircuitClosed() {
+        // 熔断截止时间
         long openUntil = circuitOpenUntilEpochMillis.get();
         if (openUntil > System.currentTimeMillis()) {
+            // 熔断中，直接抛异常，不走网络
             throw new LlmCallException(
                     "MODEL_CIRCUIT_OPEN",
                     "模型服务熔断器处于打开状态，请稍后重试。",
@@ -292,13 +303,16 @@ public class SpringAiLlmService implements LlmService {
             );
         }
         if (openUntil > 0) {
+            // 时间到了，清除标记，允许重试（半开态）
             circuitOpenUntilEpochMillis.compareAndSet(openUntil, 0);
         }
     }
 
     private void recordCircuitFailure() {
+        // 失败阈值
         int threshold = Math.max(1, resilienceProperties.getLlm().getCircuitBreakerFailureThreshold());
         if (consecutiveFailures.incrementAndGet() >= threshold) {
+            // 连续失败 N 次 → 开熔断，比如持续 30 秒
             long openMillis = Math.max(1_000, resilienceProperties.getLlm().getCircuitBreakerOpenMillis());
             circuitOpenUntilEpochMillis.set(System.currentTimeMillis() + openMillis);
             consecutiveFailures.set(0);

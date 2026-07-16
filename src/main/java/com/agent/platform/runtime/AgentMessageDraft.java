@@ -4,9 +4,13 @@ import java.util.Map;
 
 /**
  * 尚未分配持久化标识和会话序号的消息草稿。
+ * AgentMessageDraft 是“准备写入会话时间线、但还没有持久化身份的消息草稿”。
+ * AgentMessageDraft（待保存）;AgentMessage（已保存）
+ * AgentMessageDraft：只有消息内容、类型、工具调用信息、预估 Token 等业务数据。
+ * AgentMessage：在草稿基础上，由存储层补充：messageId、sessionId、runId、会话内递增的 sequence、createdAt
  */
 public record AgentMessageDraft(
-        AgentMessageType type,
+        AgentMessageType type,// 消息的类型
         String content,
         String toolCallId,
         String toolName,

@@ -37,6 +37,9 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 把 AgentRunRecord 保存到数据库
+     */
     @Override
     public AgentRunRecord create(AgentRunRecord record) {
         ensureSchema();
@@ -47,6 +50,7 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
                          record_json, version, created_at, updated_at
                      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                      """)) {
+            // 给 sql 插入数据
             bindRun(statement, record);
             statement.executeUpdate();
             return record;
@@ -100,23 +104,29 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
         }
     }
 
+    /**
+     * 根据新的 AgentRunRecord 更新数据库
+     */
     @Override
     public AgentRunRecord update(String runId, UnaryOperator<AgentRunRecord> updater) {
         ensureSchema();
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
+                // 从数据库中加载出当前的 agent 运行状态 AgentRunRecord
                 AgentRunRecord current = loadRunForUpdate(connection, runId)
                         .orElseThrow(() -> new IllegalArgumentException("agent run not found: " + runId));
+                // 根据 AgentRequest 更新 AgentRunRecord
                 AgentRunRecord next = updater.apply(current)
                         .withVersion(current.version() + 1, Instant.now());
+                // 根据新的 AgentRunRecord 更新数据库
                 writeRun(connection, next);
-                connection.commit();
+                connection.commit();// ← 正常提交
                 return next;
             }
             catch (RuntimeException | SQLException exception) {
-                rollbackQuietly(connection);
-                throw exception;
+                rollbackQuietly(connection);// ← 事务失败，回滚
+                throw exception;// ← 抛出的是业务异常，不是回滚的异常
             }
         }
         catch (SQLException exception) {
@@ -151,6 +161,9 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
         }
     }
 
+    /**
+     * "工具调用 claim 就是分布式幂等锁——同一个 toolCallId 全局只执行一次，已经执行过的直接返回缓存结果；如果同时多个请求抢执行权，数据库行锁保证只有一个赢
+     */
     @Override
     public ToolExecutionClaim claim(String runId, ToolCallRequest request) {
         if (request == null || request.requestId() == null || request.requestId().isBlank()) {
@@ -160,28 +173,34 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
+                // ① 查数据库：这个 toolCallId 之前见过吗？
                 ToolExecutionRecord current = loadToolForUpdate(connection, request.requestId()).orElse(null);
                 if (current == null) {
+                    // ② 没见过 → 插入 RUNNING 记录 → 拿到执行权
                     insertTool(connection, ToolExecutionRecord.running(runId, request));
                     connection.commit();
-                    return ToolExecutionClaim.acquired();
+                    return ToolExecutionClaim.acquired();// ✅ 允许执行
                 }
                 if (!runId.equals(current.runId())) {
                     connection.commit();
+                    // ③ 被另一个 run 占用 → 拒绝
                     return ToolExecutionClaim.crossRunConflict(
                             "tool execution id already belongs to another run"
                     );
                 }
                 if (current.state() == ToolExecutionState.SUCCEEDED) {
                     connection.commit();
+                    // ④ 已经成功执行过 → 返回缓存结果
                     return ToolExecutionClaim.existing(current, "toolCallId already succeeded");
                 }
                 if (current.state() == ToolExecutionState.FAILED) {
+                    // ⑤ 上次失败了 → 允许重试
                     writeTool(connection, current.retrying());
                     connection.commit();
                     return ToolExecutionClaim.acquired();
                 }
                 connection.commit();
+                // ⑥ RUNNING 或 MANUAL_REVIEW → 正在进行中
                 return ToolExecutionClaim.existing(current, "toolCallId has uncertain or in-progress result");
             }
             catch (RuntimeException | SQLException exception) {
@@ -277,6 +296,9 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
         }
     }
 
+    /**
+     * 从 agent_run_state 表中读取 record_json 并反序列化为 AgentRunRecord
+     */
     private Optional<AgentRunRecord> loadRunForUpdate(Connection connection, String runId) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
                 "SELECT record_json FROM agent_run_state WHERE run_id = ? FOR UPDATE")) {
@@ -313,6 +335,9 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
         statement.setTimestamp(9, Timestamp.from(record.updatedAt()));
     }
 
+    /**
+     * 根据新的 AgentRunRecord 更新数据库
+     */
     private void writeRun(Connection connection, AgentRunRecord record) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 UPDATE agent_run_state

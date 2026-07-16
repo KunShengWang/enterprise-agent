@@ -41,6 +41,7 @@ public class McpProperties {
     }
 
     public List<Server> effectiveServers() {
+        // 从配置文件 yaml 中读取配置数据，组装成 Server，然后过滤后返回
         if (!servers.isEmpty()) {
             return servers.stream()
                     .filter(Server::isEnabled)

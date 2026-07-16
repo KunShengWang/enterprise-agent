@@ -73,6 +73,7 @@ public class AgentController {
         ));
     }
 
+    // TODO 返回是非流式的
     @PostMapping("/runs")
     public Mono<ApiResponse<AgentResponse>> run(@Valid @RequestBody AgentRequest request) {
         // @Valid 会在进入方法前校验 AgentRequest；这里先按 userId 做入口限流，

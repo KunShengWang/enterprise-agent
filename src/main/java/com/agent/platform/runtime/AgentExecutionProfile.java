@@ -6,11 +6,11 @@ import java.util.Set;
  * Runtime 内部可信的执行配置；不会从用户请求 metadata 反序列化。
  */
 public record AgentExecutionProfile(
-        String name,
-        String systemPrompt,
-        Set<String> allowedCapabilities,
-        AgentRunLimits limits,
-        boolean longTermMemoryEnabled
+        String name,// 执行配置名称
+        String systemPrompt,// 系统提示词
+        Set<String> allowedCapabilities,// agent 能使用的工具
+        AgentRunLimits limits,// agent 运行时的限制条件
+        boolean longTermMemoryEnabled// 启用长期内存存储
 ) {
 
     public AgentExecutionProfile {

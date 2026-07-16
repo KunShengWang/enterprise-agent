@@ -8,6 +8,9 @@ import java.util.List;
  */
 public interface MemoryService {
 
+    /**
+     * 根据用户问题保存长期记忆和用户画像
+     */
     void rememberLongTerm(String conversationId, String userId, MemoryMessage message);
 
     List<MemorySearchResult> recall(String conversationId, String userId, String query, int limit);

@@ -8,6 +8,9 @@ import java.util.List;
 
 public interface McpToolGateway {
 
+    /**
+     * 寻找服务商的工具
+     */
     List<ToolDefinition> discoverTools();
 
     ToolCallResult callTool(ToolCallRequest request);

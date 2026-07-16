@@ -47,17 +47,19 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
     public AgentToolRuntimeResult execute(String runId,
                                           String sessionId,
                                           String userId,
-                                          Map<String, Object> attributes,
+                                          Map<String, Object> attributes,// 刚开始请求传来的元数据
                                           AgentToolCall toolCall,
                                           ToolDefinition definition) {
         ToolCallRequest request = new ToolCallRequest(toolCall.toolName(), toolCall.toolCallId(), toolCall.arguments());
         ToolPolicyContext policyContext = ToolPolicyContext.from(runId, sessionId, userId, attributes);
+        // 工具调用审查
         GuardrailDecision policy = guardrailService.checkToolCall(definition, request, policyContext);
         if (policy.action() == GuardrailAction.BLOCK) {
             return denied(request, policy);
         }
         if (policy.action() == GuardrailAction.REQUIRE_APPROVAL) {
             String approvalId = UUID.randomUUID().toString();
+            // TODO 不能像 codex 一样在执行的过程中让用户批准吗？
             approvalService.requestApproval(new ApprovalRequest(
                     approvalId,
                     runId,
@@ -106,7 +108,9 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                                                   ToolCallRequest request,
                                                   GuardrailAction policyAction,
                                                   String policyReason) {
+        // "工具调用 claim 就是分布式幂等锁——同一个 toolCallId 全局只执行一次，已经执行过的直接返回缓存结果；如果同时多个请求抢执行权，数据库行锁保证只有一个赢
         ToolExecutionClaim claim = toolExecutionStore.claim(runId, request);
+        // 没拿到执行权
         if (!claim.claimed()) {
             if (claim.state() == ToolExecutionState.SUCCEEDED && claim.cachedResult() != null) {
                 return new AgentToolRuntimeResult(
@@ -129,7 +133,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                     true
             );
         }
-
+        // 拿到执行权 → 真正执行
         ToolCallResult result = executeWithRetry(request);
         try {
             if (result.success()) {
@@ -166,6 +170,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         ToolCallResult lastResult = null;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
+                // 工具执行
                 lastResult = capabilityExecutor.execute(request);
             }
             catch (RuntimeException exception) {

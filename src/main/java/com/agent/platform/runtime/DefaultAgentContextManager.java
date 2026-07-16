@@ -55,33 +55,44 @@ public class DefaultAgentContextManager implements AgentContextManager {
 
     @Override
     public AgentContextView project(String sessionId, String userId, String query, long maxTokens) {
+        // 从数据库加载有限的历史消息
         List<AgentMessage> timeline = timelineStore.loadMessages(sessionId, MAX_TIMELINE_MESSAGES);
         if (timeline.isEmpty()) {
             return new AgentContextView(List.of(), 0, 0, false);
         }
         long budget = Math.max(1, maxTokens);
+        // 获取最新的消息摘要
         AgentMessage latestSummary = latestSummary(timeline);
+        // 当前最新摘要覆盖到的消息序号上限
         long coveredThrough = coveredThrough(latestSummary);
+        // 活跃消息 = 序号 > 57 的（不在摘要范围里的新消息）
         List<AgentMessage> activeMessages = timeline.stream()
-                .filter(message -> message.type() != AgentMessageType.CONTEXT_SUMMARY)
-                .filter(message -> message.sequence() > coveredThrough)
+                .filter(message -> message.type() != AgentMessageType.CONTEXT_SUMMARY)// 排除摘要本身
+                .filter(message -> message.sequence() > coveredThrough)// 只取未被覆盖的新消息
                 .toList();
 
         long selectedTokens = 0;
         List<MessageUnit> selectedRecent = new ArrayList<>();
+        // 把活跃的消息变为最小的上下文裁剪消息单元
         List<MessageUnit> units = buildUnits(activeMessages);
         long summaryTokens = latestSummary == null ? 0 : tokens(latestSummary);
+        // recentBudget = 总预算 - 摘要占用的 token（比如 3000 个 token 留给最近消息）
         long recentBudget = Math.max(1, budget - summaryTokens);
+        // 用 token 预算"从后往前"挑选最近的消息——越新的优先级越高，超出预算的老消息就被丢弃。
         for (int index = units.size() - 1; index >= 0; index--) {
             MessageUnit unit = units.get(index);
+            // ① 不完整的 unit 跳过（如缺了 tool_result 的 tool_call）
             if (!unit.complete()) {
                 continue;
             }
+            // ② 加上这个 unit 超预算了，且已经至少选了一个 → 停止
             if (selectedTokens + unit.tokens() > recentBudget && !selectedRecent.isEmpty()) {
                 break;
             }
+            // ③ 选中这个 unit
             selectedRecent.add(unit);
             selectedTokens += unit.tokens();
+            // ④ 预算填满了 → 停止
             if (selectedTokens >= recentBudget) {
                 break;
             }
@@ -95,6 +106,7 @@ public class DefaultAgentContextManager implements AgentContextManager {
         }
         selectedRecent.forEach(unit -> projected.addAll(unit.messages()));
 
+        // 加载长期记忆和用户资料，转为 AgentMessage
         AgentMessage memoryContext = longTermMemoryContext(sessionId, userId, query);
         if (memoryContext != null && selectedTokens + tokens(memoryContext) <= budget) {
             projected.add(0, memoryContext);
@@ -200,13 +212,19 @@ public class DefaultAgentContextManager implements AgentContextManager {
         ));
     }
 
+    /**
+     * 把活跃的消息变为最小的消息单元
+     */
     private List<MessageUnit> buildUnits(List<AgentMessage> messages) {
         Map<String, AgentMessage> calls = new HashMap<>();
         Map<String, AgentMessage> results = new HashMap<>();
+        // 判断消息类型并存入对应的 Map 集合
         for (AgentMessage message : messages) {
+            // 消息是工具调用消息
             if (message.isToolCall()) {
                 calls.put(message.toolCallId(), message);
             }
+            // 消息是工具调用结果消息
             else if (message.isToolResult()) {
                 results.put(message.toolCallId(), message);
             }
@@ -214,6 +232,7 @@ public class DefaultAgentContextManager implements AgentContextManager {
         Set<String> handledToolCallIds = new HashSet<>();
         List<MessageUnit> units = new ArrayList<>();
         for (AgentMessage message : messages) {
+            // 消息既不是工具调用消息也不是工具调用结果消息
             if (!message.isToolCall() && !message.isToolResult()) {
                 units.add(new MessageUnit(List.of(message), tokens(message), true));
                 continue;
@@ -223,6 +242,7 @@ public class DefaultAgentContextManager implements AgentContextManager {
             }
             AgentMessage call = calls.get(message.toolCallId());
             AgentMessage result = results.get(message.toolCallId());
+            // 把工具调用消息和工具调用结果消息存为最小的消息单元 MessageUnit
             if (call != null && result != null) {
                 List<AgentMessage> pair = List.of(call, result).stream()
                         .sorted(Comparator.comparingLong(AgentMessage::sequence))
@@ -238,13 +258,19 @@ public class DefaultAgentContextManager implements AgentContextManager {
         return units;
     }
 
+    /**
+     * 获取最新的消息摘要
+     */
     private AgentMessage latestSummary(List<AgentMessage> timeline) {
         return timeline.stream()
-                .filter(message -> message.type() == AgentMessageType.CONTEXT_SUMMARY)
-                .max(Comparator.comparingLong(AgentMessage::sequence))
+                .filter(message -> message.type() == AgentMessageType.CONTEXT_SUMMARY)// 只保留摘要消息
+                .max(Comparator.comparingLong(AgentMessage::sequence))// 只返回消息序号最大的一个
                 .orElse(null);
     }
 
+    /**
+     * 当前最新摘要覆盖到的消息序号上限。 用于判断"哪些历史消息已经被摘要消化了，哪些还保留在活跃窗口里"。
+     */
     private long coveredThrough(AgentMessage summary) {
         if (summary == null) {
             return 0;
@@ -290,11 +316,16 @@ public class DefaultAgentContextManager implements AgentContextManager {
                 + tokenEstimator.estimate(String.valueOf(message.metadata()));
     }
 
+    /**
+     * 加载长期记忆和用户资料，转为 AgentMessage
+     */
     private AgentMessage longTermMemoryContext(String sessionId, String userId, String query) {
         if (query == null || query.isBlank()) {
             return null;
         }
+        // 根据用户当前问题 query，去长期记忆库中用向量语义相似度 + 关键词命中率双重打分，找回最相关的历史记忆
         List<MemorySearchResult> recalled = memoryService.recall(sessionId, userId, query, 8);
+        // 加载用户资料
         UserProfile profile = memoryService.loadUserProfile(userId);
         if (recalled.isEmpty() && profile.items().isEmpty()) {
             return null;
@@ -335,6 +366,14 @@ public class DefaultAgentContextManager implements AgentContextManager {
         return message.messageId().startsWith("memory-context-");
     }
 
+    /**
+     * MessageUnit 是 DefaultAgentContextManager 内部使用的“上下文裁剪最小单位”。
+     * 它主要解决：上下文裁剪时不能把工具调用和工具结果拆开。
+     * 三个字段的作用：
+        messages：这个单元包含的消息；普通消息为一条，工具单元为两条。
+        tokens：整个单元的 Token 总量，用于计算上下文预算。
+        complete：工具调用与结果是否完整配对。
+     */
     private record MessageUnit(List<AgentMessage> messages, long tokens, boolean complete) {
 
         private long firstSequence() {

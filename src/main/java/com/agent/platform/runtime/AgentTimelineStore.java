@@ -8,17 +8,29 @@ import java.util.Optional;
  */
 public interface AgentTimelineStore {
 
+    /**
+     * 开启聊天窗口，并确认下一个消息和事件的序号
+     */
     AgentSession openSession(String sessionId, String userId);
 
     Optional<AgentSession> findSession(String sessionId);
 
+    /**
+     * 往数据库中插入消息
+     */
     List<AgentMessage> appendMessages(String sessionId,
                                       String userId,
                                       String runId,
                                       List<AgentMessageDraft> messages);
 
+    /**
+     * 从数据库加载有限的历史消息
+     */
     List<AgentMessage> loadMessages(String sessionId, int limit);
 
+    /**
+     * 往数据库中添加 agent 事件
+     */
     AgentEvent appendEvent(String sessionId,
                            String userId,
                            String runId,

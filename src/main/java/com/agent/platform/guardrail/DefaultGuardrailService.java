@@ -31,6 +31,9 @@ public class DefaultGuardrailService implements GuardrailService {
         this.auditRecorder = auditRecorder;
     }
 
+    /**
+     * 输入 Guardrail
+     */
     @Override
     public GuardrailDecision checkInput(String userQuestion) {
         // 检测用户输入是否是不安全的操作

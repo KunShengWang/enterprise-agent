@@ -6,6 +6,16 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * ToolPolicyContext 是“工具权限检查所需的身份和运行上下文”
+ * 各字段作用：
+    runId：当前 Agent 运行 ID，便于审计和追踪。
+    sessionId：当前会话 ID。
+    userId：发起请求的用户。
+    tenantId：用户所属租户，用于租户级工具权限。
+    roles：已经认证的角色，例如 admin。
+    attributes：请求携带的其他可信身份元数据。
+ */
 public record ToolPolicyContext(
         String runId,
         String sessionId,

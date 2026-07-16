@@ -6,13 +6,13 @@ import com.agent.platform.config.AgentProperties;
  * 一次 Agent Run 的硬性资源边界。
  */
 public record AgentRunLimits(
-        int maxTurns,
-        int maxModelCalls,
-        int maxToolCalls,
-        long maxInputTokens,
-        long maxOutputTokens,
-        double maxEstimatedCost,
-        long maxRunDurationMillis
+        int maxTurns,// 最大轮次
+        int maxModelCalls,// 最大模型调用次数
+        int maxToolCalls,// 最大工具调用次数
+        long maxInputTokens,// 最大输入 token
+        long maxOutputTokens,// 最大输出 token
+        double maxEstimatedCost,// 最大预估成本
+        long maxRunDurationMillis// 最大运行时间（毫秒）
 ) {
 
     public AgentRunLimits {

@@ -7,6 +7,11 @@ import com.agent.platform.tool.ToolCallResult;
 import java.time.Instant;
 import java.util.List;
 
+/**
+ * AgentRunRecord 记录的是：某一次 Agent Run 当前执行到哪里、已经消耗多少预算、调用过哪些工具、是否等待审批，以及最终执行结果。
+ * 它可以理解为一次 Agent 执行的“状态快照 + 恢复检查点”。
+ * 对应数据库 agent_run_state
+ */
 public record AgentRunRecord(
         String runId,
         String traceId,
@@ -18,14 +23,14 @@ public record AgentRunRecord(
         AgentRunState state,
         AgentRunPhase phase,
         String approvalId,
-        ToolCallRequest pendingToolCall,
+        ToolCallRequest pendingToolCall,// 当前准备执行的工具调用
         List<ToolCallResult> toolResults,
         List<String> usedTools,
         boolean usedRag,
         boolean blockedByGuardrail,
         String answer,
         String failureReason,
-        int resumeCount,
+        int resumeCount,// 这个 Run 被恢复过多少次
         long version,
         Instant createdAt,
         Instant updatedAt
@@ -80,6 +85,9 @@ public record AgentRunRecord(
         );
     }
 
+    /**
+     * 根据 AgentRequest 更新 AgentRunRecord
+     */
     public AgentRunRecord withRequest(AgentRequest nextRequest) {
         return new AgentRunRecord(
                 runId, traceId, conversationId,

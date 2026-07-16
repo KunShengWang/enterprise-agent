@@ -47,20 +47,29 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 开启聊天窗口，并确认下一个消息和事件的序号
+     */
     @Override
     public AgentSession openSession(String sessionId, String userId) {
+        // ① 建表（幂等）
         ensureSchema();
+        // ② 标准化
         String normalizedSessionId = normalize(sessionId, DEFAULT_SESSION_ID);
         String normalizedUserId = normalize(userId, DEFAULT_USER_ID);
         try (Connection connection = openConnection()) {
+            // ③ 开启事务
             connection.setAutoCommit(false);
             try {
+                // ④ 确保会话行存在
                 ensureSession(connection, normalizedSessionId, normalizedUserId);
-                AgentSession session = readSession(connection, normalizedSessionId, false)
+                // ⑤ 读当前状态
+                AgentSession session = readSession(connection, normalizedSessionId, false)// 读不加行锁
                         .orElseThrow(() -> new AgentStorageException(
                                 "Failed to create agent session: " + normalizedSessionId,
                                 new IllegalStateException("session row is missing after upsert")
                         ));
+                // ⑥ 提交
                 connection.commit();
                 return session;
             }
@@ -88,6 +97,9 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
         }
     }
 
+    /**
+     * 往数据库中插入消息
+     */
     @Override
     public List<AgentMessage> appendMessages(String sessionId,
                                              String userId,
@@ -104,20 +116,25 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
             connection.setAutoCommit(false);
             try {
                 ensureSession(connection, normalizedSessionId, normalizedUserId);
+                // 从数据库中读取当前 session 信息，包含全部字段
                 AgentSession lockedSession = readSession(connection, normalizedSessionId, true)
                         .orElseThrow(() -> new AgentStorageException(
                                 "Agent session disappeared: " + normalizedSessionId,
                                 new IllegalStateException("session row is missing while appending messages")
                         ));
+                // 验证工具调用和工具结果的一一对应关系，保证写入的每一条 TOOL_RESULT 都有对应的 ASSISTANT_TOOL_CALL
                 validateToolPairs(connection, normalizedSessionId, messages);
 
                 long nextSequence = lockedSession.nextMessageSequence();
                 List<AgentMessage> persisted = new ArrayList<>(messages.size());
                 for (AgentMessageDraft draft : messages) {
+                    // 把 AgentMessageDraft 转为 AgentMessage
                     AgentMessage message = toMessage(normalizedSessionId, normalizedRunId, nextSequence++, draft);
+                    // 把 AgentMessage 插入数据库
                     insertMessage(connection, message);
                     persisted.add(message);
                 }
+                // 更新数据库中 next_message_sequence 字段 + 1
                 updateMessageCursor(connection, normalizedSessionId, nextSequence);
                 connection.commit();
                 return List.copyOf(persisted);
@@ -132,6 +149,9 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
         }
     }
 
+    /**
+     * 从数据库加载有限的历史消息
+     */
     @Override
     public List<AgentMessage> loadMessages(String sessionId, int limit) {
         if (sessionId == null || sessionId.isBlank()) {
@@ -166,6 +186,9 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
         }
     }
 
+    /**
+     * 往数据库中添加 agent 事件
+     */
     @Override
     public AgentEvent appendEvent(String sessionId,
                                   String userId,
@@ -197,7 +220,9 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
                         event.payload(),
                         Instant.now()
                 );
+                // 把 agent 时间插入数据库
                 insertEvent(connection, persisted);
+                // 更新数据库中 next_event_sequence 字段 + 1
                 updateEventCursor(connection, normalizedSessionId, persisted.sequence() + 1);
                 connection.commit();
                 return persisted;
@@ -257,16 +282,22 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
         }
     }
 
+    /**
+     * 验证工具调用和工具结果的一一对应关系，保证写入的每一条 TOOL_RESULT 都有对应的 ASSISTANT_TOOL_CALL
+     */
     private void validateToolPairs(Connection connection,
                                    String sessionId,
                                    List<AgentMessageDraft> messages) throws SQLException {
         Set<String> callsInBatch = new HashSet<>();
         for (AgentMessageDraft draft : messages) {
+            // 规则 ①：工具调用不能重复（本批次内 + 历史数据中）
             if (draft.type() == AgentMessageType.ASSISTANT_TOOL_CALL) {
+                // 如果 set 集合插入失败 || 工具调用已经在数据库中存在
                 if (!callsInBatch.add(draft.toolCallId()) || toolCallExists(connection, sessionId, draft.toolCallId())) {
                     throw new IllegalArgumentException("duplicate tool call message: " + draft.toolCallId());
                 }
             }
+            // 规则 ②：工具结果必须匹配一个存在的工具调用
             if (draft.type() == AgentMessageType.TOOL_RESULT
                     && !callsInBatch.contains(draft.toolCallId())
                     && !toolCallExists(connection, sessionId, draft.toolCallId())) {
@@ -275,6 +306,9 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
         }
     }
 
+    /**
+     * select 1 只判断行是否存在，不取任何列数据
+     */
     private boolean toolCallExists(Connection connection, String sessionId, String toolCallId) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT 1 FROM agent_message
@@ -283,11 +317,14 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
             statement.setString(1, sessionId);
             statement.setString(2, toolCallId);
             try (ResultSet resultSet = statement.executeQuery()) {
-                return resultSet.next();
+                return resultSet.next();// 有下一行 → true；没有 → false
             }
         }
     }
 
+    /**
+     * 把 AgentMessageDraft 转为 AgentMessage
+     */
     private AgentMessage toMessage(String sessionId,
                                    String runId,
                                    long sequence,
@@ -308,6 +345,9 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
         );
     }
 
+    /**
+     * 把 AgentMessage 插入数据库
+     */
     private void insertMessage(Connection connection, AgentMessage message) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 INSERT INTO agent_message(
@@ -388,6 +428,9 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
         }
     }
 
+    /**
+     * 从数据库中读取当前 session 信息，包含全部字段
+     */
     private Optional<AgentSession> readSession(Connection connection,
                                                String sessionId,
                                                boolean forUpdate) throws SQLException {
@@ -396,7 +439,7 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
                        version, created_at, updated_at
                 FROM agent_session
                 WHERE session_id = ?
-                """ + (forUpdate ? " FOR UPDATE" : "");
+                """ + (forUpdate ? " FOR UPDATE" : "");// 如果 sql 加上  FOR UPDATE 表示对该行加上行锁
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, sessionId);
             try (ResultSet resultSet = statement.executeQuery()) {
@@ -406,8 +449,8 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
                 return Optional.of(new AgentSession(
                         resultSet.getString("session_id"),
                         resultSet.getString("user_id"),
-                        resultSet.getLong("next_message_sequence"),
-                        resultSet.getLong("next_event_sequence"),
+                        resultSet.getLong("next_message_sequence"),// 下一条消息的序号
+                        resultSet.getLong("next_event_sequence"),// 下一个事件的序号
                         resultSet.getLong("version"),
                         resultSet.getTimestamp("created_at").toInstant(),
                         resultSet.getTimestamp("updated_at").toInstant()
@@ -416,14 +459,23 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
         }
     }
 
+    /**
+     * 更新数据库中 next_message_sequence 字段 + 1
+     */
     private void updateMessageCursor(Connection connection, String sessionId, long nextSequence) throws SQLException {
         updateCursor(connection, sessionId, "next_message_sequence", nextSequence);
     }
 
+    /**
+     * 更新数据库中 next_event_sequence 字段 + 1
+     */
     private void updateEventCursor(Connection connection, String sessionId, long nextSequence) throws SQLException {
         updateCursor(connection, sessionId, "next_event_sequence", nextSequence);
     }
 
+    /**
+     * 更新数据库中 next_message_sequence 或者 next_event_sequence 字段 + 1
+     */
     private void updateCursor(Connection connection,
                               String sessionId,
                               String column,

@@ -14,6 +14,7 @@ public class DeterministicPromptInjectionSignalDetector implements PromptInjecti
 
     private final PromptInputNormalizer normalizer;
 
+    // 关键词黑名单
     private final List<String> injectionPhrases = List.of(
             "忽略之前的指令",
             "忽略之前所有指令",
@@ -32,6 +33,7 @@ public class DeterministicPromptInjectionSignalDetector implements PromptInjecti
             "dump secrets"
     );
 
+    // 正则模式
     private final List<Pattern> injectionPatterns = List.of(
             Pattern.compile("忽略.*(指令|规则|系统提示)", Pattern.CASE_INSENSITIVE),
             Pattern.compile("(输出|泄露|展示|打印).*(系统提示|系统提示词|内部工具|工具配置|开发者消息)", Pattern.CASE_INSENSITIVE),
@@ -43,6 +45,10 @@ public class DeterministicPromptInjectionSignalDetector implements PromptInjecti
         this.normalizer = normalizer;
     }
 
+    /**
+     * 检测用户输入是否是不安全的操作
+     * 对输入内容的关键词 + 正则的检查
+     */
     @Override
     public GuardrailDecision detect(String input) {
         NormalizedPrompt normalizedPrompt = normalizer.normalize(input);

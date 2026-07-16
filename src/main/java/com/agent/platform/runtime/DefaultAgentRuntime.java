@@ -115,27 +115,37 @@ public class DefaultAgentRuntime implements AgentRuntime {
         AgentExecutionProfile profile = executionProfile == null
                 ? defaultExecutionProfile()
                 : executionProfile;
+        // 该接口是同步接口，使用空监听器，也就是如果有事件发送不做任何处理（不推送前端）
         AgentEventListener effectiveListener = listener == null ? AgentEventListener.NOOP : listener;
+        // 多轮对话的上下文标识——同一会话所有消息共享
         String sessionId = normalize(originalRequest.conversationId(), DEFAULT_SESSION_ID);
+        // 用户身份标识——用于画像、权限、限流
         String userId = normalize(originalRequest.userId(), DEFAULT_USER_ID);
+        // 	本次 Agent 执行的唯一标识——串联整条执行链路
         String runId = UUID.randomUUID().toString();
+        // 并发租约锁的持有者 ID——防止同一 session 被多个 run 并发执行
         String leaseOwnerId = newLeaseOwnerId(runId);
+        // agent 运行预算
         AgentRunBudget budget = new AgentRunBudget(profile.limits());
+        // 获取 session 租约，这样就能把请求的结果打印在当前的窗口上
         acquireRun(sessionId, runId, leaseOwnerId, budget);
         boolean runCreated = false;
         try {
+            // 开启 session 会话
             timelineStore.openSession(sessionId, userId);
+            // 创建 AgentRunRecord
             runStore.create(AgentRunRecord.create(
                     runId, runId, sessionId, originalRequest, profile, budget.snapshot()
             ));
             runCreated = true;
+            // 往数据库中添加 agent 事件
             publish(sessionId, userId, runId, AgentEventType.RUN_STARTED,
                     "agent run started", Map.of(
                             "question", originalRequest.question(),
                             "profile", profile.name(),
                             "allowedCapabilities", profile.allowedCapabilities()
                     ), effectiveListener);
-
+            // 输入 Guardrail
             GuardrailDecision inputDecision = guardrailService.checkInput(originalRequest.question());
             if (inputDecision.action() == GuardrailAction.BLOCK) {
                 return finish(
@@ -158,14 +168,18 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     && inputDecision.safeContent() != null
                     ? inputDecision.safeContent()
                     : originalRequest.question();
+            // 构建真正的 agent 请求，主要是替换用户问题为安全问题
             AgentRequest request = new AgentRequest(sessionId, userId, safeQuestion, originalRequest.metadata());
             if (!safeQuestion.equals(originalRequest.question())) {
+                // 根据新的 AgentRunRecord 更新数据库
                 runStore.update(runId, current -> current.withRequest(request));
             }
+            // 往数据库中插入消息
             timelineStore.appendMessages(sessionId, userId, runId, List.of(
                     AgentMessageDraft.user(safeQuestion, tokenEstimator.estimate(safeQuestion))
             ));
             if (profile.longTermMemoryEnabled()) {
+                // 根据用户问题保存长期记忆和用户画像
                 memoryService.rememberLongTerm(sessionId, userId, new MemoryMessage("user", safeQuestion, Instant.now()));
             }
             return executeLoop(request, runId, leaseOwnerId, sessionId, userId, budget,
@@ -224,6 +238,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
             List<String> usedTools = new ArrayList<>(claimed.usedTools());
             budget.resumeExecution();
             synchronizeCancellation(runId, budget);
+            // 在 agent 的执行轮次之前判断是否取消 agent
             Optional<AgentStopReason> resumeStop = budget.beforeTurn();
             if (resumeStop.isPresent()) {
                 return finishBudgetStop(claimed.request(), runId, sessionId, userId, resumeStop.get(),
@@ -344,6 +359,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                            AgentEventListener listener) {
         int contextOverflowRetries = 0;
         while (true) {
+            // 更新 session 租约（续约），避免 agent 执行时间过长导致租约丢失，然后其他的请求会把当前的 session 写脏
             if (!runControlStore.renewSessionLease(sessionId, leaseOwnerId, sessionLeaseDuration())) {
                 return finish(
                         runId, sessionId, userId, AgentRunState.FAILED, AgentStopReason.INTERNAL_ERROR,
@@ -351,16 +367,19 @@ public class DefaultAgentRuntime implements AgentRuntime {
                         toolResults, usedTools, usedRag, false, budget, listener
                 );
             }
+            // 查看是否有 agent 的取消请求，有取消请求的话就不往下执行了
             synchronizeCancellation(runId, budget);
+            // 在 agent 的执行轮次之前判断是否取消 agent
             Optional<AgentStopReason> turnStop = budget.beforeTurn();
             if (turnStop.isPresent()) {
                 return finishBudgetStop(request, runId, sessionId, userId, turnStop.get(),
                         toolResults, usedTools, usedRag, budget, listener);
             }
             budget.recordTurnStarted();
+            // 把 Agent 执行过程中的"当前快照"持久化到数据库，保证中断后可以恢复，也可以从外部监控当前执行进度
             checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
                     toolResults, usedTools, usedRag, budget);
-
+            // 计算上下文消息预算
             long contextTokenBudget = contextMessageBudget(profile);
             AgentContextView context = contextManager.project(
                     sessionId,
@@ -369,6 +388,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     contextTokenBudget
             );
             if (context.omittedMessages() > 0) {
+                // 上下文压缩
                 context = contextManager.compact(
                         sessionId, userId, runId, request.question(), contextTokenBudget, "context_budget"
                 );
@@ -389,8 +409,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
                         toolResults, usedTools, usedRag, false, budget, listener
                 );
             }
-
+            // 查看是否有 agent 的取消请求
             synchronizeCancellation(runId, budget);
+            // 在模型调用之前判断是否取消 agent
             Optional<AgentStopReason> modelStop = budget.beforeModelCall();
             if (modelStop.isPresent()) {
                 return finishBudgetStop(request, runId, sessionId, userId, modelStop.get(),
@@ -415,6 +436,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     break;
                 }
                 catch (RuntimeException modelFailure) {
+                    // 判断是否是上下文溢出异常
                     boolean contextOverflow = isContextOverflow(modelFailure);
                     publish(sessionId, userId, runId, AgentEventType.MODEL_FAILED,
                             contextOverflow ? "model rejected context" : "model turn failed",
@@ -431,6 +453,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                     toolResults, usedTools, usedRag, budget, listener);
                         }
                     }
+                    // ============ 上下文溢出处理 ============
                     if (contextOverflow
                             && contextOverflowRetries < Math.max(0, properties.getMaxContextOverflowRetries())) {
                         contextOverflowRetries++;
@@ -440,10 +463,11 @@ public class DefaultAgentRuntime implements AgentRuntime {
                             return finishBudgetStop(request, runId, sessionId, userId, retryStop.get(),
                                     toolResults, usedTools, usedRag, budget, listener);
                         }
+                        // ① 压缩上下文，预算减半
                         long retryBudget = Math.max(1, contextTokenBudget / 2);
                         context = contextManager.compact(
                                 sessionId, userId, runId, request.question(), retryBudget,
-                                "provider_context_overflow"
+                                "provider_context_overflow"// ← 压缩原因
                         );
                         publish(sessionId, userId, runId, AgentEventType.CONTEXT_COMPACTED,
                                 "provider rejected context; compacted before bounded retry",
@@ -454,6 +478,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                         "estimatedTokens", context.estimatedTokens(),
                                         "omittedMessages", context.omittedMessages()
                                 ), listener);
+                        // ② 压缩后还是超 → 直接放弃
                         if (context.estimatedTokens() > retryBudget || context.omittedMessages() > 0) {
                             return finish(
                                     runId, sessionId, userId, AgentRunState.FAILED,
@@ -468,6 +493,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                 listener);
                         continue;
                     }
+                    // 重试次数用完 → 放弃
                     if (contextOverflow) {
                         budget.recordModelCall(new LlmUsage(0, 0, 0, 0, 0, "", "context-overflow"), 0);
                     }
@@ -483,7 +509,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     );
                 }
             }
+            //  LLM 调用了多少 token
             LlmUsage effectiveUsage = effectiveUsage(modelTurn, context);
+            //  LLM 调用花了多少钱
             double modelCallCost = costCalculator.estimate(effectiveUsage);
             budget.recordModelCall(effectiveUsage, modelCallCost);
             checkpoint(runId, AgentRunPhase.MODEL_CALL, null,
@@ -506,12 +534,12 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 return finishBudgetStop(request, runId, sessionId, userId, asynchronousStop.get(),
                         toolResults, usedTools, usedRag, budget, listener);
             }
-
+            // 本次 LLM 调用没有返回工具调用，直接对本地 LLM 答案做护栏输出并添加 LLM 返回消息，然后返回结果
             if (!modelTurn.hasToolCalls()) {
                 return finishFinalAnswer(request, runId, sessionId, userId, modelTurn.assistantText(),
                         toolResults, usedTools, usedRag, budget, listener);
             }
-
+            // 添加 LLM 返回消息
             if (!modelTurn.assistantText().isBlank()) {
                 timelineStore.appendMessages(sessionId, userId, runId, List.of(
                         new AgentMessageDraft(
@@ -533,13 +561,14 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     return finishBudgetStop(request, runId, sessionId, userId, toolStop.get(),
                             toolResults, usedTools, usedRag, budget, listener);
                 }
-                String modelToolCallId = rawCall.toolCallId();
-                AgentToolCall call = assignExecutionId(rawCall);
+                String modelToolCallId = rawCall.toolCallId();       // DeepSeek 返回的原始 ID，如 "call_abc123"
+                AgentToolCall call = assignExecutionId(rawCall);     // 项目自己的 UUID，如 "f3a8-4b12-..."
                 ToolCallRequest checkpointCall = new ToolCallRequest(
                         call.toolName(), call.toolCallId(), call.arguments()
                 );
                 checkpoint(runId, AgentRunPhase.EXECUTING_TOOL, checkpointCall,
                         toolResults, usedTools, usedRag, budget);
+                // 添加工具调用消息
                 timelineStore.appendMessages(sessionId, userId, runId, List.of(
                         AgentMessageDraft.toolCall(
                                 call.toolCallId(),
@@ -583,7 +612,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                             "unknown capability returned to model", toolResultPayload(call.toolCallId(), unknown), listener);
                     continue;
                 }
-
+                // 工具调用
                 AgentToolRuntimeResult execution = toolRuntime.execute(
                         runId,
                         sessionId,
@@ -642,6 +671,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
 
                 budget.recordToolCall();
                 ToolCallResult toolResult = execution.result();
+                // 把工具调用结果存入数据库
                 ToolCallResult projectedToolResult = appendToolResult(
                         sessionId, userId, runId, call.toolCallId(), toolResult,
                         execution.status() == AgentToolExecutionStatus.COMPLETED
@@ -784,6 +814,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
                         && toolCallId.equals(message.toolCallId()));
     }
 
+    /**
+     * 记录 AgentRunBudget 快照然后更新 AgentRunRecord 并把数据库中的数据更新
+     */
     private void checkpoint(String runId,
                             AgentRunPhase phase,
                             ToolCallRequest pendingToolCall,
@@ -793,6 +826,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                             AgentRunBudget budget) {
         List<ToolCallResult> persistedResults = List.copyOf(toolResults);
         List<String> persistedTools = List.copyOf(usedTools);
+        // 记录当前的快照
         AgentRunBudgetSnapshot snapshot = budget.snapshot();
         runStore.update(runId, current -> current.checkpoint(
                 phase, pendingToolCall, persistedResults, persistedTools, usedRag, snapshot
@@ -967,24 +1001,30 @@ public class DefaultAgentRuntime implements AgentRuntime {
     }
 
     private LlmUsage effectiveUsage(AgentModelTurn turn, AgentContextView context) {
+        // ① API 返回了真实 token 数 → 直接用
         if (turn.usage() != null && turn.usage().hasTokenUsage()) {
             return turn.usage();
         }
+        // ② API 没返回 token 数（部分模型不返回） → 项目自己估算
         long output = tokenEstimator.estimate(turn.rawResponse());
         return new LlmUsage(
-                context.estimatedTokens(),
-                output,
-                context.estimatedTokens() + output,
+                context.estimatedTokens(),// prompt token = 我们算的上下文大小
+                output,// output token = 估的回答长度
+                context.estimatedTokens() + output,// total
                 0,
                 0,
                 turn.usage() == null ? "" : turn.usage().model(),
-                "runtime-estimate"
+                "runtime-estimate"// 标记：这是估算值，不是真实值
         );
     }
 
+    /**
+     * 上下文消息预算
+     */
     private long contextMessageBudget(AgentExecutionProfile profile) {
+        // token 估算
         long staticTokens = tokenEstimator.estimate(profile.systemPrompt()) + 700;
-        for (ToolDefinition definition : capabilitiesFor(profile)) {
+        for (ToolDefinition definition : capabilitiesFor(profile)) {// 保留允许调用的工具
             staticTokens += tokenEstimator.estimate(definition.name())
                     + tokenEstimator.estimate(definition.description())
                     + tokenEstimator.estimate(definition.inputSchema());
@@ -996,13 +1036,20 @@ public class DefaultAgentRuntime implements AgentRuntime {
         return Math.max(1, Math.min(profile.limits().maxInputTokens(), availableWindow));
     }
 
+    /**
+     * 保留允许调用的工具
+     */
     private List<ToolDefinition> capabilitiesFor(AgentExecutionProfile profile) {
         return capabilityRegistry.listCapabilities().stream()
                 .filter(definition -> profile.allows(definition.name()))
                 .toList();
     }
 
+    /**
+     * 默认执行配置文件，包括 agent 能使用的工具、系统提示词、agent 运行时的限制条件、启用长期内存存储
+     */
     private AgentExecutionProfile defaultExecutionProfile() {
+        // 列出 agent 的能力，也就是 agent 能访问的工具，包括本地定义的工具和 mcp 提供的工具，收集成工具名称集合
         Set<String> capabilities = capabilityRegistry.listCapabilities().stream()
                 .map(ToolDefinition::name)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
@@ -1040,10 +1087,14 @@ public class DefaultAgentRuntime implements AgentRuntime {
         return failure == null ? "UNKNOWN" : failure.getClass().getSimpleName();
     }
 
+    /**
+     * 获取 session 租约
+     */
     private void acquireRun(String sessionId,
                             String runId,
                             String leaseOwnerId,
                             AgentRunBudget budget) {
+        // 获取 session 租赁，防止同一 session 被多个 run 并发执行
         runControlStore.acquireSessionLease(sessionId, runId, leaseOwnerId, sessionLeaseDuration());
         activeBudgets.put(runId, budget);
     }
@@ -1051,6 +1102,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
     private void releaseRun(String sessionId, String runId, String leaseOwnerId) {
         activeBudgets.remove(runId);
         try {
+            // 释放 session 租约
             runControlStore.releaseSessionLease(sessionId, leaseOwnerId);
         }
         catch (RuntimeException exception) {
@@ -1063,12 +1115,19 @@ public class DefaultAgentRuntime implements AgentRuntime {
         return runId + ":" + UUID.randomUUID();
     }
 
+    /**
+     * 查看是否有 agent 的取消请求
+     */
     private void synchronizeCancellation(String runId, AgentRunBudget budget) {
+        // 查看是否有 agent 的取消请求
         if (runControlStore.cancellationRequested(runId)) {
             budget.cancel();
         }
     }
 
+    /**
+     * 会话租赁期限
+     */
     private Duration sessionLeaseDuration() {
         return Duration.ofMillis(Math.max(60_000, properties.getMaxRunDurationMillis() + 60_000));
     }
@@ -1081,6 +1140,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 || state == AgentRunState.MANUAL_REVIEW;
     }
 
+    /**
+     * 往数据库中添加 agent 事件
+     */
     private AgentEvent publish(String sessionId,
                                String userId,
                                String runId,
@@ -1088,6 +1150,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                String content,
                                Map<String, Object> payload,
                                AgentEventListener listener) {
+        // 往数据库中添加 agent 事件
         AgentEvent event = timelineStore.appendEvent(
                 sessionId,
                 userId,
@@ -1095,6 +1158,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 new AgentEventDraft(type, content, payload)
         );
         try {
+            // 这里使用的是空监听器，不会做任何的操作
             listener.onEvent(event);
         }
         catch (RuntimeException ignored) {

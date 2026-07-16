@@ -63,8 +63,10 @@ public class StdioMcpToolGateway implements McpToolGateway {
      * 寻找服务商的工具
      */
     private List<ToolDefinition> discoverTools(McpProperties.Server server) {
+        // 启动一个外部 MCP Server 子进程，并建立 stdin/stdout 通信管道
         try (McpSession session = openSession(server)) {
             initialize(server, session);
+            // 向 mcp 服务发送请求
             Map<?, ?> result = session.request("tools/list", Map.of());
             Object toolsValue = result.get("tools");
             if (!(toolsValue instanceof List<?> tools)) {
@@ -176,15 +178,23 @@ public class StdioMcpToolGateway implements McpToolGateway {
         return toolName;
     }
 
+    /**
+     * 启动一个外部 MCP Server 子进程，并建立 stdin/stdout 通信管道
+     */
     private McpSession openSession(McpProperties.Server server) throws IOException {
+        // ① 组装启动命令
         List<String> command = new ArrayList<>();
         command.add(server.getCommand());
         command.addAll(server.getArgs());
+        // ② 创建进程启动器
         ProcessBuilder processBuilder = new ProcessBuilder(command);
+        // ③ 设置工作目录（可选）
         if (server.getWorkingDirectory() != null && !server.getWorkingDirectory().isBlank()) {
             processBuilder.directory(new File(server.getWorkingDirectory()));
         }
+        // ④ 丢弃 stderr（避免日志干扰 JSON-RPC 通信）
         processBuilder.redirectError(ProcessBuilder.Redirect.DISCARD);
+        // ⑤ 启动进程 + 包装成可通信的 Session
         return new McpSession(processBuilder.start(), objectMapper);
     }
 
@@ -216,6 +226,9 @@ public class StdioMcpToolGateway implements McpToolGateway {
             this.writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
         }
 
+        /**
+         * 向 mcp 服务发送请求
+         */
         private Map<?, ?> request(String method, Map<String, Object> params) {
             int id = ids.getAndIncrement();
             Map<String, Object> request = new LinkedHashMap<>();
@@ -225,8 +238,10 @@ public class StdioMcpToolGateway implements McpToolGateway {
             if (params != null && !params.isEmpty()) {
                 request.put("params", params);
             }
+            // 给 mcp 服务发送消息
             write(request);
             while (true) {
+                // 读取 mcp 服务返回的消息
                 Map<?, ?> response = readMessage();
                 Object responseId = response.get("id");
                 if (responseId != null && String.valueOf(responseId).equals(String.valueOf(id))) {
@@ -252,6 +267,9 @@ public class StdioMcpToolGateway implements McpToolGateway {
             write(notification);
         }
 
+        /**
+         * 给 mcp 服务发送消息
+         */
         private void write(Map<String, Object> message) {
             try {
                 writer.write(objectMapper.writeValueAsString(message));
@@ -263,6 +281,9 @@ public class StdioMcpToolGateway implements McpToolGateway {
             }
         }
 
+        /**
+         * 读取 mcp 服务返回的消息
+         */
         private Map<?, ?> readMessage() {
             try {
                 String line;

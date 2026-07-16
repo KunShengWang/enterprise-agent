@@ -7,13 +7,25 @@ import java.time.Duration;
  */
 public interface AgentRunControlStore {
 
+    /**
+     * 获取 session 租赁，防止同一 session 被多个 run 并发执行
+     */
     void acquireSessionLease(String sessionId, String runId, String leaseOwnerId, Duration leaseDuration);
 
+    /**
+     * 更新 session 租约
+     */
     boolean renewSessionLease(String sessionId, String leaseOwnerId, Duration leaseDuration);
 
+    /**
+     * 释放 session 租约
+     */
     void releaseSessionLease(String sessionId, String leaseOwnerId);
 
     boolean requestCancellation(String runId);
 
+    /**
+     * 查看是否有 agent 的取消请求
+     */
     boolean cancellationRequested(String runId);
 }

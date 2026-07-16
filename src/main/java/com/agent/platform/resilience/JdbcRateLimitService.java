@@ -35,6 +35,10 @@ public class JdbcRateLimitService implements RateLimitService {
         this.storageProperties = storageProperties;
     }
 
+    /**
+     * "同一分钟窗口内累加计数，跨分钟自动重置"的固定窗口限流
+     *  当一分钟内的请求次数小于最大限制的话就把 RateLimitResult 中的 allowed 设为 true 说明允许请求
+     */
     @Override
     public RateLimitResult acquire(String key) {
         String effectiveKey = key == null || key.isBlank() ? "anonymous" : key.trim();
@@ -49,16 +53,21 @@ public class JdbcRateLimitService implements RateLimitService {
         long resetAt = windowStart + WINDOW_MILLIS;
         try (Connection connection = openConnection();
              PreparedStatement statement = connection.prepareStatement("""
+                     -- ① 尝试插入新记录，计数初始为 1
                      INSERT INTO agent_rate_limit(rate_key, window_start_millis, request_count, updated_at)
                      VALUES (?, ?, 1, ?)
+                     -- ② 如果 rate_key 已存在（冲突），走 UPDATE
                      ON CONFLICT(rate_key) DO UPDATE SET
+                         -- ③ 关键判断：新旧窗口是否属于同一分钟？
                          request_count = CASE
                              WHEN agent_rate_limit.window_start_millis = EXCLUDED.window_start_millis
-                             THEN agent_rate_limit.request_count + 1
-                             ELSE 1
+                             THEN agent_rate_limit.request_count + 1 -- 同一分钟窗口 → 计数 +1
+                             ELSE 1 -- 跨分钟了 → 重置为 1
                          END,
+                         -- ④ 不管哪种情况，都更新窗口起始时间和时间戳
                          window_start_millis = EXCLUDED.window_start_millis,
                          updated_at = EXCLUDED.updated_at
+                     -- ⑤ 返回更新后的 count，用于立即判断是否超限
                      RETURNING request_count
                      """)) {
             statement.setString(1, effectiveKey);
@@ -92,6 +101,7 @@ public class JdbcRateLimitService implements RateLimitService {
                             updated_at TIMESTAMPTZ NOT NULL
                         )
                         """);
+                // 在 updated_at 字段上建立 B-tree 索引，索引名称为 idx_agent_rate_limit_updated
                 statement.execute("CREATE INDEX IF NOT EXISTS idx_agent_rate_limit_updated ON agent_rate_limit(updated_at)");
                 schemaReady.set(true);
             }

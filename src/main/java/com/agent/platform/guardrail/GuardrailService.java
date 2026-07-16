@@ -5,6 +5,9 @@ import com.agent.platform.tool.ToolDefinition;
 
 public interface GuardrailService {
 
+    /**
+     * 输入 Guardrail
+     */
     GuardrailDecision checkInput(String userQuestion);
 
     /**

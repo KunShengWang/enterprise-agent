@@ -54,6 +54,9 @@ public class JdbcMemoryService implements MemoryService {
         this.embeddingClientProvider = embeddingClientProvider;
     }
 
+    /**
+     * 根据用户问题保存长期记忆和用户画像
+     */
     @Override
     public void rememberLongTerm(String conversationId, String userId, MemoryMessage message) {
         if (message == null || message.content() == null || message.content().isBlank()) {
@@ -77,9 +80,11 @@ public class JdbcMemoryService implements MemoryService {
             connection.setAutoCommit(false);
             try {
                 for (LongTermMemoryDraft draft : extraction.longTermMemories()) {
+                    // 保存长期记忆到数据库
                     saveLongTermMemory(connection, normalizedConversationId, normalizedUserId, draft);
                 }
                 for (UserProfileItem item : extraction.profileItems()) {
+                    // 插入或更新用户画像
                     upsertProfileItem(connection, normalizedUserId, item);
                 }
                 connection.commit();
@@ -216,6 +221,7 @@ public class JdbcMemoryService implements MemoryService {
         String category = normalize(draft.category(), "fact");
         String content = draft.content().trim();
         double confidence = clamp(draft.confidence());
+        // 把记忆内容转成向量
         double[] embedding = embedBestEffort(content);
         Instant now = Instant.now();
         try (PreparedStatement statement = connection.prepareStatement("""
@@ -245,6 +251,9 @@ public class JdbcMemoryService implements MemoryService {
         }
     }
 
+    /**
+     * 插入或更新用户画像
+     */
     private void upsertProfileItem(Connection connection, String userId, UserProfileItem item) throws SQLException {
         if (item == null || item.key() == null || item.key().isBlank()
                 || item.value() == null || item.value().isBlank()) {
@@ -445,6 +454,9 @@ public class JdbcMemoryService implements MemoryService {
         }
     }
 
+    /**
+     * 把记忆内容转成向量
+     */
     private double[] embedBestEffort(String text) {
         EmbeddingClient client = embeddingClientProvider.getIfAvailable();
         if (client == null || text == null || text.isBlank()) {

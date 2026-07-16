@@ -62,7 +62,11 @@ public final class AgentRunBudget {
         }
     }
 
+    /**
+     * 在 agent 的执行轮次之前判断是否取消 agent
+     */
     public synchronized Optional<AgentStopReason> beforeTurn() {
+        // 判断是否应该设置取消原因
         Optional<AgentStopReason> common = commonStopReason();
         if (common.isPresent()) {
             return common;
@@ -76,6 +80,9 @@ public final class AgentRunBudget {
         turns++;
     }
 
+    /**
+     * 在模型调用之前判断是否取消 agent
+     */
     public synchronized Optional<AgentStopReason> beforeModelCall() {
         Optional<AgentStopReason> common = commonStopReason();
         if (common.isPresent()) {
@@ -135,6 +142,9 @@ public final class AgentRunBudget {
         return commonStopReason();
     }
 
+    /**
+     * 记录当前的快照
+     */
     public synchronized AgentRunBudgetSnapshot snapshot() {
         long remaining = executionPaused
                 ? remainingExecutionMillis
@@ -154,6 +164,9 @@ public final class AgentRunBudget {
         );
     }
 
+    /**
+     * 判断是否应该设置取消原因
+     */
     private Optional<AgentStopReason> commonStopReason() {
         if (cancelled.get()) {
             return Optional.of(AgentStopReason.CANCELLED);
