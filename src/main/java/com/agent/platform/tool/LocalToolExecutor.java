@@ -23,17 +23,21 @@ public class LocalToolExecutor implements ToolExecutor {
 
     private final ObjectProvider<McpToolGateway> mcpToolGatewayProvider;
 
+    private final ObjectProvider<ToolHandler> toolHandlers;
+
     @Autowired
     public LocalToolExecutor(ToolRegistry toolRegistry,
                              ToolParameterValidator parameterValidator,
                              ToolRunRecorder toolRunRecorder,
                              TicketStore ticketStore,
-                             ObjectProvider<McpToolGateway> mcpToolGatewayProvider) {
+                             ObjectProvider<McpToolGateway> mcpToolGatewayProvider,
+                             ObjectProvider<ToolHandler> toolHandlers) {
         this.toolRegistry = toolRegistry;
         this.parameterValidator = parameterValidator;
         this.toolRunRecorder = toolRunRecorder;
         this.ticketStore = ticketStore;
         this.mcpToolGatewayProvider = mcpToolGatewayProvider;
+        this.toolHandlers = toolHandlers;
     }
 
     @Override
@@ -88,6 +92,13 @@ public class LocalToolExecutor implements ToolExecutor {
                 return new ToolCallResult(request.toolName(), false, "", "MCP gateway is not configured", Map.of("provider", "mcp"));
             }
             return gateway.callTool(request);
+        }
+
+        Optional<ToolHandler> businessHandler = toolHandlers.orderedStream()
+                .filter(handler -> handler.supports(request.toolName()))
+                .findFirst();
+        if (businessHandler.isPresent()) {
+            return businessHandler.get().execute(request);
         }
 
         return switch (request.toolName()) {

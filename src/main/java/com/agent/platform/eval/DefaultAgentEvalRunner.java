@@ -36,9 +36,10 @@ public class DefaultAgentEvalRunner implements EvalRunner {
     @Override
     public EvalReport run(List<EvalCase> evalCases) {
         List<EvalCase> effectiveCases = evalCases == null || evalCases.isEmpty() ? evalCaseRepository.list() : List.copyOf(evalCases);
+        String evalRunId = UUID.randomUUID().toString();
         List<EvalCaseResult> results = new ArrayList<>();
         for (EvalCase evalCase : effectiveCases) {
-            results.add(runCase(evalCase));
+            results.add(runCase(evalRunId, evalCase));
         }
         int totalCases = results.size();
         int passedCases = (int) results.stream().filter(EvalCaseResult::passed).count();
@@ -48,7 +49,7 @@ public class DefaultAgentEvalRunner implements EvalRunner {
         double ragUsageAccuracy = rate(results.stream().filter(EvalCaseResult::ragMatched).count(), totalCases);
         double groundednessRate = rate(results.stream().filter(EvalCaseResult::grounded).count(), totalCases);
         return new EvalReport(
-                UUID.randomUUID().toString(),
+                evalRunId,
                 Instant.now(),
                 totalCases,
                 passedCases,
@@ -63,12 +64,13 @@ public class DefaultAgentEvalRunner implements EvalRunner {
         );
     }
 
-    private EvalCaseResult runCase(EvalCase evalCase) {
+    private EvalCaseResult runCase(String evalRunId, EvalCase evalCase) {
         AgentResponse response = agentExecutor.execute(new AgentRequest(
-                "eval-" + evalCase.id(),
+                "eval-" + evalRunId + "-" + evalCase.id(),
                 "eval-user",
                 evalCase.question(),
-                Map.of("evalCaseId", evalCase.id(), "eval", true)
+                Map.of("evalCaseId", evalCase.id(), "eval", true),
+                scenarioId(evalCase)
         ));
         String answer = response.answer() == null ? "" : response.answer();
         List<String> actualTools = actualTools(response);
@@ -125,6 +127,11 @@ public class DefaultAgentEvalRunner implements EvalRunner {
                 response.trace().traceId(),
                 metadata
         );
+    }
+
+    private String scenarioId(EvalCase evalCase) {
+        Object value = evalCase.metadata().get("scenarioId");
+        return value == null ? "" : String.valueOf(value).trim();
     }
 
     private double score(boolean adversarial,
@@ -186,6 +193,10 @@ public class DefaultAgentEvalRunner implements EvalRunner {
     private List<String> actualTools(AgentResponse response) {
         Set<String> tools = new LinkedHashSet<>();
         for (AgentStep step : response.steps()) {
+            String runtimeToolName = stringMetadata(step, "toolName");
+            if (step.name().startsWith("tool.") && !runtimeToolName.isBlank()) {
+                tools.add(runtimeToolName);
+            }
             if ("tool.plan".equals(step.name()) && step.summary().contains("tool=")) {
                 String summary = step.summary();
                 int start = summary.indexOf("tool=") + "tool=".length();
@@ -220,12 +231,33 @@ public class DefaultAgentEvalRunner implements EvalRunner {
     }
 
     private boolean ragMatched(EvalCase evalCase, AgentResponse response) {
-        boolean usedRag = response.steps().stream().anyMatch(step -> "rag.retrieve".equals(step.name()));
+        boolean usedRag = response.steps().stream().anyMatch(this::isRagEvidence);
         if (!evalCase.expectRag()) {
             return !usedRag;
         }
         return response.steps().stream()
-                .anyMatch(step -> "rag.retrieve".equals(step.name()) && ("HIT".equalsIgnoreCase(step.status()) || step.summary().contains("documents=")));
+                .anyMatch(step -> isRagEvidence(step) && successfulEvidence(step));
+    }
+
+    private boolean isRagEvidence(AgentStep step) {
+        return "rag.retrieve".equals(step.name())
+                || "knowledge_search".equals(stringMetadata(step, "toolName"));
+    }
+
+    private boolean successfulEvidence(AgentStep step) {
+        if ("rag.retrieve".equals(step.name())) {
+            return "HIT".equalsIgnoreCase(step.status()) || step.summary().contains("documents=");
+        }
+        if (!"tool.completed".equals(step.name())) {
+            return false;
+        }
+        Object success = step.metadata().get("success");
+        return success == null || Boolean.TRUE.equals(success);
+    }
+
+    private String stringMetadata(AgentStep step, String key) {
+        Object value = step.metadata().get(key);
+        return value == null ? "" : String.valueOf(value).trim();
     }
 
     private List<String> missingKeywords(String answer, List<String> expectedKeywords) {

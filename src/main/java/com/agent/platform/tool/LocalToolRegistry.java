@@ -14,6 +14,8 @@ public class LocalToolRegistry implements ToolRegistry {
 
     private final ObjectProvider<McpToolGateway> mcpToolGatewayProvider;
 
+    private final ObjectProvider<ToolCatalogContributor> catalogContributors;
+
     private final List<ToolDefinition> tools = List.of(
             new ToolDefinition(
                     "ticket_status",
@@ -53,8 +55,10 @@ public class LocalToolRegistry implements ToolRegistry {
             )
     );
 
-    public LocalToolRegistry(ObjectProvider<McpToolGateway> mcpToolGatewayProvider) {
+    public LocalToolRegistry(ObjectProvider<McpToolGateway> mcpToolGatewayProvider,
+                             ObjectProvider<ToolCatalogContributor> catalogContributors) {
         this.mcpToolGatewayProvider = mcpToolGatewayProvider;
+        this.catalogContributors = catalogContributors;
     }
 
     /**
@@ -63,6 +67,8 @@ public class LocalToolRegistry implements ToolRegistry {
     @Override
     public List<ToolDefinition> listTools() {
         List<ToolDefinition> mergedTools = new ArrayList<>(tools);
+        catalogContributors.orderedStream()
+                .forEach(contributor -> mergedTools.addAll(contributor.definitions()));
         mcpToolGatewayProvider.ifAvailable(gateway -> mergedTools.addAll(gateway.discoverTools()));
         return List.copyOf(mergedTools);
     }

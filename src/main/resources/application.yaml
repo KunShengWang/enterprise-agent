@@ -65,6 +65,12 @@ enterprise-agent:
   default-system-prompt: >
     You are an enterprise knowledge-base and support-ticket agent.
     Follow the orchestrated execution flow and do not bypass guardrails.
+  ordercare:
+    floworder-base-url: ${FLOWORDER_BASE_URL:http://localhost:8081}
+    connect-timeout-millis: ${FLOWORDER_CONNECT_TIMEOUT_MILLIS:1000}
+    read-timeout-millis: ${FLOWORDER_READ_TIMEOUT_MILLIS:3000}
+    inspect-max-attempts: ${FLOWORDER_INSPECT_MAX_ATTEMPTS:2}
+    inspect-retry-backoff-millis: ${FLOWORDER_INSPECT_RETRY_BACKOFF_MILLIS:150}
   memory:
     long-term-candidate-limit: 40
     profile-item-limit: 30

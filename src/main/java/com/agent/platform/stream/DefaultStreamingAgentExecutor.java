@@ -2,10 +2,12 @@ package com.agent.platform.stream;
 
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.config.AgentProperties;
+import com.agent.platform.ordercare.config.AgentScenarioProfileResolver;
 import com.agent.platform.runtime.AgentEvent;
 import com.agent.platform.runtime.AgentEventListener;
 import com.agent.platform.runtime.AgentRuntime;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import reactor.core.Disposable;
 import reactor.core.publisher.BufferOverflowStrategy;
 import reactor.core.publisher.Flux;
@@ -28,9 +30,19 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
     private final AgentRuntime runtime;
     private final AgentProperties properties;
 
-    public DefaultStreamingAgentExecutor(AgentRuntime runtime, AgentProperties properties) {
+    private final AgentScenarioProfileResolver scenarioProfileResolver;
+
+    @Autowired
+    public DefaultStreamingAgentExecutor(AgentRuntime runtime,
+                                         AgentProperties properties,
+                                         AgentScenarioProfileResolver scenarioProfileResolver) {
         this.runtime = runtime;
         this.properties = properties;
+        this.scenarioProfileResolver = scenarioProfileResolver;
+    }
+
+    DefaultStreamingAgentExecutor(AgentRuntime runtime, AgentProperties properties) {
+        this(runtime, properties, null);
     }
 
     @Override
@@ -38,8 +50,20 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
         return streamExecution(
                 "",
                 sessionId(request),
-                listener -> runtime.run(request, listener)
+                listener -> run(request, listener)
         );
+    }
+
+    private void run(AgentRequest request, AgentEventListener listener) {
+        if (scenarioProfileResolver == null) {
+            runtime.run(request, listener);
+            return;
+        }
+        scenarioProfileResolver.resolve(request.scenarioId())
+                .ifPresentOrElse(
+                        profile -> runtime.run(request, profile, listener),
+                        () -> runtime.run(request, listener)
+                );
     }
 
     @Override

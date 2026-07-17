@@ -3,8 +3,10 @@ package com.agent.platform.agent;
 import com.agent.platform.runtime.AgentEvent;
 import com.agent.platform.runtime.AgentEventType;
 import com.agent.platform.runtime.AgentRunState;
+import com.agent.platform.runtime.AgentEventListener;
 import com.agent.platform.runtime.AgentRuntime;
 import com.agent.platform.runtime.AgentRuntimeResult;
+import com.agent.platform.ordercare.config.AgentScenarioProfileResolver;
 import com.agent.platform.trace.TraceEvent;
 import com.agent.platform.trace.TraceSummary;
 import org.springframework.context.annotation.Primary;
@@ -22,13 +24,20 @@ public class RuntimeAgentExecutor implements AgentExecutor {
 
     private final AgentRuntime runtime;
 
-    public RuntimeAgentExecutor(AgentRuntime runtime) {
+    private final AgentScenarioProfileResolver scenarioProfileResolver;
+
+    public RuntimeAgentExecutor(AgentRuntime runtime,
+                                AgentScenarioProfileResolver scenarioProfileResolver) {
         this.runtime = runtime;
+        this.scenarioProfileResolver = scenarioProfileResolver;
     }
 
     @Override
     public AgentResponse execute(AgentRequest request) {
-        return toResponse(runtime.run(request));
+        AgentRuntimeResult result = scenarioProfileResolver.resolve(request.scenarioId())
+                .map(profile -> runtime.run(request, profile, AgentEventListener.NOOP))
+                .orElseGet(() -> runtime.run(request));
+        return toResponse(result);
     }
 
     @Override
@@ -59,7 +68,8 @@ public class RuntimeAgentExecutor implements AgentExecutor {
         return new AgentStep(
                 event.type().name().toLowerCase(Locale.ROOT).replace('_', '.'),
                 eventStatus(event),
-                event.content()
+                event.content(),
+                event.payload()
         );
     }
 

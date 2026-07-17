@@ -10,6 +10,55 @@ export interface AgentRequest {
   userId: string
   question: string
   metadata: Record<string, unknown>
+  scenarioId?: string
+}
+
+export interface OrderCareCaseSnapshot {
+  schemaVersion: string
+  caseKey: string
+  canonicalRequestId: string
+  found: boolean
+  diagnosisCode: string
+  factsComplete: boolean
+  recoveryEligible: boolean
+  reservation?: {
+    orderNo?: string
+    orderStatusName?: string
+    latestOrderEventType?: string
+  }
+  order?: {
+    dependencyAvailable?: boolean
+    exists?: boolean
+    orderNo?: string
+    statusName?: string
+    queryError?: string
+  }
+  deduct?: {
+    deductNo?: string
+    statusName?: string
+    quantity?: number
+  }
+  inventory?: {
+    totalStock?: number
+    availableStock?: number
+    lockedStock?: number
+    soldStock?: number
+    invariantOk?: boolean
+  }
+  deadLetters: Array<{
+    deadLetterId: number
+    messageType: string
+    statusName: string
+    replayCount: number
+  }>
+  candidates: Array<{
+    candidateId: string
+    actionType: string
+    eligible: boolean
+    blockedBy: string
+  }>
+  evidence: string[]
+  hardRisks: string[]
 }
 
 export interface AgentStreamEvent {

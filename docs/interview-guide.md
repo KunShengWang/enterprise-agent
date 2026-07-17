@@ -2,9 +2,19 @@
 
 ## 30 秒项目定位
 
-> 我做的是一个 Java 企业知识库与工单 Agent。最初版本是固定路由流水线，后来我把核心重构成统一模型驱动 Agent Runtime：模型每轮只决定最终回答或 ToolCall，Runtime 强制管理 PostgreSQL 消息时间线、上下文预算、工具权限、人工审批、幂等、取消、终止原因和事件。同步与 SSE 共用同一执行引擎，RAG、Skill、MCP 和 Sub-Agent 都作为受控能力接入。
+> 我基于自研 Java Agent Runtime 做了一个异常订单诊断与受控恢复项目 OrderCare。当前 M1 已完成：Agent 从自然语言中定位 FlowOrder 案例，调用强类型工具聚合订单、扣减、库存和死信事实，并结合版本化 SOP 解释处置建议；交易诊断由 FlowOrder 确定性代码负责。统一 Runtime 管理 PostgreSQL 时间线、能力白名单、预算、工具执行和 SSE 事件，首批 8 条真实模型 Eval 全部通过。Proposal、人工审批和恢复执行属于下一阶段，当前不夸大为完整恢复闭环。
 
 不要说“对标或复刻 Claude Code”。更准确的说法是：参考成熟 Agent 的 Runtime 不变量，在有限业务场景中自行实现并理解取舍。
+
+## 为什么这里需要 Agent，而不是固定工作流
+
+- 已知目标后的 `preview -> approval -> execute -> verify` 应由确定性流程负责。
+- Agent 的必要性来自入口不确定：运营人员可能只给 requestId、orderNo、deductNo、deadLetterId 或一段现象描述。
+- 诊断证据分散在订单、扣减、库存、死信和 SOP 中，模型适合做标识提取、工具选择和解释。
+- FlowOrder 返回的 `diagnosisCode`、硬风险和候选动作是权威结论，模型不能自己改交易规则。
+- 因此边界是：Agent 负责理解、诊断解释和建议；程序负责校验、执行和验证。
+
+M1 证据：7 类确定性诊断、FlowOrder 真实 HTTP E2E、统一 SSE Run，以及 8/8 真实模型 Eval。当前只能表述为“异常订单智能诊断”。
 
 ## 与目标实习岗位的能力映射
 

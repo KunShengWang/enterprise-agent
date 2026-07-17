@@ -6,15 +6,16 @@ import EventTimeline from '../components/EventTimeline.vue'
 import JsonViewer from '../components/JsonViewer.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { useAgentStream } from '../composables/useAgentStream'
-import type { AgentRequest } from '../types/agent'
+import type { AgentRequest, OrderCareCaseSnapshot } from '../types/agent'
 
 const stream = useAgentStream()
 const route = useRoute()
 const router = useRouter()
 const conversationId = ref(`learn-${new Date().toISOString().slice(0, 10)}`)
 const userId = ref('student-001')
-const question = ref('发布失败时应该先检查什么？请结合知识库给出排查顺序。')
-const metadataText = ref('{\n  "source": "learning-console",\n  "mode": "runtime-observation"\n}')
+const scenarioId = ref('ordercare-floworder-v1')
+const question = ref('请诊断 requestId=ORDERCARE-M05-REQUEST，列出关键事实、风险和下一步建议。')
+const metadataText = ref('{\n  "source": "ordercare-workbench",\n  "mode": "read-only-diagnosis"\n}')
 const showAdvanced = ref(false)
 const formError = ref('')
 const decisionBusy = ref(false)
@@ -27,11 +28,21 @@ const submittedQuestion = ref('')
 let clock: number | undefined
 
 const examples = [
-  { label: '知识库问答', value: '发布失败时应该先检查什么？请结合知识库给出排查顺序。' },
-  { label: '普通对话', value: '请用三句话解释统一 Agent Loop 为什么比固定路由更重要。' },
-  { label: '工具调用', value: '请查询工单 T1001 的当前状态。' },
-  { label: '触发审批', value: '请把工单 T1001 的优先级修改为 P1。' },
+  { label: 'requestId 诊断', value: '请诊断 requestId=ORDERCARE-M05-REQUEST，列出关键事实、风险和下一步建议。' },
+  { label: 'orderNo 定位', value: '订单号 ORDERCARE-M05-ORDER 的库存为什么没有释放？请基于证据诊断。' },
+  { label: 'deductNo 定位', value: '检查扣减流水 ORDERCARE-M05-DEDUCT 是否存在可恢复的死信。' },
+  { label: '解释恢复 SOP', value: '诊断 requestId=ORDERCARE-M05-REQUEST，并结合 OrderCare SOP 解释为什么当前允许或禁止恢复。' },
 ]
+
+const orderCareCase = computed<OrderCareCaseSnapshot | null>(() => {
+  const result = stream.runRecord.value?.toolResults.find((item) => item.toolName === 'floworder_case_inspect')
+  if (!result?.success || !result.content) return null
+  try {
+    return JSON.parse(result.content) as OrderCareCaseSnapshot
+  } catch {
+    return null
+  }
+})
 
 const currentState = computed(() => {
   if (stream.running.value) return 'RUNNING'
@@ -99,6 +110,7 @@ async function submit() {
     userId: userId.value.trim(),
     question: question.value.trim(),
     metadata,
+    scenarioId: scenarioId.value,
   }
   submittedQuestion.value = request.question
   await stream.start(request)
@@ -152,6 +164,7 @@ async function openPersistedRun(targetRunId: string) {
     userId.value = run.userId
     question.value = run.request?.question ?? ''
     metadataText.value = JSON.stringify(run.request?.metadata ?? {}, null, 2)
+    scenarioId.value = run.request?.scenarioId || 'ordercare-floworder-v1'
     startedAt.value = 0
   } catch (error) {
     formError.value = error instanceof Error ? error.message : '加载持久化 Run 失败'
@@ -201,8 +214,8 @@ onBeforeUnmount(() => {
         <div class="conversation-title">
           <span class="assistant-avatar">✦</span>
           <div>
-            <strong>Enterprise Agent</strong>
-            <small>模型驱动的 Runtime 会话</small>
+            <strong>OrderCare Incident Agent</strong>
+            <small>FlowOrder 异常订单 · 统一 Runtime 只读诊断</small>
           </div>
         </div>
         <StatusBadge :value="currentState" />
@@ -239,6 +252,34 @@ onBeforeUnmount(() => {
               <p>Runtime 尚未返回最终回答。你可以在右侧查看它停在了哪个阶段。</p>
             </div>
 
+            <section v-if="orderCareCase" class="ordercare-case-card">
+              <div class="case-card-heading">
+                <div>
+                  <span>FLOWORDER CASE</span>
+                  <strong>{{ orderCareCase.diagnosisCode }}</strong>
+                </div>
+                <StatusBadge :value="orderCareCase.recoveryEligible ? 'CANDIDATE' : 'READ_ONLY'" />
+              </div>
+              <div class="case-fact-grid">
+                <div><span>Request</span><code>{{ orderCareCase.canonicalRequestId || '未定位' }}</code></div>
+                <div><span>Order</span><strong>{{ orderCareCase.order?.statusName || orderCareCase.order?.queryError || 'UNKNOWN' }}</strong></div>
+                <div><span>Deduct</span><strong>{{ orderCareCase.deduct?.statusName || 'NOT_FOUND' }}</strong></div>
+                <div><span>Inventory</span><strong>{{ orderCareCase.inventory?.invariantOk ? 'INVARIANT_OK' : 'CHECK_REQUIRED' }}</strong></div>
+              </div>
+              <div class="case-evidence">
+                <span v-for="item in orderCareCase.evidence" :key="item">{{ item }}</span>
+              </div>
+              <div v-if="orderCareCase.hardRisks.length" class="case-risks">
+                <strong>硬风险</strong>
+                <span v-for="risk in orderCareCase.hardRisks" :key="risk">{{ risk }}</span>
+              </div>
+              <div v-if="orderCareCase.candidates.length" class="case-candidate">
+                <span>候选动作由 FlowOrder 生成</span>
+                <code>{{ orderCareCase.candidates[0].candidateId }}</code>
+                <strong>{{ orderCareCase.candidates[0].eligible ? '可进入预演' : `阻断：${orderCareCase.candidates[0].blockedBy}` }}</strong>
+              </div>
+            </section>
+
             <div v-if="budget" class="budget-grid">
               <div><span>Turns</span><strong>{{ budget.turns }}</strong></div>
               <div><span>Model calls</span><strong>{{ budget.modelCalls }}</strong></div>
@@ -267,6 +308,13 @@ onBeforeUnmount(() => {
           <label>
             <span>userId</span>
             <input v-model="userId" :disabled="stream.running.value" />
+          </label>
+          <label>
+            <span>scenarioId（服务端白名单）</span>
+            <select v-model="scenarioId" :disabled="stream.running.value">
+              <option value="ordercare-floworder-v1">ordercare-floworder-v1</option>
+              <option value="">默认学习场景</option>
+            </select>
           </label>
           <label class="metadata-field">
             <span>metadata JSON</span>

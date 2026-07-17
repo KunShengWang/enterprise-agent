@@ -284,6 +284,20 @@ code, pre { font-family: var(--mono); }
 .live-indicator i { display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: #2f9e63; animation: blink 1s ease-in-out infinite; }
 @keyframes blink { 50% { opacity: .25; } }
 .answer-content { min-height: 90px; margin-top: 7px; color: var(--text); font-size: 14px; line-height: 1.9; white-space: pre-wrap; }
+.ordercare-case-card { margin-top: 14px; padding: 14px; border: 1px solid #cbd8cf; border-radius: 12px; background: #f7faf7; }
+.case-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.case-card-heading span, .case-fact-grid span { display: block; color: var(--faint); font: 9px var(--mono); letter-spacing: .08em; }
+.case-card-heading strong { display: block; margin-top: 5px; color: #244d36; font: 700 15px var(--mono); }
+.case-fact-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+.case-fact-grid div { min-width: 0; padding: 9px; border: 1px solid var(--line-soft); border-radius: 8px; background: #fff; }
+.case-fact-grid strong, .case-fact-grid code { display: block; overflow-wrap: anywhere; margin-top: 5px; color: var(--text); font: 11px var(--mono); }
+.case-evidence, .case-risks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.case-evidence span, .case-risks span { padding: 4px 7px; border-radius: 999px; background: #e9f1eb; color: #315c40; font: 9px var(--mono); }
+.case-risks strong { width: 100%; color: #923c32; font: 10px var(--mono); }
+.case-risks span { background: #fae9e6; color: #923c32; }
+.case-candidate { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; margin-top: 11px; padding-top: 10px; border-top: 1px dashed #cbd8cf; font-size: 10px; }
+.case-candidate code { overflow-wrap: anywhere; color: var(--muted); }
+.case-candidate strong { color: #315c40; }
 .answer-empty { min-height: 140px; margin-top: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed var(--line); border-radius: 13px; color: var(--muted); text-align: center; }
 .answer-empty > span { color: var(--accent); font-size: 27px; }
 .answer-empty p { max-width: 500px; margin: 10px; font-size: 11px; line-height: 1.7; }

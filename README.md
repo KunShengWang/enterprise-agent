@@ -37,6 +37,17 @@
 - SSE 可靠性：持久化事件序号、心跳、背压缺口通知；客户端可以识别不完整事件流。
 - Sub-Agent：独立 Session、System Prompt、能力白名单、预算和父子 Run；只向协调者返回摘要与 childRunId。
 - AgentOps：Runtime 事件投影为 Trace / Eval / Replay，保留真实 Usage 或明确标记估算来源。
+- OrderCare M1：与 FlowOrder 联动完成异常订单只读诊断，支持四类业务标识、7 类领域诊断、版本化 SOP、同一 Run/SSE 工作台和 8/8 真实模型 Eval；尚未进入受控恢复阶段。
+
+## 当前业务主线：OrderCare
+
+项目不再以“通用 Agent 能力数量”作为完成标准，当前主线是：
+
+> 面向 FlowOrder 异常订单的智能诊断与受控恢复系统。
+
+M1 已通过：Agent 负责理解自然语言、选择只读工具并解释证据；FlowOrder 负责交易事实、诊断规则和候选动作。下一阶段 M2 才会增加不可变 Proposal、人工审批、幂等 execute 和确定性收敛检查。
+
+详见 [OrderCare M1 证据报告](docs/reports/ordercare/m1-readonly-diagnosis.md)。
 
 ## 技术栈
 
@@ -82,8 +93,9 @@ mvn clean test
 $body = @{
   conversationId = "demo-session-1"
   userId = "demo-user"
-  question = "发布失败时应该先检查什么？"
+  question = "请诊断 requestId=ORDERCARE-M05-REQUEST，只依据权威事实回答"
   metadata = @{}
+  scenarioId = "ordercare-floworder-v1"
 } | ConvertTo-Json
 
 Invoke-RestMethod `
