@@ -10,6 +10,8 @@ public class OrderCareProperties {
     private long readTimeoutMillis = 3_000;
     private int inspectMaxAttempts = 2;
     private long inspectRetryBackoffMillis = 150;
+    private int convergenceMaxAttempts = 8;
+    private long convergenceIntervalMillis = 500;
 
     public String getFloworderBaseUrl() {
         return floworderBaseUrl;
@@ -49,5 +51,21 @@ public class OrderCareProperties {
 
     public void setInspectRetryBackoffMillis(long inspectRetryBackoffMillis) {
         this.inspectRetryBackoffMillis = Math.max(0, inspectRetryBackoffMillis);
+    }
+
+    public int getConvergenceMaxAttempts() {
+        return convergenceMaxAttempts;
+    }
+
+    public void setConvergenceMaxAttempts(int convergenceMaxAttempts) {
+        this.convergenceMaxAttempts = Math.max(1, Math.min(convergenceMaxAttempts, 30));
+    }
+
+    public long getConvergenceIntervalMillis() {
+        return convergenceIntervalMillis;
+    }
+
+    public void setConvergenceIntervalMillis(long convergenceIntervalMillis) {
+        this.convergenceIntervalMillis = Math.max(0, Math.min(convergenceIntervalMillis, 5_000));
     }
 }

@@ -26,18 +26,19 @@
 - RAG 语义重排调用通用 ChatModel，不是专用 cross-encoder；成本和延迟需要基于真实数据评测。
 - Prompt Injection 语义分类与主模型共用 LLM Service，尚未使用独立安全模型或外部内容安全服务。
 - PostgreSQL RAG 缓存提供 TTL 和容量裁剪，但没有 Redis 的高吞吐与主动广播失效能力。
-- 管理接口、AgentOps 和 Eval 还没有前端控制台。
+- 运行台已展示 OrderCare 案例、Proposal、审批和收敛结果，但还没有生产级身份认证、租户隔离和运维告警大盘。
 
 ## 证据边界
 
 - 已验证 `mvn clean test`、Spring Context 启动和现有测试通过。
 - 最终 HTTP 冒烟以 Mock ChatModel 验证 Runtime/数据库/同步/SSE 连接，不代表真实 DeepSeek ToolCall 质量。
-- 已有 23 个测试覆盖 Spring Context、预算/Profile 续接、审批有效期与并发决定、审批过期 CAS 与查询收敛、原子恢复、跨 Run 工具执行 ID 隔离、确定与不确定工具检查点、SSE 心跳和 ToolResult 边界；尚无多实例 PostgreSQL 故障注入与上下文溢出系统测试，因此不要声称“完善的测试体系”。
+- 当前 47 条 enterprise-agent 测试（外部 E2E 默认可选）覆盖 Spring Context、预算/Profile 续接、审批有效期与并发决定、审批快照绑定、原子恢复、跨 Run 工具执行 ID 隔离、SSE、ToolResult 边界和 OrderCare M2；另有 10/10 真实模型 Eval。仍缺多实例 PostgreSQL 崩溃注入、写响应丢失对账和上下文溢出系统测试，因此不要声称“完善的测试体系”。
 
 ## 可以继续做，但只有拿到证据后再写简历
 
 - Testcontainers + PostgreSQL/pgvector 集成测试；
-- 高风险工具审批恢复与幂等的真实 PostgreSQL/多实例故障注入；
+- OrderCare 写请求 `UNKNOWN` 后的 Action 对账和人工接管；
+- FlowOrder Proposal/Action 执行租约、进程重启和响应丢失故障注入；
 - 多实例 Session Lease 竞争验证；
 - 长上下文压缩质量 Eval；
 - 真实模型下 ToolCall 成功率、RAG Recall@K、重排增益、P95 延迟和成本；

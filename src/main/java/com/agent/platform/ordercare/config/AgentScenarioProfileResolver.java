@@ -21,7 +21,7 @@ public class AgentScenarioProfileResolver {
             return Optional.empty();
         }
         if (ORDERCARE_FLOWORDER_V1.equals(scenarioId.trim())) {
-            return Optional.of(orderCareProfileFactory.createM1Profile());
+            return Optional.of(orderCareProfileFactory.createProfile());
         }
         throw new IllegalArgumentException("unsupported agent scenarioId: " + scenarioId);
     }

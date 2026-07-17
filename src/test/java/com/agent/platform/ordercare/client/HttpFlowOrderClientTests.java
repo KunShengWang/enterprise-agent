@@ -2,6 +2,9 @@ package com.agent.platform.ordercare.client;
 
 import com.agent.platform.ordercare.config.OrderCareProperties;
 import com.agent.platform.ordercare.model.OrderCareCaseSnapshot;
+import com.agent.platform.ordercare.model.OrderCareProposalCreateCommand;
+import com.agent.platform.ordercare.model.OrderCareProposalExecuteCommand;
+import com.agent.platform.ordercare.model.OrderCareRecoveryProposal;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -10,9 +13,12 @@ import tools.jackson.databind.ObjectMapper;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class HttpFlowOrderClientTests {
 
@@ -55,6 +61,93 @@ class HttpFlowOrderClientTests {
         assertTrue(query.get().contains("identifierValue=request+1"));
     }
 
+    @Test
+    void previewRetriesWithExactlyTheSameProposalId() throws Exception {
+        AtomicInteger attempts = new AtomicInteger();
+        AtomicReference<String> firstBody = new AtomicReference<>();
+        AtomicReference<String> secondBody = new AtomicReference<>();
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/internal/recovery/proposals", exchange -> {
+            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            int attempt = attempts.incrementAndGet();
+            if (attempt == 1) {
+                firstBody.set(body);
+                exchange.sendResponseHeaders(503, -1);
+            } else {
+                secondBody.set(body);
+                byte[] response = proposalBody().getBytes(StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(200, response.length);
+                exchange.getResponseBody().write(response);
+            }
+            exchange.close();
+        });
+        server.start();
+
+        OrderCareProperties properties = properties();
+        properties.setInspectMaxAttempts(2);
+        properties.setInspectRetryBackoffMillis(0);
+        HttpFlowOrderClient client = new HttpFlowOrderClient(properties, new ObjectMapper());
+
+        OrderCareRecoveryProposal proposal = client.createProposal(
+                new OrderCareProposalCreateCommand(
+                        "prop-fixed-id",
+                        "REQUEST_ID",
+                        "request-1",
+                        "REPLAY",
+                        "diagnosed by agent"
+                ),
+                "trace-preview"
+        );
+
+        assertEquals(2, attempts.get());
+        assertEquals(firstBody.get(), secondBody.get());
+        assertTrue(firstBody.get().contains("prop-fixed-id"));
+        assertEquals("act-fixed-id", proposal.actionRequestId());
+        assertEquals("ACTIVE", proposal.proposalStatus());
+    }
+
+    @Test
+    void executeNeverBlindlyRetriesAndClassifiesPossibleSideEffectAsUnknown() throws Exception {
+        AtomicInteger attempts = new AtomicInteger();
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/internal/recovery/proposals/prop-fixed-id/execute", exchange -> {
+            attempts.incrementAndGet();
+            exchange.getRequestBody().readAllBytes();
+            exchange.sendResponseHeaders(503, -1);
+            exchange.close();
+        });
+        server.start();
+
+        OrderCareProperties properties = properties();
+        properties.setInspectMaxAttempts(3);
+        HttpFlowOrderClient client = new HttpFlowOrderClient(properties, new ObjectMapper());
+
+        FlowOrderApiException exception = assertThrows(FlowOrderApiException.class, () ->
+                client.executeProposal(new OrderCareProposalExecuteCommand(
+                        "prop-fixed-id",
+                        1,
+                        "fingerprint",
+                        "effects",
+                        "warnings",
+                        "preview",
+                        "approval-1",
+                        "reviewer-1",
+                        "approved"
+                ), "trace-execute")
+        );
+
+        assertEquals(1, attempts.get());
+        assertTrue(exception.outcomeUnknown());
+        assertFalse(exception.retryable());
+    }
+
+    private OrderCareProperties properties() {
+        OrderCareProperties properties = new OrderCareProperties();
+        properties.setFloworderBaseUrl("http://127.0.0.1:" + server.getAddress().getPort());
+        properties.setReadTimeoutMillis(2_000);
+        return properties;
+    }
+
     private String successBody() {
         return """
                 {
@@ -75,6 +168,38 @@ class HttpFlowOrderClientTests {
                     "candidates": [],
                     "evidence": ["ORDER_FOUND"],
                     "hardRisks": []
+                  }
+                }
+                """;
+    }
+
+    private String proposalBody() {
+        return """
+                {
+                  "code": 200,
+                  "message": "success",
+                  "data": {
+                    "schemaVersion": "floworder-recovery-proposal-v1",
+                    "proposalId": "prop-fixed-id",
+                    "proposalVersion": 1,
+                    "proposalStatus": "ACTIVE",
+                    "actionRequestId": "act-fixed-id",
+                    "actionStatus": "NOT_STARTED",
+                    "caseOutcome": "NOT_CONVERGED",
+                    "caseKey": "floworder:request:request-1",
+                    "identifierType": "REQUEST_ID",
+                    "identifierValue": "request-1",
+                    "actionType": "REPLAY",
+                    "targetType": "DEAD_LETTER",
+                    "targetKey": "101",
+                    "stateFingerprint": "fingerprint",
+                    "effectsDigest": "effects",
+                    "warningsDigest": "warnings",
+                    "previewDigest": "preview",
+                    "canExecute": true,
+                    "effects": ["replay"],
+                    "warnings": ["approval required"],
+                    "expiresAt": "2026-07-17T18:00:00"
                   }
                 }
                 """;

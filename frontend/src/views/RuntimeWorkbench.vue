@@ -6,7 +6,12 @@ import EventTimeline from '../components/EventTimeline.vue'
 import JsonViewer from '../components/JsonViewer.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { useAgentStream } from '../composables/useAgentStream'
-import type { AgentRequest, OrderCareCaseSnapshot } from '../types/agent'
+import type {
+  AgentRequest,
+  OrderCareCaseSnapshot,
+  OrderCareRecoveryExecutionSnapshot,
+  OrderCareRecoveryProposalSnapshot,
+} from '../types/agent'
 
 const stream = useAgentStream()
 const route = useRoute()
@@ -14,8 +19,8 @@ const router = useRouter()
 const conversationId = ref(`learn-${new Date().toISOString().slice(0, 10)}`)
 const userId = ref('student-001')
 const scenarioId = ref('ordercare-floworder-v1')
-const question = ref('请诊断 requestId=ORDERCARE-M05-REQUEST，列出关键事实、风险和下一步建议。')
-const metadataText = ref('{\n  "source": "ordercare-workbench",\n  "mode": "read-only-diagnosis"\n}')
+const question = ref('请诊断 requestId=ORDERCARE-M05-REQUEST；若 FlowOrder 判定可恢复，请创建预演并请求人工审批，审批后执行并验证业务是否收敛。')
+const metadataText = ref('{\n  "source": "ordercare-workbench",\n  "mode": "controlled-recovery"\n}')
 const showAdvanced = ref(false)
 const formError = ref('')
 const decisionBusy = ref(false)
@@ -29,6 +34,7 @@ let clock: number | undefined
 
 const examples = [
   { label: 'requestId 诊断', value: '请诊断 requestId=ORDERCARE-M05-REQUEST，列出关键事实、风险和下一步建议。' },
+  { label: '受控恢复闭环', value: '请诊断 requestId=ORDERCARE-M05-REQUEST；若 FlowOrder 判定可恢复，请创建预演并请求人工审批，审批后执行并验证业务是否收敛。' },
   { label: 'orderNo 定位', value: '订单号 ORDERCARE-M05-ORDER 的库存为什么没有释放？请基于证据诊断。' },
   { label: 'deductNo 定位', value: '检查扣减流水 ORDERCARE-M05-DEDUCT 是否存在可恢复的死信。' },
   { label: '解释恢复 SOP', value: '诊断 requestId=ORDERCARE-M05-REQUEST，并结合 OrderCare SOP 解释为什么当前允许或禁止恢复。' },
@@ -43,6 +49,33 @@ const orderCareCase = computed<OrderCareCaseSnapshot | null>(() => {
     return null
   }
 })
+
+function parseToolResult<T>(toolName: string): T | null {
+  const result = [...(stream.runRecord.value?.toolResults ?? [])]
+    .reverse()
+    .find((item) => item.toolName === toolName)
+  if (!result?.success || !result.content) return null
+  try {
+    return JSON.parse(result.content) as T
+  } catch {
+    return null
+  }
+}
+
+const recoveryPreview = computed(() => parseToolResult<OrderCareRecoveryProposalSnapshot>('floworder_recovery_preview'))
+const recoveryExecution = computed(() => parseToolResult<OrderCareRecoveryExecutionSnapshot>('floworder_recovery_execute'))
+const recoveryProposal = computed(() => recoveryExecution.value?.execution ?? recoveryPreview.value)
+const convergence = computed(() => recoveryExecution.value?.convergence ?? null)
+const approvalSnapshot = computed(() => {
+  const pending = stream.runRecord.value?.pendingToolCall
+  return pending?.toolName === 'floworder_recovery_execute' ? pending.arguments : null
+})
+const approvalEffects = computed(() => Array.isArray(approvalSnapshot.value?.effects)
+  ? approvalSnapshot.value.effects.map(String)
+  : [])
+const approvalWarnings = computed(() => Array.isArray(approvalSnapshot.value?.warnings)
+  ? approvalSnapshot.value.warnings.map(String)
+  : [])
 
 const currentState = computed(() => {
   if (stream.running.value) return 'RUNNING'
@@ -215,7 +248,7 @@ onBeforeUnmount(() => {
           <span class="assistant-avatar">✦</span>
           <div>
             <strong>OrderCare Incident Agent</strong>
-            <small>FlowOrder 异常订单 · 统一 Runtime 只读诊断</small>
+            <small>FlowOrder 异常订单 · 诊断、预演、审批、执行与收敛验证</small>
           </div>
         </div>
         <StatusBadge :value="currentState" />
@@ -277,6 +310,48 @@ onBeforeUnmount(() => {
                 <span>候选动作由 FlowOrder 生成</span>
                 <code>{{ orderCareCase.candidates[0].candidateId }}</code>
                 <strong>{{ orderCareCase.candidates[0].eligible ? '可进入预演' : `阻断：${orderCareCase.candidates[0].blockedBy}` }}</strong>
+              </div>
+            </section>
+
+            <section v-if="recoveryProposal" class="ordercare-proposal-card">
+              <div class="case-card-heading">
+                <div>
+                  <span>IMMUTABLE RECOVERY PROPOSAL · V{{ recoveryProposal.proposalVersion }}</span>
+                  <strong>{{ recoveryProposal.proposalId }}</strong>
+                </div>
+                <StatusBadge :value="recoveryProposal.proposalStatus" />
+              </div>
+              <div class="proposal-state-grid">
+                <div><span>Proposal</span><strong>{{ recoveryProposal.proposalStatus }}</strong></div>
+                <div><span>Action</span><strong>{{ recoveryProposal.actionStatus }}</strong></div>
+                <div><span>Case outcome</span><strong>{{ recoveryProposal.caseOutcome }}</strong></div>
+                <div><span>Expires</span><strong>{{ recoveryProposal.expiresAt || '—' }}</strong></div>
+              </div>
+              <div class="proposal-target">
+                <span>权威目标</span>
+                <code>{{ recoveryProposal.targetType }} / {{ recoveryProposal.targetKey }}</code>
+                <small>actionRequestId {{ recoveryProposal.actionRequestId }}</small>
+              </div>
+              <div class="proposal-columns">
+                <div>
+                  <strong>执行影响</strong>
+                  <p v-for="effect in recoveryProposal.effects" :key="effect">{{ effect }}</p>
+                </div>
+                <div class="proposal-warnings">
+                  <strong>审批警告</strong>
+                  <p v-for="warning in recoveryProposal.warnings" :key="warning">{{ warning }}</p>
+                </div>
+              </div>
+              <div class="proposal-digests">
+                <code>fingerprint {{ recoveryProposal.stateFingerprint }}</code>
+                <code>preview {{ recoveryProposal.previewDigest }}</code>
+              </div>
+              <div v-if="convergence" class="convergence-result" :class="`is-${convergence.status.toLowerCase()}`">
+                <div>
+                  <span>DETERMINISTIC CONVERGENCE</span>
+                  <strong>{{ convergence.status }}</strong>
+                </div>
+                <p>{{ convergence.attempts }} 次回查 · 扣减 {{ convergence.deductStatus }} · 库存守恒 {{ convergence.inventoryInvariantOk ? '通过' : '失败' }} · 相关死信 {{ convergence.relatedDeadLettersTerminal ? '已终结' : '未终结' }}</p>
               </div>
             </section>
 
@@ -387,8 +462,18 @@ onBeforeUnmount(() => {
           <h3>高风险工具等待审批</h3>
           <code>{{ stream.approvalId.value }}</code>
         </div>
+        <div v-if="approvalSnapshot" class="approval-snapshot">
+          <span>批准的是不可变预演快照</span>
+          <strong>Proposal V{{ approvalSnapshot.proposalVersion }}</strong>
+          <code>{{ approvalSnapshot.proposalId }}</code>
+          <small>到期：{{ approvalSnapshot.expiresAt }}</small>
+        </div>
         <label>审批人<input v-model="reviewer" /></label>
         <label>决策理由<input v-model="decisionReason" /></label>
+        <div v-if="approvalSnapshot" class="approval-impact-list">
+          <div><strong>影响</strong><p v-for="item in approvalEffects" :key="item">{{ item }}</p></div>
+          <div><strong>警告</strong><p v-for="item in approvalWarnings" :key="item">{{ item }}</p></div>
+        </div>
         <div class="approval-actions">
           <button class="primary-button" type="button" :disabled="decisionBusy" @click="decide(true)">批准并继续执行</button>
           <button class="danger-button" type="button" :disabled="decisionBusy" @click="decide(false)">拒绝并结束</button>

@@ -71,6 +71,8 @@ enterprise-agent:
     read-timeout-millis: ${FLOWORDER_READ_TIMEOUT_MILLIS:3000}
     inspect-max-attempts: ${FLOWORDER_INSPECT_MAX_ATTEMPTS:2}
     inspect-retry-backoff-millis: ${FLOWORDER_INSPECT_RETRY_BACKOFF_MILLIS:150}
+    convergence-max-attempts: ${ORDERCARE_CONVERGENCE_MAX_ATTEMPTS:8}
+    convergence-interval-millis: ${ORDERCARE_CONVERGENCE_INTERVAL_MILLIS:500}
   memory:
     long-term-candidate-limit: 40
     profile-item-limit: 30

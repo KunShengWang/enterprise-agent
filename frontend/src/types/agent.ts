@@ -61,6 +61,46 @@ export interface OrderCareCaseSnapshot {
   hardRisks: string[]
 }
 
+export interface OrderCareRecoveryProposalSnapshot {
+  schemaVersion: string
+  proposalId: string
+  proposalVersion: number
+  proposalStatus: string
+  actionRequestId: string
+  actionStatus: string
+  caseOutcome: string
+  caseKey: string
+  targetType: string
+  targetKey: string
+  stateFingerprint: string
+  effectsDigest: string
+  warningsDigest: string
+  previewDigest: string
+  canExecute: boolean
+  effects: string[]
+  warnings: string[]
+  suggestedReason: string
+  expiresAt: string
+  approvedBy?: string
+  approvalComment?: string
+}
+
+export interface OrderCareConvergenceSnapshot {
+  status: string
+  attempts: number
+  actionStatus: string
+  caseOutcome: string
+  deductStatus: string
+  inventoryInvariantOk: boolean
+  relatedDeadLettersTerminal: boolean
+  message?: string
+}
+
+export interface OrderCareRecoveryExecutionSnapshot {
+  execution: OrderCareRecoveryProposalSnapshot
+  convergence: OrderCareConvergenceSnapshot
+}
+
 export interface AgentStreamEvent {
   eventId: string
   traceId: string

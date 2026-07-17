@@ -13,10 +13,12 @@ import com.agent.platform.tool.ToolCallRequest;
 import com.agent.platform.tool.ToolCallResult;
 import com.agent.platform.tool.ToolDefinition;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -30,17 +32,30 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
     private final ToolExecutionStore toolExecutionStore;
     private final AgentCapabilityExecutor capabilityExecutor;
     private final AgentProperties properties;
+    private final List<ApprovalToolCallRequestPreparer> approvalRequestPreparers;
 
+    @Autowired
     public DefaultAgentToolRuntime(GuardrailService guardrailService,
                                    ApprovalService approvalService,
                                    ToolExecutionStore toolExecutionStore,
                                    AgentCapabilityExecutor capabilityExecutor,
-                                   AgentProperties properties) {
+                                   AgentProperties properties,
+                                   List<ApprovalToolCallRequestPreparer> approvalRequestPreparers) {
         this.guardrailService = guardrailService;
         this.approvalService = approvalService;
         this.toolExecutionStore = toolExecutionStore;
         this.capabilityExecutor = capabilityExecutor;
         this.properties = properties;
+        this.approvalRequestPreparers = approvalRequestPreparers == null
+                ? List.of() : List.copyOf(approvalRequestPreparers);
+    }
+
+    DefaultAgentToolRuntime(GuardrailService guardrailService,
+                            ApprovalService approvalService,
+                            ToolExecutionStore toolExecutionStore,
+                            AgentCapabilityExecutor capabilityExecutor,
+                            AgentProperties properties) {
+        this(guardrailService, approvalService, toolExecutionStore, capabilityExecutor, properties, List.of());
     }
 
     @Override
@@ -59,18 +74,23 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         }
         if (policy.action() == GuardrailAction.REQUIRE_APPROVAL) {
             String approvalId = UUID.randomUUID().toString();
+            ToolCallRequest approvalBoundRequest = prepareApprovalRequest(
+                    approvalId,
+                    request,
+                    policyContext
+            );
             // TODO 不能像 codex 一样在执行的过程中让用户批准吗？
             approvalService.requestApproval(new ApprovalRequest(
                     approvalId,
                     runId,
                     sessionId,
-                    request,
+                    approvalBoundRequest,
                     policy.reason(),
                     Instant.now()
             ));
             return new AgentToolRuntimeResult(
                     AgentToolExecutionStatus.WAITING_APPROVAL,
-                    request,
+                    approvalBoundRequest,
                     null,
                     policy.action(),
                     policy.reason(),
@@ -79,6 +99,18 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
             );
         }
         return executeClaimed(runId, request, policy.action(), policy.reason());
+    }
+
+    private ToolCallRequest prepareApprovalRequest(String approvalId,
+                                                   ToolCallRequest request,
+                                                   ToolPolicyContext context) {
+        ToolCallRequest prepared = request;
+        for (ApprovalToolCallRequestPreparer preparer : approvalRequestPreparers) {
+            if (preparer.supports(prepared.toolName())) {
+                prepared = preparer.prepare(approvalId, prepared, context);
+            }
+        }
+        return prepared;
     }
 
     @Override

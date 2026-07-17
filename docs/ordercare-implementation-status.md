@@ -1,7 +1,7 @@
 # OrderCare 实施状态与学习地图
 
 > 更新时间：2026-07-17
-> 当前阶段：M1 `PASSED`，M2 准备开始
+> 当前阶段：M2 `PASSED`（Resume Ready），M3 准备开始
 > 目标完成线：Interview Strong（M3）
 
 ## 1. 文档用途
@@ -15,7 +15,7 @@
 | M0 设计收口 | `PASSED` | 总蓝图 V1.1、Agent/确定性代码责任边界、分级 DoD | 保持设计与实现同步 |
 | M0.5 FlowOrder Recovery Baseline | `PASSED` | 15 条测试、固定夹具、双扫描器 CAS、真实 RabbitMQ 跨服务恢复 | 开始 M1 只读契约 |
 | M1 只读智能诊断 | `PASSED` | 稳定 Case 契约、7 类诊断、统一 SSE Run、8/8 真实模型 Eval | Proposal/Action 双标识与不可变预演 |
-| M2 受控恢复闭环 | `NOT_STARTED` | Runtime 已有通用 Approval/ToolExecution 基础 | Proposal、HITL、execute、确定性收敛检查、happy-path E2E |
+| M2 受控恢复闭环 | `PASSED` | 不可变 Proposal、版本审批、同 Run 恢复、领域幂等、确定性收敛、真实 RabbitMQ E2E、10/10 模型 Eval | M3 UNKNOWN 对账与崩溃恢复 |
 | M3 故障正确性 | `NOT_STARTED` | Runtime 已有部分 claim/恢复基础，但没有 OrderCare 证据 | UNKNOWN、执行租约、重启、响应丢失、重复 resume、20 条 Eval |
 | M4 安全部署 | `NOT_STARTED` | FlowOrder 管理接口默认关闭 | 服务认证、用户身份、迁移脚本、部署边界 |
 
@@ -95,7 +95,47 @@ hallucinationRiskRate  = 0.000
 
 首轮 Eval 只有 5/8。失败集中在“诊断后再查 SOP”“纯 SOP 咨询”和“拒绝绕过审批”三类。修复没有降低阈值，而是把能力选择规则明确到服务端 Profile，并修复 Eval 复跑复用固定会话导致的历史上下文污染；第二轮达到 8/8。完整证据见 [M1 只读智能诊断报告](reports/ordercare/m1-readonly-diagnosis.md)。
 
-## 5. 核心学习主线保护
+## 5. M2 放行证据
+
+M2 没有把固定工作流塞进模型循环，而是形成以下责任链：
+
+```text
+LLM 识别意图并选择能力
+-> FlowOrder 聚合事实并生成不可变 Proposal
+-> Runtime 将服务端快照绑定到 ApprovalRecord
+-> 人工批准具体版本、指纹、影响和警告
+-> FlowOrder 使用 actionRequestId 幂等提交原始消息
+-> RecoveryConvergenceChecker 有界回查业务收敛
+-> LLM 只解释结构化结果
+```
+
+权威状态严格分离：
+
+```text
+proposalStatus = ACTIVE / APPROVED / REJECTED / EXPIRED / INVALIDATED
+actionStatus   = NOT_STARTED / SUBMITTED / UNKNOWN
+caseOutcome    = NOT_CONVERGED / RESOLVED / MANUAL_REVIEW
+```
+
+自动化与真实链路证据：
+
+```text
+FlowOrder M0.5 + M1 + M2 组合回归：33 tests，0 failures
+FlowOrder RecoveryProposalHttpE2ETest：真实 MySQL + Nacos + RabbitMQ，1/1
+enterprise-agent mvn clean test：47 tests，0 failures（其中 4 个外部依赖 E2E 默认跳过）
+OrderCareControlledRecoveryRuntimeE2ETests：真实 PostgreSQL，暂停/审批/恢复，1/1
+OrderCare M2 真实模型 Eval：10/10
+toolCallSuccessRate = 1.000
+toolPrecision       = 1.000
+forbiddenViolation = 0.000
+frontend npm run build：通过
+```
+
+首次真实消息 E2E 还发现了部署环境问题：旧 resource-service 消费者长期持有一条 `unacked` 测试消息，导致新实例无法收敛。通过 RabbitMQ 管理指标定位具体连接和消息后，只释放该测试连接并核验消息体，随后 E2E 观察到真实 `order-state-consumer` 日志并通过。这一证据说明测试覆盖了 broker 与多实例环境，而不只是 HTTP stub。
+
+完整报告见 [M2 受控恢复闭环](reports/ordercare/m2-controlled-recovery.md)。
+
+## 6. 核心学习主线保护
 
 `DefaultAgentRuntime.run()` 是 Agent 学习主线，不承载 OrderCare 业务分支。开始 M1 前的文件哈希为：
 
@@ -110,7 +150,7 @@ f58ac71baac0f8785c36b53271fbb436cff9912b
 3. 不新增第二套 Run 状态机取代 Runtime。
 4. 若核心循环确有正确性缺陷，先留下失败测试和设计说明，再单独修改。
 
-## 6. 分阶段学习地图
+## 7. 分阶段学习地图
 
 ### M1：从 Agent 循环到真实业务 RPC
 
@@ -143,15 +183,19 @@ ordercare/model/OrderCareCaseSnapshot
 - Agent 工具幂等与 FlowOrder 业务幂等为什么不能互相替代。
 - Java 收敛检查器为什么优于模型循环轮询。
 
-主要现有入口：
+当前代码入口：
 
 ```text
-approval/LocalApprovalService
-approval/JdbcApprovalStore
-runtime/ToolExecutionStore
-runtime/AgentRunControlStore
-runtime/DefaultAgentRuntime
+ordercare/application/OrderCareProposalBindingStore
+ordercare/application/RecoveryConvergenceChecker
+ordercare/tool/OrderCareApprovalRequestPreparer
+ordercare/tool/OrderCareRecoveryToolHandler
+ordercare/client/HttpFlowOrderClient
+runtime/ApprovalToolCallRequestPreparer
+runtime/DefaultAgentToolRuntime
 ```
+
+M2 只在 `DefaultAgentToolRuntime` 增加审批前请求准备扩展点；`DefaultAgentRuntime.run()` 未加入 OrderCare 分支，也没有第二套恢复状态机。
 
 ### M3：生产型 Agent 可靠性
 
@@ -173,7 +217,7 @@ trace/JdbcTraceRecorder
 eval/DefaultAgentEvalRunner
 ```
 
-## 7. 分阶段中间件清单
+## 8. 分阶段中间件清单
 
 | 工作 | MySQL | Redis | RabbitMQ | Nacos | PostgreSQL/pgvector | 模型 API |
 |---|---:|---:|---:|---:|---:|---:|
@@ -187,7 +231,7 @@ eval/DefaultAgentEvalRunner
 
 当前不要求每次开发都启动全部中间件。只有真实跨服务验证时才启完整链路，普通编码优先使用窄测试和 HTTP stub。
 
-## 8. M1 验收清单
+## 9. M1 验收清单
 
 - [x] FlowOrder 定义稳定的 Case DTO，不返回 Entity。
 - [x] 支持四类业务标识并聚合预约、订单、扣减、库存不变量和关联死信。
@@ -199,3 +243,18 @@ eval/DefaultAgentEvalRunner
 - [x] 从现有统一 Run/SSE 执行线完成一次持久化只读诊断。
 
 M1 只能表述为“实现异常订单智能诊断”，没有 Proposal、审批和 execute，不能宣称已经完成恢复闭环。
+
+## 10. M2 验收清单
+
+- [x] FlowOrder 是 Proposal 和 Recovery Action 的唯一权威事实源。
+- [x] `proposalId` 与 `actionRequestId` 分离，并一对一绑定目标。
+- [x] 审批绑定 Proposal 版本、状态指纹、影响/警告摘要、预演摘要和有效期。
+- [x] 过期或状态漂移使原审批失效，执行前由 FlowOrder 重新校验。
+- [x] 审批后恢复原始 ToolCall；模型只提交 `proposalId`，其余参数由服务端恢复。
+- [x] execute 网络结果未知不自动重试写请求，并标记人工核对信息。
+- [x] Java 有界轮询区分 `SUBMITTED` 和 `RESOLVED`，模型不负责循环回查。
+- [x] 同一 Runtime 窗口展示案例、Proposal、审批、执行和收敛结果。
+- [x] 真实 PostgreSQL Runtime E2E 与真实 MySQL/RabbitMQ 业务 E2E 均通过。
+- [x] 10 条真实模型 Eval 通过率、工具匹配率和工具精确率均为 100%。
+
+当前可以保守表述为“实现异常订单诊断与人工审批恢复闭环”。M3 未完成前，不能声称支持写响应丢失后的自动对账、执行租约接管或进程崩溃恢复。

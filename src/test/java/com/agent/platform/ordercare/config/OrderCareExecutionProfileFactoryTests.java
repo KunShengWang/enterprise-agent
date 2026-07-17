@@ -15,20 +15,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OrderCareExecutionProfileFactoryTests {
 
     @Test
-    void m1ProfileIsReadOnlyAndDisablesLongTermMemory() {
+    void orderCareProfileAllowsOnlyControlledRecoveryCapabilitiesAndDisablesLongTermMemory() {
         OrderCareExecutionProfileFactory factory = new OrderCareExecutionProfileFactory();
 
-        AgentExecutionProfile profile = factory.createM1Profile();
+        AgentExecutionProfile profile = factory.createProfile();
 
         assertEquals(OrderCareExecutionProfileFactory.PROFILE_NAME, profile.name());
         assertEquals(Set.of(
                 OrderCareToolCatalog.CASE_INSPECT,
-                DefaultAgentCapabilityRegistry.KNOWLEDGE_SEARCH
+                DefaultAgentCapabilityRegistry.KNOWLEDGE_SEARCH,
+                OrderCareToolCatalog.RECOVERY_PREVIEW,
+                OrderCareToolCatalog.RECOVERY_EXECUTE
         ), profile.allowedCapabilities());
         assertFalse(profile.longTermMemoryEnabled());
-        assertEquals(4, profile.limits().maxToolCalls());
+        assertEquals(6, profile.limits().maxToolCalls());
         assertTrue(profile.systemPrompt().contains("必须调用 knowledge_search"));
-        assertTrue(profile.systemPrompt().contains("预演和人工审批"));
+        assertTrue(profile.systemPrompt().contains("Runtime 会自动暂停等待人工审批"));
+        assertTrue(profile.systemPrompt().contains("proposalStatus、actionStatus 和 caseOutcome"));
     }
 
     @Test

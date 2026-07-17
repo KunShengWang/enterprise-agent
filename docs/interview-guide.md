@@ -2,7 +2,7 @@
 
 ## 30 秒项目定位
 
-> 我基于自研 Java Agent Runtime 做了一个异常订单诊断与受控恢复项目 OrderCare。当前 M1 已完成：Agent 从自然语言中定位 FlowOrder 案例，调用强类型工具聚合订单、扣减、库存和死信事实，并结合版本化 SOP 解释处置建议；交易诊断由 FlowOrder 确定性代码负责。统一 Runtime 管理 PostgreSQL 时间线、能力白名单、预算、工具执行和 SSE 事件，首批 8 条真实模型 Eval 全部通过。Proposal、人工审批和恢复执行属于下一阶段，当前不夸大为完整恢复闭环。
+> 我基于自研 Java Agent Runtime 做了异常订单诊断与受控恢复项目 OrderCare。运营人员可以用 requestId、orderNo、deductNo 或 deadLetterId 描述问题；Agent 聚合 FlowOrder 权威事实并解释 SOP，FlowOrder 生成不可变恢复 Proposal；高风险执行由 Runtime 暂停并绑定具体版本给人工审批，随后用领域幂等键提交原消息，再由 Java 有界回查扣减、库存和死信是否收敛。M2 已通过真实 PostgreSQL、MySQL、RabbitMQ E2E 和 10/10 真实模型 Eval，当前定位是 Resume Ready，不夸大为生产级。
 
 不要说“对标或复刻 Claude Code”。更准确的说法是：参考成熟 Agent 的 Runtime 不变量，在有限业务场景中自行实现并理解取舍。
 
@@ -14,7 +14,7 @@
 - FlowOrder 返回的 `diagnosisCode`、硬风险和候选动作是权威结论，模型不能自己改交易规则。
 - 因此边界是：Agent 负责理解、诊断解释和建议；程序负责校验、执行和验证。
 
-M1 证据：7 类确定性诊断、FlowOrder 真实 HTTP E2E、统一 SSE Run，以及 8/8 真实模型 Eval。当前只能表述为“异常订单智能诊断”。
+M2 证据：7 类确定性诊断、Proposal 过期/漂移门禁、审批原参数恢复、业务幂等、确定性收敛、统一 SSE Run、真实 RabbitMQ 恢复链路，以及 10/10 真实模型 Eval。当前可以表述为“异常订单诊断与人工审批恢复闭环”。
 
 ## 与目标实习岗位的能力映射
 
@@ -69,13 +69,15 @@ M1 证据：7 类确定性诊断、FlowOrder 真实 HTTP E2E、统一 SSE Run，
 回答要点：
 
 - Run 在 `WAITING_APPROVAL` 时保存 pending ToolCall、已完成结果和使用工具。
+- 模型只能把 `proposalId` 交给高风险工具；审批前扩展点重新从 FlowOrder 读取 Proposal，把版本、指纹、effects/warnings digest、preview digest 和有效期替换进 ApprovalRecord，不能审批模型自己复述的影响。
+- `proposalId` 表示被审批的不可变预演；`actionRequestId` 表示一次有副作用命令的领域幂等键，二者不能混成同一个概念。
 - 审批后 claim 同一个 Run，执行或写入拒绝 ToolResult，再继续同一个 Agent Loop。
 - 审批决定通过数据库同时检查 `status=REQUESTED` 和 `expiresAt>decisionTime`；批准、拒绝和过期只有一个状态迁移能成功，失败方读取胜出结果，既不能后写覆盖，也不能在 CAS 时刻批准已过期请求。
 - Profile、能力白名单、累计 Token/成本与剩余执行时长都随 Run 持久化；审批等待不消耗执行预算，Approval 则有独立有效期，恢复不会重新获得预算或默认权限。
 - 同一个 Run 的每次执行使用唯一 leaseOwnerId；claim 失败者不能继续工具执行。
 - 模型提供的 ToolCall ID 只用于追踪；Runtime 生成全局执行 ID 作为消息配对和工具幂等键，存储层额外拒绝跨 Run 复用；已完成调用返回持久化结果。
-- 对“远端可能成功但本地超时”的不确定状态进入 `MANUAL_REVIEW`，不自动重复副作用。
-- 崩溃恢复时先按 pending `requestId` 查询工具执行记录：`SUCCEEDED/FAILED` 复用持久化结果并继续规划，只有 `RUNNING/UNKNOWN/MANUAL_REVIEW` 才人工核对。
+- M2 对写请求超时明确不自动重试，并返回 `UNKNOWN/manualReview` 信息；完整的 Action 对账、执行租约和重启接管属于 M3，当前不宣称已经完成。
+- execute 返回 `SUBMITTED` 后，由 `RecoveryConvergenceChecker` 固定次数回查 FlowOrder；只有 action、扣减、库存不变量和相关死信同时满足条件才返回 `RESOLVED`。
 
 ## 故事五：为什么规则没有全部删除
 
