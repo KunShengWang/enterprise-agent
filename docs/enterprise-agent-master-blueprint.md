@@ -17,6 +17,9 @@
 - `enterprise-agent` 与 FlowOrder 如何形成可运行、可恢复、可评估的完整系统。
 - 每个阶段做到什么程度，才能写进简历并经得住面试追问。
 
+实际完成度、当前门禁和证据入口统一记录在
+[OrderCare 实施状态与学习地图](ordercare-implementation-status.md)。蓝图描述目标状态，实施状态文档描述当前事实，二者不能混用。
+
 已有的 [OrderCare × FlowOrder 异常订单恢复闭环设计稿](ordercare-floworder-integration-design.md) 作为早期业务子设计保留。若两份文档冲突，以本总蓝图为准；原子设计中的“模型循环回查”和“5 个模型可见工具”不再作为实施方案。
 
 ## 2. 最终项目定位
@@ -139,7 +142,7 @@ AND inventoryInvariantOk == true
 AND unresolvedRelatedDeadLetterCount == 0
 ```
 
-其中 `SUBMITTED` 是目标契约语义；当前 FlowOrder 动作日志中的 `SUCCEEDED` 实际表示“重放已提交”，M0.5 必须将对外 DTO 和文档语义统一为 `SUBMITTED`，数据库数值迁移可以后置，但不能继续向新客户端暴露误导性名称。
+其中 `SUBMITTED` 是目标契约语义。FlowOrder 已在 M0.5 将对外 DTO、测试和文档从误导性的 `SUCCEEDED` 统一为 `SUBMITTED`，同时保留数据库数值 20 的兼容性。
 
 动作提交成功只代表命令已受理，不代表业务已经恢复。限定时间内不满足上述条件时，结果只能是 `NOT_CONVERGED` 或 `MANUAL_REVIEW`。
 
@@ -158,6 +161,8 @@ AND unresolvedRelatedDeadLetterCount == 0
 - 输入注入检测、DLP、输出脱敏和审计。
 - Run Trace、Eval、AgentOps、SSE 心跳和背压缺口通知。
 - 隔离式 Sub-Agent Runtime 和有界并行 specialist；但它不进入 OrderCare V1。
+- FlowOrder M0.5 恢复基线：15 条自动化测试、双扫描器 CAS、固定异常注入脚本，以及真实 HTTP/Outbox/RabbitMQ/消费者跨服务重放证据。
+- FlowOrder 两个服务已能通过 Spring Boot `repackage` 生成可执行 JAR，恢复管理接口已显式绑定参数名。
 
 ### 5.2 当前真正缺少
 
@@ -169,7 +174,7 @@ AND unresolvedRelatedDeadLetterCount == 0
 - 写请求结果未知时的确定性对账。
 - FlowOrder `EXECUTING` 崩溃窗口的租约与恢复。
 - Java `RecoveryConvergenceChecker`。
-- 跨仓库契约测试、故障注入和真实业务 Eval。
+- Agent 侧跨仓库契约测试、M1～M3 故障注入和真实业务 Eval。
 - 管理 API 身份认证与服务间认证。
 
 ## 6. 目标架构
