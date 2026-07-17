@@ -66,6 +66,8 @@ RUN_STARTED
 
 运行台 URL 会保存 `runId`。刷新页面或从 Run 历史、审批中心进入时，前端会先读取 `AgentRunRecord + AgentEvent` 恢复工作区；若状态为 `WAITING_APPROVAL`，可直接在右侧审批卡片中决定并继续流式执行。
 
+使用 `ordercare-floworder-v1` 场景时，同一工作区还会投影 Case、Proposal、Approval、Action 和 Convergence。M3 故障结果会显示 `responseLost`、`reconciled`、对账次数、是否按原 ID 补发以及 `recoveredAfterCrash`；这些字段来自 ToolResult/FlowOrder 权威状态，不由前端猜测。
+
 ### 2. Run 历史与回放
 
 选择刚才的 Run，对照以下三类数据：

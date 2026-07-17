@@ -90,7 +90,7 @@ export interface OrderCareConvergenceSnapshot {
   attempts: number
   actionStatus: string
   caseOutcome: string
-  deductStatus: string
+  deductReleased: boolean
   inventoryInvariantOk: boolean
   relatedDeadLettersTerminal: boolean
   message?: string
@@ -99,6 +99,29 @@ export interface OrderCareConvergenceSnapshot {
 export interface OrderCareRecoveryExecutionSnapshot {
   execution: OrderCareRecoveryProposalSnapshot
   convergence: OrderCareConvergenceSnapshot
+}
+
+export interface OrderCareRecoveryActionSnapshot {
+  schemaVersion: string
+  proposalId: string
+  actionRequestId: string
+  actionStatus: string
+  caseOutcome: string
+  reconciliationStatus: string
+  executionOwner?: string
+  executionLeaseUntil?: string
+  leaseExpired?: boolean
+  reconcileCount?: number
+  lastError?: string
+}
+
+export interface OrderCareRecoveryReconciliationSnapshot {
+  status: string
+  attempts: number
+  responseLost: boolean
+  executeReissuedWithSameId: boolean
+  action?: OrderCareRecoveryActionSnapshot
+  convergence?: OrderCareConvergenceSnapshot
 }
 
 export interface AgentStreamEvent {

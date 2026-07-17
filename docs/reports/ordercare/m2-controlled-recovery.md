@@ -1,5 +1,7 @@
 # OrderCare M2：受控恢复闭环证据
 
+> 本文保留 M2 阶段证据。M3 UNKNOWN 对账、Action 租约和崩溃恢复现已完成，当前状态见 [M3 故障正确性报告](m3-fault-correctness.md)。
+
 > 验证日期：2026-07-17
 >
 > 阶段结论：`PASSED / Resume Ready`

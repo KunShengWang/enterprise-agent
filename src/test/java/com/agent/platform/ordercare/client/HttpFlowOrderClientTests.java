@@ -4,6 +4,7 @@ import com.agent.platform.ordercare.config.OrderCareProperties;
 import com.agent.platform.ordercare.model.OrderCareCaseSnapshot;
 import com.agent.platform.ordercare.model.OrderCareProposalCreateCommand;
 import com.agent.platform.ordercare.model.OrderCareProposalExecuteCommand;
+import com.agent.platform.ordercare.model.OrderCareActionReconcileCommand;
 import com.agent.platform.ordercare.model.OrderCareRecoveryProposal;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
@@ -132,9 +133,54 @@ class HttpFlowOrderClientTests {
                         "preview",
                         "approval-1",
                         "reviewer-1",
-                        "approved"
+                        "approved",
+                        "tool-exec-1"
                 ), "trace-execute")
         );
+
+        assertEquals(1, attempts.get());
+        assertTrue(exception.outcomeUnknown());
+        assertFalse(exception.retryable());
+    }
+
+    @Test
+    void actionQueryReturnsLeaseAndCorrelationFacts() throws Exception {
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/internal/recovery/actions/act-fixed-id", exchange -> {
+            byte[] body = actionSuccessBody().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+
+        var action = new HttpFlowOrderClient(properties(), new ObjectMapper())
+                .getAction("act-fixed-id", "trace-action");
+
+        assertEquals("act-fixed-id", action.actionRequestId());
+        assertEquals("tool-exec-1", action.executionOwner());
+        assertEquals("EXECUTING", action.actionStatus());
+        assertEquals("WAITING_EXECUTION", action.reconciliationStatus());
+    }
+
+    @Test
+    void reconciliationWriteIsSentOnceWhenResponseIsUnknown() throws Exception {
+        AtomicInteger attempts = new AtomicInteger();
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/internal/recovery/actions/act-fixed-id/reconcile", exchange -> {
+            attempts.incrementAndGet();
+            exchange.getRequestBody().readAllBytes();
+            exchange.sendResponseHeaders(503, -1);
+            exchange.close();
+        });
+        server.start();
+
+        FlowOrderApiException exception = assertThrows(FlowOrderApiException.class, () ->
+                new HttpFlowOrderClient(properties(), new ObjectMapper()).reconcileAction(
+                        "act-fixed-id",
+                        new OrderCareActionReconcileCommand("tool-exec-1"),
+                        "trace-reconcile"
+                ));
 
         assertEquals(1, attempts.get());
         assertTrue(exception.outcomeUnknown());
@@ -168,6 +214,30 @@ class HttpFlowOrderClientTests {
                     "candidates": [],
                     "evidence": ["ORDER_FOUND"],
                     "hardRisks": []
+                  }
+                }
+                """;
+    }
+
+    private String actionSuccessBody() {
+        return """
+                {
+                  "code": 200,
+                  "message": "success",
+                  "data": {
+                    "schemaVersion": "floworder-recovery-action-v1",
+                    "proposalId": "prop-fixed-id",
+                    "actionRequestId": "act-fixed-id",
+                    "actionType": "REPLAY",
+                    "targetType": "DEAD_LETTER",
+                    "targetKey": "9",
+                    "actionStatus": "EXECUTING",
+                    "caseOutcome": "NOT_CONVERGED",
+                    "reconciliationStatus": "WAITING_EXECUTION",
+                    "executionOwner": "tool-exec-1",
+                    "executionLeaseUntil": "2026-07-17T20:00:00",
+                    "leaseExpired": false,
+                    "reconcileCount": 0
                   }
                 }
                 """;

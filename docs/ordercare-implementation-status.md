@@ -1,8 +1,8 @@
 # OrderCare 实施状态与学习地图
 
 > 更新时间：2026-07-17
-> 当前阶段：M2 `PASSED`（Resume Ready），M3 准备开始
-> 目标完成线：Interview Strong（M3）
+> 当前阶段：M3 `PASSED`（Interview Strong）
+> 下一阶段：M4 安全部署；不作为当前简历主闭环的完成前提
 
 ## 1. 文档用途
 
@@ -16,7 +16,7 @@
 | M0.5 FlowOrder Recovery Baseline | `PASSED` | 15 条测试、固定夹具、双扫描器 CAS、真实 RabbitMQ 跨服务恢复 | 开始 M1 只读契约 |
 | M1 只读智能诊断 | `PASSED` | 稳定 Case 契约、7 类诊断、统一 SSE Run、8/8 真实模型 Eval | Proposal/Action 双标识与不可变预演 |
 | M2 受控恢复闭环 | `PASSED` | 不可变 Proposal、版本审批、同 Run 恢复、领域幂等、确定性收敛、真实 RabbitMQ E2E、10/10 模型 Eval | M3 UNKNOWN 对账与崩溃恢复 |
-| M3 故障正确性 | `NOT_STARTED` | Runtime 已有部分 claim/恢复基础，但没有 OrderCare 证据 | UNKNOWN、执行租约、重启、响应丢失、重复 resume、20 条 Eval |
+| M3 故障正确性 | `PASSED` | 原 Action 对账、EXECUTING 租约、响应丢失、崩溃检查点恢复、重复 resume、20/20 真实模型 Eval、跨表 Trace 证据 | 保持故障证据可重复 |
 | M4 安全部署 | `NOT_STARTED` | FlowOrder 管理接口默认关闭 | 服务认证、用户身份、迁移脚本、部署边界 |
 
 ## 3. M0.5 放行证据
@@ -135,7 +135,49 @@ frontend npm run build：通过
 
 完整报告见 [M2 受控恢复闭环](reports/ordercare/m2-controlled-recovery.md)。
 
-## 6. 核心学习主线保护
+## 6. M3 放行证据
+
+M3 没有让模型决定重试写请求，而是增加一条确定性恢复支线：
+
+```text
+execute 返回 UNKNOWN / Runtime 恢复到 EXECUTING_TOOL
+-> 查询原 actionRequestId
+-> SUBMITTED/EXECUTING 时只对账，不创建新动作
+-> 仅权威状态 NOT_STARTED 才按原审批参数补发一次
+-> FlowOrder 按业务事实、死信状态和 Action 租约收敛
+-> RESOLVED / NOT_CONVERGED / MANUAL_REVIEW
+```
+
+自动化与真实链路证据：
+
+```text
+enterprise-agent 默认测试：64 tests，0 failures，7 个外部 E2E 默认跳过
+OrderCareM3ResponseLostRuntimeE2ETests：真实 PostgreSQL，响应丢失后只执行 1 次
+OrderCareM3CrashRecoveryRuntimeE2ETests：真实 PostgreSQL，EXECUTING_TOOL 重启恢复且 0 次重复 execute
+FlowOrder 恢复域测试：42 tests，0 failures
+RecoveryProposalHttpE2ETest：真实 MySQL + Nacos + RabbitMQ，Action 查询/重复对账 1/1
+Vue 生产构建：通过
+```
+
+2026-07-17 真实 DeepSeek M3 Eval：
+
+```text
+evalRunId              = 701dbbc3-e004-4cbb-b78a-74f1ce6e2050
+passed                 = 20 / 20
+passRate               = 1.000
+averageScore           = 0.990
+toolCallSuccessRate    = 1.000
+toolPrecision          = 1.000
+ragUsageAccuracy       = 1.000
+groundednessRate       = 1.000
+forbiddenViolationRate = 0.000
+hallucinationRiskRate  = 0.000
+adversarialPassRate    = 1.000
+```
+
+完整故障矩阵、真实关联 ID 和复现命令见 [M3 故障正确性报告](reports/ordercare/m3-fault-correctness.md)。
+
+## 7. 核心学习主线保护
 
 `DefaultAgentRuntime.run()` 是 Agent 学习主线，不承载 OrderCare 业务分支。开始 M1 前的文件哈希为：
 
@@ -150,7 +192,7 @@ f58ac71baac0f8785c36b53271fbb436cff9912b
 3. 不新增第二套 Run 状态机取代 Runtime。
 4. 若核心循环确有正确性缺陷，先留下失败测试和设计说明，再单独修改。
 
-## 7. 分阶段学习地图
+## 8. 分阶段学习地图
 
 ### M1：从 Agent 循环到真实业务 RPC
 
@@ -207,17 +249,21 @@ M2 只在 `DefaultAgentToolRuntime` 增加审批前请求准备扩展点；`Defa
 - Trace 如何串联 run、tool、approval、proposal 和 action。
 - 不确定输出如何通过确定性断言和 LLM Judge 分层评估。
 
-主要现有入口：
+当前代码入口：
 
 ```text
-runtime/JdbcAgentRuntimeStore
-runtime/ToolExecutionState
-trace/RuntimeTraceProjector
-trace/JdbcTraceRecorder
-eval/DefaultAgentEvalRunner
+ordercare/application/RecoveryOutcomeReconciler
+ordercare/tool/OrderCareUncertainExecutionResolver
+ordercare/client/HttpFlowOrderClient
+runtime/UncertainToolExecutionResolver
+runtime/DefaultAgentToolRuntime.reconcileUncertain
+runtime/DefaultAgentRuntime.recoverExecutingTool
+eval/OrderCareM3EvalSuite
 ```
 
-## 8. 分阶段中间件清单
+`DefaultAgentRuntime.run()` 的完整模型循环仍保留；M3 只在已有 `recoverExecutingTool` 恢复点调用通用 `UncertainToolExecutionResolver`，没有加入 FlowOrder DTO 或 `if (ordercare)`。
+
+## 9. 分阶段中间件清单
 
 | 工作 | MySQL | Redis | RabbitMQ | Nacos | PostgreSQL/pgvector | 模型 API |
 |---|---:|---:|---:|---:|---:|---:|
@@ -231,7 +277,7 @@ eval/DefaultAgentEvalRunner
 
 当前不要求每次开发都启动全部中间件。只有真实跨服务验证时才启完整链路，普通编码优先使用窄测试和 HTTP stub。
 
-## 9. M1 验收清单
+## 10. M1 验收清单
 
 - [x] FlowOrder 定义稳定的 Case DTO，不返回 Entity。
 - [x] 支持四类业务标识并聚合预约、订单、扣减、库存不变量和关联死信。
@@ -244,7 +290,7 @@ eval/DefaultAgentEvalRunner
 
 M1 只能表述为“实现异常订单智能诊断”，没有 Proposal、审批和 execute，不能宣称已经完成恢复闭环。
 
-## 10. M2 验收清单
+## 11. M2 验收清单
 
 - [x] FlowOrder 是 Proposal 和 Recovery Action 的唯一权威事实源。
 - [x] `proposalId` 与 `actionRequestId` 分离，并一对一绑定目标。
@@ -257,4 +303,15 @@ M1 只能表述为“实现异常订单智能诊断”，没有 Proposal、审�
 - [x] 真实 PostgreSQL Runtime E2E 与真实 MySQL/RabbitMQ 业务 E2E 均通过。
 - [x] 10 条真实模型 Eval 通过率、工具匹配率和工具精确率均为 100%。
 
-当前可以保守表述为“实现异常订单诊断与人工审批恢复闭环”。M3 未完成前，不能声称支持写响应丢失后的自动对账、执行租约接管或进程崩溃恢复。
+## 12. M3 验收清单
+
+- [x] execute 传输异常不进入通用写重试，返回 UNKNOWN 并查询原 Action。
+- [x] 只在 Action 明确为 NOT_STARTED 时，使用原 ToolCall、审批参数和 actionRequestId 补发一次。
+- [x] FlowOrder 使用 executionOwner、executionLeaseUntil 和 CAS 接管过期 EXECUTING 动作。
+- [x] 业务已收敛但 Action 日志未完成时补记 SUBMITTED；无法证明时进入 MANUAL_REVIEW。
+- [x] Runtime 从持久化 EXECUTING_TOOL 检查点恢复，并补写匹配的 ToolResult 时间线。
+- [x] 响应丢失、崩溃恢复和重复 resume 均有真实 PostgreSQL 自动化证据。
+- [x] 20 条真实模型 Eval 达到 20/20，工具精确率与 groundedness 均为 100%。
+- [x] 工作台展示 responseLost、reconciled、reconciliation attempts 和 recoveredAfterCrash。
+
+当前可以表述为“支持副作用结果未知、进程崩溃和重复恢复场景下的幂等对账与故障恢复”。M4 未完成前，仍不能宣称生产级安全、线上规模或完整 SLO。

@@ -33,6 +33,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
     private final AgentCapabilityExecutor capabilityExecutor;
     private final AgentProperties properties;
     private final List<ApprovalToolCallRequestPreparer> approvalRequestPreparers;
+    private final List<UncertainToolExecutionResolver> uncertainExecutionResolvers;
 
     @Autowired
     public DefaultAgentToolRuntime(GuardrailService guardrailService,
@@ -40,7 +41,8 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                                    ToolExecutionStore toolExecutionStore,
                                    AgentCapabilityExecutor capabilityExecutor,
                                    AgentProperties properties,
-                                   List<ApprovalToolCallRequestPreparer> approvalRequestPreparers) {
+                                   List<ApprovalToolCallRequestPreparer> approvalRequestPreparers,
+                                   List<UncertainToolExecutionResolver> uncertainExecutionResolvers) {
         this.guardrailService = guardrailService;
         this.approvalService = approvalService;
         this.toolExecutionStore = toolExecutionStore;
@@ -48,6 +50,18 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         this.properties = properties;
         this.approvalRequestPreparers = approvalRequestPreparers == null
                 ? List.of() : List.copyOf(approvalRequestPreparers);
+        this.uncertainExecutionResolvers = uncertainExecutionResolvers == null
+                ? List.of() : List.copyOf(uncertainExecutionResolvers);
+    }
+
+    DefaultAgentToolRuntime(GuardrailService guardrailService,
+                            ApprovalService approvalService,
+                            ToolExecutionStore toolExecutionStore,
+                            AgentCapabilityExecutor capabilityExecutor,
+                            AgentProperties properties,
+                            List<ApprovalToolCallRequestPreparer> approvalRequestPreparers) {
+        this(guardrailService, approvalService, toolExecutionStore, capabilityExecutor,
+                properties, approvalRequestPreparers, List.of());
     }
 
     DefaultAgentToolRuntime(GuardrailService guardrailService,
@@ -55,7 +69,8 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                             ToolExecutionStore toolExecutionStore,
                             AgentCapabilityExecutor capabilityExecutor,
                             AgentProperties properties) {
-        this(guardrailService, approvalService, toolExecutionStore, capabilityExecutor, properties, List.of());
+        this(guardrailService, approvalService, toolExecutionStore, capabilityExecutor,
+                properties, List.of(), List.of());
     }
 
     @Override
@@ -172,6 +187,18 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                 toolExecutionStore.markSucceeded(request.requestId(), result);
                 return completed(request, result, policyAction, policyReason, false);
             }
+            if (manualReview(result)) {
+                toolExecutionStore.markManualReview(request.requestId(), result.errorMessage());
+                return new AgentToolRuntimeResult(
+                        AgentToolExecutionStatus.MANUAL_REVIEW,
+                        request,
+                        result,
+                        policyAction,
+                        "tool outcome requires manual review",
+                        "",
+                        false
+                );
+            }
             toolExecutionStore.markFailed(request.requestId(), result);
             return new AgentToolRuntimeResult(
                     AgentToolExecutionStatus.FAILED,
@@ -195,6 +222,34 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                     false
             );
         }
+    }
+
+    @Override
+    public ToolExecutionRecord reconcileUncertain(ToolExecutionRecord execution) {
+        if (execution == null || execution.state() != ToolExecutionState.RUNNING) {
+            return execution;
+        }
+        for (UncertainToolExecutionResolver resolver : uncertainExecutionResolvers) {
+            if (!resolver.supports(execution)) continue;
+            try {
+                ToolCallResult result = resolver.resolve(execution);
+                if (result == null) return execution;
+                if (result.success()) {
+                    toolExecutionStore.markSucceeded(execution.toolCallId(), result);
+                } else if (manualReview(result)) {
+                    toolExecutionStore.markManualReview(execution.toolCallId(), result.errorMessage());
+                } else {
+                    toolExecutionStore.markFailed(execution.toolCallId(), result);
+                }
+            } catch (RuntimeException exception) {
+                markManualReviewBestEffort(
+                        execution.toolCallId(),
+                        "uncertain tool reconciliation failed: " + exception.getClass().getSimpleName()
+                );
+            }
+            return toolExecutionStore.findToolExecution(execution.toolCallId()).orElse(execution);
+        }
+        return execution;
     }
 
     private ToolCallResult executeWithRetry(ToolCallRequest request) {
@@ -282,6 +337,10 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                 || error.contains("unavailable")
                 || error.contains("connection")
                 || error.contains("ioexception");
+    }
+
+    private boolean manualReview(ToolCallResult result) {
+        return Boolean.TRUE.equals(result.metadata().get("manualReview"));
     }
 
     private void sleepBackoff(int attempt) {

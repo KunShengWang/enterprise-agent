@@ -190,6 +190,22 @@ class DefaultAgentRuntimeStateTests {
         verify(fixture.toolRuntime, never()).execute(anyString(), anyString(), anyString(), any(), any(), any());
     }
 
+    @Test
+    void staleOrderCareToolCanBeReconciledBeforeManualReview() {
+        Fixture fixture = new Fixture();
+        ToolCallResult reconciled = new ToolCallResult(
+                "floworder_recovery_execute", true, "reconciled", "",
+                Map.of("recoveredAfterCrash", true, "actionRequestId", "act-1")
+        );
+
+        AgentRuntimeResult recovered = fixture.recoverUncertainToolExecution(reconciled);
+
+        assertEquals(AgentRunState.COMPLETED, recovered.state());
+        assertEquals(true, fixture.persisted.get().toolResults().get(0).success());
+        verify(fixture.toolRuntime).reconcileUncertain(any(ToolExecutionRecord.class));
+        verify(fixture.toolRuntime, never()).execute(anyString(), anyString(), anyString(), any(), any(), any());
+    }
+
     private static final class Fixture {
         private final AgentProperties properties = new AgentProperties();
         private final AtomicReference<AgentRunRecord> persisted = new AtomicReference<>();
@@ -263,6 +279,41 @@ class DefaultAgentRuntimeStateTests {
                     .thenReturn(new AgentContextView(List.of(), 0, 0, false));
             when(modelGateway.nextTurn(any())).thenReturn(new AgentModelTurn(
                     "replanned answer", List.of(), "replanned answer",
+                    new LlmUsage(10, 5, 15, 0, 0, "test-model", "test"), "stop"
+            ));
+            return runtime().resume("run-1", AgentEventListener.NOOP);
+        }
+
+        private AgentRuntimeResult recoverUncertainToolExecution(ToolCallResult resolvedResult) {
+            AgentRunLimits limits = AgentRunLimits.from(properties);
+            AgentExecutionProfile profile = new AgentExecutionProfile(
+                    "ordercare", "prompt", Set.of("floworder_recovery_execute"), limits, false
+            );
+            AgentRunBudget budget = new AgentRunBudget(limits);
+            ToolCallRequest pending = new ToolCallRequest(
+                    "floworder_recovery_execute", "tool-exec-1", Map.of("proposalId", "prop-1")
+            );
+            persisted.set(AgentRunRecord.create(
+                            "run-1", "run-1", "session-1",
+                            new AgentRequest("session-1", "user-1", "recover order", Map.of()),
+                            profile, budget.snapshot())
+                    .checkpoint(AgentRunPhase.EXECUTING_TOOL, pending, List.of(), List.of(), false,
+                            budget.snapshot()));
+            when(runStore.find("run-1")).thenAnswer(invocation -> Optional.ofNullable(persisted.get()));
+            when(runStore.update(anyString(), any())).thenAnswer(invocation -> {
+                java.util.function.UnaryOperator<AgentRunRecord> updater = invocation.getArgument(1);
+                AgentRunRecord updated = updater.apply(persisted.get());
+                persisted.set(updated);
+                return updated;
+            });
+            ToolExecutionRecord running = ToolExecutionRecord.running("run-1", pending);
+            ToolExecutionRecord succeeded = running.withResult(ToolExecutionState.SUCCEEDED, resolvedResult, "");
+            when(toolExecutionStore.findToolExecution("tool-exec-1")).thenReturn(Optional.of(running));
+            when(toolRuntime.reconcileUncertain(running)).thenReturn(succeeded);
+            when(contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+                    .thenReturn(new AgentContextView(List.of(), 0, 0, false));
+            when(modelGateway.nextTurn(any())).thenReturn(new AgentModelTurn(
+                    "recovered answer", List.of(), "recovered answer",
                     new LlmUsage(10, 5, 15, 0, 0, "test-model", "test"), "stop"
             ));
             return runtime().resume("run-1", AgentEventListener.NOOP);

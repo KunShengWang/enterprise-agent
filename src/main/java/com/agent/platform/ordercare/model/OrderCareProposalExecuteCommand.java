@@ -9,6 +9,7 @@ public record OrderCareProposalExecuteCommand(
         String previewDigest,
         String approvalId,
         String approvedBy,
-        String approvalComment
+        String approvalComment,
+        String executionOwner
 ) {
 }

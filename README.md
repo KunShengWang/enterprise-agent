@@ -37,7 +37,7 @@
 - SSE 可靠性：持久化事件序号、心跳、背压缺口通知；客户端可以识别不完整事件流。
 - Sub-Agent：独立 Session、System Prompt、能力白名单、预算和父子 Run；只向协调者返回摘要与 childRunId。
 - AgentOps：Runtime 事件投影为 Trace / Eval / Replay，保留真实 Usage 或明确标记估算来源。
-- OrderCare M2：与 FlowOrder 联动完成异常订单诊断与受控恢复，覆盖不可变 Proposal、版本化审批、领域幂等 execute、确定性收敛检查、同一 Run/SSE 窗口和 10/10 真实模型 Eval。
+- OrderCare M3：与 FlowOrder 联动完成异常订单诊断、不可变 Proposal、版本化审批、领域幂等 execute、确定性收敛、UNKNOWN 对账、Action 执行租约与崩溃恢复；覆盖响应丢失、进程重启和重复 resume，并通过 20/20 真实模型 Eval。
 
 ## 当前业务主线：OrderCare
 
@@ -45,9 +45,9 @@
 
 > 面向 FlowOrder 异常订单的智能诊断与受控恢复系统。
 
-M2 已通过并达到 **Resume Ready**：Agent 负责理解入口、选择诊断/知识/预演能力和解释结果；FlowOrder 负责交易事实、候选动作、Proposal 与 Action 状态；人工审批具体预演版本；确定性 Java 代码执行有界收敛检查。`SUBMITTED` 与 `RESOLVED` 始终分开。
+M3 已通过并达到 **Interview Strong**：Agent 负责理解入口、选择诊断/知识/预演能力和解释结果；FlowOrder 负责交易事实、候选动作、Proposal、Action 租约与对账状态；人工审批具体预演版本；确定性 Java 代码执行有界收敛与未知结果恢复。`SUBMITTED` 与 `RESOLVED` 始终分开。
 
-详见 [OrderCare M2 证据报告](docs/reports/ordercare/m2-controlled-recovery.md)。M3 的 UNKNOWN 对账、执行租约、响应丢失和进程恢复尚未完成，因此当前不宣称 Interview Strong 或生产级。
+详见 [OrderCare M3 故障正确性证据](docs/reports/ordercare/m3-fault-correctness.md)。M4 的可信身份、服务认证、版本化迁移、部署与告警尚未完成，因此仍不宣称生产级。
 
 ## 技术栈
 
@@ -118,6 +118,7 @@ curl.exe -N -X POST "http://localhost:8080/api/agent/runs/events" `
 - [项目总蓝图：OrderCare Incident Agent](docs/enterprise-agent-master-blueprint.md)
 - [OrderCare 实施状态、学习地图与中间件清单](docs/ordercare-implementation-status.md)
 - [OrderCare M2 受控恢复证据](docs/reports/ordercare/m2-controlled-recovery.md)
+- [OrderCare M3 故障正确性与 20 条 Eval 证据](docs/reports/ordercare/m3-fault-correctness.md)
 - [OrderCare × FlowOrder 早期设计记录（已被 V1.1 替代）](docs/ordercare-floworder-integration-design.md)
 - [当前架构](docs/architecture.md)
 - [构建与运行](docs/build-and-run.md)

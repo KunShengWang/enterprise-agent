@@ -34,8 +34,9 @@ public class LlmAsJudgeAnswerJudge implements AnswerJudge {
 
     @Override
     public AnswerJudgement judge(EvalCase evalCase, AgentResponse response) {
+        AnswerJudgement deterministic = fallbackJudge.judge(evalCase, response);
         if (agentProperties.isMockMode()) {
-            return fallbackJudge.judge(evalCase, response);
+            return deterministic;
         }
         try {
             String judgeText = llmService.complete(new PromptRequest(
@@ -45,15 +46,22 @@ public class LlmAsJudgeAnswerJudge implements AnswerJudge {
                     Map.of("evalCaseId", evalCase.id())
             ));
             double score = parseScore(judgeText);
-            boolean grounded = parseGrounded(judgeText, score);
-            return new AnswerJudgement(score, grounded, "llm-as-judge: " + compact(judgeText));
+            boolean modelGrounded = parseGrounded(judgeText, score);
+            // 工具/RAG 证据是否存在由结构化 Trace 判定，避免裁判模型把已存在的证据误读为缺失。
+            // LLM 裁判继续负责语义正确性评分，但不覆盖确定性的 groundedness 事实。
+            return new AnswerJudgement(
+                    score,
+                    deterministic.grounded(),
+                    "llm-as-judge: " + compact(judgeText)
+                            + "; deterministicGrounded=" + deterministic.grounded()
+                            + "; modelGrounded=" + modelGrounded
+            );
         }
         catch (RuntimeException exception) {
-            AnswerJudgement fallback = fallbackJudge.judge(evalCase, response);
             return new AnswerJudgement(
-                    fallback.score(),
-                    fallback.grounded(),
-                    fallback.reason() + "; llm-as-judge fallback because " + exception.getClass().getSimpleName()
+                    deterministic.score(),
+                    deterministic.grounded(),
+                    deterministic.reason() + "; llm-as-judge fallback because " + exception.getClass().getSimpleName()
             );
         }
     }

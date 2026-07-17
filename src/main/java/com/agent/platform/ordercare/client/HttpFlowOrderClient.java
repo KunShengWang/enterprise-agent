@@ -5,6 +5,8 @@ import com.agent.platform.ordercare.model.OrderCareCaseSnapshot;
 import com.agent.platform.ordercare.model.OrderCareProposalCreateCommand;
 import com.agent.platform.ordercare.model.OrderCareProposalExecuteCommand;
 import com.agent.platform.ordercare.model.OrderCareRecoveryProposal;
+import com.agent.platform.ordercare.model.OrderCareActionReconcileCommand;
+import com.agent.platform.ordercare.model.OrderCareRecoveryAction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
@@ -24,6 +26,7 @@ public class HttpFlowOrderClient implements FlowOrderClient {
 
     private static final String INSPECT_PATH = "/internal/recovery/cases/inspect";
     private static final String PROPOSALS_PATH = "/internal/recovery/proposals";
+    private static final String ACTIONS_PATH = "/internal/recovery/actions";
 
     private final OrderCareProperties properties;
     private final ObjectMapper objectMapper;
@@ -146,6 +149,104 @@ public class HttpFlowOrderClient implements FlowOrderClient {
             Thread.currentThread().interrupt();
             throw new FlowOrderApiException(
                     "FlowOrder execute interrupted with unknown outcome",
+                    0,
+                    false,
+                    true,
+                    exception
+            );
+        }
+    }
+
+    @Override
+    public OrderCareRecoveryAction getAction(String actionRequestId, String traceId) {
+        String path = ACTIONS_PATH + "/" + encode(actionRequestId);
+        HttpRequest request = requestBuilder(path, traceId)
+                .header("Accept", "application/json")
+                .GET()
+                .build();
+        FlowOrderApiException lastFailure = null;
+        int maxAttempts = properties.getInspectMaxAttempts();
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                HttpResponse<String> response = httpClient.send(
+                        request,
+                        HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+                );
+                if (response.statusCode() == 502 || response.statusCode() == 503) {
+                    lastFailure = new FlowOrderApiException(
+                            "FlowOrder action query temporarily unavailable: HTTP " + response.statusCode(),
+                            response.statusCode(),
+                            true
+                    );
+                } else if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                    throw new FlowOrderApiException(
+                            "FlowOrder action query rejected: HTTP " + response.statusCode(),
+                            response.statusCode(),
+                            false
+                    );
+                } else {
+                    return decodeAction(response.body());
+                }
+            } catch (IOException exception) {
+                lastFailure = new FlowOrderApiException(
+                        "FlowOrder action query network failure", 0, true, exception
+                );
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new FlowOrderApiException("FlowOrder action query interrupted", 0, false, exception);
+            }
+            if (lastFailure == null || !lastFailure.retryable() || attempt >= maxAttempts) {
+                break;
+            }
+            backoff(attempt);
+        }
+        throw lastFailure == null
+                ? new FlowOrderApiException("FlowOrder action query failed", 0, false)
+                : lastFailure;
+    }
+
+    @Override
+    public OrderCareRecoveryAction reconcileAction(
+            String actionRequestId,
+            OrderCareActionReconcileCommand command,
+            String traceId
+    ) {
+        String path = ACTIONS_PATH + "/" + encode(actionRequestId) + "/reconcile";
+        HttpRequest request = postRequest(path, command, traceId);
+        try {
+            HttpResponse<String> response = httpClient.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+            );
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                return decodeAction(response.body());
+            }
+            if (response.statusCode() >= 400 && response.statusCode() < 500) {
+                throw new FlowOrderApiException(
+                        "FlowOrder reconciliation rejected: HTTP " + response.statusCode(),
+                        response.statusCode(),
+                        false
+                );
+            }
+            throw new FlowOrderApiException(
+                    "FlowOrder reconciliation outcome unknown: HTTP " + response.statusCode(),
+                    response.statusCode(),
+                    false,
+                    true,
+                    null
+            );
+        } catch (IOException exception) {
+            throw new FlowOrderApiException(
+                    "FlowOrder reconciliation outcome unknown after network failure",
+                    0,
+                    false,
+                    true,
+                    exception
+            );
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new FlowOrderApiException(
+                    "FlowOrder reconciliation interrupted with unknown outcome",
                     0,
                     false,
                     true,
@@ -282,6 +383,29 @@ public class HttpFlowOrderClient implements FlowOrderClient {
             throw exception;
         } catch (RuntimeException exception) {
             throw new FlowOrderApiException("FlowOrder proposal response contract mismatch", 200, false, exception);
+        }
+    }
+
+    private OrderCareRecoveryAction decodeAction(String body) {
+        try {
+            Map<?, ?> envelope = objectMapper.readValue(body, Map.class);
+            int code = envelope.get("code") instanceof Number number ? number.intValue() : 0;
+            if (code != 200) {
+                throw new FlowOrderApiException(
+                        "FlowOrder action business error: " + String.valueOf(envelope.get("message")),
+                        code,
+                        false
+                );
+            }
+            Object data = envelope.get("data");
+            if (data == null) {
+                throw new FlowOrderApiException("FlowOrder action response has no data", code, false);
+            }
+            return objectMapper.convertValue(data, OrderCareRecoveryAction.class);
+        } catch (FlowOrderApiException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new FlowOrderApiException("decode FlowOrder action response failed", 0, false, exception);
         }
     }
 

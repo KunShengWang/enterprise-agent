@@ -2,7 +2,7 @@
 
 ## 30 秒项目定位
 
-> 我基于自研 Java Agent Runtime 做了异常订单诊断与受控恢复项目 OrderCare。运营人员可以用 requestId、orderNo、deductNo 或 deadLetterId 描述问题；Agent 聚合 FlowOrder 权威事实并解释 SOP，FlowOrder 生成不可变恢复 Proposal；高风险执行由 Runtime 暂停并绑定具体版本给人工审批，随后用领域幂等键提交原消息，再由 Java 有界回查扣减、库存和死信是否收敛。M2 已通过真实 PostgreSQL、MySQL、RabbitMQ E2E 和 10/10 真实模型 Eval，当前定位是 Resume Ready，不夸大为生产级。
+> 我基于自研 Java Agent Runtime 做了异常订单诊断与受控恢复项目 OrderCare。Agent 从自然语言定位 FlowOrder 案例并解释权威事实和 SOP；恢复通过不可变 Proposal、版本化人工审批和 actionRequestId 领域幂等执行。写响应丢失或进程在 EXECUTING_TOOL 崩溃时，Java 协调器查询原 Action，并结合 FlowOrder 执行租约和业务回查恢复，不生成第二个副作用命令。项目已通过真实 PostgreSQL、MySQL、RabbitMQ 故障 E2E 和 20/20 真实模型 Eval，达到 Interview Strong，但不夸大为生产级。
 
 不要说“对标或复刻 Claude Code”。更准确的说法是：参考成熟 Agent 的 Runtime 不变量，在有限业务场景中自行实现并理解取舍。
 
@@ -14,7 +14,7 @@
 - FlowOrder 返回的 `diagnosisCode`、硬风险和候选动作是权威结论，模型不能自己改交易规则。
 - 因此边界是：Agent 负责理解、诊断解释和建议；程序负责校验、执行和验证。
 
-M2 证据：7 类确定性诊断、Proposal 过期/漂移门禁、审批原参数恢复、业务幂等、确定性收敛、统一 SSE Run、真实 RabbitMQ 恢复链路，以及 10/10 真实模型 Eval。当前可以表述为“异常订单诊断与人工审批恢复闭环”。
+M3 证据：7 类确定性诊断、Proposal 过期/漂移门禁、审批原参数恢复、业务幂等、Action 租约、UNKNOWN 对账、确定性收敛、响应丢失和崩溃恢复，以及 20/20 真实模型 Eval。
 
 ## 与目标实习岗位的能力映射
 
@@ -76,10 +76,23 @@ M2 证据：7 类确定性诊断、Proposal 过期/漂移门禁、审批原参�
 - Profile、能力白名单、累计 Token/成本与剩余执行时长都随 Run 持久化；审批等待不消耗执行预算，Approval 则有独立有效期，恢复不会重新获得预算或默认权限。
 - 同一个 Run 的每次执行使用唯一 leaseOwnerId；claim 失败者不能继续工具执行。
 - 模型提供的 ToolCall ID 只用于追踪；Runtime 生成全局执行 ID 作为消息配对和工具幂等键，存储层额外拒绝跨 Run 复用；已完成调用返回持久化结果。
-- M2 对写请求超时明确不自动重试，并返回 `UNKNOWN/manualReview` 信息；完整的 Action 对账、执行租约和重启接管属于 M3，当前不宣称已经完成。
+- 写请求超时明确不进入通用重试；`RecoveryOutcomeReconciler` 先查原 `actionRequestId`，只有权威状态 `NOT_STARTED` 才按原审批参数补发一次，其余状态只对账。
+- FlowOrder 的 `EXECUTING` 动作携带 owner 和 lease；租约过期且死信仍 PENDING 时，使用原 `actionRequestId` CAS 接管，死信 REPLAYING 时只等待，无法证明时转 `MANUAL_REVIEW`。
 - execute 返回 `SUBMITTED` 后，由 `RecoveryConvergenceChecker` 固定次数回查 FlowOrder；只有 action、扣减、库存不变量和相关死信同时满足条件才返回 `RESOLVED`。
 
-## 故事五：为什么规则没有全部删除
+## 故事五：UNKNOWN 为什么不能直接重试
+
+问题：execute 调用超时后，为什么不再发一次？
+
+回答要点：
+
+- HTTP 超时只表示调用方没收到结果，FlowOrder 可能已经提交 RabbitMQ，直接换 ID 重试会制造第二个业务动作。
+- enterprise-agent 保存原 ToolCall、Approval、Proposal 与 actionRequestId；先查 Action，`SUBMITTED/EXECUTING` 都不补发。
+- 只有 FlowOrder 明确返回 `NOT_STARTED` 才允许按原参数补发一次，响应再次丢失仍回到同一 Action 查询。
+- Runtime 重启从 `EXECUTING_TOOL` 检查点恢复，经通用 `UncertainToolExecutionResolver` 对账，再把确定 ToolResult 追加回原时间线。
+- 真实 PostgreSQL 证据中，响应丢失与重复 resume 的 executeCount 始终为 1；崩溃恢复场景 executeCount 为 0。
+
+## 故事六：为什么规则没有全部删除
 
 问题：既然有模型，为什么还保留正则和确定性规则？
 
@@ -90,7 +103,7 @@ M2 证据：7 类确定性诊断、Proposal 过期/漂移门禁、审批原参�
 - 语义分类不可用且已有高风险信号时安全失败；没有信号时不因分类器异常阻断全部请求。
 - Memory 提取不同：写入长期状态的误判代价高，所以模型/协议失败时宁可不写，也不回退正则猜测。
 
-## 故事六：Memory 为什么拆成两层
+## 故事七：Memory 为什么拆成两层
 
 问题：为什么不把近期消息、摘要、画像和长期记忆全塞一个对象？
 
@@ -101,7 +114,7 @@ M2 证据：7 类确定性诊断、Proposal 过期/漂移门禁、审批原参�
 - 长期记忆是有损提取，需要类别、置信度、脱敏、去重和 pgvector 召回。
 - 用户画像是显式键值事实，按上限加载；不需要假装成聊天消息。
 
-## 故事七：Sub-Agent 的隔离是什么
+## 故事八：Sub-Agent 的隔离是什么
 
 问题：和几个 Service 并行调用有什么区别？
 
@@ -118,7 +131,7 @@ M2 证据：7 类确定性诊断、Proposal 过期/漂移门禁、审批原参�
 - 没有内建身份认证和租户管理后台，管理 API 需要外部网关保护。
 - 模型工具协议目前是 JSON Gateway，不是各 Provider 原生 Tool Calling Adapter。
 - SSE 是 Runtime 事件级，未实现结构化 JSON 的逐 Token 增量解析。
-- 已有少量 Runtime 核心状态测试覆盖预算/Profile 续接、并发 claim、异常收敛、确定与不确定工具检查点、SSE 心跳和 ToolResult 边界；仍不应声称完善测试体系。
+- 默认测试共 64 条，另有真实 PostgreSQL 故障 E2E、FlowOrder 真实 MQ E2E 和 20 条模型 Eval；仍不应声称覆盖所有多实例、容量与安全场景。
 - PDF/DOCX 等二进制文档解析尚未实现。
 
 主动说清边界通常比堆叠“大厂级、生产级、全链路”更可信。

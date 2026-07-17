@@ -6,12 +6,14 @@ import com.agent.platform.approval.ApprovalStatus;
 import com.agent.platform.ordercare.application.OrderCareProposalBinding;
 import com.agent.platform.ordercare.application.OrderCareProposalBindingStore;
 import com.agent.platform.ordercare.application.RecoveryConvergenceChecker;
+import com.agent.platform.ordercare.application.RecoveryOutcomeReconciler;
 import com.agent.platform.ordercare.client.FlowOrderApiException;
 import com.agent.platform.ordercare.client.FlowOrderClient;
 import com.agent.platform.ordercare.model.OrderCareConvergenceResult;
 import com.agent.platform.ordercare.model.OrderCareProposalCreateCommand;
 import com.agent.platform.ordercare.model.OrderCareProposalExecuteCommand;
 import com.agent.platform.ordercare.model.OrderCareRecoveryProposal;
+import com.agent.platform.ordercare.model.OrderCareRecoveryReconciliationResult;
 import com.agent.platform.runtime.ToolExecutionRecord;
 import com.agent.platform.runtime.ToolExecutionStore;
 import com.agent.platform.tool.ToolCallRequest;
@@ -43,6 +45,7 @@ class OrderCareRecoveryToolHandlerTests {
         OrderCareProposalBindingStore bindingStore = mock(OrderCareProposalBindingStore.class);
         ApprovalService approvalService = mock(ApprovalService.class);
         RecoveryConvergenceChecker checker = mock(RecoveryConvergenceChecker.class);
+        RecoveryOutcomeReconciler outcomeReconciler = mock(RecoveryOutcomeReconciler.class);
         ToolCallRequest request = new ToolCallRequest(
                 OrderCareToolCatalog.RECOVERY_PREVIEW,
                 "preview-tool-1",
@@ -56,8 +59,13 @@ class OrderCareRecoveryToolHandlerTests {
                 .thenReturn(Optional.of(ToolExecutionRecord.running("run-1", request)));
         when(client.createProposal(any(), eq("preview-tool-1")))
                 .thenReturn(proposal("ACTIVE", "NOT_STARTED", "NOT_CONVERGED", true));
+        when(outcomeReconciler.reconcile(any(), any(), eq("execute-tool-1"),
+                eq("execute-tool-1"), eq(true)))
+                .thenReturn(new OrderCareRecoveryReconciliationResult(
+                        "UNKNOWN", 3, true, false, null, null
+                ));
         OrderCareRecoveryToolHandler handler = handler(
-                client, toolStore, bindingStore, approvalService, checker
+                client, toolStore, bindingStore, approvalService, checker, outcomeReconciler
         );
 
         ToolCallResult result = handler.execute(request);
@@ -128,6 +136,7 @@ class OrderCareRecoveryToolHandlerTests {
         OrderCareProposalBindingStore bindingStore = mock(OrderCareProposalBindingStore.class);
         ApprovalService approvalService = mock(ApprovalService.class);
         RecoveryConvergenceChecker checker = mock(RecoveryConvergenceChecker.class);
+        RecoveryOutcomeReconciler outcomeReconciler = mock(RecoveryOutcomeReconciler.class);
         OrderCareRecoveryProposal preview = proposal("ACTIVE", "NOT_STARTED", "NOT_CONVERGED", true);
         ToolCallRequest request = approvedExecuteRequest(preview);
         when(toolStore.findToolExecution("execute-tool-1"))
@@ -145,8 +154,13 @@ class OrderCareRecoveryToolHandlerTests {
         when(client.executeProposal(any(), eq("execute-tool-1"))).thenThrow(new FlowOrderApiException(
                 "response lost", 0, false, true, null
         ));
+        when(outcomeReconciler.reconcile(any(), any(), eq("execute-tool-1"),
+                eq("execute-tool-1"), eq(true)))
+                .thenReturn(new OrderCareRecoveryReconciliationResult(
+                        "UNKNOWN", 3, true, false, null, null
+                ));
         OrderCareRecoveryToolHandler handler = handler(
-                client, toolStore, bindingStore, approvalService, checker
+                client, toolStore, bindingStore, approvalService, checker, outcomeReconciler
         );
 
         ToolCallResult result = handler.execute(request);
@@ -162,8 +176,19 @@ class OrderCareRecoveryToolHandlerTests {
                                                  OrderCareProposalBindingStore bindingStore,
                                                  ApprovalService approvalService,
                                                  RecoveryConvergenceChecker checker) {
+        return handler(client, toolStore, bindingStore, approvalService, checker,
+                mock(RecoveryOutcomeReconciler.class));
+    }
+
+    private OrderCareRecoveryToolHandler handler(FlowOrderClient client,
+                                                 ToolExecutionStore toolStore,
+                                                 OrderCareProposalBindingStore bindingStore,
+                                                 ApprovalService approvalService,
+                                                 RecoveryConvergenceChecker checker,
+                                                 RecoveryOutcomeReconciler outcomeReconciler) {
         return new OrderCareRecoveryToolHandler(
-                client, toolStore, bindingStore, approvalService, checker, new ObjectMapper()
+                client, toolStore, bindingStore, approvalService, checker,
+                outcomeReconciler, new ObjectMapper()
         );
     }
 

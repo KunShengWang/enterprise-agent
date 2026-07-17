@@ -12,6 +12,8 @@ public class OrderCareProperties {
     private long inspectRetryBackoffMillis = 150;
     private int convergenceMaxAttempts = 8;
     private long convergenceIntervalMillis = 500;
+    private int reconciliationMaxAttempts = 8;
+    private long reconciliationIntervalMillis = 500;
 
     public String getFloworderBaseUrl() {
         return floworderBaseUrl;
@@ -67,5 +69,21 @@ public class OrderCareProperties {
 
     public void setConvergenceIntervalMillis(long convergenceIntervalMillis) {
         this.convergenceIntervalMillis = Math.max(0, Math.min(convergenceIntervalMillis, 5_000));
+    }
+
+    public int getReconciliationMaxAttempts() {
+        return reconciliationMaxAttempts;
+    }
+
+    public void setReconciliationMaxAttempts(int reconciliationMaxAttempts) {
+        this.reconciliationMaxAttempts = Math.max(1, Math.min(reconciliationMaxAttempts, 30));
+    }
+
+    public long getReconciliationIntervalMillis() {
+        return reconciliationIntervalMillis;
+    }
+
+    public void setReconciliationIntervalMillis(long reconciliationIntervalMillis) {
+        this.reconciliationIntervalMillis = Math.max(0, Math.min(reconciliationIntervalMillis, 5_000));
     }
 }

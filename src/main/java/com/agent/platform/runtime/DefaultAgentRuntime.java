@@ -750,6 +750,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 ? null
                 : toolExecutionStore.findToolExecution(pending.requestId()).orElse(null);
         if (!hasCertainPersistedResult(claimed.runId(), pending, execution)) {
+            execution = toolRuntime.reconcileUncertain(execution);
+        }
+        if (!hasCertainPersistedResult(claimed.runId(), pending, execution)) {
             String executionState = execution == null ? "UNKNOWN" : execution.state().name();
             return finish(
                     claimed.runId(), sessionId, userId, AgentRunState.MANUAL_REVIEW, AgentStopReason.TOOL_ERROR,

@@ -73,6 +73,8 @@ enterprise-agent:
     inspect-retry-backoff-millis: ${FLOWORDER_INSPECT_RETRY_BACKOFF_MILLIS:150}
     convergence-max-attempts: ${ORDERCARE_CONVERGENCE_MAX_ATTEMPTS:8}
     convergence-interval-millis: ${ORDERCARE_CONVERGENCE_INTERVAL_MILLIS:500}
+    reconciliation-max-attempts: ${ORDERCARE_RECONCILIATION_MAX_ATTEMPTS:8}
+    reconciliation-interval-millis: ${ORDERCARE_RECONCILIATION_INTERVAL_MILLIS:500}
   memory:
     long-term-candidate-limit: 40
     profile-item-limit: 30

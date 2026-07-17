@@ -20,6 +20,8 @@
 实际完成度、当前门禁和证据入口统一记录在
 [OrderCare 实施状态与学习地图](ordercare-implementation-status.md)。蓝图描述目标状态，实施状态文档描述当前事实，二者不能混用。
 
+> 2026-07-17 实施结论：M0～M3 已通过，达到 Interview Strong；M4 安全部署仍未完成。故障注入、真实模型 Eval 和 Trace 证据见 [M3 报告](reports/ordercare/m3-fault-correctness.md)。
+
 已有的 [OrderCare × FlowOrder 异常订单恢复闭环设计稿](ordercare-floworder-integration-design.md) 作为早期业务子设计保留。若两份文档冲突，以本总蓝图为准；原子设计中的“模型循环回查”和“5 个模型可见工具”不再作为实施方案。
 
 ## 2. 最终项目定位
@@ -121,9 +123,9 @@ OrderCare 同时涉及预演、人工决策、命令执行和业务收敛，禁�
 
 | 状态维度 | 权威事实源 | V1 状态 | 表达的问题 |
 |---|---|---|---|
-| `ProposalStatus` | FlowOrder | `ACTIVE / EXPIRED / INVALIDATED / CONSUMED` | 这一份不可变预演是否仍可被执行 |
+| `ProposalStatus` | FlowOrder | `ACTIVE / APPROVED / REJECTED / EXPIRED / INVALIDATED` | 这一份不可变预演及审批绑定处于什么生命周期 |
 | `ApprovalStatus` | enterprise-agent | `REQUESTED / APPROVED / REJECTED / EXPIRED` | 人是否批准了指定版本的预演 |
-| `ActionStatus` | FlowOrder | `NOT_STARTED / EXECUTING / SUBMITTED / FAILED / UNKNOWN` | 恢复命令是否已被可靠提交 |
+| `ActionStatus` | FlowOrder | `NOT_STARTED / PREVIEWED / EXECUTING / SUBMITTED / FAILED / MANUAL_REVIEW` | 恢复命令是否已被可靠提交；网络结果未知是调用方结果，不伪造成持久化动作终态 |
 | `CaseOutcome` | 确定性收敛检查器 | `ALREADY_CONVERGED / RESOLVED / NOT_CONVERGED / MANUAL_REVIEW` | 订单、扣减、库存和死信是否真正收敛 |
 
 `ApprovalStatus` 不进入 FlowOrder 的 Proposal 状态机。enterprise-agent 是人工审批的事实源；FlowOrder execute 接收并审计可信审批凭据，但不维护第二套审批事实。
@@ -771,11 +773,11 @@ M2 是 **Resume Ready**：可以保守表述为“实现异常订单诊断与人
 
 ### M3：故障正确性与证据
 
-- execute UNKNOWN 对账。
-- FlowOrder EXECUTING 租约和 reconciliation。
-- 重启、重复 resume、响应丢失和不收敛故障测试。
-- 20 条 Eval、Trace 证据包和演示脚本。
-- 真实模型下的准确率、延迟和 Token 数据。
+- [x] execute UNKNOWN 使用原 actionRequestId 对账。
+- [x] FlowOrder EXECUTING 租约和 reconciliation。
+- [x] 重启、重复 resume、响应丢失和不收敛故障测试。
+- [x] 20 条 Eval、Trace 证据包和演示脚本。
+- [x] 真实模型准确率与逐例 Trace；Provider Usage 仍按现有 Runtime 来源记录，未包装成财务账单。
 
 M3 是 **Interview Strong**。完成后，才能重点讲“支持副作用未知、进程崩溃和重复恢复场景下的幂等与故障恢复”。
 
@@ -873,11 +875,11 @@ src/main/java/com/agent/platform/ordercare/
 
 在 Resume Ready 基础上继续满足：
 
-- execute 超时后使用原 actionRequestId 对账，不生成第二个副作用命令。
-- `EXECUTING` 租约过期、进程重启和响应丢失有自动化证据。
-- 重复 resume 只产生一个 FlowOrder Recovery Action。
-- 至少 20 条业务 Eval，覆盖 UNKNOWN、崩溃恢复、不收敛和对抗输入。
-- Trace 证据包能够关联 runId、toolExecutionId、approvalId、proposalId 和 actionRequestId。
+- [x] execute 超时后使用原 actionRequestId 对账，不生成第二个副作用命令。
+- [x] `EXECUTING` 租约过期、进程重启和响应丢失有自动化证据。
+- [x] 重复 resume 只产生一个 FlowOrder Recovery Action。
+- [x] 至少 20 条业务 Eval，覆盖 UNKNOWN、崩溃恢复、不收敛和对抗输入。
+- [x] Trace 证据包能够关联 runId、toolExecutionId、approvalId、proposalId 和 actionRequestId。
 
 ## 25. 面试表达
 

@@ -6,12 +6,14 @@ import com.agent.platform.approval.ApprovalStatus;
 import com.agent.platform.ordercare.application.OrderCareProposalBinding;
 import com.agent.platform.ordercare.application.OrderCareProposalBindingStore;
 import com.agent.platform.ordercare.application.RecoveryConvergenceChecker;
+import com.agent.platform.ordercare.application.RecoveryOutcomeReconciler;
 import com.agent.platform.ordercare.client.FlowOrderApiException;
 import com.agent.platform.ordercare.client.FlowOrderClient;
 import com.agent.platform.ordercare.model.OrderCareConvergenceResult;
 import com.agent.platform.ordercare.model.OrderCareProposalCreateCommand;
 import com.agent.platform.ordercare.model.OrderCareProposalExecuteCommand;
 import com.agent.platform.ordercare.model.OrderCareRecoveryProposal;
+import com.agent.platform.ordercare.model.OrderCareRecoveryReconciliationResult;
 import com.agent.platform.runtime.ToolExecutionRecord;
 import com.agent.platform.runtime.ToolExecutionStore;
 import com.agent.platform.tool.ToolCallRequest;
@@ -34,6 +36,7 @@ public class OrderCareRecoveryToolHandler implements ToolHandler {
     private final OrderCareProposalBindingStore bindingStore;
     private final ApprovalService approvalService;
     private final RecoveryConvergenceChecker convergenceChecker;
+    private final RecoveryOutcomeReconciler outcomeReconciler;
     private final ObjectMapper objectMapper;
 
     public OrderCareRecoveryToolHandler(FlowOrderClient flowOrderClient,
@@ -41,12 +44,14 @@ public class OrderCareRecoveryToolHandler implements ToolHandler {
                                         OrderCareProposalBindingStore bindingStore,
                                         ApprovalService approvalService,
                                         RecoveryConvergenceChecker convergenceChecker,
+                                        RecoveryOutcomeReconciler outcomeReconciler,
                                         ObjectMapper objectMapper) {
         this.flowOrderClient = flowOrderClient;
         this.toolExecutionStore = toolExecutionStore;
         this.bindingStore = bindingStore;
         this.approvalService = approvalService;
         this.convergenceChecker = convergenceChecker;
+        this.outcomeReconciler = outcomeReconciler;
         this.objectMapper = objectMapper;
     }
 
@@ -111,7 +116,7 @@ public class OrderCareRecoveryToolHandler implements ToolHandler {
         try {
             String runId = currentRunId(request.requestId());
             String proposalId = requiredString(request, "proposalId");
-            bindingStore.requireForRun(proposalId, runId);
+            OrderCareProposalBinding binding = bindingStore.requireForRun(proposalId, runId);
             String approvalId = requiredString(request, "approvalId");
             ApprovalRecord approval = approvalService.find(approvalId)
                     .filter(item -> item.status() == ApprovalStatus.APPROVED)
@@ -119,8 +124,7 @@ public class OrderCareRecoveryToolHandler implements ToolHandler {
             if (!runId.equals(approval.runId())) {
                 throw new IllegalArgumentException("Approval 不属于当前 Run");
             }
-            OrderCareRecoveryProposal execution = flowOrderClient.executeProposal(
-                    new OrderCareProposalExecuteCommand(
+            OrderCareProposalExecuteCommand command = new OrderCareProposalExecuteCommand(
                             proposalId,
                             integerArgument(request, "proposalVersion"),
                             requiredString(request, "stateFingerprint"),
@@ -129,10 +133,25 @@ public class OrderCareRecoveryToolHandler implements ToolHandler {
                             requiredString(request, "previewDigest"),
                             approval.approvalId(),
                             approval.reviewer(),
-                            approval.decisionReason()
-                    ),
-                    request.requestId()
-            );
+                            approval.decisionReason(),
+                            request.requestId()
+                    );
+            OrderCareRecoveryProposal execution;
+            try {
+                execution = flowOrderClient.executeProposal(command, request.requestId());
+            } catch (FlowOrderApiException exception) {
+                if (!exception.outcomeUnknown()) {
+                    throw exception;
+                }
+                OrderCareRecoveryReconciliationResult reconciliation = outcomeReconciler.reconcile(
+                        binding.immutablePreview(),
+                        command,
+                        request.requestId(),
+                        request.requestId(),
+                        true
+                );
+                return reconciliationResult(request, approvalId, binding, reconciliation);
+            }
             OrderCareConvergenceResult convergence = convergenceChecker.await(
                     proposalId,
                     request.requestId()
@@ -140,6 +159,9 @@ public class OrderCareRecoveryToolHandler implements ToolHandler {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("execution", execution);
             payload.put("convergence", convergence);
+            if (!"RESOLVED".equals(convergence.status())) {
+                return convergenceFailure(request, approvalId, binding, execution, convergence);
+            }
             return success(
                     request,
                     payload,
@@ -149,6 +171,7 @@ public class OrderCareRecoveryToolHandler implements ToolHandler {
                             "retryable", false,
                             "approvalId", approvalId,
                             "proposalId", proposalId,
+                            "actionRequestId", binding.actionRequestId(),
                             "actionStatus", convergence.actionStatus(),
                             "caseOutcome", convergence.caseOutcome(),
                             "convergenceStatus", convergence.status()
@@ -159,6 +182,65 @@ public class OrderCareRecoveryToolHandler implements ToolHandler {
         } catch (RuntimeException exception) {
             return localFailure(request, exception, false);
         }
+    }
+
+    private ToolCallResult reconciliationResult(
+            ToolCallRequest request,
+            String approvalId,
+            OrderCareProposalBinding binding,
+            OrderCareRecoveryReconciliationResult reconciliation
+    ) {
+        Map<String, Object> metadata = baseMetadata();
+        metadata.put("readOnly", false);
+        metadata.put("sideEffect", true);
+        metadata.put("retryable", false);
+        metadata.put("approvalId", approvalId);
+        metadata.put("proposalId", binding.proposalId());
+        metadata.put("actionRequestId", binding.actionRequestId());
+        metadata.put("outcome", reconciliation.status());
+        metadata.put("responseLost", reconciliation.responseLost());
+        metadata.put("reconciled", "RESOLVED".equals(reconciliation.status()));
+        metadata.put("reconciliationAttempts", reconciliation.attempts());
+        metadata.put("executeReissuedWithSameId", reconciliation.executeReissuedWithSameId());
+        metadata.put("manualReview", !"RESOLVED".equals(reconciliation.status()));
+        boolean resolved = "RESOLVED".equals(reconciliation.status());
+        return new ToolCallResult(
+                request.toolName(),
+                resolved,
+                resolved ? objectMapper.writeValueAsString(reconciliation) : "",
+                resolved ? "" : "FlowOrder execute outcome could not be proven after reconciliation",
+                metadata
+        );
+    }
+
+    private ToolCallResult convergenceFailure(
+            ToolCallRequest request,
+            String approvalId,
+            OrderCareProposalBinding binding,
+            OrderCareRecoveryProposal execution,
+            OrderCareConvergenceResult convergence
+    ) {
+        Map<String, Object> metadata = baseMetadata();
+        metadata.put("readOnly", false);
+        metadata.put("sideEffect", true);
+        metadata.put("retryable", false);
+        metadata.put("manualReview", true);
+        metadata.put("outcome", convergence.status());
+        metadata.put("approvalId", approvalId);
+        metadata.put("proposalId", binding.proposalId());
+        metadata.put("actionRequestId", binding.actionRequestId());
+        metadata.put("actionStatus", convergence.actionStatus());
+        metadata.put("caseOutcome", convergence.caseOutcome());
+        return new ToolCallResult(
+                request.toolName(),
+                false,
+                objectMapper.writeValueAsString(Map.of(
+                        "execution", execution,
+                        "convergence", convergence
+                )),
+                "Recovery command was submitted but business convergence was not proven",
+                metadata
+        );
     }
 
     private ToolCallResult success(ToolCallRequest request,

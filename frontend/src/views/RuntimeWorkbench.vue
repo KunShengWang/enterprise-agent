@@ -10,6 +10,7 @@ import type {
   AgentRequest,
   OrderCareCaseSnapshot,
   OrderCareRecoveryExecutionSnapshot,
+  OrderCareRecoveryReconciliationSnapshot,
   OrderCareRecoveryProposalSnapshot,
 } from '../types/agent'
 
@@ -63,9 +64,15 @@ function parseToolResult<T>(toolName: string): T | null {
 }
 
 const recoveryPreview = computed(() => parseToolResult<OrderCareRecoveryProposalSnapshot>('floworder_recovery_preview'))
-const recoveryExecution = computed(() => parseToolResult<OrderCareRecoveryExecutionSnapshot>('floworder_recovery_execute'))
+const recoveryExecutionRaw = computed(() => parseToolResult<OrderCareRecoveryExecutionSnapshot | OrderCareRecoveryReconciliationSnapshot>('floworder_recovery_execute'))
+const recoveryExecution = computed(() => recoveryExecutionRaw.value && 'execution' in recoveryExecutionRaw.value
+  ? recoveryExecutionRaw.value as OrderCareRecoveryExecutionSnapshot
+  : null)
+const recoveryReconciliation = computed(() => recoveryExecutionRaw.value && 'responseLost' in recoveryExecutionRaw.value
+  ? recoveryExecutionRaw.value as OrderCareRecoveryReconciliationSnapshot
+  : null)
 const recoveryProposal = computed(() => recoveryExecution.value?.execution ?? recoveryPreview.value)
-const convergence = computed(() => recoveryExecution.value?.convergence ?? null)
+const convergence = computed(() => recoveryExecution.value?.convergence ?? recoveryReconciliation.value?.convergence ?? null)
 const approvalSnapshot = computed(() => {
   const pending = stream.runRecord.value?.pendingToolCall
   return pending?.toolName === 'floworder_recovery_execute' ? pending.arguments : null
@@ -351,7 +358,24 @@ onBeforeUnmount(() => {
                   <span>DETERMINISTIC CONVERGENCE</span>
                   <strong>{{ convergence.status }}</strong>
                 </div>
-                <p>{{ convergence.attempts }} 次回查 · 扣减 {{ convergence.deductStatus }} · 库存守恒 {{ convergence.inventoryInvariantOk ? '通过' : '失败' }} · 相关死信 {{ convergence.relatedDeadLettersTerminal ? '已终结' : '未终结' }}</p>
+                <p>{{ convergence.attempts }} 次回查 · 扣减 {{ convergence.deductReleased ? '已释放' : '未释放' }} · 库存守恒 {{ convergence.inventoryInvariantOk ? '通过' : '失败' }} · 相关死信 {{ convergence.relatedDeadLettersTerminal ? '已终结' : '未终结' }}</p>
+              </div>
+
+              <div v-if="recoveryReconciliation" class="convergence-result" :class="`is-${recoveryReconciliation.status.toLowerCase()}`">
+                <div>
+                  <span>UNKNOWN / CRASH RECONCILIATION</span>
+                  <strong>{{ recoveryReconciliation.status }}</strong>
+                </div>
+                <p>
+                  {{ recoveryReconciliation.attempts }} 次对账 ·
+                  响应丢失 {{ recoveryReconciliation.responseLost ? '是' : '否' }} ·
+                  原 ID 补发 {{ recoveryReconciliation.executeReissuedWithSameId ? '是' : '否' }}
+                </p>
+                <p v-if="recoveryReconciliation.action">
+                  Action {{ recoveryReconciliation.action.actionRequestId }} ·
+                  {{ recoveryReconciliation.action.actionStatus }} / {{ recoveryReconciliation.action.caseOutcome }} ·
+                  对账 {{ recoveryReconciliation.action.reconciliationStatus }}
+                </p>
               </div>
             </section>
 
