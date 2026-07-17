@@ -103,6 +103,8 @@ curl.exe -N -X POST "http://localhost:8080/api/agent/runs/events" `
 
 ## 文档入口
 
+- [项目总蓝图：OrderCare Incident Agent](docs/enterprise-agent-master-blueprint.md)
+- [OrderCare × FlowOrder 早期业务子设计](docs/ordercare-floworder-integration-design.md)
 - [当前架构](docs/architecture.md)
 - [构建与运行](docs/build-and-run.md)
 - [API 使用](docs/api-guide.md)
