@@ -2,6 +2,8 @@
 
 这份清单用于约束简历和面试表述，不是继续无止境堆功能的任务列表。
 
+尚未决定是否实施的 Purchase Assistant 与事故指挥 Agent Team，统一记录在[后续业务场景待决策清单](future-scenario-backlog.md)，不属于当前完成范围。
+
 ## 高优先级但不属于本轮 Runtime 重构
 
 1. 身份认证与管理 API 授权
