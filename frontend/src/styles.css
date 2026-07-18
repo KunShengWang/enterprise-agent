@@ -183,6 +183,14 @@ code, pre { font-family: var(--mono); }
 .assistant-thinking > span:nth-child(2) { animation-delay: .15s; }
 .assistant-thinking > span:nth-child(3) { animation-delay: .3s; }
 .assistant-thinking p { margin: 0 0 0 7px; font-size: 12px; }
+.assistant-thinking.is-static > span { opacity: .6; transform: none; animation: none; }
+.assistant-thinking.activity-waiting { color: #8a6219; }
+.assistant-thinking.activity-waiting > span { background: var(--amber); }
+.assistant-thinking.activity-paused { color: var(--muted); }
+.assistant-thinking.activity-error { color: var(--red); }
+.assistant-thinking.activity-error > span { background: var(--red); }
+.assistant-thinking.activity-done { color: #237a4b; }
+.assistant-thinking.activity-done > span { background: #2f9e63; }
 @keyframes thinking { 0%, 70%, 100% { opacity: .25; transform: translateY(0); } 35% { opacity: 1; transform: translateY(-3px); } }
 
 .composer-area { padding: 11px clamp(20px, 4vw, 58px) 14px; border-top: 1px solid var(--line-soft); background: rgba(255,255,255,.96); }

@@ -8,6 +8,7 @@ import StatusBadge from '../components/StatusBadge.vue'
 import { useAgentStream } from '../composables/useAgentStream'
 import { renderMarkdown } from '../utils/markdown'
 import { classifyPausedRunInput } from '../utils/pausedRunIntent'
+import { resolveRuntimeActivity } from '../utils/runtimeActivity'
 import type {
   AgentConversationMessage,
   AgentRequest,
@@ -108,6 +109,12 @@ const currentState = computed(() => {
   if (type === 'run_cancelled') return 'CANCELLED'
   return 'READY'
 })
+
+const runtimeActivity = computed(() => resolveRuntimeActivity(
+  stream.events.value,
+  currentState.value,
+  stream.running.value,
+))
 
 const elapsed = computed(() => {
   if (!startedAt.value) return '0.0s'
@@ -463,11 +470,17 @@ onBeforeUnmount(() => {
               <span v-if="stream.running.value" class="live-indicator"><i /> WORKING</span>
             </div>
             <div v-if="stream.answer.value" class="answer-content" v-html="renderedAnswer" />
-            <div v-else-if="stream.running.value" class="assistant-thinking">
+            <div
+              v-if="runtimeActivity"
+              class="assistant-thinking"
+              :class="[`activity-${runtimeActivity.tone}`, { 'is-static': !runtimeActivity.animated }]"
+              aria-live="polite"
+              aria-atomic="true"
+            >
               <span /><span /><span />
-              <p>正在读取上下文并执行任务…</p>
+              <p>{{ runtimeActivity.text }}</p>
             </div>
-            <div v-else class="answer-empty">
+            <div v-else-if="!stream.answer.value" class="answer-empty">
               <p>Runtime 尚未返回最终回答。你可以在右侧查看它停在了哪个阶段。</p>
             </div>
 
