@@ -103,6 +103,8 @@ Run 持久化原始 `AgentExecutionProfile`、累计 `BudgetSnapshot`、当前 P
 
 用户中断采用 `RUNNING -> PAUSE_REQUESTED -> PAUSED -> RUNNING`。暂停请求和预算冻结都持久化；恢复通过数据库行锁原子 claim `PAUSED`，保持原 `runId`、会话、事件 sequence、权限和累计预算。模型调用不能从供应商内部 token 精确续跑，因此从完整消息边界重做本轮决策；工具阶段则依靠 pending ToolCall 与 ToolExecutionStore 对账，避免重复副作用。
 
+暂停后提交新需求不会复用旧 Checkpoint：Runtime 先将旧 Run 永久收敛为取消状态，再创建新 Run。若旧 Run 停在已经写入 `ASSISTANT_TOOL_CALL` 的工具阶段，取消路径会补写确定的持久化结果，或写入明确的 `RUN_ABANDONED/outcomeKnown=false` 终态 ToolResult；它只闭合消息协议，不重试未知副作用。这样同一会话的新 Run 不会读到孤立 ToolCall。
+
 若中断点为 `EXECUTING_TOOL`，Runtime 会按 pending `requestId` 查询 `ToolExecutionStore`：确定的 `SUCCEEDED/FAILED` 结果直接复用；`RUNNING` 结果先交给匹配的 `UncertainToolExecutionResolver`。OrderCare resolver 使用原 Proposal、审批参数和 actionRequestId 调用确定性对账，解析为确定结果后再补写原 ToolResult 并继续 Agent Loop；没有 resolver、记录不匹配或仍无法证明时才进入人工核对。时间线已有同一 ToolResult 时不会重复追加。
 
 审批的单条与列表 HTTP 查询统一经过 `ApprovalService`，不会绕过上述过期迁移直接暴露存储层的陈旧 `REQUESTED` 状态。

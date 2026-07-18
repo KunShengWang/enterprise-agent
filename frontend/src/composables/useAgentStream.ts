@@ -169,6 +169,16 @@ export function useAgentStream() {
     controller?.abort()
   }
 
+  async function abandon() {
+    const activeRunId = runId.value
+    if (!activeRunId) {
+      throw new Error('当前没有可以放弃的 Run。')
+    }
+    await agentApi.cancelRun(activeRunId)
+    controller?.abort()
+    await refreshStoredRun()
+  }
+
   async function pause() {
     const activeRunId = runId.value
     if (!activeRunId) {
@@ -231,6 +241,7 @@ export function useAgentStream() {
     start,
     resume,
     pause,
+    abandon,
     cancel,
     reset,
     refresh,

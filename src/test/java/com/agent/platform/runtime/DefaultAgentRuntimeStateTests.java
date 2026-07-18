@@ -243,6 +243,53 @@ class DefaultAgentRuntimeStateTests {
         assertEquals(1, fixture.persisted.get().resumeCount());
     }
 
+    @Test
+    void abandoningPausedRunClosesPendingToolCallForTheNextConversationRun() {
+        Fixture fixture = new Fixture();
+        AgentRunLimits limits = AgentRunLimits.from(fixture.properties);
+        AgentRunBudget budget = new AgentRunBudget(limits);
+        ToolCallRequest pending = new ToolCallRequest(
+                "ticket_close", "tool-call-abandoned", Map.of("id", "T1")
+        );
+        AgentRunRecord paused = AgentRunRecord.create(
+                        "run-abandoned", "run-abandoned", "session-shared",
+                        new AgentRequest("session-shared", "user-1", "close ticket", Map.of()),
+                        new AgentExecutionProfile("restricted", "prompt", Set.of("ticket_close"), limits, false),
+                        budget.snapshot())
+                .checkpoint(
+                        AgentRunPhase.EXECUTING_TOOL, pending, List.of(), List.of(), false, budget.snapshot()
+                );
+        budget.pauseExecution();
+        fixture.persisted.set(paused.paused(budget.snapshot()));
+        when(fixture.runStore.find("run-abandoned"))
+                .thenAnswer(invocation -> Optional.of(fixture.persisted.get()));
+        when(fixture.runStore.update(anyString(), any())).thenAnswer(invocation -> {
+            java.util.function.UnaryOperator<AgentRunRecord> updater = invocation.getArgument(1);
+            AgentRunRecord updated = updater.apply(fixture.persisted.get());
+            fixture.persisted.set(updated);
+            return updated;
+        });
+        when(fixture.runControlStore.requestCancellation("run-abandoned")).thenReturn(true);
+        when(fixture.timelineStore.loadMessages("session-shared", 10_000)).thenReturn(List.of());
+
+        boolean cancelled = fixture.runtime().cancel("run-abandoned");
+
+        assertTrue(cancelled);
+        assertEquals(AgentRunState.REJECTED, fixture.persisted.get().state());
+        assertEquals(1, fixture.persisted.get().toolResults().size());
+        ToolCallResult closure = fixture.persisted.get().toolResults().get(0);
+        assertEquals("RUN_ABANDONED", closure.metadata().get("outcome"));
+        assertEquals(false, closure.metadata().get("outcomeKnown"));
+        verify(fixture.timelineStore).appendMessages(
+                anyString(), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.argThat(messages -> messages.size() == 1
+                        && messages.get(0).type() == AgentMessageType.TOOL_RESULT
+                        && "tool-call-abandoned".equals(messages.get(0).toolCallId()))
+        );
+        verify(fixture.toolRuntime, never()).execute(anyString(), anyString(), anyString(), any(), any(), any());
+        verify(fixture.toolRuntime, never()).reconcileUncertain(any());
+    }
+
     private static AgentModelTurn finalTurn(String answer) {
         return new AgentModelTurn(
                 answer,

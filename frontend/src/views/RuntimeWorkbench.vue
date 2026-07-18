@@ -53,10 +53,15 @@ const examples = [
   { label: 'deductNo 定位', value: '检查扣减流水 ORDERCARE-M05-DEDUCT 是否存在可恢复的死信。' },
   { label: '解释恢复 SOP', value: '诊断 requestId=ORDERCARE-M05-REQUEST，并结合 OrderCare SOP 解释为什么当前允许或禁止恢复。' },
 ]
-const resumeCommands = new Set(['继续', '继续执行', '恢复', '恢复执行', 'resume'])
-
 function isResumeCommand(value: string) {
-  return resumeCommands.has(value.trim().toLowerCase())
+  const normalized = value.trim().toLowerCase().replace(/[\s。.!！?？、，,]/g, '')
+  return /^(继续|接着|恢复|续跑|resume)(一下|吧|执行|运行|做|任务|原任务|当前任务|这个任务|刚才任务|刚才的任务|上一个任务|原run|当前run)?(一下|吧)?$/.test(normalized)
+}
+
+function isAbandonCommand(value: string) {
+  const normalized = value.trim().toLowerCase().replace(/[\s。.!！?？、，,]/g, '')
+  return /^(取消|算了|不做了|停止|结束|放弃|abort|cancel)(吧|执行|运行|任务|原任务|当前任务|这个任务|刚才任务|刚才的任务)?(吧|了)?$/.test(normalized)
+    || /^(不要|不用)(再)?(继续|执行|做)(这个|当前|刚才的)?(任务)?(了)?$/.test(normalized)
 }
 
 const orderCareCase = computed<OrderCareCaseSnapshot | null>(() => {
@@ -188,20 +193,16 @@ async function submit() {
   }
   const persistedState = stream.runRecord.value?.state
   if (persistedState === 'PAUSE_REQUESTED') {
-    formError.value = '暂停请求正在安全检查点落盘，请稍后输入“继续”。'
+    formError.value = 'Runtime 正在保存安全检查点。完成后可继续原任务，也可以直接输入新需求。'
     await stream.refresh()
     return
   }
-  if (persistedState === 'PAUSED') {
-    if (!isResumeCommand(question.value)) {
-      formError.value = '当前 Run 已暂停。输入“继续”恢复同一 Run，或点击“新建会话”开始新任务。'
-      return
-    }
-    startedAt.value = Date.now()
-    followConversation.value = true
-    await stream.resume()
-    await refreshConversationMessages()
-    await scrollConversationToBottom(true)
+  if (persistedState === 'PAUSED' && isResumeCommand(question.value)) {
+    await resumeOriginalRun()
+    return
+  }
+  if (persistedState === 'PAUSED' && isAbandonCommand(question.value)) {
+    await abandonOriginalRun()
     return
   }
   let metadata: Record<string, unknown>
@@ -214,6 +215,18 @@ async function submit() {
     formError.value = 'Metadata 必须是合法的 JSON 对象。'
     showAdvanced.value = true
     return
+  }
+
+  if (persistedState === 'PAUSED') {
+    try {
+      await stream.abandon()
+      await refreshConversationMessages()
+    } catch (error) {
+      formError.value = error instanceof Error
+        ? `无法结束原暂停任务：${error.message}`
+        : '无法结束原暂停任务'
+      return
+    }
   }
 
   startedAt.value = Date.now()
@@ -229,6 +242,37 @@ async function submit() {
   await scrollConversationToBottom(true)
   await stream.start(request)
   await refreshConversationMessages()
+}
+
+async function resumeOriginalRun() {
+  if (stream.runRecord.value?.state !== 'PAUSED') return
+  formError.value = ''
+  startedAt.value = Date.now()
+  followConversation.value = true
+  await stream.resume()
+  await refreshConversationMessages()
+  await scrollConversationToBottom(true)
+}
+
+async function abandonOriginalRun() {
+  if (stream.runRecord.value?.state !== 'PAUSED') return
+  formError.value = ''
+  try {
+    await stream.abandon()
+    question.value = ''
+    await refreshConversationMessages()
+    await scrollConversationToBottom(true)
+  } catch (error) {
+    formError.value = error instanceof Error ? error.message : '放弃原任务失败'
+  }
+}
+
+async function pauseCurrentRun() {
+  formError.value = ''
+  await stream.pause()
+  if (stream.runRecord.value?.state === 'PAUSED') {
+    question.value = ''
+  }
 }
 
 function resetWorkbench() {
@@ -280,7 +324,7 @@ async function openPersistedRun(targetRunId: string) {
     submittedQuestion.value = run.request?.question ?? ''
     conversationId.value = run.conversationId
     userId.value = run.userId
-    question.value = run.request?.question ?? ''
+    question.value = run.state === 'PAUSED' ? '' : run.request?.question ?? ''
     metadataText.value = JSON.stringify(run.request?.metadata ?? {}, null, 2)
     scenarioId.value = run.request?.scenarioId || 'ordercare-floworder-v1'
     startedAt.value = 0
@@ -314,6 +358,15 @@ watch(
   (value) => {
     if (!value || routeRunId(route.query.runId) === value) return
     void router.replace({ name: 'runtime', query: { runId: value } })
+  },
+)
+
+watch(
+  () => stream.runRecord.value?.state,
+  (state) => {
+    if (state === 'PAUSED' && question.value.trim() === submittedQuestion.value.trim()) {
+      question.value = ''
+    }
   },
 )
 
@@ -529,7 +582,7 @@ onBeforeUnmount(() => {
             rows="3"
             :disabled="stream.running.value || loadingRun"
             aria-label="发送给 Agent 的任务"
-            placeholder="给 Agent 一个任务…"
+            :placeholder="currentState === 'PAUSED' ? '输入新需求，或点击下方“继续原任务”…' : '给 Agent 一个任务…'"
             @keydown.ctrl.enter.prevent="submit"
           />
           <div class="composer-toolbar">
@@ -537,8 +590,15 @@ onBeforeUnmount(() => {
               <span>{{ showAdvanced ? '−' : '+' }}</span> 上下文
             </button>
             <code>POST /api/agent/runs/events</code>
-            <button v-if="stream.running.value" class="stop-button" type="button" aria-label="暂停当前 Run" @click="stream.pause">■</button>
+            <button v-if="stream.running.value" class="stop-button" type="button" aria-label="暂停当前 Run" @click="pauseCurrentRun">■</button>
             <button v-else class="send-button" type="button" :disabled="loadingRun" aria-label="发送任务" @click="submit">↑</button>
+          </div>
+        </div>
+        <div v-if="currentState === 'PAUSED'" class="paused-run-guidance">
+          <span>原 Run 已安全暂停。可以继续原任务，也可以直接输入新需求；新需求会结束原 Run 并在当前会话创建新 Run。</span>
+          <div>
+            <button class="secondary-button" type="button" :disabled="loadingRun" @click="resumeOriginalRun">继续原任务</button>
+            <button class="secondary-button" type="button" :disabled="loadingRun" @click="abandonOriginalRun">放弃原任务</button>
           </div>
         </div>
         <div class="composer-footer">

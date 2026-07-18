@@ -370,10 +370,25 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     : stored.executionProfile();
             AgentRunBudget cancelledBudget = new AgentRunBudget(profile.limits(), stored.budgetSnapshot());
             cancelledBudget.cancel();
+            List<ToolCallResult> cancelledResults = new ArrayList<>(stored.toolResults());
+            List<String> cancelledTools = new ArrayList<>(stored.usedTools());
+            CancelledPendingToolClosure closure = closePendingToolCallForCancellation(
+                    stored,
+                    normalize(stored.userId(), DEFAULT_USER_ID)
+            );
+            if (closure != null) {
+                cancelledResults.add(closure.result());
+                if (!cancelledTools.contains(closure.result().toolName())) {
+                    cancelledTools.add(closure.result().toolName());
+                }
+                if (closure.executionObserved()) {
+                    cancelledBudget.recordToolCall();
+                }
+            }
             finishBudgetStop(
                     stored.request(), stored.runId(), stored.conversationId(),
                     normalize(stored.userId(), DEFAULT_USER_ID), AgentStopReason.CANCELLED,
-                    stored.toolResults(), stored.usedTools(), stored.usedRag(), cancelledBudget,
+                    cancelledResults, cancelledTools, stored.usedRag(), cancelledBudget,
                     AgentEventListener.NOOP
             );
         }
@@ -1295,6 +1310,55 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 "tool outcome requires manual review",
                 toolResultPayload(request.requestId(), projected), listener);
         return projected;
+    }
+
+    /**
+     * 放弃暂停 Run 时也要闭合可能已经写入时间线的 ToolCall，否则同一会话的新 Run 会读到孤立调用。
+     * 这里仅记录已知结果或“结果未知且旧 Run 已放弃”的终态事实，不重新执行工具。
+     */
+    private CancelledPendingToolClosure closePendingToolCallForCancellation(AgentRunRecord stored,
+                                                                            String userId) {
+        ToolCallRequest pending = stored.pendingToolCall();
+        if (pending == null
+                || timelineContainsToolResult(stored.conversationId(), stored.runId(), pending.requestId())) {
+            return null;
+        }
+        ToolExecutionRecord execution = toolExecutionStore.findToolExecution(pending.requestId()).orElse(null);
+        boolean certain = hasCertainPersistedResult(stored.runId(), pending, execution);
+        ToolCallResult underlying = certain ? execution.result() : null;
+        LinkedHashMap<String, Object> metadata = new LinkedHashMap<>(
+                underlying == null ? Map.of() : underlying.metadata()
+        );
+        metadata.put("outcome", "RUN_ABANDONED");
+        metadata.put("runAbandoned", true);
+        metadata.put("retryable", false);
+        metadata.put("executionObserved", execution != null);
+        metadata.put("outcomeKnown", certain);
+        if (execution != null) {
+            metadata.put("toolExecutionState", execution.state().name());
+        }
+        String error = certain
+                ? underlying.errorMessage()
+                : "Run was abandoned by the user; the pending tool outcome is not asserted.";
+        ToolCallResult rawResult = new ToolCallResult(
+                pending.toolName(),
+                certain && underlying.success(),
+                certain ? underlying.content() : "",
+                error,
+                Map.copyOf(metadata)
+        );
+        ToolCallResult projected = appendToolResult(
+                stored.conversationId(), userId, stored.runId(), pending.requestId(), rawResult, certain
+        );
+        publish(
+                stored.conversationId(), userId, stored.runId(), AgentEventType.TOOL_COMPLETED,
+                "pending tool call closed because the run was abandoned",
+                toolResultPayload(pending.requestId(), projected), AgentEventListener.NOOP
+        );
+        return new CancelledPendingToolClosure(projected, execution != null);
+    }
+
+    private record CancelledPendingToolClosure(ToolCallResult result, boolean executionObserved) {
     }
 
     AgentToolCall assignExecutionId(AgentToolCall modelCall) {
