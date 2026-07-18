@@ -7,6 +7,7 @@ import JsonViewer from '../components/JsonViewer.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { useAgentStream } from '../composables/useAgentStream'
 import { renderMarkdown } from '../utils/markdown'
+import { classifyPausedRunInput } from '../utils/pausedRunIntent'
 import type {
   AgentConversationMessage,
   AgentRequest,
@@ -44,6 +45,7 @@ const submittedQuestion = ref('')
 const conversationMessages = ref<AgentConversationMessage[]>([])
 const conversationScroll = ref<HTMLElement | null>(null)
 const followConversation = ref(true)
+const ambiguousPausedInput = ref('')
 let clock: number | undefined
 
 const examples = [
@@ -53,17 +55,6 @@ const examples = [
   { label: 'deductNo 定位', value: '检查扣减流水 ORDERCARE-M05-DEDUCT 是否存在可恢复的死信。' },
   { label: '解释恢复 SOP', value: '诊断 requestId=ORDERCARE-M05-REQUEST，并结合 OrderCare SOP 解释为什么当前允许或禁止恢复。' },
 ]
-function isResumeCommand(value: string) {
-  const normalized = value.trim().toLowerCase().replace(/[\s。.!！?？、，,]/g, '')
-  return /^(继续|接着|恢复|续跑|resume)(一下|吧|执行|运行|做|任务|原任务|当前任务|这个任务|刚才任务|刚才的任务|上一个任务|原run|当前run)?(一下|吧)?$/.test(normalized)
-}
-
-function isAbandonCommand(value: string) {
-  const normalized = value.trim().toLowerCase().replace(/[\s。.!！?？、，,]/g, '')
-  return /^(取消|算了|不做了|停止|结束|放弃|abort|cancel)(吧|执行|运行|任务|原任务|当前任务|这个任务|刚才任务|刚才的任务)?(吧|了)?$/.test(normalized)
-    || /^(不要|不用)(再)?(继续|执行|做)(这个|当前|刚才的)?(任务)?(了)?$/.test(normalized)
-}
-
 const orderCareCase = computed<OrderCareCaseSnapshot | null>(() => {
   const result = stream.runRecord.value?.toolResults.find((item) => item.toolName === 'floworder_case_inspect')
   if (!result?.success || !result.content) return null
@@ -197,27 +188,42 @@ async function submit() {
     await stream.refresh()
     return
   }
-  if (persistedState === 'PAUSED' && isResumeCommand(question.value)) {
-    await resumeOriginalRun()
-    return
+  if (persistedState === 'PAUSED') {
+    const pausedIntent = classifyPausedRunInput(question.value)
+    if (pausedIntent === 'RESUME') {
+      await resumeOriginalRun()
+      return
+    }
+    if (pausedIntent === 'ABANDON') {
+      await abandonOriginalRun()
+      return
+    }
+    if (pausedIntent === 'AMBIGUOUS') {
+      ambiguousPausedInput.value = question.value.trim()
+      return
+    }
   }
-  if (persistedState === 'PAUSED' && isAbandonCommand(question.value)) {
-    await abandonOriginalRun()
-    return
-  }
-  let metadata: Record<string, unknown>
+  const metadata = parseMetadata()
+  if (!metadata) return
+  await startNewTask(metadata, persistedState === 'PAUSED')
+}
+
+function parseMetadata(): Record<string, unknown> | null {
   try {
-    metadata = JSON.parse(metadataText.value) as Record<string, unknown>
+    const metadata = JSON.parse(metadataText.value) as Record<string, unknown>
     if (!metadata || Array.isArray(metadata) || typeof metadata !== 'object') {
       throw new Error('metadata must be an object')
     }
+    return metadata
   } catch {
     formError.value = 'Metadata 必须是合法的 JSON 对象。'
     showAdvanced.value = true
-    return
+    return null
   }
+}
 
-  if (persistedState === 'PAUSED') {
+async function startNewTask(metadata: Record<string, unknown>, abandonPausedRun: boolean) {
+  if (abandonPausedRun) {
     try {
       await stream.abandon()
       await refreshConversationMessages()
@@ -229,6 +235,7 @@ async function submit() {
     }
   }
 
+  ambiguousPausedInput.value = ''
   startedAt.value = Date.now()
   const request: AgentRequest = {
     conversationId: conversationId.value.trim(),
@@ -244,9 +251,18 @@ async function submit() {
   await refreshConversationMessages()
 }
 
+async function submitAmbiguousInputAsNewTask() {
+  formError.value = ''
+  const metadata = parseMetadata()
+  if (!metadata) return
+  await startNewTask(metadata, true)
+}
+
 async function resumeOriginalRun() {
   if (stream.runRecord.value?.state !== 'PAUSED') return
   formError.value = ''
+  ambiguousPausedInput.value = ''
+  question.value = ''
   startedAt.value = Date.now()
   followConversation.value = true
   await stream.resume()
@@ -257,6 +273,7 @@ async function resumeOriginalRun() {
 async function abandonOriginalRun() {
   if (stream.runRecord.value?.state !== 'PAUSED') return
   formError.value = ''
+  ambiguousPausedInput.value = ''
   try {
     await stream.abandon()
     question.value = ''
@@ -269,6 +286,7 @@ async function abandonOriginalRun() {
 
 async function pauseCurrentRun() {
   formError.value = ''
+  ambiguousPausedInput.value = ''
   await stream.pause()
   if (stream.runRecord.value?.state === 'PAUSED') {
     question.value = ''
@@ -280,6 +298,7 @@ function resetWorkbench() {
   conversationId.value = newConversationId()
   conversationMessages.value = []
   submittedQuestion.value = ''
+  ambiguousPausedInput.value = ''
   startedAt.value = 0
   formError.value = ''
   void router.replace({ name: 'runtime' })
@@ -315,6 +334,7 @@ function routeRunId(value: unknown) {
 async function openPersistedRun(targetRunId: string) {
   loadingRun.value = true
   formError.value = ''
+  ambiguousPausedInput.value = ''
   try {
     const [run, events] = await Promise.all([
       agentApi.findRun(targetRunId),
@@ -369,6 +389,12 @@ watch(
     }
   },
 )
+
+watch(question, (value) => {
+  if (ambiguousPausedInput.value && value.trim() !== ambiguousPausedInput.value) {
+    ambiguousPausedInput.value = ''
+  }
+})
 
 watch(
   () => [historicalMessages.value.length, submittedQuestion.value, stream.answer.value.length],
@@ -599,6 +625,13 @@ onBeforeUnmount(() => {
           <div>
             <button class="secondary-button" type="button" :disabled="loadingRun" @click="resumeOriginalRun">继续原任务</button>
             <button class="secondary-button" type="button" :disabled="loadingRun" @click="abandonOriginalRun">放弃原任务</button>
+          </div>
+        </div>
+        <div v-if="currentState === 'PAUSED' && ambiguousPausedInput" class="paused-intent-choice">
+          <span>这句话既可能是在继续旧任务，也可能包含新要求。为了避免误取消原 Run，请选择它的用途。</span>
+          <div>
+            <button class="secondary-button" type="button" @click="resumeOriginalRun">仅继续原任务</button>
+            <button class="primary-button" type="button" @click="submitAmbiguousInputAsNewTask">作为新需求提交</button>
           </div>
         </div>
         <div class="composer-footer">

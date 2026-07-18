@@ -64,7 +64,7 @@ RUN_STARTED
 
 注意：当前 `JsonAgentModelGateway` 使用结构化整轮模型调用，Runtime 尚未发布真正的逐 Token `MODEL_DELTA`。所以现在实时流式的是执行事件，最终文本主要在 `RUN_COMPLETED` 中收口；前端已经兼容未来的 `MODEL_DELTA`，但不会把客户端打字机动画伪装成模型原生流式。
 
-运行台 URL 会保存 `runId`。刷新页面或从 Run 历史、审批中心进入时，前端会先读取 `AgentRunRecord + AgentEvent` 恢复工作区；若状态为 `WAITING_APPROVAL`，可直接在右侧审批卡片中决定并继续流式执行；若状态为 `PAUSED`，可以点击按钮或使用“继续、接着做、恢复一下”等自然控制语句恢复同一 Run。输入其他需求时，运行台会先安全结束旧 Run，再在当前会话创建新 Run；输入“取消、算了、不做了”或点击放弃按钮则只结束旧 Run。
+运行台 URL 会保存 `runId`。刷新页面或从 Run 历史、审批中心进入时，前端会先读取 `AgentRunRecord + AgentEvent` 恢复工作区；若状态为 `WAITING_APPROVAL`，可直接在右侧审批卡片中决定并继续流式执行；若状态为 `PAUSED`，可以点击按钮或使用“刚才暂停了任务，现在继续之前的任务、接着做、恢复一下”等自然表达恢复同一 Run。输入其他需求时，运行台会先安全结束旧 Run，再在当前会话创建新 Run；输入“取消、算了、不做了”或点击放弃按钮则只结束旧 Run。同时包含继续意图和新约束的句子不会自动取消旧 Run，界面会要求用户选择“仅继续原任务”或“作为新需求提交”。
 
 使用 `ordercare-floworder-v1` 场景时，同一工作区还会投影 Case、Proposal、Approval、Action 和 Convergence。M3 故障结果会显示 `responseLost`、`reconciled`、对账次数、是否按原 ID 补发以及 `recoveredAfterCrash`；这些字段来自 ToolResult/FlowOrder 权威状态，不由前端猜测。
 
