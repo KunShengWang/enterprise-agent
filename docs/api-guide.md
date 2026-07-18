@@ -28,11 +28,14 @@ GET /api/agent/runs/{runId}
 GET /api/agent/runs?limit=20
 ```
 
-取消：
+可恢复暂停与永久取消是两种不同语义：
 
 ```http
+POST /api/agent/runs/{runId}/pause
 POST /api/agent/runs/{runId}/cancel
 ```
+
+暂停先把状态写为 `PAUSE_REQUESTED`，Runtime 到达持久化安全边界后写为 `PAUSED`；取消最终收敛为不可恢复终态。
 
 ## 2. SSE Runtime 事件
 
@@ -42,7 +45,7 @@ Accept: text/event-stream
 Content-Type: application/json
 ```
 
-事件包括：Run 开始/恢复/结束、Context 投影/压缩、模型开始/完成/失败、工具请求、策略判定、审批等待、工具开始/结束、Sub-Agent 开始/结束和心跳。持久事件包含 `sequence`；心跳携带 `lastPersistedSequence`。收到 `stream_gap` 时应停止消费并按最后序号重新加载持久事件。
+事件包括：Run 开始/暂停请求/已暂停/恢复/结束、Context 投影/压缩、模型开始/完成/失败、工具请求、策略判定、审批等待、工具开始/结束、Sub-Agent 开始/结束和心跳。持久事件包含 `sequence`；心跳携带 `lastPersistedSequence`。收到 `stream_gap` 时应停止消费并按最后序号重新加载持久事件。
 
 ```http
 GET /api/agent/runs/{runId}/events?afterSequence=42&limit=500
@@ -91,7 +94,7 @@ Accept: text/event-stream
 
 该接口只是 `AgentRuntime.resume(runId, listener)` 的流式适配，不包含另一套恢复逻辑。初次执行与恢复执行产生的持久化事件共享同一个 `runId` 和递增 `sequence`。
 
-恢复不是重新执行整个问题。Runtime 会原子 claim 等待中的 Run，从持久化 Profile 与 BudgetSnapshot 继续；抢占失败者只返回当前状态。对租约已过期的 `RUNNING` Run，Context/Model 检查点可以继续，处于工具副作用检查点时转入人工核对。
+恢复不会创建新 Run。Runtime 会原子 claim `WAITING_APPROVAL` 或 `PAUSED` 的原 Run，从持久化 Profile、BudgetSnapshot、Phase、pending ToolCall 和已完成 ToolResult 继续；抢占失败者只返回当前状态。Context/Model 阶段从最后一条完整消息边界重新进行本轮模型决策；`EXECUTING_TOOL` 阶段先使用原 toolCallId 查询或对账持久化执行结果，禁止盲目重复副作用。
 
 ## 4. RAG
 

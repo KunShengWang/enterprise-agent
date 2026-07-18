@@ -77,6 +77,8 @@ public class RuntimeAgentExecutor implements AgentExecutor {
         return switch (event.type()) {
             case RUN_FAILED -> "FAILED";
             case RUN_CANCELLED -> "CANCELLED";
+            case RUN_PAUSE_REQUESTED -> "PAUSE_REQUESTED";
+            case RUN_PAUSED -> "PAUSED";
             case APPROVAL_REQUIRED -> "WAITING_APPROVAL";
             case POLICY_DECIDED -> String.valueOf(event.payload().getOrDefault("action", "COMPLETED"));
             default -> "COMPLETED";
@@ -86,6 +88,7 @@ public class RuntimeAgentExecutor implements AgentExecutor {
     private AgentRunStatus toStatus(AgentRunState state) {
         return switch (state) {
             case CREATED, RUNNING -> AgentRunStatus.RUNNING;
+            case PAUSE_REQUESTED, PAUSED -> AgentRunStatus.PAUSED;
             case WAITING_APPROVAL -> AgentRunStatus.WAITING_APPROVAL;
             case COMPLETED -> AgentRunStatus.COMPLETED;
             case NEEDS_CLARIFICATION -> AgentRunStatus.NEEDS_CLARIFICATION;

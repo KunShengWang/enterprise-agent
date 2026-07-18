@@ -20,6 +20,8 @@ public enum AgentStopReason {
     TIMEOUT,
     /** 主动取消：外部通过 runId 发送取消信号中断执行 */
     CANCELLED,
+    /** 用户暂停：保留 Checkpoint，等待使用同一 runId 恢复 */
+    PAUSED,
     /** 护栏拦截：输入/输出/工具的 Guardrail 判定为 BLOCK */
     GUARDRAIL_BLOCKED,
     /** 模型异常：LLM 调用失败（网络错误、API 限流、服务不可用等） */

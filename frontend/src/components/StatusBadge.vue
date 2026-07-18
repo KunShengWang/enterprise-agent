@@ -7,6 +7,9 @@ const normalized = computed(() => props.value?.toLowerCase().replaceAll('_', '-'
 const label = computed(() => {
   const labels: Record<string, string> = {
     running: '运行中',
+    pause_requested: '暂停中',
+    'pause-requested': '暂停中',
+    paused: '已暂停',
     completed: '已完成',
     waiting_approval: '等待审批',
     'waiting-approval': '等待审批',

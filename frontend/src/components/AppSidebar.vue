@@ -2,7 +2,7 @@
 import { RouterLink } from 'vue-router'
 
 defineProps<{ open: boolean }>()
-defineEmits<{ close: [] }>()
+defineEmits<{ close: []; newTask: [] }>()
 
 const navigation = [
   { to: '/', icon: '✦', label: 'Agent 运行台', hint: '对话与实时执行' },
@@ -27,10 +27,10 @@ const navigation = [
       <button class="icon-button sidebar-close" type="button" aria-label="关闭导航" @click="$emit('close')">×</button>
     </div>
 
-    <RouterLink class="new-task-button" to="/" @click="$emit('close')">
+    <button class="new-task-button" type="button" @click="$emit('newTask')">
       <span>＋</span>
       新建 Agent 任务
-    </RouterLink>
+    </button>
 
     <nav class="nav-list" aria-label="主导航">
       <RouterLink v-for="item in navigation" :key="item.to" :to="item.to" @click="$emit('close')">

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterView, useRoute } from 'vue-router'
+import { RouterView, useRoute, useRouter } from 'vue-router'
 import AppSidebar from './components/AppSidebar.vue'
 import { agentApi } from './api/agent'
 
 const route = useRoute()
+const router = useRouter()
 const sidebarOpen = ref(false)
+const runtimeViewVersion = ref(0)
 const backendOnline = ref(false)
 const backendLabel = ref('检测中')
 
@@ -22,12 +24,30 @@ async function checkHealth() {
   }
 }
 
+async function createNewAgentTask() {
+  sidebarOpen.value = false
+  if (route.name === 'runtime') {
+    if (Object.keys(route.query).length > 0) {
+      await router.replace({ name: 'runtime' })
+    }
+    runtimeViewVersion.value += 1
+    return
+  }
+
+  runtimeViewVersion.value += 1
+  await router.push({ name: 'runtime' })
+}
+
 onMounted(checkHealth)
 </script>
 
 <template>
   <div class="app-shell">
-    <AppSidebar :open="sidebarOpen" @close="sidebarOpen = false" />
+    <AppSidebar
+      :open="sidebarOpen"
+      @close="sidebarOpen = false"
+      @new-task="createNewAgentTask"
+    />
 
     <main class="app-main">
       <header class="topbar">
@@ -45,7 +65,12 @@ onMounted(checkHealth)
       </header>
 
       <section class="page-frame">
-        <RouterView />
+        <RouterView v-slot="{ Component }">
+          <component
+            :is="Component"
+            :key="route.name === 'runtime' ? `runtime-${runtimeViewVersion}` : String(route.name)"
+          />
+        </RouterView>
       </section>
     </main>
   </div>

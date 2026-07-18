@@ -13,6 +13,15 @@ export interface AgentRequest {
   scenarioId?: string
 }
 
+export interface AgentConversationMessage {
+  messageId: string
+  runId: string
+  sequence: number
+  role: 'USER' | 'ASSISTANT'
+  content: string
+  createdAt: string
+}
+
 export interface OrderCareCaseSnapshot {
   schemaVersion: string
   caseKey: string

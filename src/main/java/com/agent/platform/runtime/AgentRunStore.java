@@ -21,4 +21,6 @@ public interface AgentRunStore {
     AgentRunRecord update(String runId, UnaryOperator<AgentRunRecord> updater);
 
     Optional<AgentRunRecord> claimForResume(String runId);
+
+    Optional<AgentRunRecord> claimPausedForResume(String runId);
 }

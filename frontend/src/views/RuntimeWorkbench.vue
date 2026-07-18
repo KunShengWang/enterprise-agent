@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { agentApi } from '../api/agent'
 import EventTimeline from '../components/EventTimeline.vue'
 import JsonViewer from '../components/JsonViewer.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { useAgentStream } from '../composables/useAgentStream'
+import { renderMarkdown } from '../utils/markdown'
 import type {
+  AgentConversationMessage,
   AgentRequest,
   OrderCareCaseSnapshot,
   OrderCareRecoveryExecutionSnapshot,
@@ -17,7 +19,15 @@ import type {
 const stream = useAgentStream()
 const route = useRoute()
 const router = useRouter()
-const conversationId = ref(`learn-${new Date().toISOString().slice(0, 10)}`)
+
+function newConversationId() {
+  const uniquePart = typeof globalThis.crypto?.randomUUID === 'function'
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  return `learn-${uniquePart}`
+}
+
+const conversationId = ref(newConversationId())
 const userId = ref('student-001')
 const scenarioId = ref('ordercare-floworder-v1')
 const question = ref('请诊断 requestId=ORDERCARE-M05-REQUEST；若 FlowOrder 判定可恢复，请创建预演并请求人工审批，审批后执行并验证业务是否收敛。')
@@ -31,6 +41,9 @@ const loadingRun = ref(false)
 const startedAt = ref(0)
 const now = ref(Date.now())
 const submittedQuestion = ref('')
+const conversationMessages = ref<AgentConversationMessage[]>([])
+const conversationScroll = ref<HTMLElement | null>(null)
+const followConversation = ref(true)
 let clock: number | undefined
 
 const examples = [
@@ -40,6 +53,11 @@ const examples = [
   { label: 'deductNo 定位', value: '检查扣减流水 ORDERCARE-M05-DEDUCT 是否存在可恢复的死信。' },
   { label: '解释恢复 SOP', value: '诊断 requestId=ORDERCARE-M05-REQUEST，并结合 OrderCare SOP 解释为什么当前允许或禁止恢复。' },
 ]
+const resumeCommands = new Set(['继续', '继续执行', '恢复', '恢复执行', 'resume'])
+
+function isResumeCommand(value: string) {
+  return resumeCommands.has(value.trim().toLowerCase())
+}
 
 const orderCareCase = computed<OrderCareCaseSnapshot | null>(() => {
   const result = stream.runRecord.value?.toolResults.find((item) => item.toolName === 'floworder_case_inspect')
@@ -104,11 +122,47 @@ const elapsed = computed(() => {
 const sequence = computed(() => Math.max(0, ...stream.events.value.map((event) => event.sequence)))
 const budget = computed(() => stream.runRecord.value?.budgetSnapshot)
 const hasConversation = computed(() => Boolean(
-  submittedQuestion.value
+  conversationMessages.value.length
+  || submittedQuestion.value
   || stream.runId.value
   || stream.events.value.length
   || stream.answer.value,
 ))
+const renderedAnswer = computed(() => renderMarkdown(stream.answer.value))
+const historicalMessages = computed(() => conversationMessages.value
+  .filter((message) => !stream.runId.value || message.runId !== stream.runId.value)
+  .map((message) => ({
+    ...message,
+    renderedContent: message.role === 'ASSISTANT' ? renderMarkdown(message.content) : '',
+  })))
+
+async function refreshConversationMessages() {
+  const targetConversationId = conversationId.value.trim()
+  if (!targetConversationId) {
+    conversationMessages.value = []
+    return
+  }
+  try {
+    conversationMessages.value = await agentApi.conversationMessages(targetConversationId, 500)
+  } catch (error) {
+    formError.value = error instanceof Error ? `会话消息加载失败：${error.message}` : '会话消息加载失败'
+  }
+}
+
+function updateConversationFollowState() {
+  const element = conversationScroll.value
+  if (!element) return
+  followConversation.value = element.scrollHeight - element.scrollTop - element.clientHeight < 96
+}
+
+async function scrollConversationToBottom(force = false) {
+  if (!force && !followConversation.value) return
+  await nextTick()
+  const element = conversationScroll.value
+  if (!element) return
+  element.scrollTop = element.scrollHeight
+  followConversation.value = true
+}
 const stages = computed(() => {
   const types = new Set(stream.events.value.map((event) => event.type))
   const ended = ['run_completed', 'run_failed', 'run_cancelled'].some((type) => types.has(type))
@@ -132,6 +186,24 @@ async function submit() {
     formError.value = '请输入要交给 Agent 的任务。'
     return
   }
+  const persistedState = stream.runRecord.value?.state
+  if (persistedState === 'PAUSE_REQUESTED') {
+    formError.value = '暂停请求正在安全检查点落盘，请稍后输入“继续”。'
+    await stream.refresh()
+    return
+  }
+  if (persistedState === 'PAUSED') {
+    if (!isResumeCommand(question.value)) {
+      formError.value = '当前 Run 已暂停。输入“继续”恢复同一 Run，或点击“新建会话”开始新任务。'
+      return
+    }
+    startedAt.value = Date.now()
+    followConversation.value = true
+    await stream.resume()
+    await refreshConversationMessages()
+    await scrollConversationToBottom(true)
+    return
+  }
   let metadata: Record<string, unknown>
   try {
     metadata = JSON.parse(metadataText.value) as Record<string, unknown>
@@ -153,11 +225,16 @@ async function submit() {
     scenarioId: scenarioId.value,
   }
   submittedQuestion.value = request.question
+  followConversation.value = true
+  await scrollConversationToBottom(true)
   await stream.start(request)
+  await refreshConversationMessages()
 }
 
 function resetWorkbench() {
   stream.reset()
+  conversationId.value = newConversationId()
+  conversationMessages.value = []
   submittedQuestion.value = ''
   startedAt.value = 0
   formError.value = ''
@@ -176,6 +253,7 @@ async function decide(approved: boolean) {
       decisionReason.value.trim(),
     )
     await stream.resume()
+    await refreshConversationMessages()
   } catch (error) {
     formError.value = error instanceof Error ? error.message : '审批或恢复失败'
   } finally {
@@ -206,6 +284,8 @@ async function openPersistedRun(targetRunId: string) {
     metadataText.value = JSON.stringify(run.request?.metadata ?? {}, null, 2)
     scenarioId.value = run.request?.scenarioId || 'ordercare-floworder-v1'
     startedAt.value = 0
+    await refreshConversationMessages()
+    await scrollConversationToBottom(true)
   } catch (error) {
     formError.value = error instanceof Error ? error.message : '加载持久化 Run 失败'
   } finally {
@@ -237,13 +317,19 @@ watch(
   },
 )
 
+watch(
+  () => [historicalMessages.value.length, submittedQuestion.value, stream.answer.value.length],
+  () => { void scrollConversationToBottom() },
+  { flush: 'post' },
+)
+
 onMounted(() => {
   clock = window.setInterval(() => { now.value = Date.now() }, 100)
 })
 
 onBeforeUnmount(() => {
   if (clock) window.clearInterval(clock)
-  if (stream.running.value) stream.cancel()
+  if (stream.running.value) void stream.pause()
 })
 </script>
 
@@ -261,12 +347,26 @@ onBeforeUnmount(() => {
         <StatusBadge :value="currentState" />
       </header>
 
-      <div class="conversation-scroll">
+      <div ref="conversationScroll" class="conversation-scroll" @scroll.passive="updateConversationFollowState">
         <div v-if="!hasConversation" class="conversation-welcome">
           <span class="welcome-mark">✦</span>
           <h2>今天想让 Agent 做什么？</h2>
           <p>发送任务后，回答会留在正文中；上下文、模型决策、工具和审批过程会同步出现在右侧。</p>
         </div>
+
+        <article
+          v-for="message in historicalMessages"
+          :key="message.messageId"
+          class="chat-turn"
+          :class="message.role === 'USER' ? 'user-turn' : 'assistant-turn'"
+        >
+          <div class="turn-avatar">{{ message.role === 'USER' ? '你' : '✦' }}</div>
+          <div class="turn-content">
+            <span class="turn-role">{{ message.role === 'USER' ? 'YOU' : 'AGENT' }}</span>
+            <p v-if="message.role === 'USER'">{{ message.content }}</p>
+            <div v-else class="answer-content history-answer" v-html="message.renderedContent" />
+          </div>
+        </article>
 
         <article v-if="submittedQuestion" class="chat-turn user-turn">
           <div class="turn-avatar">你</div>
@@ -283,7 +383,7 @@ onBeforeUnmount(() => {
               <span class="turn-role">AGENT</span>
               <span v-if="stream.running.value" class="live-indicator"><i /> WORKING</span>
             </div>
-            <div v-if="stream.answer.value" class="answer-content">{{ stream.answer.value }}</div>
+            <div v-if="stream.answer.value" class="answer-content" v-html="renderedAnswer" />
             <div v-else-if="stream.running.value" class="assistant-thinking">
               <span /><span /><span />
               <p>正在读取上下文并执行任务…</p>
@@ -437,7 +537,7 @@ onBeforeUnmount(() => {
               <span>{{ showAdvanced ? '−' : '+' }}</span> 上下文
             </button>
             <code>POST /api/agent/runs/events</code>
-            <button v-if="stream.running.value" class="stop-button" type="button" aria-label="停止当前 Run" @click="stream.cancel">■</button>
+            <button v-if="stream.running.value" class="stop-button" type="button" aria-label="暂停当前 Run" @click="stream.pause">■</button>
             <button v-else class="send-button" type="button" :disabled="loadingRun" aria-label="发送任务" @click="submit">↑</button>
           </div>
         </div>

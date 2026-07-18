@@ -116,7 +116,7 @@ export function useAgentStream() {
       await streamer(controller.signal)
     } catch (reason) {
       if (reason instanceof DOMException && reason.name === 'AbortError') {
-        error.value = '已停止接收事件，并向 Runtime 请求取消当前 Run。'
+        error.value = ''
       } else if (reason instanceof ApiError) {
         error.value = `${reason.code}: ${reason.message}`
       } else {
@@ -143,8 +143,13 @@ export function useAgentStream() {
       error.value = '当前没有可以恢复的 Run。'
       return
     }
-    if (runRecord.value?.state === 'WAITING_APPROVAL') {
+    if (runRecord.value?.state === 'PAUSE_REQUESTED') {
+      error.value = 'Runtime 正在等待安全检查点落盘，请稍后再继续。'
+      return
+    }
+    if (runRecord.value?.state === 'WAITING_APPROVAL' || runRecord.value?.state === 'PAUSED') {
       answer.value = ''
+      hasModelDelta.value = false
     }
     await consume((signal) => resumeAgentEvents(runId.value, {
       signal,
@@ -162,6 +167,37 @@ export function useAgentStream() {
       }
     }
     controller?.abort()
+  }
+
+  async function pause() {
+    const activeRunId = runId.value
+    if (!activeRunId) {
+      controller?.abort()
+      return
+    }
+    try {
+      await agentApi.pauseRun(activeRunId)
+    } catch (reason) {
+      error.value = reason instanceof Error ? reason.message : '暂停请求发送失败'
+      return
+    }
+    controller?.abort()
+
+    // 暂停是协作式的：模型或工具返回后，Runtime 才能把安全检查点落为 PAUSED。
+    for (let attempt = 0; attempt < 16; attempt += 1) {
+      try {
+        const record = await agentApi.findRun(activeRunId)
+        runRecord.value = record
+        if (record.state === 'PAUSED'
+          || ['COMPLETED', 'FAILED', 'REJECTED', 'BLOCKED', 'MANUAL_REVIEW'].includes(record.state)) {
+          break
+        }
+      } catch {
+        break
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 250))
+    }
+    await refreshStoredRun()
   }
 
   async function hydrate(run: AgentRunRecord, storedEvents: AgentEvent[]) {
@@ -194,6 +230,7 @@ export function useAgentStream() {
     terminal,
     start,
     resume,
+    pause,
     cancel,
     reset,
     refresh,

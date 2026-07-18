@@ -52,7 +52,17 @@ public class JdbcEvalEventRecorder implements EvalEventRecorder {
         return new AgentRunEvalEvent(
                 run.runId(),
                 run.conversationId(),
-                AgentRunStatus.valueOf(run.state().name()),
+                switch (run.state()) {
+                    case CREATED, RUNNING -> AgentRunStatus.RUNNING;
+                    case PAUSE_REQUESTED, PAUSED -> AgentRunStatus.PAUSED;
+                    case WAITING_APPROVAL -> AgentRunStatus.WAITING_APPROVAL;
+                    case COMPLETED -> AgentRunStatus.COMPLETED;
+                    case NEEDS_CLARIFICATION -> AgentRunStatus.NEEDS_CLARIFICATION;
+                    case BLOCKED -> AgentRunStatus.BLOCKED;
+                    case FAILED -> AgentRunStatus.FAILED;
+                    case REJECTED -> AgentRunStatus.REJECTED;
+                    case MANUAL_REVIEW -> AgentRunStatus.MANUAL_REVIEW;
+                },
                 run.usedTools(),
                 run.usedRag(),
                 run.blockedByGuardrail(),

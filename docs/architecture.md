@@ -93,13 +93,15 @@ sequenceDiagram
 
 ## 5. 同步与 SSE
 
-`RuntimeAgentExecutor` 收集 Runtime 结果并投影为同步 `AgentResponse`。`DefaultStreamingAgentExecutor` 将相同 Runtime 发出的事件转成 SSE，客户端断开时请求取消对应 Run。
+`RuntimeAgentExecutor` 收集 Runtime 结果并投影为同步 `AgentResponse`。`DefaultStreamingAgentExecutor` 将相同 Runtime 发出的事件转成 SSE。客户端断开时只发起协作式暂停；显式 cancel API 才表示永久取消。
 
 当前 SSE 是 Runtime 事件流，不是逐 Token 输出流。持久事件携带数据库 `sequence`；长调用期间发送不落库的心跳并附带最后序号。背压缓冲溢出时发送 `stream_gap/replayRequired` 后结束连接，不再静默丢弃事件。
 
 ## 6. 恢复检查点
 
 Run 持久化原始 `AgentExecutionProfile`、累计 `BudgetSnapshot`、当前 Phase、pending ToolCall 和已完成结果。进入人工审批时会冻结剩余 Agent 执行时长，审批等待时间不计入 Run 执行预算；Approval 使用独立的可配置有效期（默认 24 小时）。审批决定通过数据库同时检查 `status=REQUESTED` 与 `expiresAt>decisionTime`，过期迁移检查 `status=REQUESTED` 与 `expiresAt<=checkedAt`，因此并发批准、拒绝和过期不会互相覆盖，也不存在“读取时有效、更新时已过期”仍批准成功的窗口。审批恢复采用数据库原子 claim；普通未处理异常收敛为 `FAILED/INTERNAL_ERROR`。进程直接退出后，新的执行尝试只能在旧租约过期后接管。
+
+用户中断采用 `RUNNING -> PAUSE_REQUESTED -> PAUSED -> RUNNING`。暂停请求和预算冻结都持久化；恢复通过数据库行锁原子 claim `PAUSED`，保持原 `runId`、会话、事件 sequence、权限和累计预算。模型调用不能从供应商内部 token 精确续跑，因此从完整消息边界重做本轮决策；工具阶段则依靠 pending ToolCall 与 ToolExecutionStore 对账，避免重复副作用。
 
 若中断点为 `EXECUTING_TOOL`，Runtime 会按 pending `requestId` 查询 `ToolExecutionStore`：确定的 `SUCCEEDED/FAILED` 结果直接复用；`RUNNING` 结果先交给匹配的 `UncertainToolExecutionResolver`。OrderCare resolver 使用原 Proposal、审批参数和 actionRequestId 调用确定性对账，解析为确定结果后再补写原 ToolResult 并继续 Agent Loop；没有 resolver、记录不匹配或仍无法证明时才进入人工核对。时间线已有同一 ToolResult 时不会重复追加。
 

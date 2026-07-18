@@ -95,6 +95,7 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                     }, heartbeatSeconds, heartbeatSeconds, java.util.concurrent.TimeUnit.SECONDS);
                     Disposable task = Schedulers.boundedElastic().schedule(() -> {
                         try {
+                            // 整个 agent 开始执行
                             invocation.accept(event -> {
                                 if (event.runId() != null && !event.runId().isBlank()) {
                                     runId.set(event.runId());
@@ -104,7 +105,7 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                                 }
                                 lastSequence.accumulateAndGet(event.sequence(), Math::max);
                                 if (cancelled.get()) {
-                                    runtime.cancel(event.runId());
+                                    runtime.pause(event.runId());
                                 }
                                 if (!sink.isCancelled()) {
                                     sink.next(toStreamEvent(event));
@@ -122,25 +123,27 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                                         lastSequence.get(),
                                         exception
                                 ));
-                                sink.complete();
+                                sink.complete();// SSE 流正常结束，关上数据流的水龙头，也就是关闭 sink 数据发射器
                             }
                         }
                         finally {
-                            heartbeat.dispose();
+                            heartbeat.dispose();// 关掉定时心跳
                         }
                     });
+                    // 客户端主动断连只请求暂停；永久取消仍由显式 cancel API 完成。
                     sink.onCancel(() -> {
-                        cancelled.set(true);
+                        cancelled.set(true);// 标记客户端已中断接收
                         String activeRunId = runId.get();
                         if (activeRunId != null && !activeRunId.isBlank()) {
-                            runtime.cancel(activeRunId);
+                            runtime.pause(activeRunId);
                         }
-                        heartbeat.dispose();
-                        task.dispose();
+                        heartbeat.dispose();// 关心跳
+                        task.dispose();// 关执行任务
                     });
+                    // 任务正常结束（不杀 Agent）
                     sink.onDispose(() -> {
-                        heartbeat.dispose();
-                        task.dispose();
+                        heartbeat.dispose();// 关掉定时心跳
+                        task.dispose();// 关执行任务
                     });
                 }, reactor.core.publisher.FluxSink.OverflowStrategy.IGNORE);
         return source

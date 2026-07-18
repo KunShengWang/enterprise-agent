@@ -164,7 +164,11 @@ onMounted(() => loadRuns(false))
           <div class="detail-actions">
             <button v-if="selectedRun.state === 'RUNNING'" class="danger-button" type="button" @click="cancelSelected">请求取消</button>
             <button class="primary-button" type="button" @click="openInWorkbench">
-              {{ selectedRun.state === 'WAITING_APPROVAL' ? '进入运行台审批' : '在运行台打开' }}
+              {{ selectedRun.state === 'WAITING_APPROVAL'
+                ? '进入运行台审批'
+                : selectedRun.state === 'PAUSED'
+                  ? '进入运行台继续'
+                  : '在运行台打开' }}
             </button>
           </div>
 

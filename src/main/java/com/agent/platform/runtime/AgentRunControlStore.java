@@ -24,6 +24,12 @@ public interface AgentRunControlStore {
 
     boolean requestCancellation(String runId);
 
+    boolean requestPause(String runId);
+
+    boolean pauseRequested(String runId);
+
+    boolean clearPauseRequest(String runId);
+
     /**
      * 查看是否有 agent 的取消请求
      */

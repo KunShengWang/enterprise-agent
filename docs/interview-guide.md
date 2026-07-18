@@ -47,7 +47,8 @@ M3 证据：7 类确定性诊断、Proposal 过期/漂移门禁、审批原参�
 
 - 如果 SSE 自己实现简化 RAG/Tool 流程，可能缺少审批、幂等、Eval 或恢复，产生不同安全语义。
 - 当前同步适配器收集 Runtime 结果，SSE 适配器只转发 Runtime 事件。
-- 客户端断开时 SSE 请求取消 Run，取消信号落 PostgreSQL。
+- 客户端断开时 SSE 请求协作式暂停，状态按 `PAUSE_REQUESTED -> PAUSED` 落 PostgreSQL；显式取消仍是不可恢复终态。
+- 用户输入“继续”调用同一 `runId` 的恢复 API，通过原子 claim 延续原事件 sequence、Profile 和累计预算，不创建第二个 Run。
 
 边界：当前 SSE 是事件级，不是逐 Token 结构化输出。
 

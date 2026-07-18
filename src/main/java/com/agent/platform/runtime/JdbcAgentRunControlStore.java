@@ -148,6 +148,59 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
         }
     }
 
+    @Override
+    public boolean requestPause(String runId) {
+        ensureSchema();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE agent_run_control
+                     SET pause_requested = TRUE, updated_at = ?
+                     WHERE run_id = ?
+                     """)) {
+            statement.setTimestamp(1, Timestamp.from(Instant.now()));
+            statement.setString(2, runId);
+            return statement.executeUpdate() == 1;
+        }
+        catch (SQLException exception) {
+            throw new AgentStorageException("Failed to request agent run pause: " + runId, exception);
+        }
+    }
+
+    @Override
+    public boolean pauseRequested(String runId) {
+        ensureSchema();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT pause_requested FROM agent_run_control WHERE run_id = ?
+                     """)) {
+            statement.setString(1, runId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next() && resultSet.getBoolean(1);
+            }
+        }
+        catch (SQLException exception) {
+            throw new AgentStorageException("Failed to read agent run pause request: " + runId, exception);
+        }
+    }
+
+    @Override
+    public boolean clearPauseRequest(String runId) {
+        ensureSchema();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE agent_run_control
+                     SET pause_requested = FALSE, updated_at = ?
+                     WHERE run_id = ?
+                     """)) {
+            statement.setTimestamp(1, Timestamp.from(Instant.now()));
+            statement.setString(2, runId);
+            return statement.executeUpdate() == 1;
+        }
+        catch (SQLException exception) {
+            throw new AgentStorageException("Failed to clear agent run pause request: " + runId, exception);
+        }
+    }
+
     /**
      * 查看是否有 agent 的取消请求
      */
@@ -173,8 +226,10 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
                                     String runId,
                                     Instant now) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
-                INSERT INTO agent_run_control(run_id, session_id, cancellation_requested, created_at, updated_at)
-                VALUES (?, ?, FALSE, ?, ?)
+                INSERT INTO agent_run_control(
+                    run_id, session_id, cancellation_requested, pause_requested, created_at, updated_at
+                )
+                VALUES (?, ?, FALSE, FALSE, ?, ?)
                 ON CONFLICT(run_id) DO UPDATE SET session_id = EXCLUDED.session_id, updated_at = EXCLUDED.updated_at
                 """)) {
             statement.setString(1, runId);
@@ -199,9 +254,14 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
                             run_id TEXT PRIMARY KEY,
                             session_id TEXT NOT NULL,
                             cancellation_requested BOOLEAN NOT NULL DEFAULT FALSE,
+                            pause_requested BOOLEAN NOT NULL DEFAULT FALSE,
                             created_at TIMESTAMPTZ NOT NULL,
                             updated_at TIMESTAMPTZ NOT NULL
                         )
+                        """);
+                statement.execute("""
+                        ALTER TABLE agent_run_control
+                        ADD COLUMN IF NOT EXISTS pause_requested BOOLEAN NOT NULL DEFAULT FALSE
                         """);
                 statement.execute("""
                         CREATE TABLE IF NOT EXISTS agent_session_lease (

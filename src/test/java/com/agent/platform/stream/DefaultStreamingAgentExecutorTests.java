@@ -15,12 +15,15 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -87,5 +90,44 @@ class DefaultStreamingAgentExecutorTests {
         assertTrue(events.stream().allMatch(event ->
                 event.traceId().equals("run-1") && event.conversationId().equals("session-1")));
         verify(runtime).resume(eq("run-1"), any(AgentEventListener.class));
+    }
+
+    @Test
+    void clientDisconnectRequestsPauseInsteadOfTerminalCancellation() throws Exception {
+        AgentRuntime runtime = mock(AgentRuntime.class);
+        AgentProperties properties = new AgentProperties();
+        CountDownLatch pauseRequested = new CountDownLatch(1);
+        when(runtime.pause("run-1")).thenAnswer(invocation -> {
+            pauseRequested.countDown();
+            return true;
+        });
+        when(runtime.run(any(AgentRequest.class), any(AgentEventListener.class))).thenAnswer(invocation -> {
+            AgentEventListener listener = invocation.getArgument(1);
+            listener.onEvent(new AgentEvent(
+                    "event-1", "run-1", "session-1", 1,
+                    AgentEventType.MODEL_STARTED, "started", Map.of(), Instant.now()
+            ));
+            try {
+                Thread.sleep(5_000);
+            }
+            catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            }
+            return new AgentRuntimeResult(
+                    "run-1", "session-1", AgentRunState.PAUSED, AgentStopReason.PAUSED,
+                    "paused", "", null, List.of()
+            );
+        });
+        DefaultStreamingAgentExecutor executor = new DefaultStreamingAgentExecutor(runtime, properties);
+
+        AgentStreamEvent first = executor.stream(
+                        new AgentRequest("session-1", "user-1", "question", Map.of()))
+                .next()
+                .block(Duration.ofSeconds(2));
+
+        assertEquals("model_started", first.type());
+        assertTrue(pauseRequested.await(2, TimeUnit.SECONDS));
+        verify(runtime).pause("run-1");
+        verify(runtime, never()).cancel(any());
     }
 }

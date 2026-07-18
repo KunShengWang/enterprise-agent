@@ -116,7 +116,7 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
                 // 从数据库中加载出当前的 agent 运行状态 AgentRunRecord
                 AgentRunRecord current = loadRunForUpdate(connection, runId)
                         .orElseThrow(() -> new IllegalArgumentException("agent run not found: " + runId));
-                // 根据 AgentRequest 更新 AgentRunRecord
+                // 根据读取到的 AgentRunRecord 获取新的 AgentRunRecord，也就是读取 checkpoint
                 AgentRunRecord next = updater.apply(current)
                         .withVersion(current.version() + 1, Instant.now());
                 // 根据新的 AgentRunRecord 更新数据库
@@ -158,6 +158,34 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
         }
         catch (SQLException exception) {
             throw new AgentStorageException("Failed to claim agent run for resume: " + runId, exception);
+        }
+    }
+
+    @Override
+    public Optional<AgentRunRecord> claimPausedForResume(String runId) {
+        ensureSchema();
+        try (Connection connection = openConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                AgentRunRecord current = loadRunForUpdate(connection, runId).orElse(null);
+                if (current == null || (current.state() != AgentRunState.PAUSED
+                        && current.state() != AgentRunState.PAUSE_REQUESTED)) {
+                    connection.rollback();
+                    return Optional.empty();
+                }
+                AgentRunRecord claimed = current.claimedPausedForResume()
+                        .withVersion(current.version() + 1, Instant.now());
+                writeRun(connection, claimed);
+                connection.commit();
+                return Optional.of(claimed);
+            }
+            catch (RuntimeException | SQLException exception) {
+                rollbackQuietly(connection);
+                throw exception;
+            }
+        }
+        catch (SQLException exception) {
+            throw new AgentStorageException("Failed to claim paused agent run for resume: " + runId, exception);
         }
     }
 

@@ -11,6 +11,7 @@ import com.agent.platform.runtime.AgentRunRecord;
 import com.agent.platform.runtime.AgentRunStore;
 import com.agent.platform.runtime.AgentRuntime;
 import com.agent.platform.runtime.AgentEvent;
+import com.agent.platform.runtime.AgentMessageType;
 import com.agent.platform.runtime.AgentTimelineStore;
 import com.agent.platform.stream.AgentStreamEvent;
 import com.agent.platform.stream.StreamingAgentExecutor;
@@ -117,6 +118,33 @@ public class AgentController {
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
+    @GetMapping("/conversations/{conversationId}/messages")
+    public Mono<ApiResponse<List<ConversationMessageView>>> conversationMessages(
+            @PathVariable String conversationId,
+            @RequestParam(defaultValue = "200") int limit) {
+        return Mono.fromSupplier(() -> {
+                    int visibleLimit = Math.max(1, Math.min(limit, 500));
+                    int timelineLimit = Math.min(10_000, visibleLimit * 10);
+                    List<ConversationMessageView> visibleMessages = timelineStore
+                            .loadMessages(normalizeConversationId(conversationId), timelineLimit)
+                            .stream()
+                            .filter(message -> message.type() == AgentMessageType.USER
+                                    || message.type() == AgentMessageType.ASSISTANT_TEXT)
+                            .map(message -> new ConversationMessageView(
+                                    message.messageId(),
+                                    message.runId(),
+                                    message.sequence(),
+                                    message.type() == AgentMessageType.USER ? "USER" : "ASSISTANT",
+                                    message.content(),
+                                    message.createdAt()
+                            ))
+                            .toList();
+                    int fromIndex = Math.max(0, visibleMessages.size() - visibleLimit);
+                    return ApiResponse.success(List.copyOf(visibleMessages.subList(fromIndex, visibleMessages.size())));
+                })
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
     @PostMapping("/runs/{runId}/resume")
     public Mono<ApiResponse<AgentResponse>> resumeRun(@PathVariable String runId) {
         return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.resume(runId)))
@@ -140,6 +168,23 @@ public class AgentController {
                     }
                     return ApiResponse.<Map<String, Object>>success(
                             Map.<String, Object>of("runId", runId, "cancellationRequested", true)
+                    );
+                })
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @PostMapping("/runs/{runId}/pause")
+    public Mono<ApiResponse<Map<String, Object>>> pauseRun(@PathVariable String runId) {
+        return Mono.fromSupplier(() -> {
+                    boolean requested = agentRuntime.pause(runId);
+                    if (!requested) {
+                        return ApiResponse.<Map<String, Object>>failure(
+                                com.agent.platform.common.ErrorCode.NOT_FOUND,
+                                "agent run is not pausable: " + runId
+                        );
+                    }
+                    return ApiResponse.<Map<String, Object>>success(
+                            Map.<String, Object>of("runId", runId, "pauseRequested", true)
                     );
                 })
                 .subscribeOn(Schedulers.boundedElastic());

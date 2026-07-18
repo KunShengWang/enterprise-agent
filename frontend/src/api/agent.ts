@@ -1,6 +1,7 @@
 import { apiRequest, jsonBody } from './http'
 import type {
   AgentEvent,
+  AgentConversationMessage,
   AgentRequest,
   AgentResponse,
   AgentRunRecord,
@@ -27,9 +28,17 @@ export const agentApi = {
     apiRequest<AgentEvent[]>(
       `/api/agent/runs/${encodeURIComponent(runId)}/events?afterSequence=${afterSequence}&limit=${limit}`,
     ),
+  conversationMessages: (conversationId: string, limit = 200) =>
+    apiRequest<AgentConversationMessage[]>(
+      `/api/agent/conversations/${encodeURIComponent(conversationId)}/messages?limit=${limit}`,
+    ),
   resumeRun: (runId: string) => apiRequest<AgentResponse>(`/api/agent/runs/${encodeURIComponent(runId)}/resume`, {
     method: 'POST',
   }),
+  pauseRun: (runId: string) => apiRequest<{ runId: string; pauseRequested: boolean }>(
+    `/api/agent/runs/${encodeURIComponent(runId)}/pause`,
+    { method: 'POST' },
+  ),
   cancelRun: (runId: string) => apiRequest<{ runId: string; cancellationRequested: boolean }>(
     `/api/agent/runs/${encodeURIComponent(runId)}/cancel`,
     { method: 'POST' },

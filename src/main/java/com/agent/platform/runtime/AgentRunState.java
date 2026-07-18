@@ -5,6 +5,10 @@ public enum AgentRunState {
     CREATED,
     /** 运行中：Agent 正在执行主链路 */
     RUNNING,
+    /** 已请求暂停：Runtime 将在下一个安全检查点落盘后停止 */
+    PAUSE_REQUESTED,
+    /** 已暂停：保留原 Run、Checkpoint 和剩余预算，可继续恢复 */
+    PAUSED,
     /** 等待审批：高风险工具触发 HITL，暂停等待人工确认 */
     WAITING_APPROVAL,
     /** 已完成：正常执行结束，返回了最终回答 */

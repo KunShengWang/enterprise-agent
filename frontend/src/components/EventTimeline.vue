@@ -9,6 +9,8 @@ const visibleEvents = computed(() => props.events.filter((event) => event.type !
 
 const eventInfo: Record<string, { label: string; group: string; explanation: string }> = {
   run_started: { label: 'Run 已创建', group: 'RUN', explanation: '创建持久化 Run，并固定 Session、Profile 与预算。' },
+  run_pause_requested: { label: 'Run 请求暂停', group: 'PAUSE', explanation: '收到客户端中断，Runtime 将在下一个持久化安全边界暂停。' },
+  run_paused: { label: 'Run 已暂停', group: 'PAUSE', explanation: 'Checkpoint 已安全落盘，可以使用同一个 Run ID 恢复执行。' },
   run_resumed: { label: 'Run 已恢复', group: 'RUN', explanation: '从审批点或故障检查点恢复原有执行状态。' },
   context_prepared: { label: '上下文就绪', group: 'CTX', explanation: '加载消息、Memory、Skill 与工具定义，并计算上下文预算。' },
   context_compacted: { label: '上下文已压缩', group: 'CTX', explanation: '上下文接近窗口上限，Runtime 对投影内容进行了压缩。' },

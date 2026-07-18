@@ -32,9 +32,9 @@
 - RAG：真实 Embedding、pgvector、向量 + 关键词混合召回、模型语义重排、确定性降级、引用元数据、持久化 TTL 缓存。
 - Memory：Runtime 时间线负责短期上下文；结构化模型提取后的长期记忆使用 pgvector 召回；用户画像独立持久化。
 - Guardrail：输入规范化、确定性注入信号 + 模型语义确认、分层 DLP、输出脱敏、工具策略审计。
-- 可靠性：唯一执行租约、原子恢复抢占、过期 RUNNING 检查点恢复、跨实例取消、有界模型线程池、超时重试、熔断和明确终止原因。
+- 可靠性：唯一执行租约、原子恢复抢占、同 Run 协作式暂停/Checkpoint 恢复、过期 RUNNING 检查点恢复、跨实例取消、有界模型线程池、超时重试、熔断和明确终止原因。
 - ToolResult 隔离：完整原文保存在工具执行记录，模型时间线只接收带哈希和 rawReference 的有界投影，并转义结构边界。
-- SSE 可靠性：持久化事件序号、心跳、背压缺口通知；客户端可以识别不完整事件流。
+- SSE 可靠性：持久化事件序号、心跳、背压缺口通知；客户端断开只请求暂停，重连后以同一 runId 和连续 sequence 恢复。
 - Sub-Agent：独立 Session、System Prompt、能力白名单、预算和父子 Run；只向协调者返回摘要与 childRunId。
 - AgentOps：Runtime 事件投影为 Trace / Eval / Replay，保留真实 Usage 或明确标记估算来源。
 - OrderCare M3：与 FlowOrder 联动完成异常订单诊断、不可变 Proposal、版本化审批、领域幂等 execute、确定性收敛、UNKNOWN 对账、Action 执行租约与崩溃恢复；覆盖响应丢失、进程重启和重复 resume，并通过 20/20 真实模型 Eval。

@@ -156,14 +156,69 @@ public record AgentRunRecord(
         );
     }
 
+    public AgentRunRecord pauseRequested(AgentRunBudgetSnapshot currentBudget) {
+        return copy(
+                AgentRunState.PAUSE_REQUESTED,
+                phase,
+                approvalId,
+                pendingToolCall,
+                toolResults,
+                usedTools,
+                usedRag,
+                blockedByGuardrail,
+                "",
+                "",
+                resumeCount,
+                currentBudget == null ? budgetSnapshot : currentBudget
+        );
+    }
+
+    public AgentRunRecord paused(AgentRunBudgetSnapshot pausedBudget) {
+        return copy(
+                AgentRunState.PAUSED,
+                phase,
+                approvalId,
+                pendingToolCall,
+                toolResults,
+                usedTools,
+                usedRag,
+                blockedByGuardrail,
+                "",
+                "",
+                resumeCount,
+                pausedBudget
+        );
+    }
+
+    public AgentRunRecord claimedPausedForResume() {
+        return copy(
+                AgentRunState.RUNNING,
+                phase,
+                approvalId,
+                pendingToolCall,
+                toolResults,
+                usedTools,
+                usedRag,
+                blockedByGuardrail,
+                "",
+                "",
+                resumeCount + 1,
+                budgetSnapshot
+        );
+    }
+
     public AgentRunRecord checkpoint(AgentRunPhase checkpointPhase,
                                      ToolCallRequest activeToolCall,
                                      List<ToolCallResult> completedToolResults,
                                      List<String> completedTools,
                                      boolean ragUsed,
                                      AgentRunBudgetSnapshot currentBudget) {
+        AgentRunState checkpointState = state == AgentRunState.PAUSE_REQUESTED
+                || state == AgentRunState.PAUSED
+                ? state
+                : AgentRunState.RUNNING;
         return copy(
-                AgentRunState.RUNNING,
+                checkpointState,
                 checkpointPhase,
                 approvalId,
                 activeToolCall,

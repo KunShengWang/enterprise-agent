@@ -26,7 +26,9 @@ public class ToolResultProjector {
     public ToolCallResult project(String toolCallId, ToolCallResult raw, boolean rawPersisted) {
         String content = raw.content() == null ? "" : raw.content();
         String error = raw.errorMessage() == null ? "" : raw.errorMessage();
+        // ① 限制内容长度（默认 512 字符）
         int contentLimit = Math.max(512, properties.getMaxToolResultCharsForModel());
+        // ② 限制错误信息长度（默认 256 字符）
         int errorLimit = Math.max(256, properties.getMaxToolErrorCharsForModel());
         boolean contentTruncated = content.length() > contentLimit;
         boolean errorTruncated = error.length() > errorLimit;

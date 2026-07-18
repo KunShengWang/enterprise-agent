@@ -17,6 +17,7 @@ public final class AgentRunBudget {
     private long remainingExecutionMillis;
     private boolean executionPaused;
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
+    private final AtomicBoolean pauseRequested = new AtomicBoolean(false);
 
     private int turns;
     private int modelCalls;
@@ -122,6 +123,18 @@ public final class AgentRunBudget {
 
     public void cancel() {
         cancelled.set(true);
+    }
+
+    public void requestPause() {
+        pauseRequested.set(true);
+    }
+
+    public void clearPauseRequest() {
+        pauseRequested.set(false);
+    }
+
+    public boolean pauseRequested() {
+        return pauseRequested.get();
     }
 
     public synchronized void pauseExecution() {

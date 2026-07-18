@@ -189,6 +189,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
             if (!runCreated) {
                 throw exception;
             }
+            if (pauseRequested(runId, budget)) {
+                return pauseAtCheckpoint(runId, sessionId, userId, budget, effectiveListener);
+            }
             return finishUnexpectedFailure(
                     runId, sessionId, userId, budget, effectiveListener, exception
             );
@@ -205,6 +208,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 .orElseThrow(() -> new IllegalArgumentException("agent run not found: " + runId));
         if (stored.state() == AgentRunState.RUNNING) {
             return recoverRunning(stored, effectiveListener);
+        }
+        if (stored.state() == AgentRunState.PAUSED || stored.state() == AgentRunState.PAUSE_REQUESTED) {
+            return resumePaused(stored, effectiveListener);
         }
         if (stored.state() != AgentRunState.WAITING_APPROVAL) {
             return resultFromStored(stored, inferStoredStopReason(stored));
@@ -238,6 +244,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
             List<String> usedTools = new ArrayList<>(claimed.usedTools());
             budget.resumeExecution();
             synchronizeCancellation(runId, budget);
+            if (budget.pauseRequested()) {
+                return pauseAtCheckpoint(runId, sessionId, userId, budget, effectiveListener);
+            }
             // 在 agent 的执行轮次之前判断是否取消 agent
             Optional<AgentStopReason> resumeStop = budget.beforeTurn();
             if (resumeStop.isPresent()) {
@@ -270,6 +279,16 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                 claimed.request() == null ? Map.of() : claimed.request().metadata())
                 );
                 if (execution.status() == AgentToolExecutionStatus.MANUAL_REVIEW) {
+                    ToolCallRequest reviewRequest = execution.request() == null
+                            ? approval.toolCallRequest()
+                            : execution.request();
+                    ToolCallResult reviewResult = appendTerminalManualReviewResult(
+                            sessionId, userId, runId, reviewRequest, execution.result(),
+                            execution.policyReason(), approval.approvalId(), effectiveListener
+                    );
+                    toolResults.add(reviewResult);
+                    usedTools.add(reviewRequest.toolName());
+                    budget.recordToolCall();
                     return finish(
                             runId, sessionId, userId, AgentRunState.MANUAL_REVIEW, AgentStopReason.TOOL_ERROR,
                             "工具执行状态不确定，需要人工核对。", approval.approvalId(), toolResults, usedTools,
@@ -302,6 +321,15 @@ public class DefaultAgentRuntime implements AgentRuntime {
             if (!claimedForResume) {
                 throw exception;
             }
+            if (pauseRequested(runId, budget)) {
+                return pauseAtCheckpoint(
+                        runId,
+                        sessionId,
+                        normalize(claimed.userId(), DEFAULT_USER_ID),
+                        budget,
+                        effectiveListener
+                );
+            }
             return finishUnexpectedFailure(
                     runId,
                     sessionId,
@@ -333,8 +361,14 @@ public class DefaultAgentRuntime implements AgentRuntime {
         if (localBudget != null) {
             localBudget.cancel();
         }
-        else if (persisted && stored.state() == AgentRunState.WAITING_APPROVAL) {
-            AgentRunBudget cancelledBudget = new AgentRunBudget(AgentRunLimits.from(properties));
+        // 如果是在数据库中等待人工审批的，直接更新数据库中 agent_run_state 的状态
+        else if (persisted && (stored.state() == AgentRunState.WAITING_APPROVAL
+                || stored.state() == AgentRunState.PAUSED
+                || stored.state() == AgentRunState.PAUSE_REQUESTED)) {
+            AgentExecutionProfile profile = stored.executionProfile() == null
+                    ? defaultExecutionProfile()
+                    : stored.executionProfile();
+            AgentRunBudget cancelledBudget = new AgentRunBudget(profile.limits(), stored.budgetSnapshot());
             cancelledBudget.cancel();
             finishBudgetStop(
                     stored.request(), stored.runId(), stored.conversationId(),
@@ -344,6 +378,50 @@ public class DefaultAgentRuntime implements AgentRuntime {
             );
         }
         return persisted;
+    }
+
+    @Override
+    public boolean pause(String runId) {
+        if (runId == null || runId.isBlank()) {
+            return false;
+        }
+        String normalizedRunId = runId.trim();
+        AgentRunRecord stored = runStore.find(normalizedRunId).orElse(null);
+        if (stored == null || isTerminal(stored.state())) {
+            return false;
+        }
+        if (stored.state() == AgentRunState.PAUSED || stored.state() == AgentRunState.PAUSE_REQUESTED) {
+            return true;
+        }
+        if (stored.state() != AgentRunState.RUNNING) {
+            return false;
+        }
+        if (!runControlStore.requestPause(normalizedRunId)) {
+            return false;
+        }
+        AgentRunBudget localBudget = activeBudgets.get(normalizedRunId);
+        if (localBudget != null) {
+            localBudget.requestPause();
+            localBudget.pauseExecution();
+        }
+        AgentRunRecord requested = runStore.update(normalizedRunId, current ->
+                current.state() == AgentRunState.RUNNING
+                        ? current.pauseRequested(localBudget == null ? current.budgetSnapshot() : localBudget.snapshot())
+                        : current
+        );
+        if (requested.state() == AgentRunState.PAUSE_REQUESTED) {
+            publish(
+                    requested.conversationId(),
+                    normalize(requested.userId(), DEFAULT_USER_ID),
+                    requested.runId(),
+                    AgentEventType.RUN_PAUSE_REQUESTED,
+                    "agent run pause requested",
+                    Map.of("phase", requested.phase().name()),
+                    AgentEventListener.NOOP
+            );
+            return true;
+        }
+        return requested.state() == AgentRunState.PAUSED;
     }
 
     private AgentRuntimeResult executeLoop(AgentRequest request,
@@ -369,6 +447,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
             }
             // 查看是否有 agent 的取消请求，有取消请求的话就不往下执行了
             synchronizeCancellation(runId, budget);
+            if (budget.pauseRequested()) {
+                return pauseAtCheckpoint(runId, sessionId, userId, budget, listener);
+            }
             // 在 agent 的执行轮次之前判断是否取消 agent
             Optional<AgentStopReason> turnStop = budget.beforeTurn();
             if (turnStop.isPresent()) {
@@ -411,6 +492,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
             }
             // 查看是否有 agent 的取消请求
             synchronizeCancellation(runId, budget);
+            if (budget.pauseRequested()) {
+                return pauseAtCheckpoint(runId, sessionId, userId, budget, listener);
+            }
             // 在模型调用之前判断是否取消 agent
             Optional<AgentStopReason> modelStop = budget.beforeModelCall();
             if (modelStop.isPresent()) {
@@ -447,6 +531,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     if (!contextOverflow) {
                         budget.recordModelCall(new LlmUsage(0, 0, 0, 0, 0, "", "failed"), 0);
                         synchronizeCancellation(runId, budget);
+                        if (budget.pauseRequested()) {
+                            return pauseAtCheckpoint(runId, sessionId, userId, budget, listener);
+                        }
                         Optional<AgentStopReason> interruptedStop = budget.currentStopReason();
                         if (interruptedStop.isPresent()) {
                             return finishBudgetStop(request, runId, sessionId, userId, interruptedStop.get(),
@@ -529,6 +616,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     listener);
 
             synchronizeCancellation(runId, budget);
+            if (budget.pauseRequested()) {
+                return pauseAtCheckpoint(runId, sessionId, userId, budget, listener);
+            }
             Optional<AgentStopReason> asynchronousStop = budget.currentStopReason();
             if (asynchronousStop.isPresent()) {
                 return finishBudgetStop(request, runId, sessionId, userId, asynchronousStop.get(),
@@ -536,6 +626,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
             }
             // 本次 LLM 调用没有返回工具调用，直接对本地 LLM 答案做护栏输出并添加 LLM 返回消息，然后返回结果
             if (!modelTurn.hasToolCalls()) {
+                // TODO 最终返回的答案是非流式的（POST /api/agent/runs/events）
                 return finishFinalAnswer(request, runId, sessionId, userId, modelTurn.assistantText(),
                         toolResults, usedTools, usedRag, budget, listener);
             }
@@ -556,6 +647,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
 
             for (AgentToolCall rawCall : modelTurn.toolCalls()) {
                 synchronizeCancellation(runId, budget);
+                if (budget.pauseRequested()) {
+                    return pauseAtCheckpoint(runId, sessionId, userId, budget, listener);
+                }
                 Optional<AgentStopReason> toolStop = budget.beforeToolCall();
                 if (toolStop.isPresent()) {
                     return finishBudgetStop(request, runId, sessionId, userId, toolStop.get(),
@@ -662,6 +756,16 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     );
                 }
                 if (execution.status() == AgentToolExecutionStatus.MANUAL_REVIEW) {
+                    ToolCallRequest reviewRequest = execution.request() == null
+                            ? new ToolCallRequest(call.toolName(), call.toolCallId(), call.arguments())
+                            : execution.request();
+                    ToolCallResult reviewResult = appendTerminalManualReviewResult(
+                            sessionId, userId, runId, reviewRequest, execution.result(),
+                            execution.policyReason(), "", listener
+                    );
+                    toolResults.add(reviewResult);
+                    usedTools.add(reviewRequest.toolName());
+                    budget.recordToolCall();
                     return finish(
                             runId, sessionId, userId, AgentRunState.MANUAL_REVIEW, AgentStopReason.TOOL_ERROR,
                             "工具执行状态不确定，需要人工核对后再继续。", "", toolResults, usedTools,
@@ -691,7 +795,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         }
     }
 
-    private AgentRuntimeResult recoverRunning(AgentRunRecord stored, AgentEventListener listener) {
+    private AgentRuntimeResult resumePaused(AgentRunRecord stored, AgentEventListener listener) {
         String runId = stored.runId();
         String sessionId = stored.conversationId();
         String userId = normalize(stored.userId(), DEFAULT_USER_ID);
@@ -704,15 +808,23 @@ public class DefaultAgentRuntime implements AgentRuntime {
         try {
             acquireRun(sessionId, runId, leaseOwnerId, budget);
             acquired = true;
-            AgentRunRecord current = runStore.find(runId).orElse(stored);
-            if (current.state() != AgentRunState.RUNNING) {
+            Optional<AgentRunRecord> claim = runStore.claimPausedForResume(runId);
+            if (claim.isEmpty()) {
+                AgentRunRecord current = runStore.find(runId).orElse(stored);
                 return resultFromStored(current, inferStoredStopReason(current));
             }
-            AgentRunRecord claimed = runStore.update(runId, AgentRunRecord::claimedForRecovery);
+            AgentRunRecord claimed = claim.get();
+            if (!runControlStore.clearPauseRequest(runId)) {
+                throw new IllegalStateException("failed to clear pause request for run: " + runId);
+            }
+            budget.clearPauseRequest();
+            budget.resumeExecution();
+            runStore.update(runId, current -> current.withBudgetSnapshot(budget.snapshot()));
             publish(sessionId, userId, runId, AgentEventType.RUN_RESUMED,
-                    "stale running checkpoint recovered", Map.of(
+                    "user-paused checkpoint resumed", Map.of(
                             "phase", claimed.phase().name(),
-                            "resumeCount", claimed.resumeCount()
+                            "resumeCount", claimed.resumeCount(),
+                            "resumeSource", "USER_PAUSE"
                     ), listener);
             if (claimed.phase() == AgentRunPhase.EXECUTING_TOOL) {
                 return recoverExecutingTool(
@@ -726,9 +838,13 @@ public class DefaultAgentRuntime implements AgentRuntime {
             );
         }
         catch (AgentSessionBusyException busy) {
-            return resultFromStored(stored, AgentStopReason.IN_PROGRESS);
+            AgentRunRecord current = runStore.find(runId).orElse(stored);
+            return resultFromStored(current, AgentStopReason.IN_PROGRESS);
         }
         catch (RuntimeException failure) {
+            if (pauseRequested(runId, budget)) {
+                return pauseAtCheckpoint(runId, sessionId, userId, budget, listener);
+            }
             return finishUnexpectedFailure(runId, sessionId, userId, budget, listener, failure);
         }
         finally {
@@ -738,6 +854,72 @@ public class DefaultAgentRuntime implements AgentRuntime {
         }
     }
 
+    /**
+     * 恢复可能已经死掉的 run agent
+     * 如果当前 runId 的 agent 没有死掉，那么当前方法就获取不到租约就会抛异常失败
+     */
+    private AgentRuntimeResult recoverRunning(AgentRunRecord stored, AgentEventListener listener) {
+        String runId = stored.runId();
+        String sessionId = stored.conversationId();
+        String userId = normalize(stored.userId(), DEFAULT_USER_ID);
+        String leaseOwnerId = newLeaseOwnerId(runId);
+        AgentExecutionProfile profile = stored.executionProfile() == null
+                ? defaultExecutionProfile()
+                : stored.executionProfile();
+        AgentRunBudget budget = new AgentRunBudget(profile.limits(), stored.budgetSnapshot());
+        boolean acquired = false;
+        try {
+            // ① 抢租约（死掉的 run 租约应该已过期）
+            acquireRun(sessionId, runId, leaseOwnerId, budget);
+            acquired = true;
+            // ② 再次确认状态（抢租约期间可能被其他实例恢复了）
+            AgentRunRecord current = runStore.find(runId).orElse(stored);
+            if (current.state() != AgentRunState.RUNNING) {
+                return resultFromStored(current, inferStoredStopReason(current));
+            }
+            // ③ 标记为“已被本实例接管”
+            AgentRunRecord claimed = runStore.update(runId, AgentRunRecord::claimedForRecovery);
+            if (pauseRequested(runId, budget)) {
+                return pauseAtCheckpoint(runId, sessionId, userId, budget, listener);
+            }
+            publish(sessionId, userId, runId, AgentEventType.RUN_RESUMED,
+                    "stale running checkpoint recovered", Map.of(
+                            "phase", claimed.phase().name(),
+                            "resumeCount", claimed.resumeCount()
+                    ), listener);
+            // ④ 看上一个 checkpoint 卡在哪个阶段
+            if (claimed.phase() == AgentRunPhase.EXECUTING_TOOL) {
+                // 正在执行工具时崩了 → 从工具恢复
+                return recoverExecutingTool(
+                        claimed, leaseOwnerId, sessionId, userId, budget, profile, listener
+                );
+            }
+            // 从 executeLoop 继续（预算、工具结果都从 checkpoint 还原）
+            return executeLoop(
+                    claimed.request(), runId, leaseOwnerId, sessionId, userId, budget,
+                    new ArrayList<>(claimed.toolResults()), new ArrayList<>(claimed.usedTools()),
+                    claimed.usedRag(), profile, listener
+            );
+        }
+        catch (AgentSessionBusyException busy) {
+            return resultFromStored(stored, AgentStopReason.IN_PROGRESS);
+        }
+        catch (RuntimeException failure) {
+            if (pauseRequested(runId, budget)) {
+                return pauseAtCheckpoint(runId, sessionId, userId, budget, listener);
+            }
+            return finishUnexpectedFailure(runId, sessionId, userId, budget, listener, failure);
+        }
+        finally {
+            if (acquired) {
+                releaseRun(sessionId, runId, leaseOwnerId);
+            }
+        }
+    }
+
+    /**
+     * 从 checkpoint 恢复执行的工具，并把结果交给 executeLoop 继续执行
+     */
     private AgentRuntimeResult recoverExecutingTool(AgentRunRecord claimed,
                                                      String leaseOwnerId,
                                                      String sessionId,
@@ -745,38 +927,60 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                                      AgentRunBudget budget,
                                                      AgentExecutionProfile profile,
                                                      AgentEventListener listener) {
+        // ① 从 checkpoint 取出"卡住的那个工具"
         ToolCallRequest pending = claimed.pendingToolCall();
+        // ② 查工具执行表——工具到底执行了没有
         ToolExecutionRecord execution = pending == null
                 ? null
                 : toolExecutionStore.findToolExecution(pending.requestId()).orElse(null);
         if (!hasCertainPersistedResult(claimed.runId(), pending, execution)) {
             execution = toolRuntime.reconcileUncertain(execution);
         }
+        // ③ 结果不确定 → 进人工审核
         if (!hasCertainPersistedResult(claimed.runId(), pending, execution)) {
             String executionState = execution == null ? "UNKNOWN" : execution.state().name();
+            List<ToolCallResult> reviewResults = new ArrayList<>(claimed.toolResults());
+            List<String> reviewTools = new ArrayList<>(claimed.usedTools());
+            if (pending != null) {
+                String reviewReason = execution == null || execution.errorMessage().isBlank()
+                        ? "persisted tool state remains uncertain: " + executionState
+                        : execution.errorMessage();
+                ToolCallResult reviewResult = appendTerminalManualReviewResult(
+                        sessionId, userId, claimed.runId(), pending,
+                        execution == null ? null : execution.result(), reviewReason, "", listener
+                );
+                reviewResults.add(reviewResult);
+                reviewTools.add(pending.toolName());
+                budget.recordToolCall();
+            }
             return finish(
                     claimed.runId(), sessionId, userId, AgentRunState.MANUAL_REVIEW, AgentStopReason.TOOL_ERROR,
                     "工具执行检查点结果不确定，需要人工核对：" + executionState,
-                    claimed.approvalId(), claimed.toolResults(), claimed.usedTools(), claimed.usedRag(),
+                    claimed.approvalId(), reviewResults, reviewTools, claimed.usedRag(),
                     claimed.blockedByGuardrail(), budget, listener
             );
         }
-
+        // ④ 结果确定 → 接起来继续
+        // 拿到工具执行结果（工具执行失败也有一个错误的结果）
         ToolCallResult rawResult = execution.result();
+        // 把原始工具结果"裁剪"成安全、有界的版本再发给 LLM
         ToolCallResult projectedResult = toolResultProjector.project(pending.requestId(), rawResult, true);
+        // 如果时间线里还没有这个工具结果，补写进去
         if (!timelineContainsToolResult(sessionId, claimed.runId(), pending.requestId())) {
             projectedResult = appendToolResult(
                     sessionId, userId, claimed.runId(), pending.requestId(), rawResult, true
             );
         }
-
+        // 恢复状态：工具结果、已用工具列表、预算
         List<ToolCallResult> toolResults = new ArrayList<>(claimed.toolResults());
         toolResults.add(projectedResult);
         List<String> usedTools = new ArrayList<>(claimed.usedTools());
         usedTools.add(pending.toolName());
         boolean usedRag = claimed.usedRag()
                 || (DefaultAgentCapabilityRegistry.KNOWLEDGE_SEARCH.equals(pending.toolName()) && rawResult.success());
+        // 扣除一次工具调用预算
         budget.recordToolCall();
+        // 写入 checkpoint：标志工具执行阶段结束，回到 CONTEXT_PREPARATION
         checkpoint(claimed.runId(), AgentRunPhase.CONTEXT_PREPARATION, null,
                 toolResults, usedTools, usedRag, budget);
 
@@ -788,24 +992,30 @@ public class DefaultAgentRuntime implements AgentRuntime {
         publish(sessionId, userId, claimed.runId(), AgentEventType.TOOL_COMPLETED,
                 rawResult.success() ? "persisted tool success recovered" : "persisted tool failure recovered",
                 Map.copyOf(eventPayload), listener);
-
+        // ⑤ 继续跑 executeLoop
         return executeLoop(
                 claimed.request(), claimed.runId(), leaseOwnerId, sessionId, userId, budget,
                 toolResults, usedTools, usedRag, profile, listener
         );
     }
 
+    /**
+     * 恢复时判断"工具到底执行了没有"——执行了就跑下一步，不确定就进人工审核，绝不能盲猜。
+     */
     private boolean hasCertainPersistedResult(String runId,
                                               ToolCallRequest pending,
                                               ToolExecutionRecord execution) {
+        // ① 任意为空 → 不确定
         if (pending == null || execution == null || execution.result() == null) {
             return false;
         }
+        // ② 不属于同一个 run / 不匹配同一个工具 → 不确定
         if (!runId.equals(execution.runId())
                 || !pending.requestId().equals(execution.toolCallId())
                 || !pending.toolName().equals(execution.toolName())) {
             return false;
         }
+        // ③ 结果是"确定的"才行
         return (execution.state() == ToolExecutionState.SUCCEEDED && execution.result().success())
                 || (execution.state() == ToolExecutionState.FAILED && !execution.result().success());
     }
@@ -834,6 +1044,42 @@ public class DefaultAgentRuntime implements AgentRuntime {
         runStore.update(runId, current -> current.checkpoint(
                 phase, pendingToolCall, persistedResults, persistedTools, usedRag, snapshot
         ));
+    }
+
+    private AgentRuntimeResult pauseAtCheckpoint(String runId,
+                                                 String sessionId,
+                                                 String userId,
+                                                 AgentRunBudget budget,
+                                                 AgentEventListener listener) {
+        budget.pauseExecution();
+        AgentRunBudgetSnapshot pausedBudget = budget.snapshot();
+        AgentRunRecord paused = runStore.update(runId, current -> {
+            if (isTerminal(current.state()) || current.state() == AgentRunState.WAITING_APPROVAL) {
+                return current;
+            }
+            return current.paused(pausedBudget);
+        });
+        if (paused.state() != AgentRunState.PAUSED) {
+            return resultFromStored(paused, inferStoredStopReason(paused));
+        }
+        publish(sessionId, userId, runId, AgentEventType.RUN_PAUSED,
+                "agent run paused at durable checkpoint", Map.of(
+                        "phase", paused.phase().name(),
+                        "pendingToolCallId", paused.pendingToolCall() == null
+                                ? ""
+                                : paused.pendingToolCall().requestId(),
+                        "budget", budgetPayload(pausedBudget)
+                ), listener);
+        return new AgentRuntimeResult(
+                runId,
+                sessionId,
+                AgentRunState.PAUSED,
+                AgentStopReason.PAUSED,
+                "Agent 已暂停，可使用同一 Run ID 继续执行。",
+                paused.approvalId(),
+                pausedBudget,
+                timelineStore.loadEvents(runId, MAX_RETURNED_EVENTS)
+        );
     }
 
     private AgentRuntimeResult finishFinalAnswer(AgentRequest request,
@@ -952,7 +1198,9 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                                        RuntimeException failure) {
         LOGGER.error("Unhandled Agent Runtime failure for run {}", runId, failure);
         AgentRunRecord current = runStore.find(runId).orElse(null);
-        if (current != null && isTerminal(current.state())) {
+        if (current != null && (isTerminal(current.state())
+                || current.state() == AgentRunState.PAUSED
+                || current.state() == AgentRunState.PAUSE_REQUESTED)) {
             return resultFromStored(current, inferStoredStopReason(current));
         }
         return finish(
@@ -991,6 +1239,61 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                 + tokenEstimator.estimate(projected.errorMessage())
                 )
         ));
+        return projected;
+    }
+
+    /**
+     * 终态人工复核也必须闭合 ASSISTANT_TOOL_CALL -> TOOL_RESULT。
+     *
+     * <p>MANUAL_REVIEW 表示副作用结果不能被证明，不表示工具调用仍在等待。若直接终止 Run 而不写
+     * ToolResult，后续同一会话会留下孤立 ToolCall，Context Manager 为保护模型协议只能拒绝投影。</p>
+     */
+    private ToolCallResult appendTerminalManualReviewResult(String sessionId,
+                                                            String userId,
+                                                            String runId,
+                                                            ToolCallRequest request,
+                                                            ToolCallResult underlyingResult,
+                                                            String reason,
+                                                            String approvalId,
+                                                            AgentEventListener listener) {
+        String reviewReason = underlyingResult != null
+                && underlyingResult.errorMessage() != null
+                && !underlyingResult.errorMessage().isBlank()
+                ? underlyingResult.errorMessage()
+                : reason == null || reason.isBlank()
+                ? "tool outcome requires manual review"
+                : reason;
+        LinkedHashMap<String, Object> metadata = new LinkedHashMap<>(
+                underlyingResult == null ? Map.of() : underlyingResult.metadata()
+        );
+        metadata.put("outcome", "MANUAL_REVIEW");
+        metadata.put("manualReview", true);
+        metadata.put("retryable", false);
+        metadata.put("reviewReason", reviewReason);
+        if (approvalId != null && !approvalId.isBlank()) {
+            metadata.put("approvalId", approvalId);
+        }
+        if (underlyingResult != null) {
+            metadata.put("underlyingResultSuccess", underlyingResult.success());
+        }
+        ToolCallResult rawResult = new ToolCallResult(
+                request.toolName(),
+                false,
+                underlyingResult == null || underlyingResult.content() == null
+                        ? ""
+                        : underlyingResult.content(),
+                reviewReason,
+                Map.copyOf(metadata)
+        );
+        ToolCallResult projected = toolResultProjector.project(request.requestId(), rawResult, false);
+        if (!timelineContainsToolResult(sessionId, runId, request.requestId())) {
+            projected = appendToolResult(
+                    sessionId, userId, runId, request.requestId(), rawResult, false
+            );
+        }
+        publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
+                "tool outcome requires manual review",
+                toolResultPayload(request.requestId(), projected), listener);
         return projected;
     }
 
@@ -1126,6 +1429,14 @@ public class DefaultAgentRuntime implements AgentRuntime {
         if (runControlStore.cancellationRequested(runId)) {
             budget.cancel();
         }
+        if (runControlStore.pauseRequested(runId)) {
+            budget.requestPause();
+        }
+    }
+
+    private boolean pauseRequested(String runId, AgentRunBudget budget) {
+        synchronizeCancellation(runId, budget);
+        return budget.pauseRequested() && budget.currentStopReason().isEmpty();
     }
 
     /**
@@ -1161,7 +1472,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 new AgentEventDraft(type, content, payload)
         );
         try {
-            // 这里使用的是空监听器，不会做任何的操作
+            // 监听器，当有操作的时候会往前端推送事件（streaming 式）
             listener.onEvent(event);
         }
         catch (RuntimeException ignored) {
@@ -1216,6 +1527,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
             case COMPLETED -> AgentStopReason.COMPLETED;
             case WAITING_APPROVAL -> AgentStopReason.WAITING_APPROVAL;
             case RUNNING -> AgentStopReason.IN_PROGRESS;
+            case PAUSE_REQUESTED, PAUSED -> AgentStopReason.PAUSED;
             case BLOCKED, REJECTED -> AgentStopReason.GUARDRAIL_BLOCKED;
             case MANUAL_REVIEW -> AgentStopReason.TOOL_ERROR;
             default -> AgentStopReason.INTERNAL_ERROR;

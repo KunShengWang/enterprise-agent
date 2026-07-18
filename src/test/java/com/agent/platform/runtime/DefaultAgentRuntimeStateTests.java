@@ -6,6 +6,7 @@ import com.agent.platform.approval.ApprovalService;
 import com.agent.platform.approval.ApprovalStatus;
 import com.agent.platform.config.AgentProperties;
 import com.agent.platform.guardrail.GuardrailDecision;
+import com.agent.platform.guardrail.GuardrailAction;
 import com.agent.platform.guardrail.GuardrailService;
 import com.agent.platform.guardrail.GuardrailStage;
 import com.agent.platform.memory.MemoryService;
@@ -13,6 +14,8 @@ import com.agent.platform.llm.ConfiguredLlmCostCalculator;
 import com.agent.platform.llm.LlmUsage;
 import com.agent.platform.tool.ToolCallRequest;
 import com.agent.platform.tool.ToolCallResult;
+import com.agent.platform.tool.ToolDefinition;
+import com.agent.platform.tool.ToolRiskLevel;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -20,10 +23,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -115,6 +124,136 @@ class DefaultAgentRuntimeStateTests {
     }
 
     @Test
+    void userPauseResumesTheSameRunIdFromPersistedCheckpoint() throws Exception {
+        Fixture fixture = new Fixture();
+        AtomicBoolean pauseSignal = new AtomicBoolean(false);
+        AtomicInteger modelCalls = new AtomicInteger();
+        CountDownLatch firstModelStarted = new CountDownLatch(1);
+        CountDownLatch releaseFirstModel = new CountDownLatch(1);
+
+        when(fixture.runStore.create(any())).thenAnswer(invocation -> {
+            AgentRunRecord created = invocation.getArgument(0);
+            fixture.persisted.set(created);
+            return created;
+        });
+        when(fixture.runStore.find(anyString()))
+                .thenAnswer(invocation -> Optional.ofNullable(fixture.persisted.get()));
+        when(fixture.runStore.update(anyString(), any())).thenAnswer(invocation -> {
+            java.util.function.UnaryOperator<AgentRunRecord> updater = invocation.getArgument(1);
+            AgentRunRecord updated = updater.apply(fixture.persisted.get());
+            fixture.persisted.set(updated);
+            return updated;
+        });
+        when(fixture.runStore.claimPausedForResume(anyString())).thenAnswer(invocation -> {
+            AgentRunRecord current = fixture.persisted.get();
+            if (current == null || current.state() != AgentRunState.PAUSED) {
+                return Optional.empty();
+            }
+            AgentRunRecord claimed = current.claimedPausedForResume();
+            fixture.persisted.set(claimed);
+            return Optional.of(claimed);
+        });
+        when(fixture.runControlStore.requestPause(anyString())).thenAnswer(invocation -> {
+            pauseSignal.set(true);
+            return true;
+        });
+        when(fixture.runControlStore.pauseRequested(anyString())).thenAnswer(invocation -> pauseSignal.get());
+        when(fixture.runControlStore.clearPauseRequest(anyString())).thenAnswer(invocation -> {
+            pauseSignal.set(false);
+            return true;
+        });
+        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(new AgentContextView(List.of(), 0, 0, false));
+        when(fixture.modelGateway.nextTurn(any())).thenAnswer(invocation -> {
+            int call = modelCalls.incrementAndGet();
+            if (call == 1) {
+                firstModelStarted.countDown();
+                assertTrue(releaseFirstModel.await(5, TimeUnit.SECONDS));
+                return finalTurn("first model result must not complete the paused run");
+            }
+            return finalTurn("resumed from the same checkpoint");
+        });
+
+        DefaultAgentRuntime runtime = fixture.runtime();
+        CompletableFuture<AgentRuntimeResult> firstExecution = CompletableFuture.supplyAsync(() -> runtime.run(
+                new AgentRequest("session-pause", "user-1", "long running task", Map.of()),
+                AgentEventListener.NOOP
+        ));
+
+        assertTrue(firstModelStarted.await(5, TimeUnit.SECONDS));
+        String originalRunId = fixture.persisted.get().runId();
+        assertTrue(runtime.pause(originalRunId));
+        releaseFirstModel.countDown();
+
+        AgentRuntimeResult paused = firstExecution.get(5, TimeUnit.SECONDS);
+        assertEquals(originalRunId, paused.runId());
+        assertEquals(AgentRunState.PAUSED, paused.state());
+        assertEquals(AgentStopReason.PAUSED, paused.stopReason());
+        assertEquals(AgentRunPhase.MODEL_CALL, fixture.persisted.get().phase());
+        assertTrue(fixture.persisted.get().budgetSnapshot().executionPaused());
+
+        AgentRuntimeResult resumed = runtime.resume(originalRunId, AgentEventListener.NOOP);
+
+        assertEquals(originalRunId, resumed.runId());
+        assertEquals(AgentRunState.COMPLETED, resumed.state());
+        assertEquals("resumed from the same checkpoint", resumed.answer());
+        assertEquals(1, fixture.persisted.get().resumeCount());
+        assertEquals(2, modelCalls.get());
+        verify(fixture.runStore).claimPausedForResume(originalRunId);
+    }
+
+    @Test
+    void pauseRequestedCheckpointCanRecoverAfterTheOriginalWorkerDisappears() {
+        Fixture fixture = new Fixture();
+        AgentRunLimits limits = AgentRunLimits.from(fixture.properties);
+        AgentRunBudget budget = new AgentRunBudget(limits);
+        budget.pauseExecution();
+        AgentRunRecord pauseRequested = AgentRunRecord.create(
+                        "run-pause-requested", "run-pause-requested", "session-pause-requested",
+                        new AgentRequest("session-pause-requested", "user-1", "continue after crash", Map.of()),
+                        new AgentExecutionProfile("default", "prompt", Set.of(), limits, false),
+                        budget.snapshot())
+                .pauseRequested(budget.snapshot());
+        fixture.persisted.set(pauseRequested);
+        when(fixture.runStore.find("run-pause-requested"))
+                .thenAnswer(invocation -> Optional.of(fixture.persisted.get()));
+        when(fixture.runStore.claimPausedForResume("run-pause-requested")).thenAnswer(invocation -> {
+            AgentRunRecord claimed = fixture.persisted.get().claimedPausedForResume();
+            fixture.persisted.set(claimed);
+            return Optional.of(claimed);
+        });
+        when(fixture.runStore.update(anyString(), any())).thenAnswer(invocation -> {
+            java.util.function.UnaryOperator<AgentRunRecord> updater = invocation.getArgument(1);
+            AgentRunRecord updated = updater.apply(fixture.persisted.get());
+            fixture.persisted.set(updated);
+            return updated;
+        });
+        when(fixture.runControlStore.clearPauseRequest("run-pause-requested")).thenReturn(true);
+        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(new AgentContextView(List.of(), 0, 0, false));
+        when(fixture.modelGateway.nextTurn(any())).thenReturn(finalTurn("recovered after pause request crash"));
+
+        AgentRuntimeResult resumed = fixture.runtime().resume(
+                "run-pause-requested", AgentEventListener.NOOP
+        );
+
+        assertEquals("run-pause-requested", resumed.runId());
+        assertEquals(AgentRunState.COMPLETED, resumed.state());
+        assertEquals("recovered after pause request crash", resumed.answer());
+        assertEquals(1, fixture.persisted.get().resumeCount());
+    }
+
+    private static AgentModelTurn finalTurn(String answer) {
+        return new AgentModelTurn(
+                answer,
+                List.of(),
+                answer,
+                new LlmUsage(10, 5, 15, 0, 0, "test-model", "test"),
+                "stop"
+        );
+    }
+
+    @Test
     void staleToolExecutionCheckpointRequiresManualReviewInsteadOfRepeatingSideEffect() {
         Fixture fixture = new Fixture();
         AgentRunLimits limits = AgentRunLimits.from(fixture.properties);
@@ -143,7 +282,77 @@ class DefaultAgentRuntimeStateTests {
 
         assertEquals(AgentRunState.MANUAL_REVIEW, result.state());
         assertEquals(AgentRunState.MANUAL_REVIEW, persisted.get().state());
+        assertEquals(1, persisted.get().toolResults().size());
+        assertEquals("MANUAL_REVIEW", persisted.get().toolResults().get(0).metadata().get("outcome"));
+        verify(fixture.timelineStore).appendMessages(
+                anyString(), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.argThat(messages -> messages.size() == 1
+                        && messages.get(0).type() == AgentMessageType.TOOL_RESULT
+                        && "call-1".equals(messages.get(0).toolCallId()))
+        );
         verify(fixture.toolRuntime, never()).execute(anyString(), anyString(), anyString(), any(), any(), any());
+    }
+
+    @Test
+    void approvedManualReviewClosesToolPairBeforeRunTerminates() {
+        Fixture fixture = new Fixture();
+        AgentRunLimits limits = AgentRunLimits.from(fixture.properties);
+        AgentExecutionProfile profile = new AgentExecutionProfile(
+                "restricted", "prompt", Set.of("ticket_close"), limits, false
+        );
+        ToolCallRequest request = new ToolCallRequest("ticket_close", "call-review", Map.of("id", "T1"));
+        AgentRunBudget budget = new AgentRunBudget(limits);
+        AgentRunRecord waiting = AgentRunRecord.create(
+                        "run-review", "run-review", "session-review",
+                        new AgentRequest("session-review", "user-1", "close ticket", Map.of()),
+                        profile, budget.snapshot())
+                .waitingForApproval("approval-review", request, List.of(), List.of(), false, budget.snapshot());
+        fixture.persisted.set(waiting);
+        ApprovalRecord approval = new ApprovalRecord(
+                "approval-review", "run-review", "session-review", request, "high risk",
+                ApprovalStatus.APPROVED, "reviewer", "approved", Instant.now(), Instant.now().plusSeconds(60)
+        );
+        ToolDefinition definition = new ToolDefinition(
+                "ticket_close", "close ticket", "{}", ToolRiskLevel.HIGH, Map.of()
+        );
+        ToolCallResult uncertain = new ToolCallResult(
+                "ticket_close", false, "", "remote outcome is unknown",
+                Map.of("manualReview", true, "retryable", false)
+        );
+        AgentToolRuntimeResult manualReview = new AgentToolRuntimeResult(
+                AgentToolExecutionStatus.MANUAL_REVIEW, request, uncertain,
+                GuardrailAction.ALLOW, "tool outcome requires manual review", "", false
+        );
+        when(fixture.runStore.find("run-review")).thenAnswer(invocation -> Optional.of(fixture.persisted.get()));
+        when(fixture.runStore.claimForResume("run-review")).thenAnswer(invocation -> {
+            AgentRunRecord claimed = fixture.persisted.get().claimedForResume();
+            fixture.persisted.set(claimed);
+            return Optional.of(claimed);
+        });
+        when(fixture.runStore.update(anyString(), any())).thenAnswer(invocation -> {
+            java.util.function.UnaryOperator<AgentRunRecord> updater = invocation.getArgument(1);
+            AgentRunRecord updated = updater.apply(fixture.persisted.get());
+            fixture.persisted.set(updated);
+            return updated;
+        });
+        when(fixture.approvalService.find("approval-review")).thenReturn(Optional.of(approval));
+        when(fixture.capabilityRegistry.findCapability("ticket_close")).thenReturn(Optional.of(definition));
+        when(fixture.toolRuntime.executeApproved(any(), any(), any())).thenReturn(manualReview);
+
+        AgentRuntimeResult result = fixture.runtime().resume("run-review", AgentEventListener.NOOP);
+
+        assertEquals(AgentRunState.MANUAL_REVIEW, result.state());
+        assertEquals(1, fixture.persisted.get().toolResults().size());
+        ToolCallResult persistedResult = fixture.persisted.get().toolResults().get(0);
+        assertEquals(false, persistedResult.success());
+        assertEquals("MANUAL_REVIEW", persistedResult.metadata().get("outcome"));
+        assertEquals(1, fixture.persisted.get().budgetSnapshot().toolCalls());
+        verify(fixture.timelineStore).appendMessages(
+                anyString(), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.argThat(messages -> messages.size() == 1
+                        && messages.get(0).type() == AgentMessageType.TOOL_RESULT
+                        && "call-review".equals(messages.get(0).toolCallId()))
+        );
     }
 
     @Test

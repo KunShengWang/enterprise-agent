@@ -5,6 +5,8 @@ package com.agent.platform.runtime;
  */
 public enum AgentEventType {
     RUN_STARTED,// 运行已启动
+    RUN_PAUSE_REQUESTED,// 已请求在安全检查点暂停
+    RUN_PAUSED,// 已在安全检查点暂停
     RUN_RESUMED,// 运行已恢复
     CONTEXT_PREPARED,// 上下文已准备
     CONTEXT_COMPACTED,// 上下文压缩

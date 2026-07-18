@@ -15,6 +15,9 @@ public interface AgentRuntime {
     /** 持久化取消请求；同实例正在运行时同时触发本地预算取消。 */
     boolean cancel(String runId);
 
+    /** 请求在下一个安全 Checkpoint 暂停；暂停后可使用同一 runId 恢复。 */
+    boolean pause(String runId);
+
     default AgentRuntimeResult run(AgentRequest request) {
         return run(request, AgentEventListener.NOOP);
     }
