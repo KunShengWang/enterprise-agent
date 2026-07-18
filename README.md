@@ -100,7 +100,7 @@ $body = @{
 
 Invoke-RestMethod `
   -Method Post `
-  -Uri http://localhost:8080/api/agent/runs `
+  -Uri http://localhost:8083/api/agent/runs `
   -ContentType "application/json" `
   -Body $body
 ```
@@ -108,7 +108,8 @@ Invoke-RestMethod `
 SSE Runtime 事件：
 
 ```powershell
-curl.exe -N -X POST "http://localhost:8080/api/agent/runs/events" `
+curl.exe -N -X POST "http://localhost:8083/api/agent/runs" `
+  -H "Accept: text/event-stream" `
   -H "Content-Type: application/json" `
   -d '{"conversationId":"demo-sse-1","userId":"demo-user","question":"查询工单 T1001 的状态","metadata":{}}'
 ```
@@ -131,4 +132,4 @@ curl.exe -N -X POST "http://localhost:8080/api/agent/runs/events" `
 
 ## 重要边界
 
-这是一个有真实工程深度的面试学习项目，不应描述成 Claude Code 或 OpenClaw 的等价实现。它尚未提供操作系统级 Sandbox、管理 API 身份认证、分布式任务队列、原生模型 Tool Calling 适配和逐 Token 的结构化流式解析。详见 [仍然存在的边界](docs/remaining-gaps.md)。
+这是一个有真实工程深度的面试学习项目，不应描述成 Claude Code 或 OpenClaw 的等价实现。它尚未提供操作系统级 Sandbox、管理 API 身份认证、分布式任务队列和不同模型 Provider 的原生 Tool Calling 适配；模型正文已接入 Provider 原生流并由 Runtime 发布受 Guardrail 约束的 `MODEL_DELTA`。详见 [仍然存在的边界](docs/remaining-gaps.md)。

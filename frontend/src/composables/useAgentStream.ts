@@ -60,7 +60,8 @@ export function useAgentStream() {
       hasModelDelta.value = true
       answer.value += event.content
     }
-    if (event.type === 'run_completed' && !hasModelDelta.value) {
+    if (event.type === 'run_completed') {
+      // RUN_COMPLETED 是完整输出 Guardrail 处理后的权威文本，用它校正增量窗口中的最终内容。
       answer.value = event.content
     }
     if (event.type === 'run_failed' || event.type === 'transport_error' || event.type === 'stream_gap') {

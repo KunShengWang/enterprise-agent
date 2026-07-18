@@ -522,7 +522,15 @@ public class DefaultAgentRuntime implements AgentRuntime {
             checkpoint(runId, AgentRunPhase.MODEL_CALL, null,
                     toolResults, usedTools, usedRag, budget);
             AgentModelTurn modelTurn;
+            StreamingModelDeltaPublisher modelDeltaPublisher;
             while (true) {
+                modelDeltaPublisher = new StreamingModelDeltaPublisher(
+                        sessionId,
+                        userId,
+                        runId,
+                        budget.snapshot().turns(),
+                        listener
+                );
                 try {
                     modelTurn = modelGateway.nextTurn(new AgentModelRequest(
                             runId,
@@ -531,7 +539,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                             context.messages(),
                             capabilitiesFor(profile),
                             request.metadata()
-                    ));
+                    ), modelDeltaPublisher::accept);
                     break;
                 }
                 catch (RuntimeException modelFailure) {
@@ -641,9 +649,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
             }
             // 本次 LLM 调用没有返回工具调用，直接对本地 LLM 答案做护栏输出并添加 LLM 返回消息，然后返回结果
             if (!modelTurn.hasToolCalls()) {
-                // TODO 最终返回的答案是非流式的（POST /api/agent/runs/events）
                 return finishFinalAnswer(request, runId, sessionId, userId, modelTurn.assistantText(),
-                        toolResults, usedTools, usedRag, budget, listener);
+                        toolResults, usedTools, usedRag, budget, listener, modelDeltaPublisher);
             }
             // 添加 LLM 返回消息
             if (!modelTurn.assistantText().isBlank()) {
@@ -1106,7 +1113,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                                  List<String> usedTools,
                                                  boolean usedRag,
                                                  AgentRunBudget budget,
-                                                 AgentEventListener listener) {
+                                                 AgentEventListener listener,
+                                                 StreamingModelDeltaPublisher modelDeltaPublisher) {
         GuardrailDecision outputDecision = guardrailService.checkOutput(answer);
         if (outputDecision.action() == GuardrailAction.BLOCK) {
             return finish(
@@ -1121,6 +1129,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         if (safeAnswer == null || safeAnswer.isBlank()) {
             safeAnswer = "模型未生成有效回答，请补充问题后重试。";
         }
+        modelDeltaPublisher.complete(safeAnswer);
         timelineStore.appendMessages(sessionId, userId, runId, List.of(
                 AgentMessageDraft.assistant(safeAnswer, tokenEstimator.estimate(safeAnswer))
         ));
@@ -1543,6 +1552,84 @@ public class DefaultAgentRuntime implements AgentRuntime {
             // Event transport failure cannot roll back already persisted Agent execution state.
         }
         return event;
+    }
+
+    /**
+     * 将 Provider 的细粒度 Token/chunk 合并成可审计的 MODEL_DELTA。
+     *
+     * <p>增量末尾保留一小段窗口后再发布，用于识别横跨多个 Provider chunk 的手机号、
+     * 身份证、API Key 等敏感内容；同时按最小字符数聚合，避免逐 Token 写事件表。</p>
+     */
+    private final class StreamingModelDeltaPublisher {
+
+        private final String sessionId;
+        private final String userId;
+        private final String runId;
+        private final int turn;
+        private final AgentEventListener listener;
+        private final StringBuilder rawAnswer = new StringBuilder();
+        private final StringBuilder emittedSafeAnswer = new StringBuilder();
+        private int deltaIndex;
+
+        private StreamingModelDeltaPublisher(String sessionId,
+                                             String userId,
+                                             String runId,
+                                             int turn,
+                                             AgentEventListener listener) {
+            this.sessionId = sessionId;
+            this.userId = userId;
+            this.runId = runId;
+            this.turn = turn;
+            this.listener = listener;
+        }
+
+        private synchronized void accept(String delta) {
+            if (delta == null || delta.isEmpty()) {
+                return;
+            }
+            rawAnswer.append(delta);
+            GuardrailDecision preview = guardrailService.previewOutput(rawAnswer.toString());
+            if (preview == null || preview.action() == GuardrailAction.BLOCK) {
+                return;
+            }
+            String safe = preview.action() == GuardrailAction.REDACT && preview.safeContent() != null
+                    ? preview.safeContent()
+                    : rawAnswer.toString();
+            int holdback = Math.max(16, properties.getStreamOutputGuardrailHoldbackChars());
+            emitThrough(safe, Math.max(0, safe.length() - holdback), false);
+        }
+
+        private synchronized void complete(String safeAnswer) {
+            emitThrough(safeAnswer == null ? "" : safeAnswer,
+                    safeAnswer == null ? 0 : safeAnswer.length(), true);
+        }
+
+        private void emitThrough(String safeAnswer, int requestedEnd, boolean finalChunk) {
+            String emitted = emittedSafeAnswer.toString();
+            if (!safeAnswer.startsWith(emitted)) {
+                // 完整 Guardrail 改写了已经发送部分时不能撤回 SSE；RUN_COMPLETED 会给出权威安全文本。
+                return;
+            }
+            int end = Math.max(emitted.length(), Math.min(requestedEnd, safeAnswer.length()));
+            int available = end - emitted.length();
+            int minChars = Math.max(1, properties.getStreamModelDeltaMinChars());
+            if (!finalChunk && available < minChars) {
+                return;
+            }
+            if (available <= 0) {
+                return;
+            }
+            String delta = safeAnswer.substring(emitted.length(), end);
+            emittedSafeAnswer.append(delta);
+            deltaIndex++;
+            publish(sessionId, userId, runId, AgentEventType.MODEL_DELTA, delta,
+                    Map.of(
+                            "turn", turn,
+                            "deltaIndex", deltaIndex,
+                            "finalChunk", finalChunk,
+                            "guardrailHoldbackChars", properties.getStreamOutputGuardrailHoldbackChars()
+                    ), listener);
+        }
     }
 
     private Map<String, Object> toolResultPayload(String toolCallId, ToolCallResult result) {

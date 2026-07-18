@@ -87,7 +87,7 @@ async function consumeAgentStream(path: string, options: StreamOptions, body?: u
 }
 
 export async function streamAgentEvents(request: AgentRequest, options: StreamOptions): Promise<void> {
-  await consumeAgentStream('/api/agent/runs/events', options, request)
+  await consumeAgentStream('/api/agent/runs', options, request)
 }
 
 export async function resumeAgentEvents(runId: string, options: StreamOptions): Promise<void> {

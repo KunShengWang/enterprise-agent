@@ -14,6 +14,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @ConditionalOnProperty(prefix = "enterprise-agent", name = "mock-mode", havingValue = "false", matchIfMissing = true)
@@ -106,10 +108,7 @@ public class SpringAiLlmService implements LlmService {
 
     @Override
     public Flux<String> stream(PromptRequest promptRequest) {
-        ChatModel chatModel = requireChatModel();
-        return chatModel.stream(toSpringPrompt(promptRequest))
-                .timeout(Duration.ofMillis(Math.max(1000, resilienceProperties.getLlm().getTimeoutMillis())))
-                .retry(Math.max(0, resilienceProperties.getLlm().getMaxAttempts() - 1))
+        return streamWithRetry(toSpringPrompt(promptRequest), 1)
                 .doOnNext(response -> lastUsage.set(extractUsage(response)))
                 .map(response -> {
                     if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
@@ -128,6 +127,41 @@ public class SpringAiLlmService implements LlmService {
                     }
                     return Flux.error(toLlmCallException(error));
                 });
+    }
+
+    /**
+     * 流式调用只允许在 Provider 尚未返回任何 chunk 时重试。
+     * 已经向下游发送部分内容后重新订阅会造成答案和 ToolCall JSON 重复，因此必须直接失败。
+     */
+    private Flux<ChatResponse> streamWithRetry(Prompt prompt, int attempt) {
+        return Flux.defer(() -> {
+            assertCircuitClosed();
+            AtomicBoolean emitted = new AtomicBoolean(false);
+            return requireChatModel().stream(prompt)
+                    .timeout(Duration.ofMillis(Math.max(1000, resilienceProperties.getLlm().getTimeoutMillis())))
+                    .doOnNext(ignored -> emitted.set(true))
+                    .doOnComplete(this::resetCircuit)
+                    .onErrorResume(error -> {
+                        int maxAttempts = Math.max(1, resilienceProperties.getLlm().getMaxAttempts());
+                        if (isContextOverflow(error)) {
+                            return Flux.error(error);
+                        }
+                        if (emitted.get() || attempt >= maxAttempts || isNonRetryable(error)) {
+                            recordCircuitFailure();
+                            return Flux.error(error);
+                        }
+                        long backoffMillis = Math.max(0, resilienceProperties.getLlm().getBackoffMillis()) * attempt;
+                        Flux<ChatResponse> retry = streamWithRetry(prompt, attempt + 1);
+                        return backoffMillis <= 0
+                                ? retry
+                                : Mono.delay(Duration.ofMillis(backoffMillis)).thenMany(retry);
+                    });
+        });
+    }
+
+    private void resetCircuit() {
+        consecutiveFailures.set(0);
+        circuitOpenUntilEpochMillis.set(0);
     }
 
     @Override

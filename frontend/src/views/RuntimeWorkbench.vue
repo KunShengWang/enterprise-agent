@@ -615,7 +615,7 @@ onBeforeUnmount(() => {
             <button class="composer-option" type="button" @click="showAdvanced = !showAdvanced">
               <span>{{ showAdvanced ? '−' : '+' }}</span> 上下文
             </button>
-            <code>POST /api/agent/runs/events</code>
+            <code>POST /api/agent/runs · Accept: text/event-stream</code>
             <button v-if="stream.running.value" class="stop-button" type="button" aria-label="暂停当前 Run" @click="pauseCurrentRun">■</button>
             <button v-else class="send-button" type="button" :disabled="loadingRun" aria-label="发送任务" @click="submit">↑</button>
           </div>

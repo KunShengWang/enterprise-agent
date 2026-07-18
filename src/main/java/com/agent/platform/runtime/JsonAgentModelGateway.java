@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * 在当前字符串型 LlmService 之上提供结构化 Agent Turn。
@@ -33,19 +34,56 @@ public class JsonAgentModelGateway implements AgentModelGateway {
 
     @Override
     public AgentModelTurn nextTurn(AgentModelRequest request) {
-        String raw = llmService.complete(new PromptRequest(
+        String raw = llmService.complete(modelPrompt(request));
+        LlmUsage usage = llmService.lastUsage().orElse(new LlmUsage(0, 0, 0, 0, 0, "", "unavailable"));
+        return toModelTurn(raw, usage);
+    }
+
+    @Override
+    public AgentModelTurn nextTurn(AgentModelRequest request, AgentModelDeltaListener deltaListener) {
+        AgentModelDeltaListener listener = deltaListener == null ? AgentModelDeltaListener.NOOP : deltaListener;
+        StringBuilder raw = new StringBuilder();
+        StreamingResponseRouter responseRouter = new StreamingResponseRouter(listener);
+        AtomicReference<LlmUsage> streamedUsage = new AtomicReference<>(
+                new LlmUsage(0, 0, 0, 0, 0, "", "unavailable")
+        );
+        llmService.stream(modelPrompt(request))
+                .doOnNext(delta -> {
+                    if (delta == null || delta.isEmpty()) {
+                        return;
+                    }
+                    llmService.lastUsage().ifPresent(streamedUsage::set);
+                    raw.append(delta);
+                    if (!"fallback".equalsIgnoreCase(streamedUsage.get().source())) {
+                        responseRouter.accept(delta);
+                    }
+                })
+                .blockLast();
+        LlmUsage usage = streamedUsage.get();
+        AgentModelTurn turn = toModelTurn(raw.toString(), usage);
+        responseRouter.complete(turn);
+        return turn;
+    }
+
+    private PromptRequest modelPrompt(AgentModelRequest request) {
+        return new PromptRequest(
                 buildSystemPrompt(request),
                 "请根据完整消息时间线决定下一步。",
                 List.of(formatMessages(request.messages()), formatTools(request.tools())),
                 Map.of("purpose", "agent_loop", "runId", request.runId(), "sessionId", request.sessionId())
-        ));
-        LlmUsage usage = llmService.lastUsage().orElse(new LlmUsage(0, 0, 0, 0, 0, "", "unavailable"));
+        );
+    }
+
+    private AgentModelTurn toModelTurn(String raw, LlmUsage usage) {
         if ("fallback".equalsIgnoreCase(usage.source())) {
             throw new LlmCallException(
                     "MODEL_FALLBACK",
                     "模型服务不可用，Agent Runtime 不会把降级提示伪装成成功回答。",
                     null
             );
+        }
+        if (!looksLikeStructuredToolCall(raw)) {
+            return new AgentModelTurn(raw, List.of(), raw, usage, "final_answer");
         }
         try {
             return parseTurn(raw, usage);
@@ -54,6 +92,11 @@ public class JsonAgentModelGateway implements AgentModelGateway {
             // 兼容不支持 JSON 输出或降级模型。普通文本只能成为最终回答，不能触发工具。
             return new AgentModelTurn(raw, List.of(), raw, usage, "plain_text_fallback");
         }
+    }
+
+    private boolean looksLikeStructuredToolCall(String raw) {
+        String candidate = raw == null ? "" : raw.stripLeading();
+        return candidate.startsWith("{") || candidate.regionMatches(true, 0, "```json", 0, 7);
     }
 
     private AgentModelTurn parseTurn(String raw, LlmUsage usage) {
@@ -96,9 +139,8 @@ public class JsonAgentModelGateway implements AgentModelGateway {
 
     private String buildSystemPrompt(AgentModelRequest request) {
         return (request.systemPrompt() + "\n\n" + """
-                你正在统一 Agent Runtime 中运行。每一轮只能返回一个 JSON 对象，禁止 Markdown 和额外解释。
-                如果已经可以回答，返回：
-                {"assistantText":"最终回答","toolCalls":[]}
+                你正在统一 Agent Runtime 中运行。每一轮必须在“最终正文”和“ToolCall JSON”之间二选一。
+                如果已经可以回答，直接输出最终回答正文，不要使用 JSON 包装。
                 如果需要能力调用，返回：
                 {"assistantText":"","toolCalls":[{"id":"唯一调用ID","name":"工具名","arguments":{},"reason":"原因"}]}
                 规则：
@@ -107,7 +149,69 @@ public class JsonAgentModelGateway implements AgentModelGateway {
                 3. 不要假设工具已经执行；只有 TOOL_RESULT 才代表执行结果。
                 4. 工具失败或被拒绝后，应根据结果重新规划或给出安全回答。
                 5. 有副作用的能力是否执行由 Runtime 权限策略决定，不能在文本中绕过审批。
+                6. 只有工具调用可以输出 JSON；最终回答必须直接输出正文，以便 Runtime 安全地增量转发。
                 """).strip();
+    }
+
+    /**
+     * 根据响应首部区分最终正文和 ToolCall JSON。只有最终正文会被增量转发，
+     * 从而避免把工具名称、参数或结构化协议片段显示到用户回答中。
+     */
+    private static final class StreamingResponseRouter {
+
+        private final AgentModelDeltaListener listener;
+        private final StringBuilder undecided = new StringBuilder();
+        private ResponseKind kind = ResponseKind.UNDECIDED;
+
+        private StreamingResponseRouter(AgentModelDeltaListener listener) {
+            this.listener = listener;
+        }
+
+        private void accept(String delta) {
+            if (kind == ResponseKind.FINAL_TEXT) {
+                listener.onDelta(delta);
+                return;
+            }
+            if (kind == ResponseKind.STRUCTURED_TOOL_CALL) {
+                return;
+            }
+
+            undecided.append(delta);
+            String candidate = undecided.toString().stripLeading();
+            if (candidate.isEmpty()) {
+                return;
+            }
+            if (candidate.charAt(0) == '{') {
+                kind = ResponseKind.STRUCTURED_TOOL_CALL;
+                return;
+            }
+            if (candidate.startsWith("```")) {
+                int lineBreak = candidate.indexOf('\n');
+                if (lineBreak < 0 && candidate.length() < 32) {
+                    return;
+                }
+                String firstLine = lineBreak < 0 ? candidate : candidate.substring(0, lineBreak);
+                if (firstLine.trim().equalsIgnoreCase("```json")) {
+                    kind = ResponseKind.STRUCTURED_TOOL_CALL;
+                    return;
+                }
+            }
+            kind = ResponseKind.FINAL_TEXT;
+            listener.onDelta(undecided.toString());
+            undecided.setLength(0);
+        }
+
+        private void complete(AgentModelTurn turn) {
+            if (kind != ResponseKind.FINAL_TEXT && !turn.hasToolCalls() && !turn.assistantText().isBlank()) {
+                listener.onDelta(turn.assistantText());
+            }
+        }
+    }
+
+    private enum ResponseKind {
+        UNDECIDED,
+        FINAL_TEXT,
+        STRUCTURED_TOOL_CALL
     }
 
     private String formatMessages(List<AgentMessage> messages) {

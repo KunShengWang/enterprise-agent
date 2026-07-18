@@ -29,7 +29,7 @@ const curlCommand = computed(() => {
   const params = new URLSearchParams()
   if (query) Object.entries(query).forEach(([key, value]) => params.set(key, String(value)))
   const suffix = params.size ? `?${params.toString()}` : ''
-  const url = `${API_BASE_URL || 'http://localhost:8080'}${requestPath.value}${suffix}`
+  const url = `${API_BASE_URL || 'http://localhost:8083'}${requestPath.value}${suffix}`
   const parts = [`curl -X ${selected.value.method} "${url}"`, '-H "Accept: application/json"']
   if (bodyText.value.trim()) {
     parts.push('-H "Content-Type: application/json"', `--data '${bodyText.value.replace(/\s+/g, ' ')}'`)

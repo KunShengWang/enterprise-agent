@@ -45,6 +45,12 @@ public class AgentProperties {
 
     private int streamHeartbeatSeconds = 10;
 
+    /** MODEL_DELTA 聚合到该字符数后再持久化并推送，避免逐 Token 写数据库。 */
+    private int streamModelDeltaMinChars = 24;
+
+    /** 增量输出末尾保留窗口，用于识别跨 Provider chunk 的敏感数据。 */
+    private int streamOutputGuardrailHoldbackChars = 64;
+
     private int maxToolResultCharsForModel = 12_000;
 
     private int maxToolErrorCharsForModel = 2_000;
@@ -209,6 +215,22 @@ public class AgentProperties {
 
     public void setStreamHeartbeatSeconds(int streamHeartbeatSeconds) {
         this.streamHeartbeatSeconds = streamHeartbeatSeconds;
+    }
+
+    public int getStreamModelDeltaMinChars() {
+        return streamModelDeltaMinChars;
+    }
+
+    public void setStreamModelDeltaMinChars(int streamModelDeltaMinChars) {
+        this.streamModelDeltaMinChars = Math.max(1, streamModelDeltaMinChars);
+    }
+
+    public int getStreamOutputGuardrailHoldbackChars() {
+        return streamOutputGuardrailHoldbackChars;
+    }
+
+    public void setStreamOutputGuardrailHoldbackChars(int streamOutputGuardrailHoldbackChars) {
+        this.streamOutputGuardrailHoldbackChars = Math.max(16, streamOutputGuardrailHoldbackChars);
     }
 
     public int getMaxToolResultCharsForModel() {

@@ -95,7 +95,7 @@ sequenceDiagram
 
 `RuntimeAgentExecutor` 收集 Runtime 结果并投影为同步 `AgentResponse`。`DefaultStreamingAgentExecutor` 将相同 Runtime 发出的事件转成 SSE。客户端断开时只发起协作式暂停；显式 cancel API 才表示永久取消。
 
-当前 SSE 是 Runtime 事件流，不是逐 Token 输出流。持久事件携带数据库 `sequence`；长调用期间发送不落库的心跳并附带最后序号。背压缓冲溢出时发送 `stream_gap/replayRequired` 后结束连接，不再静默丢弃事件。
+当前 SSE 同时承载 Runtime 生命周期事件和模型正文增量。Provider chunk 先经过滚动输出 Guardrail，再按最小字符数合并为持久化 `MODEL_DELTA`，避免逐 Token 写数据库；ToolCall JSON 不会作为回答增量发送。持久事件携带数据库 `sequence`，长调用期间发送不落库的心跳并附带最后序号；背压缓冲溢出时发送 `stream_gap/replayRequired` 后结束连接，不再静默丢弃事件。
 
 ## 6. 恢复检查点
 

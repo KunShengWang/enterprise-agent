@@ -552,7 +552,7 @@ traceId
 OrderCare 页面只使用：
 
 ```text
-POST /api/agent/runs/events
+POST /api/agent/runs              # Accept: text/event-stream
 POST /api/agent/guardrails/approvals/{approvalId}/decide
 POST /api/agent/runs/{runId}/resume/events
 POST /api/agent/runs/{runId}/cancel

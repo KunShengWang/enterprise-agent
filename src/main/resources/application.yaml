@@ -46,6 +46,8 @@ enterprise-agent:
   replan-after-tool-failure: ${AGENT_TOOL_REPLAN_AFTER_FAILURE:true}
   stream-backpressure-buffer-size: ${AGENT_STREAM_BACKPRESSURE_BUFFER_SIZE:256}
   stream-heartbeat-seconds: ${AGENT_STREAM_HEARTBEAT_SECONDS:10}
+  stream-model-delta-min-chars: ${AGENT_STREAM_MODEL_DELTA_MIN_CHARS:24}
+  stream-output-guardrail-holdback-chars: ${AGENT_STREAM_OUTPUT_GUARDRAIL_HOLDBACK_CHARS:64}
   max-tool-result-chars-for-model: ${AGENT_MAX_TOOL_RESULT_CHARS_FOR_MODEL:12000}
   max-tool-error-chars-for-model: ${AGENT_MAX_TOOL_ERROR_CHARS_FOR_MODEL:2000}
   resilience:

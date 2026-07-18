@@ -74,8 +74,8 @@ public class AgentController {
         ));
     }
 
-    // TODO 返回是非流式的
-    @PostMapping("/runs")
+    /** 完成后返回 AgentResponse 的兼容接口；运行台应请求同一路径的 text/event-stream 表示。 */
+    @PostMapping(value = "/runs", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ApiResponse<AgentResponse>> run(@Valid @RequestBody AgentRequest request) {
         // @Valid 会在进入方法前校验 AgentRequest；这里先按 userId 做入口限流，
         // 避免单个用户在一分钟内创建过多 Agent Run 和模型调用。
@@ -89,6 +89,14 @@ public class AgentController {
         // 把已持久化事件投影为 AgentResponse。
         return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.execute(request)))
                 .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    /**
+     * 根据 Accept 头在同一资源路径提供结构化 SSE；其中 MODEL_DELTA 是模型正文的真实增量。
+     */
+    @PostMapping(value = "/runs", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<AgentStreamEvent> runEvents(@Valid @RequestBody AgentRequest request) {
+        return streamEventsInternal(request);
     }
 
     @GetMapping("/runs")
@@ -209,6 +217,10 @@ public class AgentController {
 
     @PostMapping(value = "/runs/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<AgentStreamEvent> streamEvents(@Valid @RequestBody AgentRequest request) {
+        return streamEventsInternal(request);
+    }
+
+    private Flux<AgentStreamEvent> streamEventsInternal(AgentRequest request) {
         RateLimitResult limit = rateLimitService.acquire(rateLimitKey(request));
         if (!limit.allowed()) {
             return Flux.just(new AgentStreamEvent(

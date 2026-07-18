@@ -65,8 +65,8 @@ mvn clean spring-boot:run
 健康检查：
 
 ```powershell
-Invoke-RestMethod http://localhost:8080/api/agent/health
-Invoke-RestMethod http://localhost:8080/actuator/health
+Invoke-RestMethod http://localhost:8083/api/agent/health
+Invoke-RestMethod http://localhost:8083/actuator/health
 ```
 
 ## Mock 模式
@@ -87,8 +87,8 @@ Mock 返回普通文本，`JsonAgentModelGateway` 会把它作为最终回答兼
 将 UTF-8 文本放入 `data/rag-docs`，支持 Markdown、纯文本、JSON/YAML、CSV、日志、SQL 和常见代码文件；单文件最大 5MB。PDF、DOCX 等二进制格式尚未配置专用解析器。
 
 ```powershell
-Invoke-RestMethod -Method Post http://localhost:8080/api/agent/rag/ingest
-Invoke-RestMethod -Method Post http://localhost:8080/api/agent/rag/index
+Invoke-RestMethod -Method Post http://localhost:8083/api/agent/rag/ingest
+Invoke-RestMethod -Method Post http://localhost:8083/api/agent/rag/index
 ```
 
 ## 旧数据库数据

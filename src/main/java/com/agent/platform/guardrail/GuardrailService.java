@@ -22,4 +22,11 @@ public interface GuardrailService {
     }
 
     GuardrailDecision checkOutput(String answer);
+
+    /**
+     * 增量输出发送前的无副作用预检查。默认复用完整检查；实现可覆盖以避免为每个 delta 重复写审计。
+     */
+    default GuardrailDecision previewOutput(String answer) {
+        return checkOutput(answer);
+    }
 }

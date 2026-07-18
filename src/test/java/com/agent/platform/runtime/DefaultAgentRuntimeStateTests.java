@@ -19,6 +19,7 @@ import com.agent.platform.tool.ToolRiskLevel;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,6 +29,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -290,6 +292,69 @@ class DefaultAgentRuntimeStateTests {
         verify(fixture.toolRuntime, never()).reconcileUncertain(any());
     }
 
+    @Test
+    void providerDeltasBecomeGuardedAndPersistedModelDeltaEvents() {
+        Fixture fixture = new Fixture();
+        fixture.properties.setStreamModelDeltaMinChars(4);
+        fixture.properties.setStreamOutputGuardrailHoldbackChars(16);
+        AtomicLong sequence = new AtomicLong();
+        List<AgentEvent> delivered = new ArrayList<>();
+        String first = "abcdefghijklmnopqrst";
+        String second = "uvwxyz0123456789ABCD";
+        String answer = first + second;
+
+        when(fixture.runStore.create(any())).thenAnswer(invocation -> {
+            AgentRunRecord created = invocation.getArgument(0);
+            fixture.persisted.set(created);
+            return created;
+        });
+        when(fixture.runStore.find(anyString()))
+                .thenAnswer(invocation -> Optional.ofNullable(fixture.persisted.get()));
+        when(fixture.runStore.update(anyString(), any())).thenAnswer(invocation -> {
+            java.util.function.UnaryOperator<AgentRunRecord> updater = invocation.getArgument(1);
+            AgentRunRecord updated = updater.apply(fixture.persisted.get());
+            fixture.persisted.set(updated);
+            return updated;
+        });
+        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(new AgentContextView(List.of(), 0, 0, false));
+        org.mockito.Mockito.doAnswer(invocation -> {
+                    AgentEventDraft draft = invocation.getArgument(3);
+                    return new AgentEvent(
+                            "event-" + sequence.incrementAndGet(),
+                            invocation.getArgument(2),
+                            invocation.getArgument(0),
+                            sequence.get(),
+                            draft.type(),
+                            draft.content(),
+                            draft.payload(),
+                            Instant.now()
+                    );
+                })
+                .when(fixture.timelineStore)
+                .appendEvent(anyString(), anyString(), anyString(), any());
+        org.mockito.Mockito.doAnswer(invocation -> {
+            AgentModelDeltaListener deltaListener = invocation.getArgument(1);
+            deltaListener.onDelta(first);
+            deltaListener.onDelta(second);
+            return finalTurn(answer);
+        }).when(fixture.modelGateway).nextTurn(any(), any());
+
+        AgentRuntimeResult result = fixture.runtime().run(
+                new AgentRequest("session-stream", "user-1", "stream answer", Map.of()),
+                delivered::add
+        );
+
+        assertEquals(AgentRunState.COMPLETED, result.state());
+        assertEquals(answer, result.answer());
+        List<AgentEvent> deltas = delivered.stream()
+                .filter(event -> event.type() == AgentEventType.MODEL_DELTA)
+                .toList();
+        assertTrue(deltas.size() >= 2);
+        assertEquals(answer, deltas.stream().map(AgentEvent::content).reduce("", String::concat));
+        assertTrue(deltas.stream().allMatch(event -> event.sequence() > 0));
+    }
+
     private static AgentModelTurn finalTurn(String answer) {
         return new AgentModelTurn(
                 answer,
@@ -483,6 +548,10 @@ class DefaultAgentRuntimeStateTests {
                     .thenReturn(GuardrailDecision.allow(GuardrailStage.INPUT, "ok"));
             when(guardrailService.checkOutput(anyString()))
                     .thenReturn(GuardrailDecision.allow(GuardrailStage.OUTPUT, "ok"));
+            when(guardrailService.previewOutput(anyString()))
+                    .thenReturn(GuardrailDecision.allow(GuardrailStage.OUTPUT, "ok"));
+            when(modelGateway.nextTurn(any(), any()))
+                    .thenAnswer(invocation -> modelGateway.nextTurn(invocation.getArgument(0)));
             when(runControlStore.renewSessionLease(anyString(), anyString(), any())).thenReturn(true);
             when(runControlStore.cancellationRequested(anyString())).thenReturn(false);
             when(timelineStore.loadEvents(anyString(), anyInt())).thenReturn(List.of());

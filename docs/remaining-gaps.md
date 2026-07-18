@@ -19,7 +19,7 @@
 ## 已知技术边界
 
 - `JsonAgentModelGateway` 使用提示词约束的 JSON ToolCall 协议；还没有针对不同模型 Provider 的原生 Tool Calling Adapter。
-- SSE 转发持久化 Runtime 事件，不解析模型 JSON 的逐 Token 增量；`MODEL_DELTA` 尚未成为主路径事件。
+- `MODEL_DELTA` 已接入 Provider 原生流并经过滚动脱敏和事件聚合，但当前 ToolCall 仍使用提示词约束 JSON，而不是不同 Provider 的原生 Tool Calling Adapter；极长且跨越 Guardrail 保留窗口的敏感标识仍应由上游数据最小化共同防护。
 - Token/Usage 优先采用 Provider 返回值，无法取得时使用估算并标记 source；成本按运维配置价格估算，默认关闭，仍不是财务账单。
 - Sub-Agent 并行使用单进程有界线程池，没有消息队列、跨节点调度、优先级和长期任务接管。
 - RAG 文档加载仅支持 UTF-8 文本格式，未接入 PDF/DOCX/PPTX OCR 和复杂表格解析。

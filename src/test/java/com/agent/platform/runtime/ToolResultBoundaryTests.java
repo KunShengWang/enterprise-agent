@@ -6,9 +6,11 @@ import com.agent.platform.prompt.PromptRequest;
 import com.agent.platform.tool.ToolCallResult;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import reactor.core.publisher.Flux;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -21,6 +23,37 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ToolResultBoundaryTests {
+
+    @Test
+    void finalAnswerUsesProviderDeltasWithoutJsonEnvelope() {
+        LlmService llmService = mock(LlmService.class);
+        when(llmService.stream(any())).thenReturn(Flux.just("第一段回答", "，第二段回答。"));
+        JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
+        List<String> deltas = new ArrayList<>();
+
+        AgentModelTurn turn = gateway.nextTurn(modelRequest(), deltas::add);
+
+        assertEquals("第一段回答，第二段回答。", turn.assistantText());
+        assertTrue(turn.toolCalls().isEmpty());
+        assertEquals(List.of("第一段回答", "，第二段回答。"), deltas);
+    }
+
+    @Test
+    void structuredToolCallIsNeverPublishedAsAnswerDelta() {
+        LlmService llmService = mock(LlmService.class);
+        when(llmService.stream(any())).thenReturn(Flux.just(
+                "{\"assistantText\":\"\",\"toolCalls\":[",
+                "{\"id\":\"call-1\",\"name\":\"ticket_status\",\"arguments\":{\"id\":\"T1\"},\"reason\":\"query\"}]}"
+        ));
+        JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
+        List<String> deltas = new ArrayList<>();
+
+        AgentModelTurn turn = gateway.nextTurn(modelRequest(), deltas::add);
+
+        assertEquals(1, turn.toolCalls().size());
+        assertEquals("ticket_status", turn.toolCalls().get(0).toolName());
+        assertTrue(deltas.isEmpty());
+    }
 
     @Test
     void largeResultUsesBoundedProjectionAndPersistentRawReference() {
@@ -72,5 +105,11 @@ class ToolResultBoundaryTests {
             offset += needle.length();
         }
         return count;
+    }
+
+    private AgentModelRequest modelRequest() {
+        return new AgentModelRequest(
+                "run-1", "session-1", "system", List.of(), List.of(), Map.of()
+        );
     }
 }

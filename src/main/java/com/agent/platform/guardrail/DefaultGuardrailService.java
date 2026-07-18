@@ -113,6 +113,15 @@ public class DefaultGuardrailService implements GuardrailService {
 
     @Override
     public GuardrailDecision checkOutput(String answer) {
+        return outputDecision(answer, true);
+    }
+
+    @Override
+    public GuardrailDecision previewOutput(String answer) {
+        return outputDecision(answer, false);
+    }
+
+    private GuardrailDecision outputDecision(String answer, boolean auditDecision) {
         SensitiveDataFilterResult filterResult = sensitiveDataFilter.filter(answer);
         if (!filterResult.categories().isEmpty()) {
             GuardrailDecision decision = GuardrailDecision.redact(
@@ -120,11 +129,15 @@ public class DefaultGuardrailService implements GuardrailService {
                     "sensitive output redacted: " + filterResult.categories(),
                     filterResult.safeContent()
             );
-            audit("output", decision, filterResult.safeContent(), Map.of("categories", filterResult.categories()));
+            if (auditDecision) {
+                audit("output", decision, filterResult.safeContent(), Map.of("categories", filterResult.categories()));
+            }
             return decision;
         }
         GuardrailDecision decision = GuardrailDecision.allow(GuardrailStage.OUTPUT, "output is allowed");
-        audit("output", decision, "", Map.of());
+        if (auditDecision) {
+            audit("output", decision, "", Map.of());
+        }
         return decision;
     }
 

@@ -40,12 +40,12 @@ POST /api/agent/runs/{runId}/cancel
 ## 2. SSE Runtime 事件
 
 ```http
-POST /api/agent/runs/events
+POST /api/agent/runs
 Accept: text/event-stream
 Content-Type: application/json
 ```
 
-事件包括：Run 开始/暂停请求/已暂停/恢复/结束、Context 投影/压缩、模型开始/完成/失败、工具请求、策略判定、审批等待、工具开始/结束、Sub-Agent 开始/结束和心跳。持久事件包含 `sequence`；心跳携带 `lastPersistedSequence`。收到 `stream_gap` 时应停止消费并按最后序号重新加载持久事件。
+事件包括：Run 开始/暂停请求/已暂停/恢复/结束、Context 投影/压缩、模型开始/正文增量/完成/失败、工具请求、策略判定、审批等待、工具开始/结束、Sub-Agent 开始/结束和心跳。`MODEL_DELTA` 来自 Provider 原生流式响应，经输出 Guardrail 与合并后持久化；ToolCall JSON 不会混入回答。持久事件包含 `sequence`；心跳携带 `lastPersistedSequence`。收到 `stream_gap` 时应停止消费并按最后序号重新加载持久事件。
 
 ```http
 GET /api/agent/runs/{runId}/events?afterSequence=42&limit=500
@@ -53,7 +53,7 @@ GET /api/agent/runs/{runId}/events?afterSequence=42&limit=500
 
 该接口从 PostgreSQL 返回序号大于 `afterSequence` 的事件，用于 SSE 断线或 `stream_gap` 后补拉。
 
-`/runs/stream` 是兼容的字符串事件视图；新调用方优先使用 `/runs/events` 的结构化 `AgentStreamEvent`。
+`/runs/stream` 是兼容的字符串事件视图；`POST /runs/events` 是结构化 SSE 的兼容别名。新调用方优先对 `POST /runs` 发送 `Accept: text/event-stream`。
 
 ## 3. 审批与恢复
 
