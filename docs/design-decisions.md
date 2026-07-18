@@ -85,3 +85,13 @@
 决定：完整工具原文保存在 ToolExecutionStore；Timeline 只保存有界摘要、哈希和 rawReference，并对 Prompt 结构边界转义。
 
 原因：外部工具结果既可能过大，也是不可信内容，不能直接拼入 Prompt。
+
+## ADR-12：能力定义与 Spring AI ToolCallback 执行分离
+
+决定：`AgentCapabilityRegistry` 保存项目自己的 `ToolDefinition`，统一聚合 RAG、Skill、本地业务工具和 MCP 工具；它不把可直接执行业务方法的 Spring AI `ToolCallback` 注册为 Runtime 执行入口。
+
+原因：`ToolCallback` 同时提供模型可见定义与 `call()` 执行能力。若使用 `ChatClient + ToolCallingAdvisor` 自动执行，会在 `DefaultAgentRuntime` 之外形成第二套工具循环，绕过 ExecutionProfile 白名单、Schema 校验、allow/ask/deny、人工审批、执行 claim、幂等结果复用、UNKNOWN 对账和统一审计。Spring AI 官方同时支持 user-controlled tool execution，并提醒默认工具会共享给所有请求，使用不当可能暴露不该开放的能力。
+
+约束：能力名称必须全局唯一；内建能力、业务 Contributor 和 MCP 发现结果发生同名冲突时启动或调用应明确失败，不能把歧义目录交给模型。
+
+演进：接入 Provider 原生 Tool Calling 时，在 `AgentModelGateway` 增加定义适配器，将领域 `ToolDefinition` 转换为 Spring AI/Provider 的工具 Schema，并把模型返回的 ToolCall 交还 `AgentToolRuntime`。适配器只负责协议转换，不直接产生业务副作用。参考 [Spring AI Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)。

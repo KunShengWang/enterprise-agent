@@ -5,7 +5,7 @@ import com.agent.platform.tool.ToolRegistry;
 import com.agent.platform.tool.ToolRiskLevel;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -20,7 +20,18 @@ public class DefaultAgentCapabilityRegistry implements AgentCapabilityRegistry {
 
     public static final String SKILL_CATALOG = "skill_catalog";
 
-    // TODO 这块为什么采取这种形式，而不是使用 Spring AI 提供的配置类注册工具的方式 ToolCallback
+    /*
+     * 这里故意保存“能力定义”，而不注册可直接执行的 Spring AI ToolCallback。
+     *
+     * ToolCallback 同时包含模型可见定义和 call() 执行入口；若交给 ChatClient/ToolCallingAdvisor
+     * 自动执行，会绕过 AgentToolRuntime 的 Profile 白名单、Schema、Policy、人工审批、幂等 claim、
+     * UNKNOWN 对账和审计。当前 Runtime 采用 user-controlled tool execution，因此 Registry 只负责
+     * 聚合与查找定义，真正执行必须统一进入 AgentToolRuntime。
+     *
+     * 将来接入 Provider 原生 Tool Calling 时，可以在 AgentModelGateway 边界把这里的 ToolDefinition
+     * 转换成 Spring AI/Provider 定义，但返回的 ToolCall 仍必须交还 Runtime，不能直接调用业务方法。
+     * 详见 docs/design-decisions.md 的 ADR-12。
+     */
     private static final ToolDefinition KNOWLEDGE_SEARCH_DEFINITION = new ToolDefinition(
             KNOWLEDGE_SEARCH,
             "Search the enterprise knowledge base. Use when the answer depends on internal policies, procedures or troubleshooting documents.",
@@ -53,21 +64,49 @@ public class DefaultAgentCapabilityRegistry implements AgentCapabilityRegistry {
      */
     @Override
     public List<ToolDefinition> listCapabilities() {
-        List<ToolDefinition> capabilities = new ArrayList<>();
-        capabilities.add(KNOWLEDGE_SEARCH_DEFINITION);
-        capabilities.add(SKILL_CATALOG_DEFINITION);
-        capabilities.addAll(toolRegistry.listTools());
-        return List.copyOf(capabilities);
+        Map<String, ToolDefinition> capabilities = new LinkedHashMap<>();
+        register(capabilities, KNOWLEDGE_SEARCH_DEFINITION, "runtime");
+        register(capabilities, SKILL_CATALOG_DEFINITION, "runtime");
+        for (ToolDefinition definition : toolRegistry.listTools()) {
+            register(capabilities, definition, providerOf(definition));
+        }
+        return List.copyOf(capabilities.values());
     }
 
     @Override
     public Optional<ToolDefinition> findCapability(String name) {
-        if (KNOWLEDGE_SEARCH.equals(name)) {
-            return Optional.of(KNOWLEDGE_SEARCH_DEFINITION);
+        if (name == null || name.isBlank()) {
+            return Optional.empty();
         }
-        if (SKILL_CATALOG.equals(name)) {
-            return Optional.of(SKILL_CATALOG_DEFINITION);
+        String normalized = name.trim();
+        return listCapabilities().stream()
+                .filter(definition -> definition.name().equals(normalized))
+                .findFirst();
+    }
+
+    private void register(Map<String, ToolDefinition> capabilities,
+                          ToolDefinition definition,
+                          String provider) {
+        if (definition == null || definition.name() == null || definition.name().isBlank()) {
+            throw new IllegalStateException("capability definition must have a non-blank name; provider=" + provider);
         }
-        return toolRegistry.findTool(name);
+        String name = definition.name().trim();
+        ToolDefinition existing = capabilities.putIfAbsent(name, definition);
+        if (existing != null) {
+            throw new IllegalStateException(
+                    "duplicate capability name '" + name + "' from providers "
+                            + providerOf(existing) + " and " + provider
+            );
+        }
+    }
+
+    private String providerOf(ToolDefinition definition) {
+        if (definition == null || definition.metadata() == null) {
+            return "unknown";
+        }
+        Object provider = definition.metadata().get("provider");
+        return provider == null || String.valueOf(provider).isBlank()
+                ? "unknown"
+                : String.valueOf(provider);
     }
 }
