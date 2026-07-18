@@ -68,6 +68,17 @@ enterprise-agent:
     You are an enterprise knowledge-base and support-ticket agent.
     Follow the orchestrated execution flow and do not bypass guardrails.
   ordercare:
+    incident-command:
+      enabled: ${ORDERCARE_INCIDENT_COMMAND_ENABLED:false}
+      max-request-ids: ${ORDERCARE_INCIDENT_MAX_REQUEST_IDS:100}
+      deadline-seconds: ${ORDERCARE_INCIDENT_DEADLINE_SECONDS:120}
+      max-parallel-specialists: ${ORDERCARE_INCIDENT_MAX_PARALLEL_SPECIALISTS:3}
+      tenant-scope: ${ORDERCARE_INCIDENT_TENANT_SCOPE:local-demo-tenant}
+      allowed-queues:
+        - floworder.order.create.dlq
+        - floworder.order.result.dlq
+        - floworder.order.state.dlq
+        - floworder.incident.e2e.dlq
     floworder-base-url: ${FLOWORDER_BASE_URL:http://localhost:8081}
     connect-timeout-millis: ${FLOWORDER_CONNECT_TIMEOUT_MILLIS:1000}
     read-timeout-millis: ${FLOWORDER_READ_TIMEOUT_MILLIS:3000}
@@ -77,6 +88,18 @@ enterprise-agent:
     convergence-interval-millis: ${ORDERCARE_CONVERGENCE_INTERVAL_MILLIS:500}
     reconciliation-max-attempts: ${ORDERCARE_RECONCILIATION_MAX_ATTEMPTS:8}
     reconciliation-interval-millis: ${ORDERCARE_RECONCILIATION_INTERVAL_MILLIS:500}
+    incident:
+      rabbitmq-management:
+        base-url: ${RABBITMQ_MANAGEMENT_BASE_URL:http://localhost:15672/api}
+        virtual-host: ${RABBITMQ_MANAGEMENT_VHOST:/}
+        username: ${RABBITMQ_MANAGEMENT_USERNAME:guest}
+        password: ${RABBITMQ_MANAGEMENT_PASSWORD:guest}
+        connect-timeout-millis: ${RABBITMQ_MANAGEMENT_CONNECT_TIMEOUT_MILLIS:1000}
+        read-timeout-millis: ${RABBITMQ_MANAGEMENT_READ_TIMEOUT_MILLIS:1500}
+        max-attempts: ${RABBITMQ_MANAGEMENT_MAX_ATTEMPTS:2}
+        retry-backoff-millis: ${RABBITMQ_MANAGEMENT_RETRY_BACKOFF_MILLIS:100}
+        backlog-threshold: ${RABBITMQ_BACKLOG_THRESHOLD:50}
+        unacknowledged-threshold: ${RABBITMQ_UNACKNOWLEDGED_THRESHOLD:20}
   memory:
     long-term-candidate-limit: 40
     profile-item-limit: 30

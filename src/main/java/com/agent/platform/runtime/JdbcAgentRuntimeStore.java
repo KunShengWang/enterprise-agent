@@ -19,12 +19,13 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.UnaryOperator;
 
 @Primary
 @Component
-public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore {
+public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore, AgentContinuationStore {
 
     private final AgentStorageProperties properties;
 
@@ -186,6 +187,141 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
         }
         catch (SQLException exception) {
             throw new AgentStorageException("Failed to claim paused agent run for resume: " + runId, exception);
+        }
+    }
+
+    @Override
+    public AgentContinuationTransition checkpointWaitingInput(String runId,
+                                                               long expectedVersion,
+                                                               String answer,
+                                                               AgentRunBudgetSnapshot budget,
+                                                               AgentMessageDraft assistantMessage,
+                                                               AgentEventDraft waitingEvent) {
+        requireContinuationDrafts(assistantMessage, AgentMessageType.ASSISTANT_TEXT,
+                waitingEvent, AgentEventType.RUN_WAITING_INPUT);
+        ensureSchema();
+        try (Connection connection = openConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                AgentRunRecord current = loadRunForUpdate(connection, runId)
+                        .orElseThrow(() -> new IllegalArgumentException("agent run not found: " + runId));
+                if (current.version() != expectedVersion || current.state() != AgentRunState.RUNNING) {
+                    throw new IllegalStateException("agent run changed before WAITING_INPUT checkpoint: " + runId);
+                }
+                SessionCursors cursors = lockSessionCursors(connection, current.conversationId());
+                Instant now = Instant.now();
+                AgentMessage message = continuationMessage(
+                        current, assistantMessage, cursors.nextMessageSequence(), now);
+                AgentEvent event = continuationEvent(
+                        current, waitingEvent, cursors.nextEventSequence(), now);
+                AgentRunRecord waiting = current.waitingForInput(
+                                answer, current.toolResults(), current.usedTools(), current.usedRag(), budget)
+                        .withVersion(current.version() + 1, now);
+
+                insertContinuationMessage(connection, message);
+                insertContinuationEvent(connection, event);
+                updateSessionCursors(connection, current.conversationId(),
+                        message.sequence() + 1, event.sequence() + 1, now);
+                writeRun(connection, waiting);
+                connection.commit();
+                return new AgentContinuationTransition(waiting, message, event);
+            }
+            catch (RuntimeException | SQLException exception) {
+                rollbackQuietly(connection);
+                throw exception;
+            }
+        }
+        catch (SQLException exception) {
+            throw new AgentStorageException("Failed to create WAITING_INPUT checkpoint: " + runId, exception);
+        }
+    }
+
+    @Override
+    public Optional<AgentContinuationTransition> claimWaitingInput(String runId,
+                                                                   long expectedVersion,
+                                                                   com.agent.platform.agent.AgentRequest followUpRequest,
+                                                                   AgentMessageDraft followUpMessage,
+                                                                   AgentEventDraft inputEvent) {
+        requireContinuationDrafts(followUpMessage, AgentMessageType.USER,
+                inputEvent, AgentEventType.RUN_INPUT_RECEIVED);
+        ensureSchema();
+        try (Connection connection = openConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                AgentRunRecord current = loadRunForUpdate(connection, runId).orElse(null);
+                if (current == null
+                        || current.version() != expectedVersion
+                        || current.state() != AgentRunState.WAITING_INPUT
+                        || current.followUpCount() >= current.maxFollowUps()) {
+                    connection.rollback();
+                    return Optional.empty();
+                }
+                SessionCursors cursors = lockSessionCursors(connection, current.conversationId());
+                Instant now = Instant.now();
+                AgentMessage message = continuationMessage(
+                        current, followUpMessage, cursors.nextMessageSequence(), now);
+                AgentEvent event = continuationEvent(
+                        current, inputEvent, cursors.nextEventSequence(), now);
+                AgentRunRecord claimed = current.claimedForInput(followUpRequest)
+                        .withVersion(current.version() + 1, now);
+
+                insertContinuationMessage(connection, message);
+                insertContinuationEvent(connection, event);
+                updateSessionCursors(connection, current.conversationId(),
+                        message.sequence() + 1, event.sequence() + 1, now);
+                writeRun(connection, claimed);
+                connection.commit();
+                return Optional.of(new AgentContinuationTransition(claimed, message, event));
+            }
+            catch (RuntimeException | SQLException exception) {
+                rollbackQuietly(connection);
+                throw exception;
+            }
+        }
+        catch (SQLException exception) {
+            throw new AgentStorageException("Failed to claim WAITING_INPUT run: " + runId, exception);
+        }
+    }
+
+    @Override
+    public Optional<AgentContinuationTransition> completeWaitingInput(String runId,
+                                                                      AgentEventDraft completedEvent) {
+        if (completedEvent == null || completedEvent.type() != AgentEventType.RUN_COMPLETED) {
+            throw new IllegalArgumentException("completeWaitingInput requires RUN_COMPLETED event");
+        }
+        ensureSchema();
+        try (Connection connection = openConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                AgentRunRecord current = loadRunForUpdate(connection, runId).orElse(null);
+                if (current == null || current.state() != AgentRunState.WAITING_INPUT) {
+                    connection.rollback();
+                    return Optional.empty();
+                }
+                SessionCursors cursors = lockSessionCursors(connection, current.conversationId());
+                Instant now = Instant.now();
+                AgentEvent event = continuationEvent(
+                        current, completedEvent, cursors.nextEventSequence(), now);
+                AgentRunRecord completed = current.finished(
+                                AgentRunState.COMPLETED, AgentRunPhase.FINISHED, current.answer(), "",
+                                current.toolResults(), current.usedTools(), current.usedRag(),
+                                current.blockedByGuardrail(), current.budgetSnapshot())
+                        .withVersion(current.version() + 1, now);
+
+                insertContinuationEvent(connection, event);
+                updateSessionCursors(connection, current.conversationId(),
+                        cursors.nextMessageSequence(), event.sequence() + 1, now);
+                writeRun(connection, completed);
+                connection.commit();
+                return Optional.of(new AgentContinuationTransition(completed, null, event));
+            }
+            catch (RuntimeException | SQLException exception) {
+                rollbackQuietly(connection);
+                throw exception;
+            }
+        }
+        catch (SQLException exception) {
+            throw new AgentStorageException("Failed to complete WAITING_INPUT run: " + runId, exception);
         }
     }
 
@@ -421,6 +557,126 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
         statement.setTimestamp(7, Timestamp.from(record.updatedAt()));
     }
 
+    private void requireContinuationDrafts(AgentMessageDraft message,
+                                           AgentMessageType expectedMessageType,
+                                           AgentEventDraft event,
+                                           AgentEventType expectedEventType) {
+        if (message == null || message.type() != expectedMessageType) {
+            throw new IllegalArgumentException("continuation message must be " + expectedMessageType);
+        }
+        if (event == null || event.type() != expectedEventType) {
+            throw new IllegalArgumentException("continuation event must be " + expectedEventType);
+        }
+    }
+
+    private SessionCursors lockSessionCursors(Connection connection, String sessionId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT next_message_sequence, next_event_sequence
+                FROM agent_session
+                WHERE session_id = ?
+                FOR UPDATE
+                """)) {
+            statement.setString(1, sessionId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    throw new IllegalStateException("agent session not found for continuation: " + sessionId);
+                }
+                return new SessionCursors(
+                        resultSet.getLong("next_message_sequence"),
+                        resultSet.getLong("next_event_sequence")
+                );
+            }
+        }
+    }
+
+    private AgentMessage continuationMessage(AgentRunRecord run,
+                                             AgentMessageDraft draft,
+                                             long sequence,
+                                             Instant now) {
+        return new AgentMessage(
+                UUID.randomUUID().toString(), run.conversationId(), run.runId(), sequence,
+                draft.type(), draft.content(), draft.toolCallId(), draft.toolName(),
+                draft.arguments(), draft.metadata(), draft.estimatedTokens(), now
+        );
+    }
+
+    private AgentEvent continuationEvent(AgentRunRecord run,
+                                         AgentEventDraft draft,
+                                         long sequence,
+                                         Instant now) {
+        return new AgentEvent(
+                UUID.randomUUID().toString(), run.runId(), run.conversationId(), sequence,
+                draft.type(), draft.content(), draft.payload(), now
+        );
+    }
+
+    private void insertContinuationMessage(Connection connection, AgentMessage message) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                INSERT INTO agent_message(
+                    message_id, session_id, run_id, message_sequence, message_type, content,
+                    tool_call_id, tool_name, arguments_json, metadata_json, estimated_tokens, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """)) {
+            statement.setString(1, message.messageId());
+            statement.setString(2, message.sessionId());
+            statement.setString(3, message.runId());
+            statement.setLong(4, message.sequence());
+            statement.setString(5, message.type().name());
+            statement.setString(6, message.content());
+            statement.setString(7, blankToNull(message.toolCallId()));
+            statement.setString(8, blankToNull(message.toolName()));
+            statement.setString(9, toJson(message.arguments()));
+            statement.setString(10, toJson(message.metadata()));
+            statement.setLong(11, message.estimatedTokens());
+            statement.setTimestamp(12, Timestamp.from(message.createdAt()));
+            statement.executeUpdate();
+        }
+    }
+
+    private void insertContinuationEvent(Connection connection, AgentEvent event) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                INSERT INTO agent_runtime_event(
+                    event_id, run_id, session_id, event_sequence, event_type,
+                    content, payload_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """)) {
+            statement.setString(1, event.eventId());
+            statement.setString(2, event.runId());
+            statement.setString(3, event.sessionId());
+            statement.setLong(4, event.sequence());
+            statement.setString(5, event.type().name());
+            statement.setString(6, event.content());
+            statement.setString(7, toJson(event.payload()));
+            statement.setTimestamp(8, Timestamp.from(event.createdAt()));
+            statement.executeUpdate();
+        }
+    }
+
+    private void updateSessionCursors(Connection connection,
+                                      String sessionId,
+                                      long nextMessageSequence,
+                                      long nextEventSequence,
+                                      Instant now) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                UPDATE agent_session
+                SET next_message_sequence = ?, next_event_sequence = ?,
+                    version = version + 1, updated_at = ?
+                WHERE session_id = ?
+                """)) {
+            statement.setLong(1, nextMessageSequence);
+            statement.setLong(2, nextEventSequence);
+            statement.setTimestamp(3, Timestamp.from(now));
+            statement.setString(4, sessionId);
+            if (statement.executeUpdate() != 1) {
+                throw new IllegalStateException("agent session cursor update lost: " + sessionId);
+            }
+        }
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
+
     private void ensureSchema() {
         if (schemaReady.get()) {
             return;
@@ -505,4 +761,6 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore 
             // Preserve the original storage failure.
         }
     }
+
+    private record SessionCursors(long nextMessageSequence, long nextEventSequence) {}
 }

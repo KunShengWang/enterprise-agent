@@ -24,6 +24,9 @@ public interface AgentRunControlStore {
 
     boolean requestCancellation(String runId);
 
+    /**
+     * 当前 agent 请求暂停，数据库持久化暂停标志
+     */
     boolean requestPause(String runId);
 
     boolean pauseRequested(String runId);

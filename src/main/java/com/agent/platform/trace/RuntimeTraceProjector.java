@@ -74,6 +74,7 @@ public class RuntimeTraceProjector {
                         || run.state() == AgentRunState.PAUSE_REQUESTED
                         || run.state() == AgentRunState.PAUSED
                         || run.state() == AgentRunState.WAITING_APPROVAL
+                        || run.state() == AgentRunState.WAITING_INPUT
                         ? null
                         : run.updatedAt());
         Instant durationEnd = endedAt == null ? Instant.now() : endedAt;
@@ -249,7 +250,7 @@ public class RuntimeTraceProjector {
             case BLOCKED -> TraceSpanStatus.BLOCKED;
             case REJECTED -> TraceSpanStatus.REJECTED;
             case FAILED, MANUAL_REVIEW -> TraceSpanStatus.FAILED;
-            case WAITING_APPROVAL, NEEDS_CLARIFICATION, PAUSE_REQUESTED, PAUSED, RUNNING, CREATED ->
+            case WAITING_APPROVAL, WAITING_INPUT, NEEDS_CLARIFICATION, PAUSE_REQUESTED, PAUSED, RUNNING, CREATED ->
                     TraceSpanStatus.STARTED;
         };
     }

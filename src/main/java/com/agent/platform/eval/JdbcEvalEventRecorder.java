@@ -56,6 +56,7 @@ public class JdbcEvalEventRecorder implements EvalEventRecorder {
                     case CREATED, RUNNING -> AgentRunStatus.RUNNING;
                     case PAUSE_REQUESTED, PAUSED -> AgentRunStatus.PAUSED;
                     case WAITING_APPROVAL -> AgentRunStatus.WAITING_APPROVAL;
+                    case WAITING_INPUT -> AgentRunStatus.WAITING_INPUT;
                     case COMPLETED -> AgentRunStatus.COMPLETED;
                     case NEEDS_CLARIFICATION -> AgentRunStatus.NEEDS_CLARIFICATION;
                     case BLOCKED -> AgentRunStatus.BLOCKED;

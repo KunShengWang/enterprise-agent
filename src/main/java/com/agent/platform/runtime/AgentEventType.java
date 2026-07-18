@@ -17,6 +17,8 @@ public enum AgentEventType {
     TOOL_REQUESTED,// 工具请求
     POLICY_DECIDED,// 政策已决定
     APPROVAL_REQUIRED,// 需要批准
+    RUN_WAITING_INPUT,// 首轮结果已持久化，等待受控定向输入
+    RUN_INPUT_RECEIVED,// 同一 runId 已通过 CAS 接收定向输入
     TOOL_STARTED,// 工具已启动
     TOOL_COMPLETED,// 工具已完成
     SUB_AGENT_STARTED,// 子代理已启动

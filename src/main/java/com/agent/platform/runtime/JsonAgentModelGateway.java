@@ -168,23 +168,27 @@ public class JsonAgentModelGateway implements AgentModelGateway {
         }
 
         private void accept(String delta) {
+            // ① 已经确定是普通文本 → 直接透传
             if (kind == ResponseKind.FINAL_TEXT) {
-                listener.onDelta(delta);
+                listener.onDelta(delta);// → modelDeltaPublisher → SSE
                 return;
             }
+            // ② 已经确定是工具调用 → 吞掉，不推送
             if (kind == ResponseKind.STRUCTURED_TOOL_CALL) {
                 return;
             }
-
+            // ③ 还不确定 → 先缓存，看开头是什么
             undecided.append(delta);
             String candidate = undecided.toString().stripLeading();
             if (candidate.isEmpty()) {
                 return;
             }
+            // if (开头是 '{')  → 是工具调用 → 抑制
             if (candidate.charAt(0) == '{') {
                 kind = ResponseKind.STRUCTURED_TOOL_CALL;
                 return;
             }
+            // if (开头是 "```json") → 是工具调用 → 抑制
             if (candidate.startsWith("```")) {
                 int lineBreak = candidate.indexOf('\n');
                 if (lineBreak < 0 && candidate.length() < 32) {
@@ -196,6 +200,7 @@ public class JsonAgentModelGateway implements AgentModelGateway {
                     return;
                 }
             }
+            // if (确认是普通文本) → kind=FINAL_TEXT → 把缓存的+后续的全部透传
             kind = ResponseKind.FINAL_TEXT;
             listener.onDelta(undecided.toString());
             undecided.setLength(0);
@@ -209,9 +214,9 @@ public class JsonAgentModelGateway implements AgentModelGateway {
     }
 
     private enum ResponseKind {
-        UNDECIDED,
-        FINAL_TEXT,
-        STRUCTURED_TOOL_CALL
+        UNDECIDED,// 未决定
+        FINAL_TEXT,// 最终文本
+        STRUCTURED_TOOL_CALL// 结构化工具调用
     }
 
     private String formatMessages(List<AgentMessage> messages) {

@@ -12,6 +12,8 @@ public enum AgentRunPhase {
     MODEL_CALL,
     /** 等待审批：高风险工具触发了 HITL，等待人工决策 */
     WAITING_APPROVAL,
+    /** 等待定向输入：已释放执行资源，可由同一 runId CAS 续跑 */
+    WAITING_INPUT,
     /** 执行工具：ToolExecutor 正在调用本地或 MCP 工具 */
     EXECUTING_TOOL,
     /** 已完成：正常结束，输出最终回答 */

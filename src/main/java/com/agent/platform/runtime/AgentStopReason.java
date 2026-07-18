@@ -10,6 +10,8 @@ public enum AgentStopReason {
     IN_PROGRESS,
     /** 等待人工审批：高风险工具触发 HITL，暂停等待管理员确认 */
     WAITING_APPROVAL,
+    /** 等待受控定向输入：Runtime 已保存检查点并释放执行资源 */
+    WAITING_INPUT,
     /** 轮次耗尽：ReAct 循环次数达到 maxModelCallsPerRun 上限 */
     MAX_TURNS,
     /** 模型预算耗尽：LLM 调用次数或 token 消耗达到上限 */

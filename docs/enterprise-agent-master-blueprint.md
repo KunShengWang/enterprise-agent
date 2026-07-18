@@ -1,8 +1,8 @@
 # Enterprise Agent 项目总蓝图：OrderCare Incident Agent
 
 > 状态：项目级实施蓝图；按阶段验收，不代表全部已实现
-> 版本：Blueprint V1.1
-> 更新日期：2026-07-17
+> 版本：Blueprint V1.5
+> 更新日期：2026-07-18 20:22 CST
 > 主仓库：`enterprise-agent`
 > 业务系统：`floworder`
 
@@ -21,6 +21,8 @@
 [OrderCare 实施状态与学习地图](ordercare-implementation-status.md)。蓝图描述目标状态，实施状态文档描述当前事实，二者不能混用。
 
 > 2026-07-17 实施结论：M0～M3 已通过，达到 Interview Strong；M4 安全部署仍未完成。故障注入、真实模型 Eval 和 Trace 证据见 [M3 报告](reports/ordercare/m3-fault-correctness.md)。
+
+> 2026-07-18 20:22 CST 结论：独立场景 [OrderCare Incident Command V1.3](ordercare-incident-command-v1-design.md) 已冻结 M0 并完成 M1-A～M1-E。M1-C 同 childRunId Runtime 门禁已通过；Phase 1 已实现受限 Commander、最多三个并行 Specialist、结构化 Evidence、显式跨 subtype ComparisonRule、一次定向补证、强类型 Assessment、synthetic coordinator Trace、三条纵向 E2E、10 条核心 Eval 和单窗口工作台。Task 当前仍只实现 version CAS、幂等防重、单实例调度保护和一次有界重试，不宣称多实例 lease 恢复、通用 Mailbox 或自动批量恢复。证据见 [Phase 1 报告](reports/ordercare/incident-command-phase1-evidence.md)。
 
 已有的 [OrderCare × FlowOrder 异常订单恢复闭环设计稿](ordercare-floworder-integration-design.md) 作为早期业务子设计保留。若两份文档冲突，以本总蓝图为准；原子设计中的“模型循环回查”和“5 个模型可见工具”不再作为实施方案。
 
@@ -539,7 +541,7 @@ traceId
 | Memory | 非主链 | OrderCare Profile 禁用长期记忆；保留学习实验室 |
 | Skill Catalog | 非主链 | V1 不放入 Profile，避免和 System Prompt/RAG 重复 |
 | MCP | 非主链 | FlowOrder 使用 typed HTTP；MCP 保留开发实验能力 |
-| Sub-Agent / Multi-Agent | 非主链 | V1 禁用；只有 Eval 证明单 Agent 不足才引入 |
+| Sub-Agent / Multi-Agent | 独立后续场景 | 单案例 OrderCare V1 继续禁用；事故级只读调查按 [ordercare-incident-command-v1](ordercare-incident-command-v1-design.md) 独立实施，必须先通过 M1-C 同 childRunId Runtime 门禁 |
 | Ticket Tools | 示例能力 | 从 OrderCare Profile 移除，保留回归测试和学习演示 |
 | API Lab | 开发能力 | 从默认业务导航降级到 Developer Lab |
 
@@ -833,7 +835,7 @@ src/main/java/com/agent/platform/ordercare/
 
 ## 22. 明确不做
 
-- 不为了展示架构引入 Multi-Agent。
+- 不为了展示架构把 Multi-Agent 塞进单案例恢复；事故级只读调查仅按独立 `ordercare-incident-command-v1` 蓝图实施。
 - 不用 MCP 包装核心 FlowOrder RPC。
 - 不重写已经学习完成的 Runtime 主循环。
 - 不建设通用低代码 Workflow 引擎。

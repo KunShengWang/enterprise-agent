@@ -61,7 +61,9 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
         }
         scenarioProfileResolver.resolve(request.scenarioId())
                 .ifPresentOrElse(
+                        // Optional 有值时执行
                         profile -> runtime.run(request, profile, listener),
+                        // Optional 为空时执行
                         () -> runtime.run(request, listener)
                 );
     }
@@ -88,7 +90,9 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
         Flux<AgentStreamEvent> source = Flux.<AgentStreamEvent>create(sink -> {
                     AtomicBoolean cancelled = new AtomicBoolean(false);
                     long heartbeatSeconds = Math.max(1, properties.getStreamHeartbeatSeconds());
+                    // 心跳事件，告诉前端该 SSE 还活着
                     Disposable heartbeat = Schedulers.parallel().schedulePeriodically(() -> {
+                        // 心跳停止检查，客户端断了就不发了
                         if (!sink.isCancelled()) {
                             sink.next(heartbeatEvent(runId.get(), sessionId.get(), lastSequence.get()));
                         }
@@ -105,12 +109,15 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                                 }
                                 lastSequence.accumulateAndGet(event.sequence(), Math::max);
                                 if (cancelled.get()) {
+                                    // agent 暂停，数据库持久化暂停标志，AgentRunBudget 标志暂停
                                     runtime.pause(event.runId());
                                 }
+                                // 监听器转发检查，客户端断了就不推了
                                 if (!sink.isCancelled()) {
-                                    sink.next(toStreamEvent(event));
+                                    sink.next(toStreamEvent(event));// 往前端推送 agent 执行事件
                                 }
                             });
+                            // 执行完成检查，客户端断了就别 complete 了
                             if (!sink.isCancelled()) {
                                 sink.complete();
                             }
@@ -146,11 +153,14 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                         task.dispose();// 关执行任务
                     });
                 }, reactor.core.publisher.FluxSink.OverflowStrategy.IGNORE);
+        // 两个防御策略
         return source
+                // ① 背压缓冲：Agent 生产太快、客户端消化来不及 → 用缓冲区兜底
                 .onBackpressureBuffer(
                         Math.max(16, properties.getStreamBackpressureBufferSize()),
-                        BufferOverflowStrategy.ERROR
+                        BufferOverflowStrategy.ERROR // ERROR 策略 → 抛异常 → 触发 ②
                 )
+                // ② 异常兜底：中间任何异常 → 优雅降级为一条 gap 事件，不 crash 整个连接
                 .onErrorResume(error -> Flux.just(
                         gapEvent(runId.get(), sessionId.get(), lastSequence.get(), error)
                 ));

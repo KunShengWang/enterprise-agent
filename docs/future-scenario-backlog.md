@@ -6,8 +6,9 @@
 ## 1. OrderCare 事故指挥 Agent Team
 
 - 候选场景 ID：`ordercare-incident-command-v1`
-- 当前状态：`DEFERRED / NOT_STARTED`
-- 决策：先不实现，后续根据项目时间和面试侧重点决定是否启动。
+- 当前状态：`PHASE_1_IMPLEMENTED / M1-C_GATE_PASSED`
+- 当前设计：[OrderCare Incident Command V1：只读事故调查 Multi-Agent 设计](ordercare-incident-command-v1-design.md)
+- 决策：V1.3 已冻结 M0 并按顺序完成 M1-A、M1-B、M1-C(GATE)、M1-D、M1-E；Phase 1 只读事故调查闭环已进入可学习、可演示状态。Phase 2 Recovery Planner 仍未启动，不继续扩展当前范围。
 
 目标场景：当大量订单超时、库存释放死信堆积或消息消费异常时，由 Incident Commander 动态委派订单、MQ、库存和 SOP Specialist 并行调查，通过持久化结构化消息汇总证据，由 Reviewer 检查冲突并提出受控处置建议。
 
@@ -15,7 +16,7 @@
 
 1. 主 Agent 动态委派，而不是固定角色 Prompt 拼接；
 2. 子 Agent 具备独立 Run、上下文、Profile、工具白名单和预算；
-3. 使用持久化 Task/Message Store 传递结构化证据和澄清请求；
+3. 使用持久化 Task/Event Store，通过 `agent_task_event` 传递受控结构化证据和澄清请求；Phase 1 不建设通用 Agent Mailbox；
 4. 支持有限的 Reviewer 追问、超时、取消和父子 Run Trace；
 5. 限制最大深度和并行数，禁止 Agent 无限互聊；
 6. Agent 负责调查和建议，批量恢复、灰度、幂等与收敛仍由确定性程序和 FlowOrder 执行。

@@ -40,7 +40,7 @@ import java.util.concurrent.ConcurrentMap;
  * 每一次模型调用、工具策略、工具执行和终止原因都先写入数据库事件时间线。</p>
  */
 @Service
-public class DefaultAgentRuntime implements AgentRuntime {
+public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRuntime {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultAgentRuntime.class);
 
@@ -67,6 +67,8 @@ public class DefaultAgentRuntime implements AgentRuntime {
 
     /** 仅保存本实例中正在执行的取消句柄，持久取消事实仍写入 AgentRunControlStore。 */
     private final ConcurrentMap<String, AgentRunBudget> activeBudgets = new ConcurrentHashMap<>();
+    /** 只在同步创建 Specialist Run 的调用栈内生效，真实续跑配置仍持久化到 AgentRunRecord。 */
+    private final ThreadLocal<Integer> requestedInputCheckpoints = ThreadLocal.withInitial(() -> 0);
 
     public DefaultAgentRuntime(AgentProperties properties,
                                AgentTimelineStore timelineStore,
@@ -112,6 +114,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         if (originalRequest == null || originalRequest.question() == null || originalRequest.question().isBlank()) {
             throw new IllegalArgumentException("agent request question must not be blank");
         }
+        // Runtime 内部可信的执行配置
         AgentExecutionProfile profile = executionProfile == null
                 ? defaultExecutionProfile()
                 : executionProfile;
@@ -134,9 +137,15 @@ public class DefaultAgentRuntime implements AgentRuntime {
             // 开启 session 会话
             timelineStore.openSession(sessionId, userId);
             // 创建 AgentRunRecord
-            runStore.create(AgentRunRecord.create(
+            AgentRunRecord createdRun = AgentRunRecord.create(
                     runId, runId, sessionId, originalRequest, profile, budget.snapshot()
-            ));
+            );
+            int maxFollowUps = requestedInputCheckpoints.get();
+            if (maxFollowUps > 0) {
+                continuationStore();
+                createdRun = createdRun.enableInputCheckpoint(maxFollowUps);
+            }
+            runStore.create(createdRun);
             runCreated = true;
             // 往数据库中添加 agent 事件
             publish(sessionId, userId, runId, AgentEventType.RUN_STARTED,
@@ -213,10 +222,12 @@ public class DefaultAgentRuntime implements AgentRuntime {
             return resumePaused(stored, effectiveListener);
         }
         if (stored.state() != AgentRunState.WAITING_APPROVAL) {
-            return resultFromStored(stored, inferStoredStopReason(stored));
+            return resultFromStored(stored, inferStoredStopReason(stored));// 不是审批状态，不能恢复
         }
+        // ① 找到审批记录
         ApprovalRecord approval = approvalService.find(stored.approvalId())
                 .orElseThrow(() -> new IllegalArgumentException("approval not found: " + stored.approvalId()));
+        // ② 还在等 → 返回"还在审批中"
         if (approval.status() == ApprovalStatus.REQUESTED) {
             return resultFromStored(stored, AgentStopReason.WAITING_APPROVAL);
         }
@@ -230,9 +241,10 @@ public class DefaultAgentRuntime implements AgentRuntime {
         boolean claimedForResume = false;
         AgentRunRecord claimed = stored;
         try {
-            acquireRun(sessionId, runId, leaseOwnerId, budget);
+            // ③ 审完了 → 从 checkpoint 恢复
+            acquireRun(sessionId, runId, leaseOwnerId, budget);// 重新抢租约
             acquired = true;
-            Optional<AgentRunRecord> claim = runStore.claimForResume(runId);
+            Optional<AgentRunRecord> claim = runStore.claimForResume(runId);// 抢执行权
             if (claim.isEmpty()) {
                 AgentRunRecord current = runStore.find(runId).orElse(stored);
                 return resultFromStored(current, inferStoredStopReason(current));
@@ -255,10 +267,12 @@ public class DefaultAgentRuntime implements AgentRuntime {
             }
 
             ToolCallResult result;
+            // ④ 审批结果判断
             if (approval.status() == ApprovalStatus.REJECTED || approval.status() == ApprovalStatus.EXPIRED) {
                 String approvalError = approval.status() == ApprovalStatus.EXPIRED
                         ? "human approval expired"
                         : "human approval rejected: " + approval.decisionReason();
+                // 被拒或过期 → 工具结果标记为失败，跳过工具执行
                 result = new ToolCallResult(
                         approval.toolCallRequest().toolName(),
                         false,
@@ -310,6 +324,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                     result.success() ? "approved tool completed" : "approved tool returned failure",
                     toolResultPayload(approval.toolCallRequest().requestId(), result), effectiveListener);
             AgentRequest request = claimed.request();
+            // ⑤ 把结果接回 executeLoop，继续跑
             return executeLoop(request, runId, leaseOwnerId, sessionId, userId, budget, toolResults, usedTools,
                     claimed.usedRag(), profile, effectiveListener);
         }
@@ -347,6 +362,163 @@ public class DefaultAgentRuntime implements AgentRuntime {
     }
 
     @Override
+    public AgentRuntimeResult runUntilInputCheckpoint(AgentRequest request,
+                                                      AgentExecutionProfile profile,
+                                                      AgentEventListener listener) {
+        if (requestedInputCheckpoints.get() > 0) {
+            throw new IllegalStateException("nested input-checkpoint runs are not supported");
+        }
+        requestedInputCheckpoints.set(1);
+        try {
+            return run(request, profile, listener);
+        }
+        finally {
+            requestedInputCheckpoints.remove();
+        }
+    }
+
+    @Override
+    public AgentRuntimeResult continueWithInput(String runId,
+                                                AgentFollowUpInput input,
+                                                AgentEventListener listener) {
+        if (runId == null || runId.isBlank()) {
+            throw new IllegalArgumentException("runId must not be blank");
+        }
+        if (input == null) {
+            throw new IllegalArgumentException("follow-up input must not be null");
+        }
+        AgentEventListener effectiveListener = listener == null ? AgentEventListener.NOOP : listener;
+        AgentRunRecord stored = runStore.find(runId.trim())
+                .orElseThrow(() -> new IllegalArgumentException("agent run not found: " + runId));
+        if (stored.state() != AgentRunState.WAITING_INPUT) {
+            return resultFromStored(stored, inferStoredStopReason(stored));
+        }
+        validateFollowUpBudget(stored, input);
+        GuardrailDecision inputDecision = guardrailService.checkInput(input.question());
+        if (inputDecision.action() == GuardrailAction.BLOCK) {
+            throw new IllegalArgumentException("follow-up input was blocked by guardrail: " + inputDecision.reason());
+        }
+        String safeQuestion = inputDecision.action() == GuardrailAction.REDACT
+                && inputDecision.safeContent() != null
+                ? inputDecision.safeContent()
+                : input.question();
+        AgentFollowUpInput safeInput = new AgentFollowUpInput(
+                input.schemaVersion(), input.followUpType(), input.originalTaskId(), input.conflictId(),
+                input.relatedEvidenceIds(), safeQuestion, input.additionalToolBudget(),
+                input.additionalTokenBudget(), input.metadata()
+        );
+        String sessionId = stored.conversationId();
+        String userId = normalize(stored.userId(), DEFAULT_USER_ID);
+        AgentExecutionProfile profile = stored.executionProfile() == null
+                ? defaultExecutionProfile()
+                : stored.executionProfile();
+        AgentRunBudget budget = new AgentRunBudget(profile.limits(), stored.budgetSnapshot());
+        String leaseOwnerId = newLeaseOwnerId(stored.runId());
+        boolean acquired = false;
+        boolean claimed = false;
+        try {
+            acquireRun(sessionId, stored.runId(), leaseOwnerId, budget);
+            acquired = true;
+            LinkedHashMap<String, Object> requestMetadata = new LinkedHashMap<>(
+                    stored.request() == null ? Map.of() : stored.request().metadata()
+            );
+            requestMetadata.put("followUpType", safeInput.followUpType());
+            requestMetadata.put("originalTaskId", safeInput.originalTaskId());
+            requestMetadata.put("conflictId", safeInput.conflictId());
+            requestMetadata.put("relatedEvidenceIds", safeInput.relatedEvidenceIds());
+            AgentRequest followUpRequest = new AgentRequest(
+                    sessionId, userId, safeQuestion, Map.copyOf(requestMetadata),
+                    stored.request() == null ? "" : stored.request().scenarioId()
+            );
+            int ordinal = stored.followUpCount() + 1;
+            AgentMessageDraft message = new AgentMessageDraft(
+                    AgentMessageType.USER,
+                    safeInput.timelineContent(),
+                    "",
+                    "",
+                    Map.of(),
+                    safeInput.timelineMetadata(ordinal),
+                    tokenEstimator.estimate(safeInput.timelineContent())
+            );
+            Optional<AgentContinuationTransition> transition = continuationStore().claimWaitingInput(
+                    stored.runId(), stored.version(), followUpRequest, message,
+                    new AgentEventDraft(
+                            AgentEventType.RUN_INPUT_RECEIVED,
+                            "follow-up input claimed for the same run",
+                            Map.of(
+                                    "followUpOrdinal", ordinal,
+                                    "followUpType", safeInput.followUpType(),
+                                    "originalTaskId", safeInput.originalTaskId(),
+                                    "conflictId", safeInput.conflictId()
+                            )
+                    )
+            );
+            if (transition.isEmpty()) {
+                AgentRunRecord current = runStore.find(stored.runId()).orElse(stored);
+                return resultFromStored(current, inferStoredStopReason(current));
+            }
+            claimed = true;
+            AgentRunRecord current = transition.get().run();
+            dispatch(transition.get().event(), effectiveListener);
+            budget.resumeExecution();
+            synchronizeCancellation(current.runId(), budget);
+            if (budget.pauseRequested()) {
+                return pauseAtCheckpoint(current.runId(), sessionId, userId, budget, effectiveListener);
+            }
+            return executeLoop(
+                    followUpRequest, current.runId(), leaseOwnerId, sessionId, userId, budget,
+                    new ArrayList<>(current.toolResults()), new ArrayList<>(current.usedTools()),
+                    current.usedRag(), profile, effectiveListener
+            );
+        }
+        catch (AgentSessionBusyException busy) {
+            AgentRunRecord current = runStore.find(stored.runId()).orElse(stored);
+            return resultFromStored(current, AgentStopReason.IN_PROGRESS);
+        }
+        catch (RuntimeException exception) {
+            if (!claimed) {
+                throw exception;
+            }
+            return finishUnexpectedFailure(
+                    stored.runId(), sessionId, userId, budget, effectiveListener, exception
+            );
+        }
+        finally {
+            if (acquired) {
+                releaseRun(sessionId, stored.runId(), leaseOwnerId);
+            }
+        }
+    }
+
+    @Override
+    public AgentRuntimeResult completeWaitingInput(String runId) {
+        if (runId == null || runId.isBlank()) {
+            throw new IllegalArgumentException("runId must not be blank");
+        }
+        AgentRunRecord stored = runStore.find(runId.trim())
+                .orElseThrow(() -> new IllegalArgumentException("agent run not found: " + runId));
+        if (stored.state() != AgentRunState.WAITING_INPUT) {
+            return resultFromStored(stored, inferStoredStopReason(stored));
+        }
+        Optional<AgentContinuationTransition> completed = continuationStore().completeWaitingInput(
+                stored.runId(),
+                new AgentEventDraft(
+                        AgentEventType.RUN_COMPLETED,
+                        stored.answer(),
+                        Map.of(
+                                "state", AgentRunState.COMPLETED.name(),
+                                "stopReason", AgentStopReason.COMPLETED.name(),
+                                "completedWithoutFollowUp", true,
+                                "budget", budgetPayload(stored.budgetSnapshot())
+                        )
+                )
+        );
+        AgentRunRecord result = completed.map(AgentContinuationTransition::run)
+                .orElseGet(() -> runStore.find(stored.runId()).orElse(stored));
+        return resultFromStored(result, inferStoredStopReason(result));
+    }
+
+    @Override
     public boolean cancel(String runId) {
         if (runId == null || runId.isBlank()) {
             return false;
@@ -363,6 +535,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         }
         // 如果是在数据库中等待人工审批的，直接更新数据库中 agent_run_state 的状态
         else if (persisted && (stored.state() == AgentRunState.WAITING_APPROVAL
+                || stored.state() == AgentRunState.WAITING_INPUT
                 || stored.state() == AgentRunState.PAUSED
                 || stored.state() == AgentRunState.PAUSE_REQUESTED)) {
             AgentExecutionProfile profile = stored.executionProfile() == null
@@ -411,6 +584,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         if (stored.state() != AgentRunState.RUNNING) {
             return false;
         }
+        // 当前 agent 请求暂停，数据库持久化暂停标志
         if (!runControlStore.requestPause(normalizedRunId)) {
             return false;
         }
@@ -532,6 +706,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                         listener
                 );
                 try {
+                    // 这是真正的 LLM token 级流式推送
                     modelTurn = modelGateway.nextTurn(new AgentModelRequest(
                             runId,
                             sessionId,
@@ -746,18 +921,21 @@ public class DefaultAgentRuntime implements AgentRuntime {
                         ),
                         listener);
                 if (execution.status() == AgentToolExecutionStatus.WAITING_APPROVAL) {
+                    // ① 冻结 deadline（暂停计时）
                     budget.pauseExecution();
                     List<ToolCallResult> persistedToolResults = List.copyOf(toolResults);
                     List<String> persistedUsedTools = List.copyOf(usedTools);
                     boolean ragUsedAtPause = usedRag;
+                    // ② 把完整状态写入数据库：审批 ID、待执行工具、已执行工具结果、预算快照
                     runStore.update(runId, current -> current.waitingForApproval(
                             execution.approvalId(),
-                            execution.request(),
-                            persistedToolResults,
+                            execution.request(),// 待审批的工具
+                            persistedToolResults,// 已执行的工具结果
                             persistedUsedTools,
                             ragUsedAtPause,
-                            budget.snapshot()
+                            budget.snapshot()// 预算快照
                     ));
+                    // ③ 通知前端（SSE 事件）
                     publish(sessionId, userId, runId, AgentEventType.APPROVAL_REQUIRED,
                             "tool call is waiting for human approval",
                             Map.of(
@@ -766,6 +944,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
                                     "toolName", call.toolName()
                             ),
                             listener);
+                    // ④ 返回 → 释放租约 → 线程释放
                     return new AgentRuntimeResult(
                             runId,
                             sessionId,
@@ -1130,6 +1309,41 @@ public class DefaultAgentRuntime implements AgentRuntime {
             safeAnswer = "模型未生成有效回答，请补充问题后重试。";
         }
         modelDeltaPublisher.complete(safeAnswer);
+        AgentRunRecord current = runStore.find(runId).orElse(null);
+        if (current != null
+                && current.inputCheckpointEnabled()
+                && current.followUpCount() < current.maxFollowUps()) {
+            budget.pauseExecution();
+            AgentContinuationTransition transition = continuationStore().checkpointWaitingInput(
+                    runId,
+                    current.version(),
+                    safeAnswer,
+                    budget.snapshot(),
+                    AgentMessageDraft.assistant(safeAnswer, tokenEstimator.estimate(safeAnswer)),
+                    new AgentEventDraft(
+                            AgentEventType.RUN_WAITING_INPUT,
+                            "run reached a durable input checkpoint",
+                            Map.of(
+                                    "state", AgentRunState.WAITING_INPUT.name(),
+                                    "stopReason", AgentStopReason.WAITING_INPUT.name(),
+                                    "followUpCount", current.followUpCount(),
+                                    "maxFollowUps", current.maxFollowUps(),
+                                    "budget", budgetPayload(budget.snapshot())
+                            )
+                    )
+            );
+            dispatch(transition.event(), listener);
+            return new AgentRuntimeResult(
+                    runId,
+                    sessionId,
+                    AgentRunState.WAITING_INPUT,
+                    AgentStopReason.WAITING_INPUT,
+                    safeAnswer,
+                    "",
+                    budget.snapshot(),
+                    timelineStore.loadEvents(runId, MAX_RETURNED_EVENTS)
+            );
+        }
         timelineStore.appendMessages(sessionId, userId, runId, List.of(
                 AgentMessageDraft.assistant(safeAnswer, tokenEstimator.estimate(safeAnswer))
         ));
@@ -1181,6 +1395,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
             case COMPLETED -> AgentRunPhase.FINISHED;
             case BLOCKED, REJECTED -> AgentRunPhase.BLOCKED;
             case WAITING_APPROVAL -> AgentRunPhase.WAITING_APPROVAL;
+            case WAITING_INPUT -> AgentRunPhase.WAITING_INPUT;
             default -> AgentRunPhase.FAILED;
         };
         runStore.update(runId, current -> current.finished(
@@ -1527,6 +1742,35 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 || state == AgentRunState.MANUAL_REVIEW;
     }
 
+    private AgentContinuationStore continuationStore() {
+        if (runStore instanceof AgentContinuationStore store) {
+            return store;
+        }
+        throw new IllegalStateException(
+                "configured AgentRunStore does not support durable WAITING_INPUT transitions"
+        );
+    }
+
+    private void validateFollowUpBudget(AgentRunRecord stored, AgentFollowUpInput input) {
+        AgentExecutionProfile profile = stored.executionProfile() == null
+                ? defaultExecutionProfile()
+                : stored.executionProfile();
+        AgentRunBudgetSnapshot snapshot = stored.budgetSnapshot();
+        if (snapshot == null) {
+            throw new IllegalStateException("WAITING_INPUT run is missing its cumulative budget snapshot");
+        }
+        long remainingTools = Math.max(0, profile.limits().maxToolCalls() - snapshot.toolCalls());
+        long remainingTokens = Math.max(
+                0,
+                profile.limits().maxInputTokens() + profile.limits().maxOutputTokens()
+                        - snapshot.inputTokens() - snapshot.outputTokens()
+        );
+        if (input.additionalToolBudget() > remainingTools
+                || input.additionalTokenBudget() > remainingTokens) {
+            throw new IllegalArgumentException("follow-up allocation exceeds the original run budget");
+        }
+    }
+
     /**
      * 往数据库中添加 agent 事件
      */
@@ -1544,6 +1788,14 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 runId,
                 new AgentEventDraft(type, content, payload)
         );
+        dispatch(event, listener);
+        return event;
+    }
+
+    private void dispatch(AgentEvent event, AgentEventListener listener) {
+        if (event == null || listener == null) {
+            return;
+        }
         try {
             // 监听器，当有操作的时候会往前端推送事件（streaming 式）
             listener.onEvent(event);
@@ -1551,7 +1803,6 @@ public class DefaultAgentRuntime implements AgentRuntime {
         catch (RuntimeException ignored) {
             // Event transport failure cannot roll back already persisted Agent execution state.
         }
-        return event;
     }
 
     /**
@@ -1587,19 +1838,23 @@ public class DefaultAgentRuntime implements AgentRuntime {
             if (delta == null || delta.isEmpty()) {
                 return;
             }
-            rawAnswer.append(delta);
+            // ① 拼接原始回答
+            rawAnswer.append(delta);// "退款流程是：首先..."
+            // ② 输出护栏预览（边吐边检查！）
             GuardrailDecision preview = guardrailService.previewOutput(rawAnswer.toString());
             if (preview == null || preview.action() == GuardrailAction.BLOCK) {
-                return;
+                return;// 检测到敏感内容 → 不推送，但不中断生成
             }
             String safe = preview.action() == GuardrailAction.REDACT && preview.safeContent() != null
                     ? preview.safeContent()
                     : rawAnswer.toString();
+            // ③ holdback：保留最后 16 个字符不推送，防止电话号码、身份证号、API Key 跨 token 边界泄露
             int holdback = Math.max(16, properties.getStreamOutputGuardrailHoldbackChars());
             emitThrough(safe, Math.max(0, safe.length() - holdback), false);
         }
 
         private synchronized void complete(String safeAnswer) {
+            // LLM 回答完毕 → 推送剩余文本（包括 holdback 部分）
             emitThrough(safeAnswer == null ? "" : safeAnswer,
                     safeAnswer == null ? 0 : safeAnswer.length(), true);
         }
@@ -1611,8 +1866,10 @@ public class DefaultAgentRuntime implements AgentRuntime {
                 return;
             }
             int end = Math.max(emitted.length(), Math.min(requestedEnd, safeAnswer.length()));
+            // ① 去重：只推还没发过的部分
             int available = end - emitted.length();
             int minChars = Math.max(1, properties.getStreamModelDeltaMinChars());
+            // ② 聚合：最少攒够 minChars 才发一次（避免一个字符发一个事件）
             if (!finalChunk && available < minChars) {
                 return;
             }
@@ -1622,6 +1879,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
             String delta = safeAnswer.substring(emitted.length(), end);
             emittedSafeAnswer.append(delta);
             deltaIndex++;
+            // ③ 推 MODEL_DELTA 事件
             publish(sessionId, userId, runId, AgentEventType.MODEL_DELTA, delta,
                     Map.of(
                             "turn", turn,
@@ -1677,6 +1935,7 @@ public class DefaultAgentRuntime implements AgentRuntime {
         return switch (stored.state()) {
             case COMPLETED -> AgentStopReason.COMPLETED;
             case WAITING_APPROVAL -> AgentStopReason.WAITING_APPROVAL;
+            case WAITING_INPUT -> AgentStopReason.WAITING_INPUT;
             case RUNNING -> AgentStopReason.IN_PROGRESS;
             case PAUSE_REQUESTED, PAUSED -> AgentStopReason.PAUSED;
             case BLOCKED, REJECTED -> AgentStopReason.GUARDRAIL_BLOCKED;

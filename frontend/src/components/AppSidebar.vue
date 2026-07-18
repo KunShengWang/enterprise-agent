@@ -8,6 +8,7 @@ const navigation = [
   { to: '/', icon: '✦', label: 'Agent 运行台', hint: '对话与实时执行' },
   { to: '/runs', icon: '◷', label: 'Run 历史', hint: '状态与事件回放' },
   { to: '/approvals', icon: '✓', label: '审批中心', hint: 'HITL 决策与恢复' },
+  { to: '/incident-command', icon: '△', label: '事故调查', hint: '只读 Multi-Agent 指挥台' },
   { to: '/capabilities', icon: '⌘', label: '能力地图', hint: 'Tool 与 Skill' },
   { to: '/knowledge', icon: '◇', label: '知识与记忆', hint: 'RAG 与 Memory' },
   { to: '/observability', icon: '⌁', label: '可观测性', hint: 'Trace · Eval · Ops' },

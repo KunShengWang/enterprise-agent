@@ -148,6 +148,9 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
         }
     }
 
+    /**
+     * 当前 agent 请求暂停，数据库持久化暂停标志
+     */
     @Override
     public boolean requestPause(String runId) {
         ensureSchema();

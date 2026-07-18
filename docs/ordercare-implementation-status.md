@@ -1,6 +1,6 @@
 # OrderCare 实施状态与学习地图
 
-> 更新时间：2026-07-17
+> 更新时间：2026-07-18
 > 当前阶段：M3 `PASSED`（Interview Strong）
 > 下一阶段：M4 安全部署；不作为当前简历主闭环的完成前提
 
@@ -315,3 +315,16 @@ M1 只能表述为“实现异常订单智能诊断”，没有 Proposal、审�
 - [x] 工作台展示 responseLost、reconciled、reconciliation attempts 和 recoveredAfterCrash。
 
 当前可以表述为“支持副作用结果未知、进程崩溃和重复恢复场景下的幂等对账与故障恢复”。M4 未完成前，仍不能宣称生产级安全、线上规模或完整 SLO。
+
+## 13. Incident Command Phase 1（独立事故级 Multi-Agent 场景）
+
+| 阶段 | 状态 | 证据 |
+|---|---|---|
+| M0 设计冻结 | `PASSED` | Incident Command V1.3，Evidence 双维度、Run 拓扑、统计口径、事务和 Fixture 契约 |
+| M1-A 只读事实层 | `PASSED` | FlowOrder 订单/库存/死信接口和 dead-letter-first MQ 复合能力 |
+| M1-B 四表与事务 | `PASSED` | 7 条真实 PostgreSQL 事务/CAS/幂等测试 |
+| M1-C 同 Run 续跑门禁 | `PASSED` | 3 条真实 PostgreSQL 重启、CAS、终态测试 |
+| M1-D 调查闭环 | `PASSED` | Commander、3 Specialist、Evidence、Conflict、Reviewer、Assessment、Trace |
+| M1-E 证据与演示 | `PASSED` | 3 条纵向 E2E、10 条核心 Eval、真实 MySQL/Rabbit Fixture、单窗口页面 |
+
+权威证据：[Incident Command Phase 1 报告](reports/ordercare/incident-command-phase1-evidence.md)。该场景只读，不包含 Recovery Planner、批量恢复、多实例 Task lease 或通用 Agent Mailbox。

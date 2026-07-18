@@ -31,6 +31,9 @@ public record AgentRunRecord(
         String answer,
         String failureReason,
         int resumeCount,// 这个 Run 被恢复过多少次
+        boolean inputCheckpointEnabled,
+        int followUpCount,
+        int maxFollowUps,
         long version,
         Instant createdAt,
         Instant updatedAt
@@ -44,6 +47,11 @@ public record AgentRunRecord(
         approvalId = approvalId == null ? "" : approvalId;
         answer = answer == null ? "" : answer;
         failureReason = failureReason == null ? "" : failureReason;
+        followUpCount = Math.max(0, followUpCount);
+        maxFollowUps = Math.max(0, maxFollowUps);
+        if (followUpCount > maxFollowUps) {
+            throw new IllegalArgumentException("followUpCount must not exceed maxFollowUps");
+        }
         createdAt = createdAt == null ? Instant.now() : createdAt;
         updatedAt = updatedAt == null ? createdAt : updatedAt;
     }
@@ -79,6 +87,9 @@ public record AgentRunRecord(
                 "",
                 "",
                 0,
+                false,
+                0,
+                0,
                 0,
                 now,
                 now
@@ -96,7 +107,74 @@ public record AgentRunRecord(
                 executionProfile, budgetSnapshot,
                 state, phase, approvalId, pendingToolCall, toolResults, usedTools,
                 usedRag, blockedByGuardrail, answer, failureReason, resumeCount,
+                inputCheckpointEnabled, followUpCount, maxFollowUps,
                 version, createdAt, Instant.now()
+        );
+    }
+
+    public AgentRunRecord enableInputCheckpoint(int allowedFollowUps) {
+        if (state != AgentRunState.RUNNING || version != 0 || allowedFollowUps < 1) {
+            throw new IllegalStateException("input checkpoint must be enabled when creating a running run");
+        }
+        return new AgentRunRecord(
+                runId, traceId, conversationId, userId, request, executionProfile, budgetSnapshot,
+                state, phase, approvalId, pendingToolCall, toolResults, usedTools, usedRag,
+                blockedByGuardrail, answer, failureReason, resumeCount,
+                true, 0, allowedFollowUps, version, createdAt, Instant.now()
+        );
+    }
+
+    public AgentRunRecord waitingForInput(String checkpointAnswer,
+                                          List<ToolCallResult> completedToolResults,
+                                          List<String> completedTools,
+                                          boolean ragUsed,
+                                          AgentRunBudgetSnapshot currentBudget) {
+        if (!inputCheckpointEnabled || followUpCount >= maxFollowUps) {
+            throw new IllegalStateException("run is not eligible for an input checkpoint");
+        }
+        return copy(
+                AgentRunState.WAITING_INPUT,
+                AgentRunPhase.WAITING_INPUT,
+                "",
+                null,
+                completedToolResults,
+                completedTools,
+                ragUsed,
+                blockedByGuardrail,
+                checkpointAnswer,
+                "",
+                resumeCount,
+                currentBudget
+        );
+    }
+
+    public AgentRunRecord claimedForInput(AgentRequest followUpRequest) {
+        if (state != AgentRunState.WAITING_INPUT || followUpCount >= maxFollowUps) {
+            throw new IllegalStateException("run is not waiting for permitted follow-up input");
+        }
+        AgentRunRecord claimed = copy(
+                AgentRunState.RUNNING,
+                AgentRunPhase.CONTEXT_PREPARATION,
+                "",
+                null,
+                toolResults,
+                usedTools,
+                usedRag,
+                blockedByGuardrail,
+                "",
+                "",
+                resumeCount + 1,
+                budgetSnapshot
+        );
+        return new AgentRunRecord(
+                claimed.runId, claimed.traceId, claimed.conversationId,
+                followUpRequest == null ? claimed.userId : followUpRequest.userId(),
+                followUpRequest == null ? claimed.request : followUpRequest,
+                claimed.executionProfile, claimed.budgetSnapshot, claimed.state, claimed.phase,
+                claimed.approvalId, claimed.pendingToolCall, claimed.toolResults, claimed.usedTools,
+                claimed.usedRag, claimed.blockedByGuardrail, claimed.answer, claimed.failureReason,
+                claimed.resumeCount, claimed.inputCheckpointEnabled, followUpCount + 1,
+                claimed.maxFollowUps, claimed.version, claimed.createdAt, Instant.now()
         );
     }
 
@@ -274,7 +352,9 @@ public record AgentRunRecord(
         return new AgentRunRecord(
                 runId, traceId, conversationId, userId, request, executionProfile, currentBudget,
                 state, phase, approvalId, pendingToolCall, toolResults, usedTools, usedRag,
-                blockedByGuardrail, answer, failureReason, resumeCount, version, createdAt, Instant.now()
+                blockedByGuardrail, answer, failureReason, resumeCount,
+                inputCheckpointEnabled, followUpCount, maxFollowUps,
+                version, createdAt, Instant.now()
         );
     }
 
@@ -283,6 +363,7 @@ public record AgentRunRecord(
                 runId, traceId, conversationId, userId, request, executionProfile, budgetSnapshot, state, phase,
                 approvalId, pendingToolCall, toolResults, usedTools, usedRag,
                 blockedByGuardrail, answer, failureReason, resumeCount,
+                inputCheckpointEnabled, followUpCount, maxFollowUps,
                 nextVersion, createdAt, timestamp == null ? Instant.now() : timestamp
         );
     }
@@ -303,7 +384,8 @@ public record AgentRunRecord(
                 runId, traceId, conversationId, userId, request, executionProfile, nextBudgetSnapshot, nextState, nextPhase,
                 nextApprovalId, nextPendingToolCall, nextToolResults, nextUsedTools,
                 nextUsedRag, nextBlockedByGuardrail, nextAnswer, nextFailureReason,
-                nextResumeCount, version, createdAt, Instant.now()
+                nextResumeCount, inputCheckpointEnabled, followUpCount, maxFollowUps,
+                version, createdAt, Instant.now()
         );
     }
 }

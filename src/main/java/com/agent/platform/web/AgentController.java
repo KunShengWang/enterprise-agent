@@ -74,24 +74,26 @@ public class AgentController {
         ));
     }
 
-    /** 完成后返回 AgentResponse 的兼容接口；运行台应请求同一路径的 text/event-stream 表示。 */
+    /**
+     * 方法 A：客户端要 JSON
+     * 完成后返回 AgentResponse 的兼容接口；运行台应请求同一路径的 text/event-stream 表示。
+     */
     @PostMapping(value = "/runs", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ApiResponse<AgentResponse>> run(@Valid @RequestBody AgentRequest request) {
-        // @Valid 会在进入方法前校验 AgentRequest；这里先按 userId 做入口限流，
-        // 避免单个用户在一分钟内创建过多 Agent Run 和模型调用。
+        // @Valid 会在进入方法前校验 AgentRequest；这里先按 userId 做入口限流，避免单个用户在一分钟内创建过多 Agent Run 和模型调用。
         RateLimitResult limit = rateLimitService.acquire(rateLimitKey(request));
         if (!limit.allowed()) {
             return Mono.just(ApiResponse.failure(com.agent.platform.common.ErrorCode.TOO_MANY_REQUESTS,
                     "请求过于频繁，请稍后重试。limit=" + limit.limit() + "/minute"));
         }
 
-        // RuntimeAgentExecutor 和 SSE 适配器共享同一个 AgentRuntime；同步接口只是在完成后
-        // 把已持久化事件投影为 AgentResponse。
+        // RuntimeAgentExecutor 和 SSE 适配器共享同一个 AgentRuntime；同步接口只是在完成后把已持久化事件投影为 AgentResponse。
         return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.execute(request)))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
     /**
+     * 方法 B：客户端要 SSE 流
      * 根据 Accept 头在同一资源路径提供结构化 SSE；其中 MODEL_DELTA 是模型正文的真实增量。
      */
     @PostMapping(value = "/runs", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

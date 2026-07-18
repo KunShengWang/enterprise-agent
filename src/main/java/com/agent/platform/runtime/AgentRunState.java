@@ -11,6 +11,8 @@ public enum AgentRunState {
     PAUSED,
     /** 等待审批：高风险工具触发 HITL，暂停等待人工确认 */
     WAITING_APPROVAL,
+    /** 等待定向输入：结果和预算已持久化，当前没有线程或模型连接在等待 */
+    WAITING_INPUT,
     /** 已完成：正常执行结束，返回了最终回答 */
     COMPLETED,
     /** 需要澄清：用户问题模糊，Agent 要求补充信息 */
