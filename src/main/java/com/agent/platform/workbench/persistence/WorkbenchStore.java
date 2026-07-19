@@ -1,6 +1,7 @@
 package com.agent.platform.workbench.persistence;
 
 import com.agent.platform.workbench.application.CreateWorkItemCommand;
+import com.agent.platform.workbench.application.CreatePersistedInputWorkItemCommand;
 import com.agent.platform.workbench.application.WorkItemCreationResult;
 import com.agent.platform.workbench.model.AgentConversationTurn;
 import com.agent.platform.workbench.model.AgentWorkItem;
@@ -17,6 +18,9 @@ import java.util.Optional;
 public interface WorkbenchStore {
 
     WorkItemCreationResult createWorkItem(AuthenticatedPrincipal principal, CreateWorkItemCommand command);
+
+    WorkItemCreationResult createWorkItemFromPersistedInput(AuthenticatedPrincipal principal,
+                                                             CreatePersistedInputWorkItemCommand command);
 
     Optional<AgentConversationTurn> findInput(AuthenticatedPrincipal principal, String inputId);
 

@@ -3,20 +3,25 @@ package com.agent.platform.workbench.persistence;
 import com.agent.platform.config.AgentStorageProperties;
 import com.agent.platform.storage.AgentStorageException;
 import com.agent.platform.workbench.application.CreateWorkItemCommand;
+import com.agent.platform.workbench.application.CreatePersistedInputWorkItemCommand;
 import com.agent.platform.workbench.application.WorkItemCreationResult;
 import com.agent.platform.workbench.model.AgentConversationTurn;
 import com.agent.platform.workbench.model.AgentWorkItem;
 import com.agent.platform.workbench.model.ConversationWorkState;
 import com.agent.platform.workbench.model.GoalOrigin;
+import com.agent.platform.workbench.model.InputClassificationStatus;
+import com.agent.platform.workbench.model.NormalGoalEnvelope;
 import com.agent.platform.workbench.model.WorkControlState;
 import com.agent.platform.workbench.model.WorkEvent;
 import com.agent.platform.workbench.model.WorkEventDraft;
 import com.agent.platform.workbench.model.WorkEventType;
 import com.agent.platform.workbench.model.WorkExecutionState;
+import com.agent.platform.workbench.model.WorkInputKind;
 import com.agent.platform.workbench.model.WorkLink;
 import com.agent.platform.workbench.model.WorkLinkRelation;
 import com.agent.platform.workbench.model.WorkLinkType;
 import com.agent.platform.workbench.model.WorkOutcome;
+import com.agent.platform.workbench.model.WorkCommandType;
 import com.agent.platform.workbench.model.WorkRelation;
 import com.agent.platform.workbench.model.WorkRelationType;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
@@ -40,6 +45,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -177,6 +183,94 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
         }
         catch (SQLException exception) {
             throw storageFailure("Failed to create work item", exception);
+        }
+    }
+
+    @Override
+    public WorkItemCreationResult createWorkItemFromPersistedInput(
+            AuthenticatedPrincipal principal,
+            CreatePersistedInputWorkItemCommand persistedCommand) {
+        requirePrincipal(principal);
+        if (persistedCommand == null) throw new IllegalArgumentException("command must not be null");
+        ensureSchema();
+        try (Connection connection = openConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                AgentConversationTurn input = readInputById(connection, persistedCommand.inputId(), true)
+                        .orElseThrow(() -> new WorkbenchNotFoundException(
+                                "work input not found: " + persistedCommand.inputId()));
+                if (!input.tenantId().equals(principal.tenantId())
+                        || !input.ownerPrincipalId().equals(principal.principalId())) {
+                    throw new WorkbenchAccessDeniedException("work input belongs to another principal");
+                }
+                boolean directGoal = input.inputKind() == WorkInputKind.NORMAL_GOAL
+                        && persistedCommand.goalOrigin() == GoalOrigin.DIRECT_NORMAL_GOAL;
+                boolean derivedGoal = input.inputKind() == WorkInputKind.WORK_COMMAND
+                        && input.commandType() == WorkCommandType.START_NEW_WORK
+                        && persistedCommand.goalOrigin() == GoalOrigin.DERIVED_FROM_START_NEW_WORK
+                        && input.commandDecisionId().equals(persistedCommand.commandDecisionId());
+                if ((!directGoal && !derivedGoal)
+                        || input.classificationStatus() != InputClassificationStatus.CLASSIFIED) {
+                    throw new WorkbenchCasConflictException("input is not an effective NORMAL_GOAL");
+                }
+                ConversationWorkState lockedFocus = ensureAndLockConversation(
+                        connection, principal, input.conversationId());
+                NormalGoalEnvelope envelope = new NormalGoalEnvelope(
+                        input.inputId(), persistedCommand.goalText(), persistedCommand.goalOrigin(),
+                        persistedCommand.commandDecisionId(), persistedCommand.parentWorkItemId(),
+                        persistedCommand.relationType());
+                CreateWorkItemCommand command = new CreateWorkItemCommand(
+                        input.clientInputId(), input.conversationId(), input.content(), envelope,
+                        persistedCommand.expectedFocusVersion());
+
+                Optional<AgentWorkItem> existing = readWorkItemBySourceInput(connection, input.inputId(), false);
+                if (existing.isPresent()) {
+                    WorkItemCreationResult result = duplicateResult(connection, input, existing.get(), principal);
+                    connection.commit();
+                    return result;
+                }
+                if (lockedFocus.version() != command.expectedFocusVersion()) {
+                    throw new WorkbenchCasConflictException(
+                            "conversation focus version mismatch: expected=" + command.expectedFocusVersion()
+                                    + ", actual=" + lockedFocus.version());
+                }
+                AgentWorkItem parent = validateParent(connection, principal, command);
+                Instant now = Instant.now();
+                String workItemId = "work-" + UUID.randomUUID();
+                String routingRequestId = "route-" + UUID.randomUUID();
+                AgentWorkItem created = new AgentWorkItem(
+                        workItemId, input.conversationId(), principal.tenantId(), principal.principalId(),
+                        input.content(), envelope.goalText(), WorkControlState.ROUTING,
+                        WorkExecutionState.NOT_STARTED, WorkOutcome.UNDETERMINED,
+                        "", "", "", "", "", input.inputId(),
+                        parent == null ? "" : parent.workItemId(), routingRequestId,
+                        0, null, null, "", "", 0, 0, now, now, null);
+                insertWorkItem(connection, created);
+                WorkRelation relation = null;
+                if (parent != null) {
+                    relation = new WorkRelation(
+                            created.workItemId(), parent.workItemId(), envelope.relationType(), input.inputId(), now);
+                    insertRelation(connection, relation);
+                }
+                ConversationWorkState focus = updateFocus(
+                        connection, principal, input.conversationId(), created.workItemId(),
+                        command.expectedFocusVersion(), now);
+                WorkEvent createdEvent = appendLocalEvent(connection, created, new WorkEventDraft(
+                        "work-item-created:" + input.inputId(), WorkEventType.WORK_ITEM_CREATED,
+                        "CREATED", "WorkItem created and focused",
+                        Map.of("inputId", input.inputId(), "routingRequestId", routingRequestId,
+                                "goalOrigin", envelope.goalOrigin().name()), input.inputId()));
+                connection.commit();
+                AgentWorkItem persisted = readWorkItemById(created.workItemId(), principal).orElseThrow();
+                return new WorkItemCreationResult(input, persisted, relation, focus, createdEvent, false);
+            }
+            catch (RuntimeException | SQLException exception) {
+                rollbackQuietly(connection);
+                throw exception;
+            }
+        }
+        catch (SQLException exception) {
+            throw storageFailure("Failed to create work item from persisted input", exception);
         }
     }
 
@@ -534,8 +628,8 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
                 INSERT INTO agent_work_input(
                     input_id, client_input_id, conversation_id, tenant_id, owner_principal_id,
                     content, content_digest, request_digest, goal_origin, command_decision_id,
-                    parent_work_item_id, relation_type, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    parent_work_item_id, relation_type, created_at, principal_roles
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb)
                 ON CONFLICT(tenant_id, owner_principal_id, client_input_id) DO NOTHING
                 """)) {
             statement.setString(1, command.goal().sourceInputId());
@@ -552,6 +646,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
             statement.setString(12, command.goal().relationType() == null
                     ? null : command.goal().relationType().name());
             statement.setTimestamp(13, Timestamp.from(Instant.now()));
+            statement.setString(14, toJson(principal.roles()));
             statement.executeUpdate();
         }
     }
@@ -568,6 +663,18 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
             statement.setString(1, principal.tenantId());
             statement.setString(2, principal.principalId());
             statement.setString(3, clientInputId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next() ? Optional.of(mapInput(resultSet)) : Optional.empty();
+            }
+        }
+    }
+
+    private Optional<AgentConversationTurn> readInputById(Connection connection,
+                                                           String inputId,
+                                                           boolean forUpdate) throws SQLException {
+        String sql = "SELECT * FROM agent_work_input WHERE input_id = ?" + (forUpdate ? " FOR UPDATE" : "");
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, inputId);
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next() ? Optional.of(mapInput(resultSet)) : Optional.empty();
             }
@@ -912,6 +1019,8 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
 
     private AgentConversationTurn mapInput(ResultSet resultSet) throws SQLException {
         String relation = resultSet.getString("relation_type");
+        String goalOrigin = resultSet.getString("goal_origin");
+        String commandType = resultSet.getString("command_type");
         return new AgentConversationTurn(
                 resultSet.getString("input_id"),
                 resultSet.getString("client_input_id"),
@@ -921,11 +1030,19 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
                 resultSet.getString("content"),
                 resultSet.getString("content_digest"),
                 resultSet.getString("request_digest"),
-                GoalOrigin.valueOf(resultSet.getString("goal_origin")),
+                hasText(goalOrigin) ? GoalOrigin.valueOf(goalOrigin) : null,
                 normalize(resultSet.getString("command_decision_id"), ""),
                 normalize(resultSet.getString("parent_work_item_id"), ""),
                 hasText(relation) ? WorkRelationType.valueOf(relation) : null,
-                instant(resultSet, "created_at")
+                instant(resultSet, "created_at"),
+                WorkInputKind.valueOf(resultSet.getString("input_kind")),
+                hasText(commandType) ? WorkCommandType.valueOf(commandType) : null,
+                normalize(resultSet.getString("target_work_item_id"), ""),
+                InputClassificationStatus.valueOf(resultSet.getString("classification_status")),
+                normalize(resultSet.getString("classification_reason"), ""),
+                nullableInstant(resultSet, "classified_at"),
+                readStringSet(resultSet.getString("principal_roles")),
+                resultSet.getLong("version")
         );
     }
 
@@ -1060,6 +1177,19 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private Set<String> readStringSet(String json) {
+        if (!hasText(json)) {
+            return Set.of();
+        }
+        try {
+            return Set.copyOf(objectMapper.readValue(json, List.class));
+        }
+        catch (RuntimeException exception) {
+            throw new AgentStorageException("Failed to deserialize principal role snapshot", exception);
+        }
+    }
+
     private void ensureSchema() {
         if (schemaReady.get()) {
             return;
@@ -1099,6 +1229,17 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
                     created_at TIMESTAMPTZ NOT NULL,
                     UNIQUE(tenant_id, owner_principal_id, client_input_id)
                 )
+                """,
+                """
+                ALTER TABLE agent_work_input
+                    ADD COLUMN IF NOT EXISTS principal_roles JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    ADD COLUMN IF NOT EXISTS input_kind TEXT NOT NULL DEFAULT 'NORMAL_GOAL',
+                    ADD COLUMN IF NOT EXISTS command_type TEXT,
+                    ADD COLUMN IF NOT EXISTS target_work_item_id TEXT,
+                    ADD COLUMN IF NOT EXISTS classification_status TEXT NOT NULL DEFAULT 'CLASSIFIED',
+                    ADD COLUMN IF NOT EXISTS classification_reason TEXT,
+                    ADD COLUMN IF NOT EXISTS classified_at TIMESTAMPTZ,
+                    ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0
                 """,
                 """
                 CREATE INDEX IF NOT EXISTS idx_agent_work_input_conversation

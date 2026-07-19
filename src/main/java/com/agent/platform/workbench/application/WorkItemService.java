@@ -25,6 +25,11 @@ public class WorkItemService {
         return store.createWorkItem(principal, command);
     }
 
+    public WorkItemCreationResult createFromPersistedInput(AuthenticatedPrincipal principal,
+                                                            CreatePersistedInputWorkItemCommand command) {
+        return store.createWorkItemFromPersistedInput(principal, command);
+    }
+
     public Optional<AgentConversationTurn> findInput(AuthenticatedPrincipal principal, String inputId) {
         return store.findInput(principal, inputId);
     }
