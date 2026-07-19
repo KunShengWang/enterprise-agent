@@ -16,7 +16,7 @@
 | 最小 WorkEvent | 旧 Run Event 不能作为统一产品事件 | 正式表、游标、源事件幂等 | `agent_work_event`、`LocalWorkEventAppender` | 并发 16 事件、双唯一约束、分页测试 | 行锁分配，禁止 `MAX(sequence)+1` |
 | 单事务创建 | 旧 Store 多为独立操作 | input/work/relation/focus/event 原子提交 | `JdbcWorkbenchStore#createWorkItem` | CAS、跨 tenant、事件注入三类回滚 | 复用项目 raw JDBC 显式事务约定 |
 | 可信身份 | 项目尚无 Spring Security Principal | 请求体不能携带 tenant/owner/server IDs | `AuthenticatedPrincipal` 应用边界、request-safe command | 反射边界测试、越权 PostgreSQL IT | M1-A 不新增未认证 HTTP Controller |
-| 真实 PostgreSQL | 既有测试按环境变量启用 | Workbench 真实库并发/故障证据 | `JdbcWorkbenchStorePostgresIT` | PostgreSQL 17 上 18/18 通过 | 不以 H2、Mock Store 或 skip 代替 |
+| 真实 PostgreSQL | 既有测试按环境变量启用 | Workbench 真实库并发/故障证据 | `JdbcWorkbenchStorePostgresIT` | PostgreSQL 17 上 19/19 通过 | 不以 H2、Mock Store 或 skip 代替 |
 
 ## 2. Schema 与持久化对象
 
