@@ -46,6 +46,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.UUID;
 
 @Service
@@ -284,14 +286,28 @@ public class IncidentRecoveryPlanner {
         input.put("maxItems", properties.getMaxRecoveryPlanItems());
         input.put("snapshotRequestIds", aggregate.incident().snapshot().orderScope().requestIds());
         input.put("assessment", assessment);
-        input.put("evidence", aggregate.evidence().stream().map(this::plannerEvidence).toList());
+        Set<String> authoritativeEvidenceIds = assessmentEvidenceIds(assessment);
+        input.put("evidence", aggregate.evidence().stream()
+                .filter(evidence -> authoritativeEvidenceIds.contains(evidence.evidenceId()))
+                .map(this::plannerEvidence)
+                .toList());
         return """
                 只返回 incident-recovery-plan-v1 JSON，不得调用工具或执行恢复。
                 输出格式：
                 {"schemaVersion":"incident-recovery-plan-v1","summary":"...","proposalRequests":[{"clientItemKey":"...","identifierType":"REQUEST_ID","identifierValue":"...","actionType":"REPLAY","suggestedReason":"...","evidenceIds":["..."],"conflictIds":[]}]}
                 每个目标必须来自 snapshotRequestIds，并引用能够证明该 requestId 存在可恢复死信的 FACT evidenceId。
+                evidence 数组已经由 Java 限定为权威 Assessment 的引用闭包，不得引用数组之外的标识符。
                 输入：
                 """ + objectMapper.writeValueAsString(input);
+    }
+
+    private Set<String> assessmentEvidenceIds(IncidentAssessment assessment) {
+        Set<String> result = new HashSet<>();
+        assessment.confirmedFacts().forEach(item -> result.addAll(item.evidenceIds()));
+        assessment.rootCauseCandidates().forEach(item -> result.addAll(item.supportingEvidenceIds()));
+        assessment.recommendations().forEach(item -> result.addAll(item.evidenceIds()));
+        assessment.conflicts().forEach(item -> result.addAll(item.evidenceIds()));
+        return Set.copyOf(result);
     }
 
     private Map<String, Object> plannerEvidence(EvidenceRecord evidence) {

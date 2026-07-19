@@ -49,6 +49,11 @@ public class IncidentAssessmentAssembler {
             conflictById.put(conflict.conflictId(), conflict);
         }
         List<String> errors = new ArrayList<>();
+        boolean hasAcceptedFact = evidenceById.values().stream().anyMatch(item ->
+                item.evidenceClass() == EvidenceClass.FACT && item.status() == EvidenceStatus.ACCEPTED);
+        if (hasAcceptedFact && draft.confirmedFacts().isEmpty()) {
+            errors.add("reviewer must confirm at least one accepted FACT when accepted facts are available");
+        }
         List<IncidentAssessment.ConfirmedFact> confirmedFacts = new ArrayList<>();
         for (ReviewerAssessmentDraft.ConfirmedFactDraft fact : draft.confirmedFacts()) {
             if (fact.statement().isBlank() || fact.evidenceIds().isEmpty()) {

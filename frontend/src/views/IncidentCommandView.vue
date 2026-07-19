@@ -22,6 +22,15 @@ interface AgentRunNode {
   evidence: IncidentEvidence[]
 }
 
+type RunStageState = 'completed' | 'failed' | 'active' | 'pending' | 'skipped'
+
+interface RunStageView {
+  key: string
+  label: string
+  detail: string
+  state: RunStageState
+}
+
 const alertBatchId = ref(`BATCH-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-01`)
 const alertType = ref('ORDER_STATE_INCONSISTENCY')
 const symptom = ref('订单、库存扣减与库存释放死信的统计口径出现异常，请完成只读调查并输出证据化结论。')
@@ -154,11 +163,72 @@ function significantEvents(run?: RuntimeRunTrace) {
   return (run?.replayEvents ?? []).filter(event => event.eventType !== 'MODEL_DELTA')
 }
 
+function latestSequence(events: RuntimeReplayEvent[], ...types: string[]) {
+  return events.filter(event => types.includes(event.eventType))
+    .reduce((latest, event) => Math.max(latest, event.sequence), -1)
+}
+
+function failedStage(node: AgentRunNode) {
+  const failed = nodeStatus(node) === 'FAILED'
+  if (!failed) return ''
+  const reason = `${node.trace?.failureReason ?? ''} ${node.task?.lastError ?? ''}`.toUpperCase()
+  if (reason.includes('TOOL') || reason.includes('CAPABILITY') || reason.includes('POLICY')) return 'tool'
+  if (reason.includes('MODEL') || reason.includes('LLM')) return 'model'
+  if (reason.includes('CONTEXT') || reason.includes('PROMPT')) return 'context'
+  return 'result'
+}
+
+function runStages(node: AgentRunNode): RunStageView[] {
+  const events = significantEvents(node.trace)
+  const failure = failedStage(node)
+  const terminalSuccess = ['COMPLETED', 'SUCCEEDED'].includes(nodeStatus(node))
+  const terminalFailure = nodeStatus(node) === 'FAILED'
+  const hasRun = Boolean(node.trace || node.task?.childRunId)
+  const receiveDone = latestSequence(events, 'RUN_STARTED') >= 0 || hasRun
+  const contextStarted = latestSequence(events, 'CONTEXT_PREPARED') >= 0
+  const modelStarted = latestSequence(events, 'MODEL_STARTED')
+  const modelCompleted = latestSequence(events, 'MODEL_COMPLETED')
+  const toolStarted = latestSequence(events, 'TOOL_REQUESTED', 'TOOL_STARTED')
+  const toolCompleted = latestSequence(events, 'TOOL_COMPLETED')
+  const expectsTool = node.runRole.startsWith('SPECIALIST:')
+  const resultCompleted = latestSequence(events, 'RUN_COMPLETED') >= 0 || terminalSuccess
+
+  const state = (key: string, done: boolean, active: boolean, skipped = false): RunStageState => {
+    if (failure === key) return 'failed'
+    if (done) return 'completed'
+    if (active && !terminalFailure) return 'active'
+    return skipped ? 'skipped' : 'pending'
+  }
+
+  return [
+    { key: 'receive', label: '接收任务', detail: receiveDone ? 'Run 已创建并领取任务' : '等待 Orchestrator 调度', state: state('receive', receiveDone, !receiveDone && !terminalFailure) },
+    { key: 'context', label: '组装上下文', detail: contextStarted ? '冻结范围与历史消息已投影' : '尚未读取上下文', state: state('context', contextStarted, receiveDone && !contextStarted && !terminalSuccess) },
+    { key: 'model', label: '模型决策', detail: modelCompleted >= modelStarted && modelCompleted >= 0 ? '至少一轮模型决策完成' : modelStarted >= 0 ? '模型正在推理' : '尚未调用模型', state: state('model', modelCompleted >= modelStarted && modelCompleted >= 0, modelStarted > modelCompleted) },
+    { key: 'tool', label: '工具执行', detail: !expectsTool ? '该角色默认无业务工具权限' : toolCompleted >= toolStarted && toolCompleted >= 0 ? '只读能力已返回结构化结果' : toolStarted >= 0 ? '工具正在执行' : '尚未调用只读能力', state: state('tool', toolCompleted >= toolStarted && toolCompleted >= 0, toolStarted > toolCompleted, !expectsTool) },
+    { key: 'result', label: '提交结果', detail: resultCompleted ? '结果与运行证据已持久化' : terminalFailure ? 'Run 未能提交成功结果' : '等待前序阶段完成', state: state('result', resultCompleted, !terminalFailure && !resultCompleted && (modelCompleted >= 0 || toolCompleted >= 0)) },
+  ]
+}
+
+function stageStateLabel(state: RunStageState) {
+  return { completed: '已完成', failed: '失败', active: '执行中', pending: '未执行', skipped: '不适用' }[state]
+}
+
+function eventVisualState(event: RuntimeReplayEvent, run?: RuntimeRunTrace): RunStageState {
+  const failureWords = ['FAILED', 'ERROR', 'DENIED', 'REJECTED', 'EXHAUSTED']
+  const value = `${event.eventType} ${event.summary}`.toUpperCase()
+  if (failureWords.some(word => value.includes(word))) return 'failed'
+  const events = significantEvents(run)
+  const latest = events.at(-1)
+  if (latest?.sequence === event.sequence && run && !['COMPLETED', 'FAILED', 'CANCELLED'].includes(run.status)) return 'active'
+  return 'completed'
+}
+
 function eventLabel(event: RuntimeReplayEvent) {
   return eventLabels[event.eventType] ?? event.eventType
 }
 
 function currentPhase(node: AgentRunNode) {
+  if (isRecoveredNode(node)) return '重复工具调用已拦截，首次成功事实已提交'
   if (!node.trace) {
     const status = node.task?.status
     if (status === 'PENDING') return '等待调度'
@@ -172,7 +242,12 @@ function currentPhase(node: AgentRunNode) {
   return node.trace.status === 'COMPLETED' ? 'Run 执行完成' : '正在初始化'
 }
 
+function isRecoveredNode(node: AgentRunNode) {
+  return node.task?.outputSummary?.recoveredFromDuplicateToolRequest === true
+}
+
 function nodeStatus(node: AgentRunNode) {
+  if (isRecoveredNode(node)) return 'SUCCEEDED'
   return node.trace?.status ?? node.task?.status ?? 'RUNNING'
 }
 
@@ -432,7 +507,8 @@ onBeforeUnmount(() => {
                       <span>Evidence <strong>{{ node.evidence.length }}</strong></span>
                     </div>
                     <div v-if="node.task?.fencingToken" class="run-lease">lease token #{{ node.task.fencingToken }} · owner {{ node.task.claimedBy || 'released' }}<template v-if="node.task.claimUntil"> · 至 {{ dateTime(node.task.claimUntil) }}</template></div>
-                    <p v-if="node.trace?.failureReason || node.task?.lastError" class="incident-error">{{ node.trace?.failureReason || node.task?.lastError }}</p>
+                    <p v-if="isRecoveredNode(node)" class="run-recovery-note">Runtime 已阻止模型重复调用只读工具；该 Task 没有重试下游，而是使用首次持久化的成功事实完成。</p>
+                    <p v-else-if="node.trace?.failureReason || node.task?.lastError" class="incident-error">{{ node.trace?.failureReason || node.task?.lastError }}</p>
                     <div v-if="node.evidence.length" class="run-evidence-chips"><span v-for="item in node.evidence" :key="item.evidenceId">{{ item.evidenceSubtype }}</span></div>
                     <button class="run-expand-button" type="button" @click="toggleRun(node.key)">{{ runExpanded(node.key) ? '收起执行细节' : '查看这个 Agent 在做什么' }}</button>
                   </div>
@@ -441,8 +517,15 @@ onBeforeUnmount(() => {
                 <div v-if="runExpanded(node.key)" class="run-detail-grid">
                   <section class="run-timeline-panel">
                     <div class="run-detail-title"><strong>执行时间线</strong><small>Runtime 持久化事件，已隐藏高频 Token Delta</small></div>
+                    <div class="stage-legend"><span class="completed">已完成</span><span class="failed">失败</span><span class="active">执行中</span><span class="pending">未执行</span></div>
+                    <div class="run-stage-overview">
+                      <article v-for="stage in runStages(node)" :key="`${node.key}:${stage.key}`" :class="stage.state">
+                        <i>{{ stage.state === 'completed' ? '✓' : stage.state === 'failed' ? '×' : stage.state === 'active' ? '•' : '–' }}</i>
+                        <div><strong>{{ stage.label }}</strong><small>{{ stageStateLabel(stage.state) }}</small><p>{{ stage.detail }}</p></div>
+                      </article>
+                    </div>
                     <ol v-if="significantEvents(node.trace).length" class="run-timeline">
-                      <li v-for="event in significantEvents(node.trace)" :key="`${node.key}:${event.sequence}`" :class="event.eventType.toLowerCase()">
+                      <li v-for="event in significantEvents(node.trace)" :key="`${node.key}:${event.sequence}`" :class="[event.eventType.toLowerCase(), `state-${eventVisualState(event, node.trace)}`]">
                         <i />
                         <div><header><strong>{{ eventLabel(event) }}</strong><time>{{ dateTime(event.occurredAt) }}</time></header><p>{{ compact(event.summary) }}</p><details v-if="Object.keys(event.payload).length"><summary>事件 payload</summary><pre>{{ JSON.stringify(event.payload, null, 2) }}</pre></details></div>
                       </li>
@@ -583,6 +666,7 @@ onBeforeUnmount(() => {
 .start-button { width: 100%; margin-top: 18px; padding: 12px; border: 0; border-radius: 9px; color: #fff; background: #171817; font-weight: 700; cursor: pointer; }
 .start-button:disabled { opacity: .55; cursor: wait; }
 .incident-error { color: var(--red); font-size: 12px; line-height: 1.6; }
+.run-recovery-note { margin: 8px 0 0; color: #0f7a46; font-size: 12px; line-height: 1.6; }
 .incident-console { min-width: 0; padding: 25px; }
 .empty-console { min-height: 570px; display: grid; place-content: center; justify-items: center; color: var(--muted); text-align: center; }
 .empty-console span { width: 58px; height: 58px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: #315a3a; font-size: 24px; }
@@ -639,12 +723,38 @@ onBeforeUnmount(() => {
 .run-detail-title strong, .run-detail-title small { display: block; }
 .run-detail-title strong { font-size: 11px; }
 .run-detail-title small { margin-top: 3px; color: var(--faint); font-size: 8px; }
+.stage-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; color: var(--faint); font: 8px var(--mono); }
+.stage-legend span::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 4px; border-radius: 50%; background: #a8aaa7; }
+.stage-legend .completed::before { background: #2d8a50; }
+.stage-legend .failed::before { background: #c34545; }
+.stage-legend .active::before { background: #d68a24; }
+.run-stage-overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 5px; margin-top: 8px; padding-bottom: 4px; }
+.run-stage-overview article { min-width: 0; padding: 8px; border: 1px solid #dedfdd; border-radius: 7px; background: #f3f3f2; color: #888b88; }
+.run-stage-overview article > i { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; background: #d5d6d4; color: #fff; font: 800 10px var(--mono); }
+.run-stage-overview article strong, .run-stage-overview article small { display: block; }
+.run-stage-overview article strong { margin-top: 6px; font-size: 8px; }
+.run-stage-overview article small { margin-top: 2px; font: 7px var(--mono); }
+.run-stage-overview article p { margin: 5px 0 0; color: inherit; font-size: 7px; line-height: 1.45; }
+.run-stage-overview article.completed { border-color: #b9d8c3; color: #237243; background: #eff8f1; }
+.run-stage-overview article.completed > i { background: #2d8a50; }
+.run-stage-overview article.failed { border-color: #e2b5b5; color: #a33232; background: #fff1f1; }
+.run-stage-overview article.failed > i { background: #c34545; }
+.run-stage-overview article.active { border-color: #e5c28e; color: #9a5f11; background: #fff7e8; box-shadow: inset 0 0 0 1px rgba(214,138,36,.12); }
+.run-stage-overview article.active > i { background: #d68a24; animation: stage-pulse 1.15s ease-in-out infinite; }
+.run-stage-overview article.pending, .run-stage-overview article.skipped { filter: saturate(.3); opacity: .72; }
+@keyframes stage-pulse { 0%, 100% { transform: scale(.85); opacity: .55; } 50% { transform: scale(1); opacity: 1; } }
 .run-timeline { position: relative; display: grid; gap: 0; margin: 11px 0 0; padding: 0; list-style: none; }
 .run-timeline::before { content: ''; position: absolute; left: 5px; top: 7px; bottom: 7px; width: 1px; background: #d8ded8; }
 .run-timeline li { position: relative; display: grid; grid-template-columns: 12px 1fr; gap: 8px; padding-bottom: 12px; }
 .run-timeline li > i { position: relative; z-index: 1; width: 11px; height: 11px; margin-top: 2px; border: 3px solid #f8faf7; border-radius: 50%; background: #789080; }
 .run-timeline li.tool_requested > i, .run-timeline li.tool_started > i, .run-timeline li.tool_completed > i { background: #28724a; }
 .run-timeline li.run_failed > i, .run-timeline li.run_stopped > i { background: #a03d3d; }
+.run-timeline li.state-completed > i { background: #2d8a50; }
+.run-timeline li.state-failed > i { background: #c34545; }
+.run-timeline li.state-failed strong, .run-timeline li.state-failed p { color: #a33232; }
+.run-timeline li.state-active > i { background: #d68a24; animation: stage-pulse 1.15s ease-in-out infinite; }
+.run-timeline li.state-active strong { color: #9a5f11; }
+.run-timeline li.state-pending { opacity: .55; }
 .run-timeline header { display: flex; justify-content: space-between; gap: 8px; }
 .run-timeline header strong { font-size: 9px; }
 .run-timeline time { color: var(--faint); font: 8px var(--mono); }

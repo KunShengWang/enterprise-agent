@@ -4,6 +4,8 @@ import com.agent.platform.config.AgentProperties;
 import com.agent.platform.llm.LlmService;
 import com.agent.platform.prompt.PromptRequest;
 import com.agent.platform.tool.ToolCallResult;
+import com.agent.platform.tool.ToolDefinition;
+import com.agent.platform.tool.ToolRiskLevel;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import reactor.core.publisher.Flux;
@@ -48,11 +50,43 @@ class ToolResultBoundaryTests {
         JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
         List<String> deltas = new ArrayList<>();
 
-        AgentModelTurn turn = gateway.nextTurn(modelRequest(), deltas::add);
+        AgentModelTurn turn = gateway.nextTurn(modelRequestWithTool(), deltas::add);
 
         assertEquals(1, turn.toolCalls().size());
         assertEquals("ticket_status", turn.toolCalls().get(0).toolName());
         assertTrue(deltas.isEmpty());
+    }
+
+    @Test
+    void domainJsonIsFinalAnswerWhenProfileHasNoCapabilities() {
+        LlmService llmService = mock(LlmService.class);
+        String delegationPlan = "{\"schemaVersion\":\"delegation-plan-v1\",\"tasks\":[]}";
+        when(llmService.stream(any())).thenReturn(Flux.just(
+                "{\"schemaVersion\":\"delegation-plan-v1\",",
+                "\"tasks\":[]}"));
+        JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
+        List<String> deltas = new ArrayList<>();
+
+        AgentModelTurn turn = gateway.nextTurn(modelRequest(), deltas::add);
+
+        assertEquals(delegationPlan, turn.assistantText());
+        assertTrue(turn.toolCalls().isEmpty());
+        assertEquals("final_answer_no_tools", turn.finishReason());
+        assertEquals(delegationPlan, String.join("", deltas));
+    }
+
+    @Test
+    void toolCallEnvelopeCannotCreateToolCallWhenProfileHasNoCapabilities() {
+        LlmService llmService = mock(LlmService.class);
+        String envelope = "{\"assistantText\":\"\",\"toolCalls\":[{\"id\":\"call-1\",\"name\":\"invented\",\"arguments\":{}}]}";
+        when(llmService.complete(any())).thenReturn(envelope);
+        JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
+
+        AgentModelTurn turn = gateway.nextTurn(modelRequest());
+
+        assertTrue(turn.toolCalls().isEmpty());
+        assertEquals(envelope, turn.assistantText());
+        assertEquals("final_answer_no_tools", turn.finishReason());
     }
 
     @Test
@@ -110,6 +144,14 @@ class ToolResultBoundaryTests {
     private AgentModelRequest modelRequest() {
         return new AgentModelRequest(
                 "run-1", "session-1", "system", List.of(), List.of(), Map.of()
+        );
+    }
+
+    private AgentModelRequest modelRequestWithTool() {
+        ToolDefinition tool = new ToolDefinition(
+                "ticket_status", "read ticket", "{\"type\":\"object\"}", ToolRiskLevel.LOW, Map.of());
+        return new AgentModelRequest(
+                "run-1", "session-1", "system", List.of(), List.of(tool), Map.of()
         );
     }
 }

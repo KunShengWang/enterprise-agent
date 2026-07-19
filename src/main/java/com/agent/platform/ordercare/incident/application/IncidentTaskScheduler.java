@@ -19,6 +19,7 @@ import com.agent.platform.runtime.AgentEventType;
 import com.agent.platform.runtime.AgentFollowUpInput;
 import com.agent.platform.runtime.AgentRunState;
 import com.agent.platform.runtime.AgentRuntimeResult;
+import com.agent.platform.runtime.AgentStopReason;
 import com.agent.platform.runtime.ToolExecutionStore;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -251,7 +252,18 @@ public class IncidentTaskScheduler {
         }
         AgentTaskRecord owned = boundTask.get();
         if (result.state() != AgentRunState.WAITING_INPUT) {
-            return retryOrFail(owned, snapshot, "specialist stopped in state " + result.state());
+            IncidentTaskExecution recovered = recoverPersistedFactsAfterDuplicateToolRequest(
+                    owned, result);
+            if (recovered != null) {
+                return recovered;
+            }
+            String stoppedReason =
+                    "specialist stopped in state " + result.state() + ": " + result.stopReason();
+            if (isRetryableStopReason(result.stopReason())) {
+                return retryOrFail(owned, snapshot, stoppedReason);
+            }
+            closeWaitingCheckpoint(owned);
+            return failed(owned, stoppedReason);
         }
         List<com.agent.platform.runtime.ToolExecutionRecord> toolExecutions =
                 toolExecutionStore.findByRun(result.runId());
@@ -267,6 +279,52 @@ public class IncidentTaskScheduler {
                 candidates, leaseOwner(owned), owned.fencingToken()));
         return new IncidentTaskExecution(
                 committed.task(), committed.evidence(), evidenceProjector.projectGaps(toolExecutions), true);
+    }
+
+    /**
+     * Specialist profiles expose exactly one composite read-only capability. If the model violates the
+     * stop contract and requests it again, Runtime must still keep the failed Run for an honest trace.
+     * The first successful ToolExecution is already durable, however, so retrying the whole Agent would
+     * duplicate an external read and create a misleading second child Run. Commit those durable facts as
+     * the task result instead. This recovery is intentionally limited to TOOL_BUDGET_EXHAUSTED and never
+     * turns a failed write/tool execution into success.
+     */
+    IncidentTaskExecution recoverPersistedFactsAfterDuplicateToolRequest(
+            AgentTaskRecord task,
+            AgentRuntimeResult result) {
+        if (result.stopReason() != AgentStopReason.TOOL_BUDGET_EXHAUSTED) {
+            return null;
+        }
+        List<com.agent.platform.runtime.ToolExecutionRecord> toolExecutions =
+                toolExecutionStore.findByRun(result.runId());
+        List<EvidenceCandidate> candidates = evidenceProjector.project(toolExecutions);
+        if (candidates.isEmpty()) {
+            return null;
+        }
+
+        log.warn("incident specialist requested its single read-only capability more than once; "
+                        + "committing already persisted facts without retry: incidentId={}, taskId={}, runId={}, evidenceCount={}",
+                task.incidentId(), task.taskId(), result.runId(), candidates.size());
+        TaskResultCommitResult committed = resultCommitter.commit(new TaskResultSubmission(
+                task.incidentId(), task.taskId(), result.runId(), task.version(),
+                "specialist-result-recovered:" + task.taskId() + ":" + task.attempt(),
+                AgentTaskStatus.SUCCEEDED,
+                Map.of(
+                        "answer", result.answer(),
+                        "evidenceCount", candidates.size(),
+                        "recoveredFromDuplicateToolRequest", true,
+                        "runtimeStopReason", result.stopReason().name(),
+                        "recoveryReason", "successful read-only facts were persisted before the duplicate request"),
+                candidates, leaseOwner(task), task.fencingToken()));
+        return new IncidentTaskExecution(
+                committed.task(), committed.evidence(), evidenceProjector.projectGaps(toolExecutions), true);
+    }
+
+    static boolean isRetryableStopReason(AgentStopReason stopReason) {
+        return stopReason == AgentStopReason.MODEL_ERROR
+                || stopReason == AgentStopReason.TOOL_ERROR
+                || stopReason == AgentStopReason.TIMEOUT
+                || stopReason == AgentStopReason.INTERNAL_ERROR;
     }
 
     private IncidentTaskExecution retryOrFail(AgentTaskRecord task,
@@ -356,19 +414,19 @@ public class IncidentTaskScheduler {
         }, interval, interval, TimeUnit.SECONDS);
     }
 
-    private String specialistPrompt(AgentTaskRecord task,
-                                    IncidentSnapshot snapshot,
-                                    IncidentAgentRole role) {
-        if (role == IncidentAgentRole.SOP_ANALYST) {
-            return "查询与以下事故相关的版本化故障处置和升级 SOP。只返回只读建议。事故症状："
-                    + task.objective() + "。scopeHash=" + snapshot.scopeHash();
-        }
+    String specialistPrompt(AgentTaskRecord task,
+                            IncidentSnapshot snapshot,
+                            IncidentAgentRole role) {
+        // The question is checked by the input guardrail as untrusted task data. Trusted execution rules
+        // (which capability to call, exact-once use and output format) belong to AgentExecutionProfile.systemPrompt.
+        // Mixing them here makes a semantic injection classifier correctly suspicious of the text shape.
         return """
-                调查任务：%s
-                角色：%s
-                必须调用唯一允许的只读能力，参数只能是：{"snapshotId":"%s"}。
-                不得提交 requestIds、queueNames、URL 或写操作。完成后返回 specialist-report-v1 JSON。
-                """.formatted(task.objective(), role, snapshot.snapshotId()).trim();
+                事故调查任务数据
+                objective: %s
+                role: %s
+                snapshotId: %s
+                scopeHash: %s
+                """.formatted(task.objective(), role, snapshot.snapshotId(), snapshot.scopeHash()).trim();
     }
 
     @PreDestroy

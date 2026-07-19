@@ -36,14 +36,15 @@ public class JsonAgentModelGateway implements AgentModelGateway {
     public AgentModelTurn nextTurn(AgentModelRequest request) {
         String raw = llmService.complete(modelPrompt(request));
         LlmUsage usage = llmService.lastUsage().orElse(new LlmUsage(0, 0, 0, 0, 0, "", "unavailable"));
-        return toModelTurn(raw, usage);
+        return toModelTurn(raw, usage, !request.tools().isEmpty());
     }
 
     @Override
     public AgentModelTurn nextTurn(AgentModelRequest request, AgentModelDeltaListener deltaListener) {
         AgentModelDeltaListener listener = deltaListener == null ? AgentModelDeltaListener.NOOP : deltaListener;
         StringBuilder raw = new StringBuilder();
-        StreamingResponseRouter responseRouter = new StreamingResponseRouter(listener);
+        boolean toolCallsAllowed = !request.tools().isEmpty();
+        StreamingResponseRouter responseRouter = new StreamingResponseRouter(listener, toolCallsAllowed);
         AtomicReference<LlmUsage> streamedUsage = new AtomicReference<>(
                 new LlmUsage(0, 0, 0, 0, 0, "", "unavailable")
         );
@@ -60,7 +61,7 @@ public class JsonAgentModelGateway implements AgentModelGateway {
                 })
                 .blockLast();
         LlmUsage usage = streamedUsage.get();
-        AgentModelTurn turn = toModelTurn(raw.toString(), usage);
+        AgentModelTurn turn = toModelTurn(raw.toString(), usage, toolCallsAllowed);
         responseRouter.complete(turn);
         return turn;
     }
@@ -74,13 +75,19 @@ public class JsonAgentModelGateway implements AgentModelGateway {
         );
     }
 
-    private AgentModelTurn toModelTurn(String raw, LlmUsage usage) {
+    private AgentModelTurn toModelTurn(String raw, LlmUsage usage, boolean toolCallsAllowed) {
         if ("fallback".equalsIgnoreCase(usage.source())) {
             throw new LlmCallException(
                     "MODEL_FALLBACK",
                     "模型服务不可用，Agent Runtime 不会把降级提示伪装成成功回答。",
                     null
             );
+        }
+        // Commander, Reviewer and Planner deliberately have no capabilities but return domain JSON.
+        // In that mode every provider response is final content; interpreting a JSON object as the
+        // ToolCall envelope would turn valid structured output into a fake tool invocation.
+        if (!toolCallsAllowed) {
+            return new AgentModelTurn(raw, List.of(), raw, usage, "final_answer_no_tools");
         }
         if (!looksLikeStructuredToolCall(raw)) {
             return new AgentModelTurn(raw, List.of(), raw, usage, "final_answer");
@@ -138,6 +145,13 @@ public class JsonAgentModelGateway implements AgentModelGateway {
     }
 
     private String buildSystemPrompt(AgentModelRequest request) {
+        if (request.tools().isEmpty()) {
+            return (request.systemPrompt() + "\n\n" + """
+                    你正在统一 Agent Runtime 的无工具输出模式中运行。
+                    当前没有任何可用能力，禁止生成 ToolCall、toolCalls 字段或工具调用协议。
+                    直接返回最终内容。业务 Schema 要求 JSON 时，可以直接返回该业务 JSON；它属于最终内容，不是工具调用。
+                    """).strip();
+        }
         return (request.systemPrompt() + "\n\n" + """
                 你正在统一 Agent Runtime 中运行。每一轮必须在“最终正文”和“ToolCall JSON”之间二选一。
                 如果已经可以回答，直接输出最终回答正文，不要使用 JSON 包装。
@@ -149,7 +163,7 @@ public class JsonAgentModelGateway implements AgentModelGateway {
                 3. 不要假设工具已经执行；只有 TOOL_RESULT 才代表执行结果。
                 4. 工具失败或被拒绝后，应根据结果重新规划或给出安全回答。
                 5. 有副作用的能力是否执行由 Runtime 权限策略决定，不能在文本中绕过审批。
-                6. 只有工具调用可以输出 JSON；最终回答必须直接输出正文，以便 Runtime 安全地增量转发。
+                6. ToolCall 协议必须使用上述固定 JSON 包装；普通业务 JSON 不得伪装成 ToolCall。
                 """).strip();
     }
 
@@ -160,14 +174,21 @@ public class JsonAgentModelGateway implements AgentModelGateway {
     private static final class StreamingResponseRouter {
 
         private final AgentModelDeltaListener listener;
+        private final boolean toolCallsAllowed;
         private final StringBuilder undecided = new StringBuilder();
         private ResponseKind kind = ResponseKind.UNDECIDED;
 
-        private StreamingResponseRouter(AgentModelDeltaListener listener) {
+        private StreamingResponseRouter(AgentModelDeltaListener listener, boolean toolCallsAllowed) {
             this.listener = listener;
+            this.toolCallsAllowed = toolCallsAllowed;
         }
 
         private void accept(String delta) {
+            if (!toolCallsAllowed) {
+                kind = ResponseKind.FINAL_TEXT;
+                listener.onDelta(delta);
+                return;
+            }
             // ① 已经确定是普通文本 → 直接透传
             if (kind == ResponseKind.FINAL_TEXT) {
                 listener.onDelta(delta);// → modelDeltaPublisher → SSE

@@ -63,6 +63,7 @@ public class IncidentInvestigationOrchestrator {
     private final EvidenceConsistencyChecker consistencyChecker;
     private final EvidenceTrustAssessor trustAssessor;
     private final IncidentAssessmentAssembler assessmentAssembler;
+    private final ReviewerAssessmentDraftParser reviewerDraftParser;
     private final AgentRuntime agentRuntime;
     private final AgentContinuationRuntime continuationRuntime;
     private final ObjectMapper objectMapper;
@@ -79,6 +80,7 @@ public class IncidentInvestigationOrchestrator {
                                              EvidenceConsistencyChecker consistencyChecker,
                                              EvidenceTrustAssessor trustAssessor,
                                              IncidentAssessmentAssembler assessmentAssembler,
+                                             ReviewerAssessmentDraftParser reviewerDraftParser,
                                              AgentRuntime agentRuntime,
                                              AgentContinuationRuntime continuationRuntime,
                                              ObjectMapper objectMapper) {
@@ -94,6 +96,7 @@ public class IncidentInvestigationOrchestrator {
         this.consistencyChecker = consistencyChecker;
         this.trustAssessor = trustAssessor;
         this.assessmentAssembler = assessmentAssembler;
+        this.reviewerDraftParser = reviewerDraftParser;
         this.agentRuntime = agentRuntime;
         this.continuationRuntime = continuationRuntime;
         this.objectMapper = objectMapper;
@@ -328,7 +331,7 @@ public class IncidentInvestigationOrchestrator {
                         Map.of("incidentId", incident.incidentId(), "parentIncidentId", incident.incidentId(),
                                 "runRole", "REVIEWER"), SCENARIO_ID),
                 profileFactory.reviewer(), event -> { });
-        ReviewerAssessmentDraft draft = parseReviewerDraft(result.answer());
+        ReviewerAssessmentDraft draft = reviewerDraftParser.parse(result.answer());
         return new ReviewResult(result.runId(), draft);
     }
 
@@ -389,7 +392,7 @@ public class IncidentInvestigationOrchestrator {
                         "follow-up-task-v1", "REVIEW_UPDATED_EVIDENCE", task.taskId(), conflict.conflictId(),
                         request.relatedEvidenceIds(), reviewerFollowUp, 0, 1_500, Map.of()),
                 event -> { });
-        ReviewerAssessmentDraft finalDraft = parseReviewerDraft(finalReview.answer());
+        ReviewerAssessmentDraft finalDraft = reviewerDraftParser.parse(finalReview.answer());
         incident = current(incident.incidentId());
         incident = transition(incident, IncidentStatus.REVIEWING, "incident-reviewing-after-clarification");
         return new ClarificationResult(
@@ -483,20 +486,6 @@ public class IncidentInvestigationOrchestrator {
                 conflicts.stream().map(EvidenceConflict::conflictId).toList());
     }
 
-    private ReviewerAssessmentDraft parseReviewerDraft(String answer) {
-        try {
-            ReviewerAssessmentDraft draft = objectMapper.readValue(json(answer), ReviewerAssessmentDraft.class);
-            return "reviewer-assessment-v1".equals(draft.schemaVersion())
-                    ? draft
-                    : new ReviewerAssessmentDraft("reviewer-assessment-v1", List.of(), List.of(),
-                    List.of(), null, List.of());
-        }
-        catch (RuntimeException exception) {
-            return new ReviewerAssessmentDraft(
-                    "reviewer-assessment-v1", List.of(), List.of(), List.of(), null, List.of());
-        }
-    }
-
     private String reviewerPrompt(IncidentSnapshot snapshot,
                                   List<EvidenceRecord> evidence,
                                   List<EvidenceConflict> conflicts,
@@ -509,7 +498,14 @@ public class IncidentInvestigationOrchestrator {
         payload.put("evidence", evidence);
         payload.put("javaConflicts", conflicts);
         payload.put("evidenceGaps", gaps);
-        return "只基于下列结构化数据返回 reviewer-assessment-v1 JSON。confirmedFact、rootCause、recommendation 必须引用有效 evidenceId 或 conflictId；不得遗漏 OPEN HIGH conflict；最多提出一次 clarificationRequest。\n"
+        return """
+                只基于下列结构化数据返回 reviewer-assessment-v1 JSON，不要添加 Markdown 代码块，不要增加 schema 名称外层包装。
+                必须严格使用以下顶层结构，confirmedFacts、rootCauseCandidates、recommendations 始终是数组，禁止使用 confirmedFact、rootCause、recommendation 单数字段：
+                {"schemaVersion":"reviewer-assessment-v1","confirmedFacts":[{"evidenceSubtype":"DEAD_LETTER_SET","statement":"...","evidenceIds":["..."]}],"rootCauseCandidates":[{"hypothesis":"...","supportingEvidenceIds":["..."],"relatedConflictIds":[]}],"recommendations":[{"action":"建议值班人员核对恢复前置条件并进入受控 Proposal 流程","evidenceIds":["..."],"conflictIds":[]}],"clarificationRequest":null,"acknowledgedConflictIds":[]}
+                每个 confirmedFact 只能引用与 evidenceSubtype 一致的 ACCEPTED FACT；rootCauseCandidate 和 recommendation 必须引用有效 evidenceId 或 conflictId。
+                如果输入存在 ACCEPTED FACT，confirmedFacts 不得为空；不得遗漏 OPEN HIGH conflict；最多提出一次 clarificationRequest。
+                输入：
+                """
                 + objectMapper.writeValueAsString(payload);
     }
 

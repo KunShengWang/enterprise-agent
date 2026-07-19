@@ -31,8 +31,10 @@ import com.agent.platform.runtime.AgentRuntime;
 import com.agent.platform.runtime.AgentRuntimeResult;
 import com.agent.platform.runtime.AgentRunState;
 import com.agent.platform.runtime.AgentStopReason;
+import com.agent.platform.agent.AgentRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import tools.jackson.databind.ObjectMapper;
 
@@ -137,6 +139,21 @@ class IncidentRecoveryPlannerTests {
         assertEquals(1, planStore.values.size());
     }
 
+    @Test
+    void plannerReceivesOnlyEvidenceReferencedByAuthoritativeAssessment() {
+        when(agentRuntime.run(any(), any(), any())).thenReturn(runtimeResult("""
+                {"schemaVersion":"incident-recovery-plan-v1","summary":"bad","proposalRequests":[]}
+                """));
+
+        var started = planner.initialize("inc-1", new RecoveryPlanStartRequest("request-filter", "plan recovery"));
+        planner.plan(started.planId(), "plan recovery");
+
+        ArgumentCaptor<AgentRequest> request = ArgumentCaptor.forClass(AgentRequest.class);
+        verify(agentRuntime).run(request.capture(), any(), any());
+        assertTrue(request.getValue().question().contains("ev-dlq"));
+        assertFalse(request.getValue().question().contains("ev-unreferenced"));
+    }
+
     private AgentRuntimeResult runtimeResult(String answer) {
         return new AgentRuntimeResult(
                 "run-planner", "session", AgentRunState.COMPLETED, AgentStopReason.COMPLETED,
@@ -169,7 +186,12 @@ class IncidentRecoveryPlannerTests {
                 "floworder", "deadletters", Map.of(), now,
                 Map.of("scopeHash", "scope-1", "truncated", false, "requestIds", List.of("REQ-1")),
                 "hash", EvidenceStatus.ACCEPTED, "", "idem", now);
-        return new IncidentAggregate(incident, List.of(), List.of(evidence), List.of());
+        EvidenceRecord unreferenced = new EvidenceRecord(
+                "ev-unreferenced", "inc-1", "task", "run", EvidenceClass.FACT,
+                EvidenceSubtype.ORDER_STATUS_SET, "floworder", "orders", Map.of(), now,
+                Map.of("scopeHash", "scope-1", "requestIds", List.of("REQ-1")),
+                "hash-2", EvidenceStatus.ACCEPTED, "", "idem-2", now);
+        return new IncidentAggregate(incident, List.of(), List.of(evidence, unreferenced), List.of());
     }
 
     private OrderCareRecoveryProposal proposal() {

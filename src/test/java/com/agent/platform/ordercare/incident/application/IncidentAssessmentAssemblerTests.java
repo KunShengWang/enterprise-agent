@@ -56,6 +56,18 @@ class IncidentAssessmentAssemblerTests {
         assertEquals("OPEN", assessment.conflicts().get(0).status());
     }
 
+    @Test
+    void rejectsEmptyAssessmentWhenAcceptedFactsExist() {
+        ReviewerAssessmentDraft empty = new ReviewerAssessmentDraft(
+                "reviewer-assessment-v1", List.of(), List.of(), List.of(), null, List.of());
+
+        IncidentAssessmentValidationException error = assertThrows(
+                IncidentAssessmentValidationException.class,
+                () -> assembler.assemble(snapshot(), List.of(evidence()), List.of(), List.of(), empty));
+
+        assertEquals(true, error.getMessage().contains("at least one accepted FACT"));
+    }
+
     private IncidentSnapshot snapshot() {
         Instant now = Instant.now();
         return new IncidentSnapshot(
