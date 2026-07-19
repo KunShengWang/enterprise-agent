@@ -1,0 +1,16 @@
+package com.agent.platform.workbench.model;
+
+/** M1 product-control events. Cross-source projection remains an M2 concern. */
+public enum WorkEventType {
+    WORK_ITEM_CREATED,
+    ROUTING_STARTED,
+    ROUTING_DECIDED,
+    ROUTING_FAILED,
+    CLARIFICATION_REQUIRED,
+    ROUTE_CONFIRMATION_REQUIRED,
+    DISPATCH_READY,
+    DISPATCH_STARTED,
+    DISPATCH_RECONCILED,
+    EXECUTION_DISPATCHED,
+    WORK_ITEM_ABANDONED
+}
