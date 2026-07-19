@@ -73,6 +73,8 @@ enterprise-agent:
       max-request-ids: ${ORDERCARE_INCIDENT_MAX_REQUEST_IDS:100}
       deadline-seconds: ${ORDERCARE_INCIDENT_DEADLINE_SECONDS:120}
       max-parallel-specialists: ${ORDERCARE_INCIDENT_MAX_PARALLEL_SPECIALISTS:3}
+      recovery-planner-enabled: ${ORDERCARE_INCIDENT_RECOVERY_PLANNER_ENABLED:false}
+      max-recovery-plan-items: ${ORDERCARE_INCIDENT_MAX_RECOVERY_PLAN_ITEMS:5}
       tenant-scope: ${ORDERCARE_INCIDENT_TENANT_SCOPE:local-demo-tenant}
       allowed-queues:
         - floworder.order.create.dlq

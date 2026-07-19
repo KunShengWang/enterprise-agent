@@ -12,6 +12,8 @@ public class IncidentCommandProperties {
     private int maxRequestIds = 100;
     private int deadlineSeconds = 120;
     private int maxParallelSpecialists = 3;
+    private boolean recoveryPlannerEnabled;
+    private int maxRecoveryPlanItems = 5;
     private String tenantScope = "local-demo-tenant";
     private Set<String> allowedQueues = new LinkedHashSet<>(Set.of(
             "floworder.order.create.dlq",
@@ -29,6 +31,14 @@ public class IncidentCommandProperties {
     public int getMaxParallelSpecialists() { return maxParallelSpecialists; }
     public void setMaxParallelSpecialists(int maxParallelSpecialists) {
         this.maxParallelSpecialists = Math.max(1, Math.min(3, maxParallelSpecialists));
+    }
+    public boolean isRecoveryPlannerEnabled() { return recoveryPlannerEnabled; }
+    public void setRecoveryPlannerEnabled(boolean recoveryPlannerEnabled) {
+        this.recoveryPlannerEnabled = recoveryPlannerEnabled;
+    }
+    public int getMaxRecoveryPlanItems() { return maxRecoveryPlanItems; }
+    public void setMaxRecoveryPlanItems(int maxRecoveryPlanItems) {
+        this.maxRecoveryPlanItems = Math.max(1, Math.min(10, maxRecoveryPlanItems));
     }
     public String getTenantScope() { return tenantScope; }
     public void setTenantScope(String tenantScope) {

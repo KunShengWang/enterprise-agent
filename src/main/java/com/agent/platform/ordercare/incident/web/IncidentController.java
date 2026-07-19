@@ -13,6 +13,13 @@ import com.agent.platform.ordercare.incident.application.IncidentTraceProjector;
 import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
 import com.agent.platform.ordercare.incident.persistence.IncidentStore;
 import com.agent.platform.ordercare.incident.persistence.TaskEventStore;
+import com.agent.platform.ordercare.incident.recovery.application.IncidentRecoveryExecutionService;
+import com.agent.platform.ordercare.incident.recovery.application.IncidentRecoveryPlanLauncher;
+import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlanRecord;
+import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanDecisionRequest;
+import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStartRequest;
+import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStartResponse;
+import com.agent.platform.ordercare.incident.recovery.persistence.IncidentRecoveryPlanStore;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,17 +45,76 @@ public class IncidentController {
     private final IncidentInvestigationLauncher launcher;
     private final IncidentTraceProjector traceProjector;
     private final IncidentCommandProperties properties;
+    private final IncidentRecoveryPlanStore recoveryPlanStore;
+    private final IncidentRecoveryPlanLauncher recoveryPlanLauncher;
+    private final IncidentRecoveryExecutionService recoveryExecutionService;
 
     public IncidentController(IncidentStore incidentStore,
                               TaskEventStore taskEventStore,
                               IncidentInvestigationLauncher launcher,
                               IncidentTraceProjector traceProjector,
-                              IncidentCommandProperties properties) {
+                              IncidentCommandProperties properties,
+                              IncidentRecoveryPlanStore recoveryPlanStore,
+                              IncidentRecoveryPlanLauncher recoveryPlanLauncher,
+                              IncidentRecoveryExecutionService recoveryExecutionService) {
         this.incidentStore = incidentStore;
         this.taskEventStore = taskEventStore;
         this.launcher = launcher;
         this.traceProjector = traceProjector;
         this.properties = properties;
+        this.recoveryPlanStore = recoveryPlanStore;
+        this.recoveryPlanLauncher = recoveryPlanLauncher;
+        this.recoveryExecutionService = recoveryExecutionService;
+    }
+
+    @PostMapping("/{incidentId}/recovery-plans")
+    public Mono<ApiResponse<RecoveryPlanStartResponse>> createRecoveryPlan(
+            @PathVariable String incidentId,
+            @RequestBody RecoveryPlanStartRequest request) {
+        return Mono.fromSupplier(() -> {
+                    if (!properties.isRecoveryPlannerEnabled()) {
+                        return ApiResponse.<RecoveryPlanStartResponse>failure(
+                                ErrorCode.BAD_REQUEST,
+                                "Incident Recovery Planner is disabled; set ORDERCARE_INCIDENT_RECOVERY_PLANNER_ENABLED=true");
+                    }
+                    return ApiResponse.success(recoveryPlanLauncher.start(incidentId, request));
+                })
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @GetMapping("/{incidentId}/recovery-plans")
+    public Mono<ApiResponse<List<IncidentRecoveryPlanRecord>>> recoveryPlans(
+            @PathVariable String incidentId) {
+        return Mono.fromSupplier(() -> ApiResponse.success(recoveryPlanStore.listByIncident(incidentId)))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @GetMapping("/{incidentId}/recovery-plans/{planId}")
+    public Mono<ApiResponse<IncidentRecoveryPlanRecord>> recoveryPlan(
+            @PathVariable String incidentId,
+            @PathVariable String planId) {
+        return Mono.fromSupplier(() -> recoveryPlanStore.find(planId)
+                        .filter(plan -> incidentId.equals(plan.incidentId()))
+                        .map(ApiResponse::success)
+                        .orElseGet(() -> ApiResponse.failure(
+                                ErrorCode.NOT_FOUND, "recovery plan not found: " + planId)))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @PostMapping("/{incidentId}/recovery-plans/{planId}/items/{itemId}/decision")
+    public Mono<ApiResponse<IncidentRecoveryPlanRecord>> decideRecoveryPlanItem(
+            @PathVariable String incidentId,
+            @PathVariable String planId,
+            @PathVariable String itemId,
+            @RequestBody RecoveryPlanDecisionRequest request) {
+        return Mono.fromSupplier(() -> {
+                    IncidentRecoveryPlanRecord plan = recoveryPlanStore.find(planId)
+                            .filter(current -> incidentId.equals(current.incidentId()))
+                            .orElseThrow(() -> new IllegalArgumentException("recovery plan not found for incident"));
+                    return ApiResponse.success(recoveryExecutionService.decideAndExecute(
+                            plan.planId(), itemId, request));
+                })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     @PostMapping("/investigate")

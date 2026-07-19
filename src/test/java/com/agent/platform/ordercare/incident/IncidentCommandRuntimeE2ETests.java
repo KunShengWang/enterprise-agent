@@ -7,6 +7,20 @@ import com.agent.platform.memory.MemoryService;
 import com.agent.platform.memory.UserProfile;
 import com.agent.platform.ordercare.incident.application.IncidentInvestigationOrchestrator;
 import com.agent.platform.ordercare.incident.application.IncidentTraceProjector;
+import com.agent.platform.ordercare.incident.recovery.application.IncidentRecoveryExecutionService;
+import com.agent.platform.ordercare.incident.recovery.application.IncidentRecoveryPlanner;
+import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanDecisionRequest;
+import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanItemStatus;
+import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanOutcome;
+import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStartRequest;
+import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStatus;
+import com.agent.platform.ordercare.client.FlowOrderClient;
+import com.agent.platform.ordercare.model.OrderCareActionReconcileCommand;
+import com.agent.platform.ordercare.model.OrderCareCaseSnapshot;
+import com.agent.platform.ordercare.model.OrderCareProposalCreateCommand;
+import com.agent.platform.ordercare.model.OrderCareProposalExecuteCommand;
+import com.agent.platform.ordercare.model.OrderCareRecoveryAction;
+import com.agent.platform.ordercare.model.OrderCareRecoveryProposal;
 import com.agent.platform.ordercare.incident.model.EvidenceConflictType;
 import com.agent.platform.ordercare.incident.model.EvidenceSubtype;
 import com.agent.platform.ordercare.incident.model.IncidentInvestigationRequest;
@@ -49,6 +63,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -61,6 +79,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest(properties = {
         "enterprise-agent.mock-mode=true",
         "enterprise-agent.ordercare.incident-command.enabled=true",
+        "enterprise-agent.ordercare.incident-command.recovery-planner-enabled=true",
         "enterprise-agent.ordercare.inspect-max-attempts=1",
         "enterprise-agent.ordercare.incident.rabbitmq-management.max-attempts=1",
         "enterprise-agent.ordercare.incident.rabbitmq-management.connect-timeout-millis=100",
@@ -76,6 +95,12 @@ class IncidentCommandRuntimeE2ETests {
     private static final AtomicReference<Scenario> SCENARIO = new AtomicReference<>(Scenario.HAPPY);
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final List<String> INCIDENT_IDS = new ArrayList<>();
+    private static final List<String> RECOVERY_PLAN_IDS = new ArrayList<>();
+    private static final List<String> APPROVAL_IDS = new ArrayList<>();
+    private static final List<String> PROPOSAL_IDS = new ArrayList<>();
+    private static final AtomicReference<String> PLANNER_REQUEST_ID = new AtomicReference<>("");
+    private static final AtomicReference<String> PLANNER_EVIDENCE_ID = new AtomicReference<>("");
+    private static final AtomicInteger RECOVERY_EXECUTE_CALLS = new AtomicInteger();
     private static HttpServer dependencyStub;
 
     @Autowired
@@ -83,6 +108,12 @@ class IncidentCommandRuntimeE2ETests {
 
     @Autowired
     private IncidentTraceProjector traceProjector;
+
+    @Autowired
+    private IncidentRecoveryPlanner recoveryPlanner;
+
+    @Autowired
+    private IncidentRecoveryExecutionService recoveryExecutionService;
 
     @Autowired
     private AgentStorageProperties storageProperties;
@@ -102,14 +133,25 @@ class IncidentCommandRuntimeE2ETests {
                 storageProperties.getDatasource().getUsername(),
                 storageProperties.getDatasource().getPassword())) {
             for (String incidentId : List.copyOf(INCIDENT_IDS)) {
+                delete(connection, "DELETE FROM agent_incident_recovery_plan WHERE incident_id = ?", incidentId);
                 delete(connection, "DELETE FROM agent_task_event WHERE incident_id = ?", incidentId);
                 delete(connection, "DELETE FROM agent_evidence WHERE incident_id = ?", incidentId);
                 delete(connection, "DELETE FROM agent_task WHERE incident_id = ?", incidentId);
                 deleteRuntime(connection, incidentId);
                 delete(connection, "DELETE FROM agent_incident WHERE incident_id = ?", incidentId);
             }
+            for (String approvalId : List.copyOf(APPROVAL_IDS)) {
+                deleteStoreRecord(connection, "approval", approvalId);
+            }
+            for (String proposalId : List.copyOf(PROPOSAL_IDS)) {
+                deleteStoreRecord(connection, "ordercare-proposal-binding", proposalId);
+            }
         }
         INCIDENT_IDS.clear();
+        RECOVERY_PLAN_IDS.clear();
+        APPROVAL_IDS.clear();
+        PROPOSAL_IDS.clear();
+        RECOVERY_EXECUTE_CALLS.set(0);
     }
 
     @AfterAll
@@ -160,6 +202,42 @@ class IncidentCommandRuntimeE2ETests {
                 item.evidenceSubtype() == EvidenceSubtype.QUEUE_RUNTIME_STATUS), () -> diagnostic(result));
         assertTrue(result.assessment().evidenceGaps().stream().anyMatch(gap ->
                 "BROKER_TIMEOUT".equals(gap.code())), () -> diagnostic(result));
+    }
+
+    @Test
+    void assessedIncidentPlansApprovesExecutesAndConvergesOneProposal() {
+        List<String> requestIds = ids("E2E-RECOVERY-", 1);
+        IncidentInvestigationResult result = investigate(Scenario.HAPPY, requestIds);
+        String deadLetterEvidenceId = result.aggregate().evidence().stream()
+                .filter(item -> item.evidenceSubtype() == EvidenceSubtype.DEAD_LETTER_SET)
+                .findFirst().orElseThrow().evidenceId();
+        PLANNER_REQUEST_ID.set(requestIds.get(0));
+        PLANNER_EVIDENCE_ID.set(deadLetterEvidenceId);
+
+        var started = recoveryPlanner.initialize(
+                result.incident().incidentId(),
+                new RecoveryPlanStartRequest("phase2-e2e-" + UUID.randomUUID(), "create controlled proposal"));
+        var planned = recoveryPlanner.plan(started.planId(), "create controlled proposal");
+        RECOVERY_PLAN_IDS.add(planned.planId());
+        assertFalse(planned.items().isEmpty(), () -> "recovery plan produced no items: status="
+                + planned.status() + ", errors=" + planned.validationErrors() + ", draft=" + planned.draft());
+        APPROVAL_IDS.add(planned.items().get(0).approvalId());
+        PROPOSAL_IDS.add(planned.items().get(0).proposal().proposalId());
+
+        assertEquals(RecoveryPlanStatus.WAITING_APPROVAL, planned.status());
+        assertEquals(RecoveryPlanItemStatus.WAITING_APPROVAL, planned.items().get(0).status());
+
+        var completed = recoveryExecutionService.decideAndExecute(
+                planned.planId(), planned.items().get(0).itemId(),
+                new RecoveryPlanDecisionRequest(true, "phase2-e2e-reviewer", "immutable preview checked"));
+
+        assertEquals(RecoveryPlanStatus.COMPLETED, completed.status());
+        assertEquals(RecoveryPlanOutcome.RESOLVED, completed.outcome());
+        assertEquals(RecoveryPlanItemStatus.RESOLVED, completed.items().get(0).status());
+        assertEquals(1, RECOVERY_EXECUTE_CALLS.get());
+        var trace = traceProjector.project(result.incident().incidentId()).orElseThrow();
+        assertEquals(6, trace.modelMetrics().get("modelRunCount"));
+        assertTrue(trace.childRuns().stream().anyMatch(child -> "RECOVERY_PLANNER".equals(child.runRole())));
     }
 
     private IncidentInvestigationResult investigate(Scenario scenario, List<String> requestIds) {
@@ -301,6 +379,15 @@ class IncidentCommandRuntimeE2ETests {
         }
     }
 
+    private void deleteStoreRecord(Connection connection, String category, String key) throws Exception {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "DELETE FROM agent_store_record WHERE category = ? AND record_key = ?")) {
+            statement.setString(1, category);
+            statement.setString(2, key);
+            statement.executeUpdate();
+        }
+    }
+
     private static List<String> ids(String prefix, int count) {
         return java.util.stream.IntStream.rangeClosed(1, count)
                 .mapToObj(index -> prefix + "%03d".formatted(index))
@@ -357,6 +444,16 @@ class IncidentCommandRuntimeE2ETests {
                             """.formatted(incidentId).trim();
                     return new AgentModelTurn(plan, List.of(), plan, usage, "final_answer");
                 }
+                if (request.systemPrompt().contains("incident-recovery-plan-v1")) {
+                    String plan = """
+                            {"schemaVersion":"incident-recovery-plan-v1","summary":"controlled replay","proposalRequests":[
+                              {"clientItemKey":"replay-1","identifierType":"REQUEST_ID","identifierValue":"%s",
+                               "actionType":"REPLAY","suggestedReason":"persisted dead letter is proven by FACT evidence",
+                               "evidenceIds":["%s"],"conflictIds":[]}
+                            ]}
+                            """.formatted(PLANNER_REQUEST_ID.get(), PLANNER_EVIDENCE_ID.get()).trim();
+                    return new AgentModelTurn(plan, List.of(), plan, usage, "final_answer");
+                }
                 if (!request.tools().isEmpty()) {
                     boolean hasToolResult = request.messages().stream()
                             .anyMatch(message -> message.type() == AgentMessageType.TOOL_RESULT);
@@ -372,8 +469,98 @@ class IncidentCommandRuntimeE2ETests {
                             "{\"schemaVersion\":\"specialist-report-v1\"}", List.of(),
                             "specialist complete", usage, "final_answer");
                 }
-                String review = "{\"schemaVersion\":\"reviewer-assessment-v1\",\"confirmedFacts\":[],\"rootCauseCandidates\":[],\"recommendations\":[],\"acknowledgedConflictIds\":[]}";
+                String reviewerInput = request.messages().stream()
+                        .map(message -> message.content())
+                        .collect(Collectors.joining("\n"));
+                Matcher deadLetterFact = Pattern.compile(
+                                "\\\"evidenceId\\\":\\\"([^\\\"]+)\\\".*?\\\"evidenceSubtype\\\":\\\"DEAD_LETTER_SET\\\"",
+                                Pattern.DOTALL)
+                        .matcher(reviewerInput);
+                String review = deadLetterFact.find()
+                        ? """
+                          {"schemaVersion":"reviewer-assessment-v1","confirmedFacts":[
+                            {"evidenceSubtype":"DEAD_LETTER_SET","statement":"persisted dead letter facts are confirmed","evidenceIds":["%s"]}
+                          ],"rootCauseCandidates":[],"recommendations":[],"acknowledgedConflictIds":[]}
+                          """.formatted(deadLetterFact.group(1)).trim()
+                        : "{\"schemaVersion\":\"reviewer-assessment-v1\",\"confirmedFacts\":[],\"rootCauseCandidates\":[],\"recommendations\":[],\"acknowledgedConflictIds\":[]}";
                 return new AgentModelTurn(review, List.of(), review, usage, "final_answer");
+            };
+        }
+
+        @Bean
+        @Primary
+        FlowOrderClient incidentRecoveryFlowOrderClient() {
+            return new FlowOrderClient() {
+                private final Map<String, OrderCareRecoveryProposal> proposals = new java.util.concurrent.ConcurrentHashMap<>();
+
+                @Override
+                public OrderCareCaseSnapshot inspectCase(String identifierType, String identifierValue, String traceId) {
+                    return convergedCase(identifierType, identifierValue);
+                }
+
+                @Override
+                public OrderCareRecoveryProposal createProposal(OrderCareProposalCreateCommand command, String traceId) {
+                    return proposals.computeIfAbsent(command.proposalId(), ignored -> proposal(
+                            command.proposalId(), command.identifierValue(), "NOT_STARTED", "NOT_CONVERGED"));
+                }
+
+                @Override
+                public OrderCareRecoveryProposal getProposal(String proposalId, String traceId) {
+                    return proposals.get(proposalId);
+                }
+
+                @Override
+                public OrderCareRecoveryProposal executeProposal(OrderCareProposalExecuteCommand command, String traceId) {
+                    RECOVERY_EXECUTE_CALLS.incrementAndGet();
+                    OrderCareRecoveryProposal current = proposals.get(command.proposalId());
+                    OrderCareRecoveryProposal completed = proposal(
+                            current.proposalId(), current.identifierValue(), "SUBMITTED", "RESOLVED");
+                    proposals.put(command.proposalId(), completed);
+                    return completed;
+                }
+
+                @Override
+                public OrderCareRecoveryAction getAction(String actionRequestId, String traceId) {
+                    return null;
+                }
+
+                @Override
+                public OrderCareRecoveryAction reconcileAction(String actionRequestId,
+                                                               OrderCareActionReconcileCommand command,
+                                                               String traceId) {
+                    return null;
+                }
+
+                private OrderCareRecoveryProposal proposal(String proposalId,
+                                                           String requestId,
+                                                           String actionStatus,
+                                                           String caseOutcome) {
+                    return new OrderCareRecoveryProposal(
+                            "floworder-recovery-proposal-v1", proposalId, 1, "ACTIVE",
+                            "action-" + proposalId, actionStatus, caseOutcome, "case-" + requestId,
+                            "REQUEST_ID", requestId, "REPLAY", "DEAD_LETTER", "target-" + requestId,
+                            "fingerprint", "effects", "warnings", "preview", true,
+                            List.of("replay persisted dead letter"), List.of("human approval required"),
+                            "controlled recovery", "", "", "", "",
+                            Instant.now().plusSeconds(300).toString(), Instant.now().toString(), Instant.now().toString());
+                }
+
+                private OrderCareCaseSnapshot convergedCase(String identifierType, String requestId) {
+                    return new OrderCareCaseSnapshot(
+                            "floworder-recovery-case-v1", "case-" + requestId, identifierType, requestId,
+                            requestId, true, "ALREADY_CONVERGED", true, false, Instant.now().toString(),
+                            null, null,
+                            new OrderCareCaseSnapshot.DeductFact(
+                                    true, 1L, "DED-" + requestId, "ORDER-1", 1L, 1, 30,
+                                    "RELEASED", "", "", Instant.now().toString()),
+                            new OrderCareCaseSnapshot.InventoryFact(
+                                    true, 1L, 100, 100, 0, 0, 0, true, 1, Instant.now().toString()),
+                            List.of(new OrderCareCaseSnapshot.DeadLetterFact(
+                                    1L, "msg-1", "queue", "resource", "STOCK_RELEASE", "DED-" + requestId,
+                                    20, "RESOLVED", 1, "timeout", "", Instant.now().toString(),
+                                    Instant.now().toString(), Instant.now().toString())),
+                            List.of(), List.of(), List.of(), List.of());
+                }
             };
         }
     }

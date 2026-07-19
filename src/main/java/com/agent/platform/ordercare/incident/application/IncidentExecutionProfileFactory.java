@@ -44,4 +44,13 @@ public class IncidentExecutionProfileFactory {
                 new AgentRunLimits(3, 3, 0, 16_000, 3_000, 4, 90_000),
                 false);
     }
+
+    public AgentExecutionProfile recoveryPlanner() {
+        return new AgentExecutionProfile(
+                "incident-recovery-planner-v1",
+                "Return only incident-recovery-plan-v1 JSON. You may propose bounded REPLAY requests for requestIds already present in the immutable snapshot. Every item must cite supplied evidence IDs. Never call tools, approve, execute, add scope, or invent identifiers.",
+                Set.of(),
+                new AgentRunLimits(3, 3, 0, 18_000, 3_500, 4, 90_000),
+                false);
+    }
 }

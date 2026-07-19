@@ -4,6 +4,9 @@ import com.agent.platform.ordercare.incident.model.AgentTaskRecord;
 import com.agent.platform.ordercare.incident.model.IncidentAggregate;
 import com.agent.platform.ordercare.incident.model.IncidentTrace;
 import com.agent.platform.ordercare.incident.persistence.IncidentStore;
+import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
+import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlanRecord;
+import com.agent.platform.ordercare.incident.recovery.persistence.IncidentRecoveryPlanStore;
 import com.agent.platform.trace.RuntimeTraceProjector;
 import com.agent.platform.trace.TraceRun;
 import com.agent.platform.trace.TraceSpan;
@@ -25,11 +28,17 @@ public class IncidentTraceProjector {
 
     private final IncidentStore incidentStore;
     private final RuntimeTraceProjector runtimeTraceProjector;
+    private final IncidentRecoveryPlanStore recoveryPlanStore;
+    private final IncidentCommandProperties properties;
 
     public IncidentTraceProjector(IncidentStore incidentStore,
-                                  RuntimeTraceProjector runtimeTraceProjector) {
+                                  RuntimeTraceProjector runtimeTraceProjector,
+                                  IncidentRecoveryPlanStore recoveryPlanStore,
+                                  IncidentCommandProperties properties) {
         this.incidentStore = incidentStore;
         this.runtimeTraceProjector = runtimeTraceProjector;
+        this.recoveryPlanStore = recoveryPlanStore;
+        this.properties = properties;
     }
 
     public Optional<IncidentTrace> project(String incidentId) {
@@ -50,6 +59,10 @@ public class IncidentTraceProjector {
                     task.taskId(), task.childRunId());
         }
         add(children, "REVIEWER", "", aggregate.incident().reviewerRunId());
+        List<IncidentRecoveryPlanRecord> recoveryPlans = properties.isRecoveryPlannerEnabled()
+                ? recoveryPlanStore.listByIncident(incidentId)
+                : List.of();
+        recoveryPlans.forEach(plan -> add(children, "RECOVERY_PLANNER", plan.planId(), plan.plannerRunId()));
 
         long promptTokens = children.stream().map(IncidentTrace.ChildRunTrace::trace)
                 .mapToLong(TraceRun::estimatedPromptTokens).sum();
@@ -81,6 +94,7 @@ public class IncidentTraceProjector {
                         "synthetic", true,
                         "excludedFromModelMetrics", true,
                         "taskCount", aggregate.tasks().size(),
+                        "recoveryPlanCount", recoveryPlans.size(),
                         "outcome", aggregate.incident().status().name()
                 )
         );

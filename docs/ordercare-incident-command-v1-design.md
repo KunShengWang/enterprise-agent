@@ -1,12 +1,12 @@
-# OrderCare Incident Command V1：只读事故调查 Multi-Agent 设计
+# OrderCare Incident Command V1：事故调查与受控恢复 Multi-Agent 设计
 
-> 文档状态：`M0_FROZEN / M1-C_GATE_PASSED / PHASE_1_IMPLEMENTED`
+> 文档状态：`M0_FROZEN / M1-C_GATE_PASSED / PHASE_1_IMPLEMENTED / PHASE_2_IMPLEMENTED / PHASE_2_E2E_PASSED`
 >
 > 场景 ID：`ordercare-incident-command-v1`
 >
-> 版本：V1.3
+> 版本：V1.4
 >
-> 更新日期：2026-07-18 20:20 CST
+> 更新日期：2026-07-19 CST
 >
 > 代码仓库：`enterprise-agent` + `floworder`
 
@@ -1462,18 +1462,111 @@ Phase 1 完成后可保守表述为：
 
 ### Phase 2：Recovery Planner
 
-只有 Phase 1 的事实审计稳定后，才允许新增 Recovery Planner。它只能输出 `ProposalRequest`：
+Phase 2 不把写权限交给 Commander、Specialist、Reviewer 或 Recovery Planner。Phase 1 的
+`IncidentStatus=ASSESSED` 仍然是调查聚合的终态；恢复计划使用独立 `RecoveryPlan` 聚合，禁止为了进入恢复阶段重新打开 Incident 状态机。
+
+只有同时满足以下门禁才允许创建 Recovery Plan：
+
+- Incident 和权威 `IncidentAssessment` 均为 `ASSESSED`；
+- 风险不是 `HIGH`；
+- 不存在 `OPEN HIGH` Java 冲突；
+- 不存在未解决 `EvidenceGap`；
+- Assessment 摘要与创建计划时保存的 `assessmentDigest` 一致。
+
+Recovery Planner 是独立模型 Run，只能输出强类型 `incident-recovery-plan-v1`：
+
+```java
+public record RecoveryPlanDraft(
+    String schemaVersion,
+    String summary,
+    List<ProposalRequest> proposalRequests
+) {}
+
+public record ProposalRequest(
+    String clientItemKey,
+    String identifierType,   // V1 仅 REQUEST_ID
+    String identifierValue,  // 必须属于 IncidentSnapshot
+    String actionType,       // V1 仅 REPLAY
+    String suggestedReason,
+    List<String> evidenceIds,
+    List<String> conflictIds
+) {}
+```
+
+V1 最多生成 5 项。每项必须引用权威 Assessment 已引用的 `ACCEPTED FACT`，并至少引用一条
+未截断、`scopeHash` 一致且明确包含目标 requestId 的 `DEAD_LETTER_SET` 证据。模型输出格式错误、
+越权动作、虚构 ID、范围扩展、重复目标、无效引用或证据不足时一律 fail closed；Java 不生成
+确定性“恢复兜底计划”，避免在模型失败时凭规则擅自制造副作用候选。
+
+完整责任链：
 
 ```text
 IncidentAssessment
-  -> Recovery Planner 提议 ProposalRequest
-  -> FlowOrder 校验并生成不可变 Proposal
-  -> enterprise-agent HITL
-  -> FlowOrder 幂等执行
-  -> Java ConvergenceChecker 验证
+  -> Recovery Planner 提议最多 5 个 ProposalRequest
+  -> Java RecoveryPlanValidator 校验 Assessment、证据引用和不可变范围
+  -> enterprise-agent 使用稳定 proposalId 逐项请求 FlowOrder
+  -> FlowOrder 校验领域前置条件并逐项生成不可变 Proposal
+  -> enterprise-agent 为每项创建独立 Approval
+  -> 审批人逐项批准或拒绝具体 previewDigest
+  -> Java CAS claim 单项执行权
+  -> FlowOrder 使用原 actionRequestId 幂等执行
+  -> UNKNOWN 使用原命令对账
+  -> Java ConvergenceChecker 逐项验证
+  -> RecoveryPlan 汇总 RESOLVED / PARTIAL / REJECTED / MANUAL_REVIEW
 ```
 
-Recovery Planner 不直接重放死信、不批量更新订单、不绕过现有 Proposal 和人工审批。
+#### Phase 2 状态分离
+
+禁止使用一个 `status` 混合规划、审批、命令和业务结果：
+
+```text
+RecoveryPlan.status  = CREATED / PLANNING / PREVIEWING / WAITING_APPROVAL /
+                       EXECUTING / COMPLETED / FAILED / CANCELLED
+RecoveryPlan.outcome = NOT_STARTED / READY / RESOLVED / PARTIAL / REJECTED / MANUAL_REVIEW
+
+Item.status          = PREVIEWING / WAITING_APPROVAL / EXECUTING / RESOLVED /
+                       INELIGIBLE / REJECTED / MANUAL_REVIEW / FAILED
+approvalStatus       = NOT_REQUESTED / REQUESTED / APPROVED / REJECTED / EXPIRED
+actionStatus         = FlowOrder 权威动作状态
+caseOutcome          = FlowOrder 权威业务结果状态
+```
+
+#### Proposal 和审批边界
+
+- 每个 item 使用由 `planId + clientItemKey` 稳定派生的独立 `proposalId`；
+- FlowOrder 继续为 Proposal、`actionRequestId`、领域状态、执行租约和收敛事实的唯一权威源；
+- enterprise-agent 保存不可变 Proposal 审计副本和关联引用，不复制 FlowOrder 恢复状态机；
+- Approval 必须绑定 `planId + itemId + assessmentDigest + proposalId + previewDigest`；
+- 审批后必须重新读取 FlowOrder Proposal，并比较 version、fingerprint、effects/warnings/preview digest；
+- Proposal 漂移、过期或不可执行时，旧审批失效并进入人工复核，禁止自动重新 preview 后沿用旧审批；
+- 多个 item 只能逐项审批和逐项执行；Phase 2 不增加 FlowOrder 批量写 API，也不提供“一键盲批”；
+- 同一 item 通过 Recovery Plan version CAS 只有一个执行者；重复审批请求复用已有结果；
+- 写响应未知时只查询和协调原 `actionRequestId`，禁止换 ID 重试。
+
+Planner Run 在输出计划后正常 `COMPLETED`；等待人工发生在持久化 Recovery Plan 上，而不是阻塞或伪造
+Planner Run 的 `WAITING_APPROVAL`。这样模型连接和线程已释放，HITL 仍复用统一 `ApprovalService` 的 TTL 与 CAS。
+
+#### Phase 2 持久化和接口
+
+Recovery Plan 使用 PostgreSQL `agent_incident_recovery_plan` JSON 聚合表，保存选定字段、完整强类型快照、
+`assessmentDigest`、version CAS 和 `(incidentId, requestKey)` 幂等约束。计划中的 item 数量被严格限制，
+因此 V1 以单聚合 CAS 保证并发审批更新，不建设第二套通用 Workflow/Task 引擎。
+
+```text
+POST /api/incidents/{incidentId}/recovery-plans
+GET  /api/incidents/{incidentId}/recovery-plans
+GET  /api/incidents/{incidentId}/recovery-plans/{planId}
+POST /api/incidents/{incidentId}/recovery-plans/{planId}/items/{itemId}/decision
+```
+
+Phase 2 复用现有 FlowOrder 单 Proposal API，不修改 FlowOrder 数据库和领域状态机。Recovery Planner
+不直接重放死信、不批量更新订单、不绕过现有 Proposal 和人工审批。
+
+#### Phase 2 与 Phase 3 的边界
+
+Phase 2 只保证单实例内的 requestKey 幂等、Recovery Plan version CAS、单项执行 claim、FlowOrder 业务幂等、
+UNKNOWN 对账和确定性收敛。进程若恰好在“CAS 标记 EXECUTING 后、结果持久化前”崩溃，仍由 Phase 3 的
+多实例 lease、stale execution 扫描和崩溃接管处理；Phase 2 不提前宣称该能力。
 
 ### Phase 3：生产化扩展
 

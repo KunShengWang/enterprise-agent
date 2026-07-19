@@ -328,3 +328,22 @@ M1 只能表述为“实现异常订单智能诊断”，没有 Proposal、审�
 | M1-E 证据与演示 | `PASSED` | 3 条纵向 E2E、10 条核心 Eval、真实 MySQL/Rabbit Fixture、单窗口页面 |
 
 权威证据：[Incident Command Phase 1 报告](reports/ordercare/incident-command-phase1-evidence.md)。该场景只读，不包含 Recovery Planner、批量恢复、多实例 Task lease 或通用 Agent Mailbox。
+
+## 14. Incident Command Phase 2（Recovery Planner）
+
+| 能力 | 状态 | 当前事实 |
+|---|---|---|
+| 强类型 Recovery Plan | `IMPLEMENTED` | 独立 Planner Run；最多 5 个 ProposalRequest；无工具和写权限 |
+| Java 安全校验 | `PASSED` | 约束 Incident/Assessment、风险、EvidenceGap、OPEN HIGH conflict、scopeHash、requestId 范围、动作白名单和证据引用 |
+| FlowOrder Proposal | `IMPLEMENTED` | 逐项复用现有单 Proposal API；稳定 proposalId；无批量写接口 |
+| HITL | `IMPLEMENTED` | 每项独立 Approval，绑定 plan/item/assessmentDigest/previewDigest，TTL 和决定 CAS 复用统一 ApprovalService |
+| 执行与收敛 | `IMPLEMENTED` | Recovery Plan version CAS claim、原 actionRequestId、UNKNOWN 对账、ConvergenceChecker、逐项结果汇总 |
+| Trace/UI | `IMPLEMENTED` | Planner Run 进入 Incident Trace；单窗口展示 Proposal 影响、警告、证据引用和逐项审批 |
+| 安全 Eval | `PASSED` | 合法单项/多项通过；越权、扩范围、虚构 Evidence、重复目标、超预算等 fail closed |
+| 全仓与前端回归 | `PASSED` | Maven 全仓测试与 Vue 生产构建通过 |
+| 真实 PostgreSQL CAS | `PASSED` | 真实 PostgreSQL 上验证 requestKey 幂等、version CAS 与旧版本冲突拒绝：1/1 通过 |
+| 完整 Runtime E2E | `PASSED` | 真实 Runtime/PG + 确定性 FlowOrder/模型 Stub：Phase 1 三场景与 Phase 2 恢复闭环共 4/4 通过 |
+
+Phase 2 不把 Incident 从 `ASSESSED` 重新打开；Recovery Plan 是独立聚合。Planner Run 完成后释放模型资源，人工等待发生在 Recovery Plan/Approval 上。当前仍不包含 Phase 3 的多实例 lease、stale execution 回收和进程崩溃接管。
+
+权威证据：[Incident Command Phase 2 报告](reports/ordercare/incident-command-phase2-evidence.md)。

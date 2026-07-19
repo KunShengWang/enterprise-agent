@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { incidentApi } from '../api/incident'
 import StatusBadge from '../components/StatusBadge.vue'
-import type { IncidentAggregate, IncidentStreamItem, IncidentTrace } from '../types/incident'
+import type { IncidentAggregate, IncidentRecoveryPlan, IncidentStreamItem, IncidentTrace } from '../types/incident'
 
 const alertBatchId = ref(`BATCH-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-01`)
 const alertType = ref('ORDER_STATE_INCONSISTENCY')
@@ -14,8 +14,15 @@ const trace = ref<IncidentTrace | null>(null)
 const incidentId = ref('')
 const busy = ref(false)
 const error = ref('')
+const recoveryPlans = ref<IncidentRecoveryPlan[]>([])
+const recoveryObjective = ref('根据已确认的库存释放死信证据，生成受控恢复 Proposal；不得扩展调查范围或直接执行。')
+const reviewer = ref('incident-operator')
+const approvalComment = ref('已核对不可变预演、影响范围、证据引用和过期时间')
+const recoveryBusy = ref(false)
+const decidingItemId = ref('')
 let stream: EventSource | null = null
 let refreshTimer: number | null = null
+let recoveryPollTimer: number | null = null
 
 const terminal = computed(() => ['ASSESSED', 'PARTIAL', 'MANUAL_REVIEW', 'FAILED', 'CANCELLED']
   .includes(aggregate.value?.incident.status ?? ''))
@@ -26,6 +33,10 @@ const progress = computed(() => {
   const terminalIndex = terminal.value ? steps.length : Math.max(0, steps.indexOf(status))
   return Math.round((terminalIndex / steps.length) * 100)
 })
+const activeRecoveryPlan = computed(() => recoveryPlans.value[0] ?? null)
+const canPlanRecovery = computed(() => aggregate.value?.incident.status === 'ASSESSED')
+const recoveryPlanActive = computed(() => activeRecoveryPlan.value
+  && !['COMPLETED', 'FAILED', 'CANCELLED'].includes(activeRecoveryPlan.value.status))
 
 function lines(value: string) {
   return [...new Set(value.split(/[\s,，;；]+/).map(item => item.trim()).filter(Boolean))]
@@ -39,8 +50,9 @@ async function start() {
   closeStream()
   busy.value = true
   error.value = ''
-  aggregate.value = null
-  trace.value = null
+    aggregate.value = null
+    trace.value = null
+    recoveryPlans.value = []
   try {
     const started = await incidentApi.start({
       alertBatchId: alertBatchId.value,
@@ -65,11 +77,68 @@ async function refresh() {
   try {
     aggregate.value = await incidentApi.find(incidentId.value)
     if (terminal.value) {
+      recoveryPlans.value = await incidentApi.recoveryPlans(incidentId.value)
+      if (recoveryPlanActive.value && recoveryPollTimer === null) startRecoveryPolling()
+    }
+    if (terminal.value) {
       trace.value = await incidentApi.trace(incidentId.value)
       closeStream()
     }
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '调查状态刷新失败'
+  }
+}
+
+async function startRecoveryPlan() {
+  if (!incidentId.value || !canPlanRecovery.value) return
+  recoveryBusy.value = true
+  error.value = ''
+  try {
+    await incidentApi.startRecoveryPlan(incidentId.value, {
+      requestKey: `recovery-${incidentId.value}-${crypto.randomUUID()}`,
+      objective: recoveryObjective.value,
+    })
+    await refreshRecoveryPlans()
+    startRecoveryPolling()
+  } catch (reason) {
+    error.value = reason instanceof Error ? reason.message : '恢复计划创建失败'
+  } finally {
+    recoveryBusy.value = false
+  }
+}
+
+async function refreshRecoveryPlans() {
+  if (!incidentId.value) return
+  recoveryPlans.value = await incidentApi.recoveryPlans(incidentId.value)
+  if (!recoveryPlanActive.value) stopRecoveryPolling()
+}
+
+function startRecoveryPolling() {
+  stopRecoveryPolling()
+  recoveryPollTimer = window.setInterval(() => {
+    refreshRecoveryPlans().catch(reason => {
+      error.value = reason instanceof Error ? reason.message : '恢复计划刷新失败'
+    })
+  }, 1200)
+}
+
+function stopRecoveryPolling() {
+  if (recoveryPollTimer !== null) window.clearInterval(recoveryPollTimer)
+  recoveryPollTimer = null
+}
+
+async function decideRecoveryItem(plan: IncidentRecoveryPlan, itemId: string, approved: boolean) {
+  decidingItemId.value = itemId
+  error.value = ''
+  try {
+    await incidentApi.decideRecoveryItem(
+      incidentId.value, plan.planId, itemId, approved, reviewer.value, approvalComment.value,
+    )
+    await refreshRecoveryPlans()
+  } catch (reason) {
+    error.value = reason instanceof Error ? reason.message : '审批执行失败'
+  } finally {
+    decidingItemId.value = ''
   }
 }
 
@@ -98,18 +167,21 @@ function closeStream() {
   refreshTimer = null
 }
 
-onBeforeUnmount(closeStream)
+onBeforeUnmount(() => {
+  closeStream()
+  stopRecoveryPolling()
+})
 </script>
 
 <template>
   <div class="incident-page">
     <header class="incident-hero">
       <div>
-        <p class="eyebrow">ORDERCARE INCIDENT COMMAND · PHASE 1</p>
+        <p class="eyebrow">ORDERCARE INCIDENT COMMAND · PHASE 1 + PHASE 2</p>
         <h2>异常订单事故调查与证据指挥台</h2>
         <p>Commander 只做受限分工，Specialist 只调用白名单只读能力，Java 完成事实投影与冲突检查，Reviewer 只能引用已落库证据。</p>
       </div>
-      <div class="phase-chip">READ ONLY</div>
+      <div class="phase-chip">INVESTIGATE → CONTROLLED RECOVERY</div>
     </header>
 
     <section class="command-grid">
@@ -190,6 +262,55 @@ onBeforeUnmount(closeStream)
             <span>Completion {{ trace.modelMetrics.completionTokens ?? 0 }}</span>
             <span>Coordinator 模型调用 0</span>
           </section>
+
+          <section v-if="terminal" class="console-section recovery-section">
+            <div class="section-title"><span>06</span><div><strong>Recovery Planner</strong><small>模型只提出 ProposalRequest；Java 校验范围和证据；FlowOrder 生成不可变预演</small></div></div>
+            <div v-if="!activeRecoveryPlan" class="recovery-start-card">
+              <p>只有无开放高风险冲突、无证据缺口且结论为 ASSESSED 的事故才能进入恢复规划。</p>
+              <textarea v-model="recoveryObjective" rows="3" :disabled="!canPlanRecovery" />
+              <button class="start-button" type="button" :disabled="recoveryBusy || !canPlanRecovery" @click="startRecoveryPlan">
+                {{ recoveryBusy ? 'Recovery Planner 正在规划…' : '生成受控恢复计划' }}
+              </button>
+              <small v-if="!canPlanRecovery">当前事故结论不允许自动生成恢复 Proposal，请保持人工处置。</small>
+            </div>
+            <article v-else class="recovery-plan-card">
+              <header>
+                <div><p class="eyebrow">RECOVERY PLAN</p><strong>{{ activeRecoveryPlan.planId }}</strong></div>
+                <div class="plan-state"><StatusBadge :value="activeRecoveryPlan.status" compact /><span>{{ activeRecoveryPlan.outcome }}</span></div>
+              </header>
+              <div class="plan-meta"><code>plannerRunId {{ activeRecoveryPlan.plannerRunId || 'PENDING' }}</code><code>assessment {{ activeRecoveryPlan.assessmentDigest }}</code></div>
+              <ul v-if="activeRecoveryPlan.validationErrors.length" class="validation-errors">
+                <li v-for="message in activeRecoveryPlan.validationErrors" :key="message">{{ message }}</li>
+              </ul>
+              <div class="approval-form">
+                <label>审批人<input v-model="reviewer" /></label>
+                <label>审批意见<input v-model="approvalComment" /></label>
+              </div>
+              <div class="recovery-items">
+                <article v-for="item in activeRecoveryPlan.items" :key="item.itemId">
+                  <header><div><strong>{{ item.identifierType }} · {{ item.identifierValue }}</strong><small>{{ item.actionType }} · {{ item.status }}</small></div><StatusBadge :value="item.status" compact /></header>
+                  <p>{{ item.suggestedReason }}</p>
+                  <div v-if="item.proposal" class="proposal-grid">
+                    <code>proposal {{ item.proposal.proposalId }} · v{{ item.proposal.proposalVersion }}</code>
+                    <code>action {{ item.proposal.actionRequestId }}</code>
+                    <span>有效期 {{ dateTime(item.proposal.expiresAt) }}</span>
+                    <span>审批 {{ item.approvalStatus }} · 动作 {{ item.actionStatus }} · 结果 {{ item.caseOutcome }}</span>
+                  </div>
+                  <div v-if="item.proposal" class="preview-boxes">
+                    <div><strong>执行影响</strong><p v-for="effect in item.proposal.effects" :key="effect">{{ effect }}</p></div>
+                    <div><strong>审批警告</strong><p v-for="warning in item.proposal.warnings" :key="warning">{{ warning }}</p></div>
+                  </div>
+                  <p class="evidence-ref">证据引用：{{ item.evidenceIds.join(', ') }}</p>
+                  <p v-if="item.lastError" class="incident-error">{{ item.lastError }}</p>
+                  <div v-if="item.status === 'WAITING_APPROVAL'" class="decision-row">
+                    <button type="button" :disabled="decidingItemId === item.itemId" @click="decideRecoveryItem(activeRecoveryPlan, item.itemId, true)">批准该 Proposal 并执行</button>
+                    <button class="reject-button" type="button" :disabled="decidingItemId === item.itemId" @click="decideRecoveryItem(activeRecoveryPlan, item.itemId, false)">拒绝</button>
+                  </div>
+                </article>
+                <p v-if="activeRecoveryPlan.items.length === 0" class="empty-line">Planner 正在生成并校验候选 Proposal…</p>
+              </div>
+            </article>
+          </section>
         </template>
       </div>
     </section>
@@ -254,6 +375,27 @@ pre { max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: a
 .empty-line { color: var(--faint); font-size: 11px; }
 .trace-strip { margin-top: 25px; padding: 12px; display: flex; flex-wrap: wrap; gap: 18px; border-top: 1px dashed var(--line); color: var(--muted); font: 10px var(--mono); }
 .trace-strip strong { color: var(--text); }
+.recovery-section { padding-top: 24px; border-top: 1px solid var(--line); }
+.recovery-start-card, .recovery-plan-card { margin-top: 12px; padding: 15px; border: 1px solid #dacbad; border-radius: 12px; background: #fffaf1; }
+.recovery-start-card textarea { width: 100%; padding: 9px; border: 1px solid var(--line); border-radius: 8px; resize: vertical; }
+.recovery-start-card small { display: block; margin-top: 8px; color: var(--muted); }
+.recovery-plan-card > header, .recovery-items article > header { display: flex; justify-content: space-between; gap: 12px; }
+.plan-state { display: flex; align-items: center; gap: 8px; font: 10px var(--mono); }
+.plan-meta { display: grid; gap: 4px; margin-top: 10px; color: var(--faint); font-size: 9px; overflow-wrap: anywhere; }
+.validation-errors { color: var(--red); font-size: 11px; }
+.approval-form { display: grid; grid-template-columns: 180px 1fr; gap: 8px; margin-top: 12px; }
+.approval-form label { display: grid; gap: 4px; color: var(--muted); font-size: 10px; }
+.approval-form input { padding: 8px; border: 1px solid var(--line); border-radius: 7px; }
+.recovery-items { display: grid; gap: 10px; margin-top: 14px; }
+.recovery-items > article { padding: 13px; border: 1px solid #ddd3bd; border-radius: 10px; background: #fff; }
+.recovery-items small { display: block; margin-top: 4px; color: var(--muted); font: 9px var(--mono); }
+.proposal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 12px; padding: 9px; background: #f7f6f2; font-size: 9px; overflow-wrap: anywhere; }
+.preview-boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.preview-boxes > div { padding: 9px; border: 1px solid var(--line); border-radius: 7px; }
+.preview-boxes p, .evidence-ref { color: var(--muted); font-size: 10px; }
+.decision-row { display: flex; gap: 8px; margin-top: 10px; }
+.decision-row button { padding: 9px 11px; border: 0; border-radius: 7px; background: #1e6c3c; color: #fff; cursor: pointer; }
+.decision-row .reject-button { background: #8b2e2e; }
 @media (max-width: 1050px) { .command-grid { grid-template-columns: 1fr; } .incident-form { border-right: 0; border-bottom: 1px solid var(--line); } }
 @media (max-width: 700px) { .incident-hero { flex-direction: column; } .metric-row { grid-template-columns: repeat(2, 1fr); } .split-section { grid-template-columns: 1fr; } .task-list article { display: block; } .task-state { margin-top: 9px; text-align: left; } }
 </style>

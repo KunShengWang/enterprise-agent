@@ -13,6 +13,70 @@ export interface IncidentStartResponse {
   createdAt: string
 }
 
+export interface RecoveryPlanStartRequest {
+  requestKey: string
+  objective: string
+}
+
+export interface RecoveryPlanStartResponse {
+  planId: string
+  incidentId: string
+  status: string
+  createdAt: string
+  newlyCreated: boolean
+}
+
+export interface RecoveryProposalView {
+  proposalId: string
+  proposalVersion: number
+  proposalStatus: string
+  actionRequestId: string
+  actionStatus: string
+  caseOutcome: string
+  stateFingerprint: string
+  previewDigest: string
+  canExecute: boolean
+  effects: string[]
+  warnings: string[]
+  expiresAt: string
+}
+
+export interface IncidentRecoveryPlanItem {
+  itemId: string
+  clientItemKey: string
+  identifierType: string
+  identifierValue: string
+  actionType: string
+  suggestedReason: string
+  evidenceIds: string[]
+  conflictIds: string[]
+  status: string
+  proposal?: RecoveryProposalView
+  approvalId: string
+  approvalStatus: string
+  actionStatus: string
+  caseOutcome: string
+  convergence?: Record<string, unknown>
+  lastError: string
+  updatedAt: string
+}
+
+export interface IncidentRecoveryPlan {
+  planId: string
+  incidentId: string
+  requestKey: string
+  plannerRunId: string
+  assessmentDigest: string
+  status: string
+  outcome: string
+  draft?: Record<string, unknown>
+  items: IncidentRecoveryPlanItem[]
+  validationErrors: string[]
+  version: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface IncidentRecord {
   incidentId: string
   commanderRunId?: string
