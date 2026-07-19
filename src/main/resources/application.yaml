@@ -75,6 +75,14 @@ enterprise-agent:
       max-parallel-specialists: ${ORDERCARE_INCIDENT_MAX_PARALLEL_SPECIALISTS:3}
       recovery-planner-enabled: ${ORDERCARE_INCIDENT_RECOVERY_PLANNER_ENABLED:false}
       max-recovery-plan-items: ${ORDERCARE_INCIDENT_MAX_RECOVERY_PLAN_ITEMS:5}
+      phase3-enabled: ${ORDERCARE_INCIDENT_PHASE3_ENABLED:false}
+      execution-kill-switch: ${ORDERCARE_INCIDENT_EXECUTION_KILL_SWITCH:false}
+      instance-id: ${ORDERCARE_INCIDENT_INSTANCE_ID:}
+      task-lease-seconds: ${ORDERCARE_INCIDENT_TASK_LEASE_SECONDS:30}
+      recovery-lease-seconds: ${ORDERCARE_INCIDENT_RECOVERY_LEASE_SECONDS:30}
+      lease-heartbeat-seconds: ${ORDERCARE_INCIDENT_LEASE_HEARTBEAT_SECONDS:10}
+      stale-scan-interval-millis: ${ORDERCARE_INCIDENT_STALE_SCAN_INTERVAL_MILLIS:5000}
+      stale-scan-batch-size: ${ORDERCARE_INCIDENT_STALE_SCAN_BATCH_SIZE:20}
       tenant-scope: ${ORDERCARE_INCIDENT_TENANT_SCOPE:local-demo-tenant}
       allowed-queues:
         - floworder.order.create.dlq

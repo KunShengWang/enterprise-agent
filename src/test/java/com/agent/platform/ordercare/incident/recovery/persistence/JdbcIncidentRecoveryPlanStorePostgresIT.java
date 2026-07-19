@@ -8,6 +8,8 @@ import com.agent.platform.ordercare.incident.persistence.IncidentCasConflictExce
 import com.agent.platform.ordercare.incident.persistence.IncidentIdempotencyConflictException;
 import com.agent.platform.ordercare.incident.persistence.JdbcIncidentStore;
 import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlanRecord;
+import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlanItem;
+import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanItemStatus;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanOutcome;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStatus;
 import org.junit.jupiter.api.AfterEach;
@@ -25,6 +27,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @EnabledIfEnvironmentVariable(named = "INCIDENT_POSTGRES_IT", matches = "true")
 class JdbcIncidentRecoveryPlanStorePostgresIT {
@@ -70,6 +73,41 @@ class JdbcIncidentRecoveryPlanStorePostgresIT {
                 () -> store.create(plan("plan-other", "request-1", "digest-other")));
     }
 
+    @Test
+    void expiredRecoveryItemLeaseUsesMonotonicFencingToken() throws Exception {
+        createIncident();
+        JdbcIncidentRecoveryPlanStore first = new JdbcIncidentRecoveryPlanStore(properties, objectMapper);
+        JdbcIncidentRecoveryPlanStore second = new JdbcIncidentRecoveryPlanStore(properties, objectMapper);
+        Instant now = Instant.now();
+        IncidentRecoveryPlanItem waiting = item(RecoveryPlanItemStatus.WAITING_APPROVAL, "", 0, null, 0);
+        IncidentRecoveryPlanRecord created = new IncidentRecoveryPlanRecord(
+                "lease-plan-" + incidentId, incidentId, "lease-request", "planner", "digest",
+                RecoveryPlanStatus.WAITING_APPROVAL, RecoveryPlanOutcome.READY, null,
+                List.of(waiting), List.of(), 0, now, now);
+        first.create(created);
+
+        var ownerA = first.claimItem(created.planId(), waiting.itemId(), "worker-a",
+                Instant.now().plusMillis(150), false);
+        assertTrue(ownerA.claimed());
+        Thread.sleep(200);
+        var ownerB = second.claimItem(created.planId(), waiting.itemId(), "worker-b",
+                Instant.now().plusSeconds(30), true);
+
+        assertTrue(ownerB.claimed());
+        assertTrue(ownerB.takeover());
+        assertEquals(2, ownerB.item().fencingToken());
+        assertEquals(1, ownerB.item().takeoverCount());
+        IncidentRecoveryPlanItem staleResult = item(
+                RecoveryPlanItemStatus.RESOLVED, "worker-a", 1, null, 0);
+        assertThrows(IncidentCasConflictException.class,
+                () -> first.updateItemFenced(created.planId(), staleResult, "worker-a", 1));
+        IncidentRecoveryPlanItem winner = item(
+                RecoveryPlanItemStatus.RESOLVED, "worker-b", 2, null, 1);
+        IncidentRecoveryPlanRecord completed = second.updateItemFenced(
+                created.planId(), winner, "worker-b", 2);
+        assertEquals(RecoveryPlanOutcome.RESOLVED, completed.outcome());
+    }
+
     private void createIncident() {
         incidentId = "inc-phase2-it-" + UUID.randomUUID();
         Instant now = Instant.now();
@@ -90,6 +128,19 @@ class JdbcIncidentRecoveryPlanStorePostgresIT {
                 planId + "-" + incidentId, incidentId, requestKey, "", digest,
                 RecoveryPlanStatus.CREATED, RecoveryPlanOutcome.NOT_STARTED, null,
                 List.of(), List.of(), 0, now, now);
+    }
+
+    private IncidentRecoveryPlanItem item(RecoveryPlanItemStatus status,
+                                          String owner,
+                                          long token,
+                                          Instant leaseUntil,
+                                          int takeovers) {
+        return new IncidentRecoveryPlanItem(
+                "item-1", "client-1", "REQUEST_ID", "REQ-1", "REPLAY", "reason",
+                List.of("ev-1"), List.of(), status, null, "approval-1", "APPROVED",
+                status == RecoveryPlanItemStatus.RESOLVED ? "SUBMITTED" : "NOT_STARTED",
+                status == RecoveryPlanItemStatus.RESOLVED ? "RESOLVED" : "NOT_CONVERGED",
+                null, "", owner, token, leaseUntil, Instant.now(), takeovers, Instant.now());
     }
 
     private AgentStorageProperties properties() {

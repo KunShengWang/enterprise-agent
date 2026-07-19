@@ -6,9 +6,9 @@
 ## 1. OrderCare 事故指挥 Agent Team
 
 - 候选场景 ID：`ordercare-incident-command-v1`
-- 当前状态：`PHASE_1_IMPLEMENTED / PHASE_2_IMPLEMENTED / PHASE_2_E2E_PASSED`
+- 当前状态：`PHASE_1_IMPLEMENTED / PHASE_2_IMPLEMENTED / PHASE_3_RELIABILITY_KERNEL_IMPLEMENTED`
 - 当前设计：[OrderCare Incident Command V1：事故调查与受控恢复 Multi-Agent 设计](ordercare-incident-command-v1-design.md)
-- 决策：V1.4 已完成 Phase 1 只读事故调查和 Phase 2 受控 Recovery Planner。Phase 2 只生成有证据引用、范围受限的 ProposalRequest，并逐项复用 FlowOrder Proposal/HITL/幂等执行/收敛；不增加批量写接口。真实 PostgreSQL CAS 与包含 Phase 1 调查、Planner、审批、执行和收敛的 Runtime E2E 已通过。Phase 3 多实例生产化仍未启动。
+- 决策：V1.5 已完成 Phase 1 只读调查、Phase 2 受控 Recovery Planner 和 Phase 3 多实例可靠性内核。Task/Recovery Item 具备 PostgreSQL lease、heartbeat、stale scan、崩溃接管、fencing token 和 kill switch；仍不增加批量写接口。告警平台、统一认证和完整租户治理保留为外部部署扩展。
 
 目标场景：当大量订单超时、库存释放死信堆积或消息消费异常时，由 Incident Commander 动态委派订单、MQ、库存和 SOP Specialist 并行调查，通过持久化结构化消息汇总证据，由 Reviewer 检查冲突并提出受控处置建议。
 

@@ -16,12 +16,16 @@ public record TaskResultSubmission(
         String idempotencyKey,
         AgentTaskStatus targetStatus,
         Map<String, Object> outputSummary,
-        List<EvidenceCandidate> evidence
+        List<EvidenceCandidate> evidence,
+        String leaseOwner,
+        long fencingToken
 ) {
     public TaskResultSubmission {
         outputSummary = outputSummary == null
                 ? Map.of()
                 : Collections.unmodifiableMap(new LinkedHashMap<>(outputSummary));
         evidence = evidence == null ? List.of() : List.copyOf(evidence);
+        leaseOwner = leaseOwner == null ? "" : leaseOwner;
+        fencingToken = Math.max(0, fencingToken);
     }
 }

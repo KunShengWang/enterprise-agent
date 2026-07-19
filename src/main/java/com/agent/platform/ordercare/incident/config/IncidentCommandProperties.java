@@ -14,6 +14,14 @@ public class IncidentCommandProperties {
     private int maxParallelSpecialists = 3;
     private boolean recoveryPlannerEnabled;
     private int maxRecoveryPlanItems = 5;
+    private boolean phase3Enabled;
+    private boolean executionKillSwitch;
+    private String instanceId = "";
+    private int taskLeaseSeconds = 30;
+    private int recoveryLeaseSeconds = 30;
+    private int leaseHeartbeatSeconds = 10;
+    private long staleScanIntervalMillis = 5000;
+    private int staleScanBatchSize = 20;
     private String tenantScope = "local-demo-tenant";
     private Set<String> allowedQueues = new LinkedHashSet<>(Set.of(
             "floworder.order.create.dlq",
@@ -40,6 +48,22 @@ public class IncidentCommandProperties {
     public void setMaxRecoveryPlanItems(int maxRecoveryPlanItems) {
         this.maxRecoveryPlanItems = Math.max(1, Math.min(10, maxRecoveryPlanItems));
     }
+    public boolean isPhase3Enabled() { return phase3Enabled; }
+    public void setPhase3Enabled(boolean phase3Enabled) { this.phase3Enabled = phase3Enabled; }
+    public boolean isExecutionKillSwitch() { return executionKillSwitch; }
+    public void setExecutionKillSwitch(boolean executionKillSwitch) { this.executionKillSwitch = executionKillSwitch; }
+    public String getInstanceId() { return instanceId; }
+    public void setInstanceId(String instanceId) { this.instanceId = instanceId == null ? "" : instanceId.trim(); }
+    public int getTaskLeaseSeconds() { return taskLeaseSeconds; }
+    public void setTaskLeaseSeconds(int value) { this.taskLeaseSeconds = Math.max(5, Math.min(300, value)); }
+    public int getRecoveryLeaseSeconds() { return recoveryLeaseSeconds; }
+    public void setRecoveryLeaseSeconds(int value) { this.recoveryLeaseSeconds = Math.max(5, Math.min(300, value)); }
+    public int getLeaseHeartbeatSeconds() { return leaseHeartbeatSeconds; }
+    public void setLeaseHeartbeatSeconds(int value) { this.leaseHeartbeatSeconds = Math.max(1, Math.min(60, value)); }
+    public long getStaleScanIntervalMillis() { return staleScanIntervalMillis; }
+    public void setStaleScanIntervalMillis(long value) { this.staleScanIntervalMillis = Math.max(1000, value); }
+    public int getStaleScanBatchSize() { return staleScanBatchSize; }
+    public void setStaleScanBatchSize(int value) { this.staleScanBatchSize = Math.max(1, Math.min(100, value)); }
     public String getTenantScope() { return tenantScope; }
     public void setTenantScope(String tenantScope) {
         this.tenantScope = tenantScope == null || tenantScope.isBlank() ? "local-demo-tenant" : tenantScope.trim();

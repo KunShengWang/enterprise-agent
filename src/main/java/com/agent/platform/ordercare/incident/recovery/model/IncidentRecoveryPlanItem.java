@@ -23,6 +23,11 @@ public record IncidentRecoveryPlanItem(
         String caseOutcome,
         OrderCareConvergenceResult convergence,
         String lastError,
+        String executionOwner,
+        long fencingToken,
+        Instant leaseUntil,
+        Instant lastHeartbeatAt,
+        int takeoverCount,
         Instant updatedAt
 ) {
     public IncidentRecoveryPlanItem {
@@ -33,6 +38,18 @@ public record IncidentRecoveryPlanItem(
         actionStatus = actionStatus == null ? "NOT_STARTED" : actionStatus;
         caseOutcome = caseOutcome == null ? "NOT_CONVERGED" : caseOutcome;
         lastError = lastError == null ? "" : lastError;
+        executionOwner = executionOwner == null ? "" : executionOwner;
+        fencingToken = Math.max(0, fencingToken);
+        takeoverCount = Math.max(0, takeoverCount);
         updatedAt = updatedAt == null ? Instant.now() : updatedAt;
+    }
+
+    public boolean leaseOwnedBy(String owner, long token, Instant now) {
+        return !executionOwner.isBlank()
+                && executionOwner.equals(owner)
+                && fencingToken == token
+                && leaseUntil != null
+                && now != null
+                && leaseUntil.isAfter(now);
     }
 }

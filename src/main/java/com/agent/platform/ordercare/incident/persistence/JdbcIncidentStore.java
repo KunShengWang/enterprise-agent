@@ -18,6 +18,7 @@ import com.agent.platform.ordercare.incident.model.TaskEventActorType;
 import com.agent.platform.ordercare.incident.model.TaskEventCategory;
 import com.agent.platform.ordercare.incident.model.TaskEventRecord;
 import com.agent.platform.ordercare.incident.model.TaskEventType;
+import com.agent.platform.ordercare.incident.model.TaskLeaseClaim;
 import com.agent.platform.storage.AgentStorageException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -363,6 +364,181 @@ public class JdbcIncidentStore implements IncidentStore,
     }
 
     @Override
+    public TaskLeaseClaim claimTask(String taskId,
+                                    long expectedVersion,
+                                    String owner,
+                                    Instant leaseUntil,
+                                    boolean allowExpiredTakeover) {
+        requireText(taskId, "taskId");
+        requireText(owner, "owner");
+        Instant now = Instant.now();
+        if (leaseUntil == null || !leaseUntil.isAfter(now)) {
+            throw new IllegalArgumentException("leaseUntil must be in the future");
+        }
+        ensureSchema();
+        try (Connection connection = openConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                AgentTaskRecord identity = loadTask(connection, taskId, false)
+                        .orElseThrow(() -> new IllegalArgumentException("task not found: " + taskId));
+                lockIncident(connection, identity.incidentId());
+                AgentTaskRecord current = loadTask(connection, taskId, true).orElseThrow();
+                if (current.version() != expectedVersion) {
+                    throw new IncidentCasConflictException("task claim version mismatch: " + taskId);
+                }
+                boolean initial = current.status() == AgentTaskStatus.PENDING
+                        || current.status() == AgentTaskStatus.RETRY_PENDING;
+                boolean expired = (current.status() == AgentTaskStatus.CLAIMED
+                        || current.status() == AgentTaskStatus.RUNNING)
+                        && (current.claimUntil() == null || !current.claimUntil().isAfter(now));
+                if (!initial && !(allowExpiredTakeover && expired)) {
+                    connection.commit();
+                    return new TaskLeaseClaim(current, current.status(), false, false);
+                }
+                if (expired && current.attempt() + 1 >= current.maxAttempts()) {
+                    String reason = "stale task takeover retry budget exhausted";
+                    try (PreparedStatement statement = connection.prepareStatement("""
+                            UPDATE agent_task SET status = 'FAILED', claimed_by = NULL, claim_until = NULL,
+                                last_error = ?, version = version + 1, updated_at = ?
+                            WHERE task_id = ? AND version = ?
+                            """)) {
+                        statement.setString(1, reason);
+                        statement.setTimestamp(2, Timestamp.from(now));
+                        statement.setString(3, taskId);
+                        statement.setLong(4, expectedVersion);
+                        if (statement.executeUpdate() != 1) {
+                            throw new IncidentCasConflictException("task exhausted takeover CAS failed: " + taskId);
+                        }
+                    }
+                    AgentTaskRecord failed = loadTask(connection, taskId, false).orElseThrow();
+                    appendEvent(connection, new TaskEventRecord(
+                            UUID.randomUUID().toString(), failed.incidentId(), taskId, failed.childRunId(),
+                            allocateEventSequence(connection, failed.incidentId()), TaskEventType.TASK_STATE_CHANGED,
+                            TaskEventCategory.CONTROL, TaskEventActorType.SYSTEM, owner, null, null, 0,
+                            taskId, null, "task-lease-exhausted:" + taskId + ":" + failed.fencingToken(),
+                            Map.of("sourceStatus", current.status().name(), "targetStatus", "FAILED",
+                                    "reason", reason), now));
+                    connection.commit();
+                    return new TaskLeaseClaim(failed, current.status(), false, true);
+                }
+                AgentTaskStatus previous = current.status();
+                try (PreparedStatement statement = connection.prepareStatement("""
+                        UPDATE agent_task
+                        SET status = 'CLAIMED', claimed_by = ?, claim_until = ?,
+                            fencing_token = fencing_token + 1, last_heartbeat_at = ?,
+                            attempt = CASE WHEN ? THEN attempt + 1 ELSE attempt END,
+                            version = version + 1, updated_at = ?
+                        WHERE task_id = ? AND version = ?
+                        """)) {
+                    statement.setString(1, owner);
+                    statement.setTimestamp(2, Timestamp.from(leaseUntil));
+                    statement.setTimestamp(3, Timestamp.from(now));
+                    statement.setBoolean(4, expired);
+                    statement.setTimestamp(5, Timestamp.from(now));
+                    statement.setString(6, taskId);
+                    statement.setLong(7, expectedVersion);
+                    if (statement.executeUpdate() != 1) {
+                        throw new IncidentCasConflictException("task lease claim CAS failed: " + taskId);
+                    }
+                }
+                AgentTaskRecord claimed = loadTask(connection, taskId, false).orElseThrow();
+                appendEvent(connection, new TaskEventRecord(
+                        UUID.randomUUID().toString(), claimed.incidentId(), taskId, claimed.childRunId(),
+                        allocateEventSequence(connection, claimed.incidentId()),
+                        expired ? TaskEventType.TASK_LEASE_RECOVERED : TaskEventType.TASK_LEASE_CLAIMED,
+                        TaskEventCategory.CONTROL, TaskEventActorType.SYSTEM, owner,
+                        null, null, 0, taskId, null,
+                        "task-lease:" + taskId + ":" + claimed.fencingToken(),
+                        Map.of("previousStatus", previous.name(), "owner", owner,
+                                "fencingToken", claimed.fencingToken(), "leaseUntil", leaseUntil.toString(),
+                                "takeover", expired), now));
+                connection.commit();
+                return new TaskLeaseClaim(claimed, previous, true, expired);
+            } catch (RuntimeException | SQLException exception) {
+                rollbackQuietly(connection);
+                throw exception;
+            }
+        } catch (SQLException exception) {
+            throw storageFailure("Failed to claim incident task: " + taskId, exception);
+        }
+    }
+
+    @Override
+    public AgentTaskRecord renewTaskLease(String taskId,
+                                          String owner,
+                                          long fencingToken,
+                                          Instant leaseUntil) {
+        Instant now = Instant.now();
+        if (leaseUntil == null || !leaseUntil.isAfter(now)) {
+            throw new IllegalArgumentException("leaseUntil must be in the future");
+        }
+        ensureSchema();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE agent_task
+                     SET claim_until = ?, last_heartbeat_at = ?, updated_at = ?
+                     WHERE task_id = ? AND claimed_by = ? AND fencing_token = ?
+                       AND status IN ('CLAIMED','RUNNING')
+                     """)) {
+            statement.setTimestamp(1, Timestamp.from(leaseUntil));
+            statement.setTimestamp(2, Timestamp.from(now));
+            statement.setTimestamp(3, Timestamp.from(now));
+            statement.setString(4, taskId);
+            statement.setString(5, owner);
+            statement.setLong(6, fencingToken);
+            if (statement.executeUpdate() != 1) {
+                throw new IncidentCasConflictException("task lease renewal rejected by fencing token: " + taskId);
+            }
+            return findTask(taskId).orElseThrow();
+        } catch (SQLException exception) {
+            throw storageFailure("Failed to renew incident task lease: " + taskId, exception);
+        }
+    }
+
+    @Override
+    public AgentTaskRecord transitionLeasedTask(String taskId,
+                                                long expectedVersion,
+                                                AgentTaskStatus targetStatus,
+                                                String childRunId,
+                                                String lastError,
+                                                String owner,
+                                                long fencingToken,
+                                                TaskEventActorType actorType,
+                                                String actorId,
+                                                String idempotencyKey) {
+        AgentTaskRecord current = findTask(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("task not found: " + taskId));
+        if (!current.leaseOwnedBy(owner, fencingToken, Instant.now())) {
+            throw new IncidentCasConflictException("task transition rejected by expired/stale lease: " + taskId);
+        }
+        return transitionTask(taskId, expectedVersion, targetStatus, childRunId, lastError,
+                actorType, actorId, idempotencyKey);
+    }
+
+    @Override
+    public List<AgentTaskRecord> listStaleTasks(Instant now, int limit) {
+        if (now == null || limit < 1) return List.of();
+        ensureSchema();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT * FROM agent_task
+                     WHERE status IN ('CLAIMED','RUNNING') AND (claim_until IS NULL OR claim_until <= ?)
+                     ORDER BY claim_until ASC
+                     LIMIT ?
+                     """)) {
+            statement.setTimestamp(1, Timestamp.from(now));
+            statement.setInt(2, Math.min(limit, 100));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                List<AgentTaskRecord> result = new ArrayList<>();
+                while (resultSet.next()) result.add(readTask(resultSet));
+                return List.copyOf(result);
+            }
+        } catch (SQLException exception) {
+            throw storageFailure("Failed to list stale incident tasks", exception);
+        }
+    }
+
+    @Override
     public AgentTaskRecord transitionTask(String taskId,
                                           long expectedVersion,
                                           AgentTaskStatus targetStatus,
@@ -436,6 +612,8 @@ public class JdbcIncidentStore implements IncidentStore,
                             first_child_run_id = COALESCE(first_child_run_id, ?),
                             last_error = ?,
                             attempt = CASE WHEN ? = 'RETRY_PENDING' THEN attempt + 1 ELSE attempt END,
+                            claimed_by = CASE WHEN ? IN ('WAITING_CLARIFICATION','SUCCEEDED','FAILED','TIMED_OUT','CANCELLED') THEN NULL ELSE claimed_by END,
+                            claim_until = CASE WHEN ? IN ('WAITING_CLARIFICATION','SUCCEEDED','FAILED','TIMED_OUT','CANCELLED') THEN NULL ELSE claim_until END,
                             version = version + 1,
                             updated_at = ?
                         WHERE task_id = ? AND version = ?
@@ -445,9 +623,11 @@ public class JdbcIncidentStore implements IncidentStore,
                     statement.setString(3, blankToNull(childRunId));
                     statement.setString(4, blankToNull(lastError));
                     statement.setString(5, targetStatus.name());
-                    statement.setTimestamp(6, Timestamp.from(now));
-                    statement.setString(7, taskId);
-                    statement.setLong(8, expectedVersion);
+                    statement.setString(6, targetStatus.name());
+                    statement.setString(7, targetStatus.name());
+                    statement.setTimestamp(8, Timestamp.from(now));
+                    statement.setString(9, taskId);
+                    statement.setLong(10, expectedVersion);
                     if (statement.executeUpdate() != 1) {
                         throw new IncidentCasConflictException("task CAS update failed: " + taskId);
                     }
@@ -618,6 +798,11 @@ public class JdbcIncidentStore implements IncidentStore,
                     return duplicate;
                 }
                 validateSubmissionAgainstTask(submission, current);
+                if (!submission.leaseOwner().isBlank()
+                        && !current.leaseOwnedBy(submission.leaseOwner(), submission.fencingToken(), Instant.now())) {
+                    throw new IncidentCasConflictException(
+                            "task result rejected by expired/stale fencing token: " + submission.taskId());
+                }
 
                 Instant now = Instant.now();
                 List<EvidenceRecord> evidence = new ArrayList<>();
@@ -662,6 +847,7 @@ public class JdbcIncidentStore implements IncidentStore,
                 try (PreparedStatement statement = connection.prepareStatement("""
                         UPDATE agent_task
                         SET status = ?, output_summary_json = ?::jsonb,
+                            claimed_by = NULL, claim_until = NULL,
                             version = version + 1, updated_at = ?
                         WHERE task_id = ? AND incident_id = ? AND version = ?
                         """)) {
@@ -826,10 +1012,11 @@ public class JdbcIncidentStore implements IncidentStore,
                     task_id, incident_id, client_task_key, task_type, role, objective,
                     priority, dependencies_json, required_evidence_json, input_payload_json,
                     output_summary_json, status, attempt, max_attempts, child_run_id,
-                    first_child_run_id, deadline_at, claimed_by, claim_until, last_error,
+                    first_child_run_id, deadline_at, claimed_by, claim_until, fencing_token,
+                    last_heartbeat_at, last_error,
                     version, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb,
-                          ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """)) {
             statement.setString(1, task.taskId());
             statement.setString(2, task.incidentId());
@@ -850,10 +1037,12 @@ public class JdbcIncidentStore implements IncidentStore,
             statement.setTimestamp(17, Timestamp.from(task.deadlineAt()));
             statement.setString(18, blankToNull(task.claimedBy()));
             setTimestamp(statement, 19, task.claimUntil());
-            statement.setString(20, blankToNull(task.lastError()));
-            statement.setLong(21, task.version());
-            statement.setTimestamp(22, Timestamp.from(task.createdAt()));
-            statement.setTimestamp(23, Timestamp.from(task.updatedAt()));
+            statement.setLong(20, task.fencingToken());
+            setTimestamp(statement, 21, task.lastHeartbeatAt());
+            statement.setString(22, blankToNull(task.lastError()));
+            statement.setLong(23, task.version());
+            statement.setTimestamp(24, Timestamp.from(task.createdAt()));
+            statement.setTimestamp(25, Timestamp.from(task.updatedAt()));
             statement.executeUpdate();
         }
     }
@@ -1095,6 +1284,8 @@ public class JdbcIncidentStore implements IncidentStore,
                 instant(resultSet, "deadline_at"),
                 resultSet.getString("claimed_by"),
                 nullableInstant(resultSet, "claim_until"),
+                resultSet.getLong("fencing_token"),
+                nullableInstant(resultSet, "last_heartbeat_at"),
                 resultSet.getString("last_error"),
                 resultSet.getLong("version"),
                 instant(resultSet, "created_at"),
@@ -1447,6 +1638,8 @@ public class JdbcIncidentStore implements IncidentStore,
                             deadline_at TIMESTAMPTZ NOT NULL,
                             claimed_by TEXT,
                             claim_until TIMESTAMPTZ,
+                            fencing_token BIGINT NOT NULL DEFAULT 0,
+                            last_heartbeat_at TIMESTAMPTZ,
                             last_error TEXT,
                             version BIGINT NOT NULL DEFAULT 0,
                             created_at TIMESTAMPTZ NOT NULL,
@@ -1454,9 +1647,16 @@ public class JdbcIncidentStore implements IncidentStore,
                             UNIQUE(incident_id, client_task_key)
                         )
                         """);
+                statement.executeUpdate("ALTER TABLE agent_task ADD COLUMN IF NOT EXISTS fencing_token BIGINT NOT NULL DEFAULT 0");
+                statement.executeUpdate("ALTER TABLE agent_task ADD COLUMN IF NOT EXISTS last_heartbeat_at TIMESTAMPTZ");
                 statement.executeUpdate("""
                         CREATE INDEX IF NOT EXISTS idx_agent_task_incident_status
                         ON agent_task(incident_id, status, priority DESC)
+                        """);
+                statement.executeUpdate("""
+                        CREATE INDEX IF NOT EXISTS idx_agent_task_stale_lease
+                        ON agent_task(status, claim_until)
+                        WHERE status IN ('CLAIMED','RUNNING')
                         """);
                 statement.executeUpdate("""
                         CREATE TABLE IF NOT EXISTS agent_evidence (

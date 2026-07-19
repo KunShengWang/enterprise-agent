@@ -58,6 +58,11 @@ export interface IncidentRecoveryPlanItem {
   caseOutcome: string
   convergence?: Record<string, unknown>
   lastError: string
+  executionOwner: string
+  fencingToken: number
+  leaseUntil?: string
+  lastHeartbeatAt?: string
+  takeoverCount: number
   updatedAt: string
 }
 
@@ -99,6 +104,10 @@ export interface IncidentTask {
   attempt: number
   maxAttempts: number
   childRunId?: string
+  claimedBy?: string
+  claimUntil?: string
+  fencingToken: number
+  lastHeartbeatAt?: string
   lastError?: string
   outputSummary: Record<string, unknown>
 }

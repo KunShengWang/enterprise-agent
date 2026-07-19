@@ -2,6 +2,7 @@ package com.agent.platform.ordercare.incident.application;
 
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
+import com.agent.platform.ordercare.incident.config.IncidentWorkerIdentity;
 import com.agent.platform.ordercare.incident.model.AgentTaskRecord;
 import com.agent.platform.ordercare.incident.model.AgentTaskStatus;
 import com.agent.platform.ordercare.incident.model.EvidenceCandidate;
@@ -10,6 +11,7 @@ import com.agent.platform.ordercare.incident.model.EvidenceRecord;
 import com.agent.platform.ordercare.incident.model.IncidentAgentRole;
 import com.agent.platform.ordercare.incident.model.IncidentSnapshot;
 import com.agent.platform.ordercare.incident.model.TaskEventActorType;
+import com.agent.platform.ordercare.incident.model.TaskLeaseClaim;
 import com.agent.platform.ordercare.incident.persistence.AgentTaskStore;
 import com.agent.platform.ordercare.incident.persistence.EvidenceStore;
 import com.agent.platform.runtime.AgentContinuationRuntime;
@@ -32,6 +34,9 @@ import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -48,7 +53,10 @@ public class IncidentTaskScheduler {
     private final ToolExecutionStore toolExecutionStore;
     private final IncidentEvidenceProjector evidenceProjector;
     private final IncidentExecutionProfileFactory profileFactory;
+    private final IncidentCommandProperties properties;
+    private final IncidentWorkerIdentity workerIdentity;
     private final ExecutorService executor;
+    private final ScheduledExecutorService leaseHeartbeatExecutor;
 
     public IncidentTaskScheduler(AgentTaskStore taskStore,
                                  EvidenceStore evidenceStore,
@@ -57,7 +65,8 @@ public class IncidentTaskScheduler {
                                  ToolExecutionStore toolExecutionStore,
                                  IncidentEvidenceProjector evidenceProjector,
                                  IncidentExecutionProfileFactory profileFactory,
-                                 IncidentCommandProperties properties) {
+                                 IncidentCommandProperties properties,
+                                 IncidentWorkerIdentity workerIdentity) {
         this.taskStore = taskStore;
         this.evidenceStore = evidenceStore;
         this.resultCommitter = resultCommitter;
@@ -65,11 +74,14 @@ public class IncidentTaskScheduler {
         this.toolExecutionStore = toolExecutionStore;
         this.evidenceProjector = evidenceProjector;
         this.profileFactory = profileFactory;
+        this.properties = properties;
+        this.workerIdentity = workerIdentity;
         int workers = properties.getMaxParallelSpecialists();
         this.executor = new ThreadPoolExecutor(
                 workers, workers, 0, TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<>(workers * 2),
                 new ThreadPoolExecutor.AbortPolicy());
+        this.leaseHeartbeatExecutor = Executors.newScheduledThreadPool(Math.min(workers, 2));
     }
 
     public List<IncidentTaskExecution> execute(List<AgentTaskRecord> tasks, IncidentSnapshot snapshot) {
@@ -152,7 +164,7 @@ public class IncidentTaskScheduler {
                 "clarification-result:" + running.taskId() + ":" + running.version(),
                 AgentTaskStatus.SUCCEEDED,
                 Map.of("clarification", true, "answer", result.answer()),
-                additional));
+                additional, leaseOwner(running), running.fencingToken()));
         return new IncidentTaskExecution(
                 committed.task(), committed.evidence(), evidenceProjector.projectGaps(toolExecutions), true);
     }
@@ -169,18 +181,44 @@ public class IncidentTaskScheduler {
         if (!Instant.now().isBefore(snapshot.deadlineAt())) {
             return cancelled(original, "incident deadline exceeded before specialist execution");
         }
-        AgentTaskRecord claimed = taskStore.transitionTask(
-                original.taskId(), original.version(), AgentTaskStatus.CLAIMED, null, "",
-                TaskEventActorType.ORCHESTRATOR, "incident-task-scheduler",
-                "task-claimed:" + original.taskId() + ":" + original.attempt());
-        AgentTaskRecord running = taskStore.transitionTask(
-                claimed.taskId(), claimed.version(), AgentTaskStatus.RUNNING, null, "",
-                TaskEventActorType.ORCHESTRATOR, "incident-task-scheduler",
-                "task-running:" + claimed.taskId() + ":" + claimed.attempt());
+        AgentTaskRecord claimed;
+        if (properties.isPhase3Enabled()) {
+            if (original.status() == AgentTaskStatus.CLAIMED
+                    && original.leaseOwnedBy(workerIdentity.value(), original.fencingToken(), Instant.now())) {
+                claimed = original;
+            } else {
+                TaskLeaseClaim lease = taskStore.claimTask(
+                        original.taskId(), original.version(), workerIdentity.value(),
+                        Instant.now().plusSeconds(properties.getTaskLeaseSeconds()), false);
+                if (!lease.claimed()) {
+                    return new IncidentTaskExecution(
+                            lease.task(), List.of(),
+                            List.of(new EvidenceGap("TASK_LEASE_BUSY", "scheduler",
+                                    "task lease is owned by another instance")), false);
+                }
+                claimed = lease.task();
+            }
+        } else {
+            claimed = taskStore.transitionTask(
+                    original.taskId(), original.version(), AgentTaskStatus.CLAIMED, null, "",
+                    TaskEventActorType.ORCHESTRATOR, "incident-task-scheduler",
+                    "task-claimed:" + original.taskId() + ":" + original.attempt());
+        }
+        AgentTaskRecord running = properties.isPhase3Enabled()
+                ? taskStore.transitionLeasedTask(
+                        claimed.taskId(), claimed.version(), AgentTaskStatus.RUNNING, null, "",
+                        workerIdentity.value(), claimed.fencingToken(), TaskEventActorType.ORCHESTRATOR,
+                        "incident-task-scheduler", "task-running:" + claimed.taskId() + ":" + claimed.attempt()
+                                + ":" + claimed.fencingToken())
+                : taskStore.transitionTask(
+                        claimed.taskId(), claimed.version(), AgentTaskStatus.RUNNING, null, "",
+                        TaskEventActorType.ORCHESTRATOR, "incident-task-scheduler",
+                        "task-running:" + claimed.taskId() + ":" + claimed.attempt());
         AtomicReference<AgentTaskRecord> boundTask = new AtomicReference<>(running);
         IncidentAgentRole role = IncidentAgentRole.valueOf(running.role());
         String prompt = specialistPrompt(running, snapshot, role);
         AgentRuntimeResult result;
+        ScheduledFuture<?> heartbeat = startHeartbeat(running);
         try {
             result = continuationRuntime.runUntilInputCheckpoint(
                     new AgentRequest(
@@ -208,6 +246,8 @@ public class IncidentTaskScheduler {
         catch (RuntimeException exception) {
             return retryOrFail(boundTask.get(), snapshot,
                     "specialist runtime failed: " + exception.getClass().getSimpleName());
+        } finally {
+            if (heartbeat != null) heartbeat.cancel(false);
         }
         AgentTaskRecord owned = boundTask.get();
         if (result.state() != AgentRunState.WAITING_INPUT) {
@@ -224,7 +264,7 @@ public class IncidentTaskScheduler {
                 "specialist-result:" + owned.taskId() + ":" + owned.attempt(),
                 AgentTaskStatus.WAITING_CLARIFICATION,
                 Map.of("answer", result.answer(), "evidenceCount", candidates.size()),
-                candidates));
+                candidates, leaseOwner(owned), owned.fencingToken()));
         return new IncidentTaskExecution(
                 committed.task(), committed.evidence(), evidenceProjector.projectGaps(toolExecutions), true);
     }
@@ -295,6 +335,27 @@ public class IncidentTaskScheduler {
                 + (message == null || message.isBlank() ? "" : ": " + message);
     }
 
+    private String leaseOwner(AgentTaskRecord task) {
+        if (!properties.isPhase3Enabled() || task == null) return "";
+        return task.leaseOwnedBy(workerIdentity.value(), task.fencingToken(), Instant.now())
+                ? workerIdentity.value()
+                : "";
+    }
+
+    private ScheduledFuture<?> startHeartbeat(AgentTaskRecord task) {
+        if (!properties.isPhase3Enabled() || task == null || task.fencingToken() <= 0) return null;
+        long interval = Math.max(1, properties.getLeaseHeartbeatSeconds());
+        return leaseHeartbeatExecutor.scheduleAtFixedRate(() -> {
+            try {
+                taskStore.renewTaskLease(task.taskId(), workerIdentity.value(), task.fencingToken(),
+                        Instant.now().plusSeconds(properties.getTaskLeaseSeconds()));
+            } catch (RuntimeException exception) {
+                log.warn("incident task lease heartbeat rejected: taskId={}, token={}",
+                        task.taskId(), task.fencingToken(), exception);
+            }
+        }, interval, interval, TimeUnit.SECONDS);
+    }
+
     private String specialistPrompt(AgentTaskRecord task,
                                     IncidentSnapshot snapshot,
                                     IncidentAgentRole role) {
@@ -313,5 +374,6 @@ public class IncidentTaskScheduler {
     @PreDestroy
     public void shutdown() {
         executor.shutdownNow();
+        leaseHeartbeatExecutor.shutdownNow();
     }
 }

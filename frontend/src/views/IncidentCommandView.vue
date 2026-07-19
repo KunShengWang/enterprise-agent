@@ -218,7 +218,7 @@ onBeforeUnmount(() => {
             <div class="task-list">
               <article v-for="task in aggregate.tasks" :key="task.taskId">
                 <div><strong>{{ task.role }}</strong><small>{{ task.objective }}</small></div>
-                <div class="task-state"><StatusBadge :value="task.status" compact /><code>{{ task.childRunId || 'RUN PENDING' }}</code></div>
+                <div class="task-state"><StatusBadge :value="task.status" compact /><code>{{ task.childRunId || 'RUN PENDING' }}</code><small v-if="task.fencingToken">lease #{{ task.fencingToken }} · {{ task.claimedBy }}</small></div>
               </article>
             </div>
           </section>
@@ -300,7 +300,8 @@ onBeforeUnmount(() => {
                     <div><strong>执行影响</strong><p v-for="effect in item.proposal.effects" :key="effect">{{ effect }}</p></div>
                     <div><strong>审批警告</strong><p v-for="warning in item.proposal.warnings" :key="warning">{{ warning }}</p></div>
                   </div>
-                  <p class="evidence-ref">证据引用：{{ item.evidenceIds.join(', ') }}</p>
+                   <p class="evidence-ref">证据引用：{{ item.evidenceIds.join(', ') }}</p>
+                  <p v-if="item.fencingToken" class="evidence-ref">执行租约：token #{{ item.fencingToken }} · owner {{ item.executionOwner }} · 接管 {{ item.takeoverCount }} 次<span v-if="item.leaseUntil"> · 至 {{ dateTime(item.leaseUntil) }}</span></p>
                   <p v-if="item.lastError" class="incident-error">{{ item.lastError }}</p>
                   <div v-if="item.status === 'WAITING_APPROVAL'" class="decision-row">
                     <button type="button" :disabled="decidingItemId === item.itemId" @click="decideRecoveryItem(activeRecoveryPlan, item.itemId, true)">批准该 Proposal 并执行</button>

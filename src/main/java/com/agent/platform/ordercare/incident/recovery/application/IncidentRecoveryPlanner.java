@@ -238,7 +238,7 @@ public class IncidentRecoveryPlanner {
                 itemId, request.clientItemKey(), request.identifierType(), request.identifierValue(),
                 request.actionType(), request.suggestedReason(), request.evidenceIds(), request.conflictIds(),
                 status, proposal, approvalId, approvalStatus, actionStatus, caseOutcome,
-                convergence, error, now);
+                convergence, error, "", 0, null, null, 0, now);
     }
 
     private ToolCallRequest approvalToolCall(IncidentRecoveryPlanRecord plan,

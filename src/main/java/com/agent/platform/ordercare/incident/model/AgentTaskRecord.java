@@ -26,6 +26,8 @@ public record AgentTaskRecord(
         Instant deadlineAt,
         String claimedBy,
         Instant claimUntil,
+        long fencingToken,
+        Instant lastHeartbeatAt,
         String lastError,
         long version,
         Instant createdAt,
@@ -38,6 +40,12 @@ public record AgentTaskRecord(
                 : List.copyOf(requiredEvidenceSubtypes);
         inputPayload = immutableMap(inputPayload);
         outputSummary = immutableMap(outputSummary);
+        fencingToken = Math.max(0, fencingToken);
+    }
+
+    public boolean leaseOwnedBy(String owner, long token, Instant now) {
+        return owner != null && owner.equals(claimedBy) && token == fencingToken
+                && claimUntil != null && now != null && claimUntil.isAfter(now);
     }
 
     private static Map<String, Object> immutableMap(Map<String, Object> value) {

@@ -347,3 +347,20 @@ M1 只能表述为“实现异常订单智能诊断”，没有 Proposal、审�
 Phase 2 不把 Incident 从 `ASSESSED` 重新打开；Recovery Plan 是独立聚合。Planner Run 完成后释放模型资源，人工等待发生在 Recovery Plan/Approval 上。当前仍不包含 Phase 3 的多实例 lease、stale execution 回收和进程崩溃接管。
 
 权威证据：[Incident Command Phase 2 报告](reports/ordercare/incident-command-phase2-evidence.md)。
+
+## 15. Incident Command Phase 3（多实例可靠性内核）
+
+| 能力 | 状态 | 当前事实 |
+|---|---|---|
+| Task claim/lease | `IMPLEMENTED` | PostgreSQL owner、leaseUntil、heartbeat 和单调 fencingToken；接管增加 attempt |
+| Recovery Item lease | `IMPLEMENTED` | 每项独立 owner/token/TTL/takeoverCount；终态写入再次验 token |
+| stale scanner | `IMPLEMENTED` | 定时和手动扫描；不依赖旧 JVM 的线程、Future 或内存回调 |
+| 崩溃接管 | `IMPLEMENTED` | Task 新 Run 受原 deadline/maxAttempts 限制；恢复项只协调原 actionRequestId |
+| 父 Incident 续跑 | `IMPLEMENTED` | Task 恢复后从持久化 DelegationPlan/Evidence 继续冲突检查、Reviewer 和终态 |
+| fencing | `PASSED` | 真实 PostgreSQL 双 owner 测试证明旧 Task/Recovery token 无法提交结果 |
+| kill switch | `IMPLEMENTED` | 停止新副作用执行和自动接管，保留只读状态查询 |
+| Runtime E2E | `PASSED` | 开启 Phase 3 后，Phase 1 三场景与 Phase 2 完整恢复闭环 4/4 通过 |
+
+Phase 3 没有修改 `DefaultAgentRuntime.run()`，也没有建设通用 Agent Mailbox、批量写接口或第二套 FlowOrder 状态机。外部告警平台、统一身份认证、完整租户隔离和任意复杂 DAG 不属于本地可靠性内核完成声明。
+
+权威证据：[Incident Command Phase 3 报告](reports/ordercare/incident-command-phase3-evidence.md)。

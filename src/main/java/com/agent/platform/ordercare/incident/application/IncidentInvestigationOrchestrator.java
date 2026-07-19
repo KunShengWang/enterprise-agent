@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -196,6 +197,74 @@ public class IncidentInvestigationOrchestrator {
         }
     }
 
+    public Optional<IncidentInvestigationResult> resumeAfterRecoveredTasks(String incidentId) {
+        IncidentRecord incident = current(incidentId);
+        if (incident.status() != IncidentStatus.INVESTIGATING) return Optional.empty();
+        List<AgentTaskRecord> tasks = taskStore.listTasks(incidentId);
+        if (tasks.isEmpty() || tasks.stream().anyMatch(task -> task.status() == AgentTaskStatus.PENDING
+                || task.status() == AgentTaskStatus.CLAIMED || task.status() == AgentTaskStatus.RUNNING
+                || task.status() == AgentTaskStatus.RETRY_PENDING)) {
+            return Optional.empty();
+        }
+        DelegationPlan plan = objectMapper.convertValue(incident.delegationPlan(), DelegationPlan.class);
+        List<EvidenceGap> gaps = tasks.stream()
+                .filter(task -> task.status() == AgentTaskStatus.FAILED
+                        || task.status() == AgentTaskStatus.TIMED_OUT
+                        || task.status() == AgentTaskStatus.CANCELLED)
+                .map(task -> new EvidenceGap("SPECIALIST_RECOVERY_FAILED", "phase3-recovery",
+                        task.taskId() + ": " + String.valueOf(task.lastError())))
+                .toList();
+        try {
+            incident = transition(incident, IncidentStatus.CHECKING_CONSISTENCY,
+                    "phase3-incident-checking-after-task-takeover");
+            List<EvidenceRecord> evidence = evidenceStore.listEvidence(incidentId);
+            Set<EvidenceSubtype> required = plan.tasks().stream()
+                    .flatMap(task -> task.requiredEvidenceSubtypes().stream()).collect(Collectors.toSet());
+            EvidenceConsistencyResult consistency = consistencyChecker.check(incident.snapshot(), evidence, required);
+            List<EvidenceConflict> conflicts = persistConflicts(incidentId, consistency.conflicts());
+            persistTrust(incidentId, trustAssessor.assess(incident.snapshot(), evidence, conflicts));
+
+            incident = transition(current(incidentId), IncidentStatus.REVIEWING,
+                    "phase3-incident-reviewing-after-task-takeover");
+            ReviewResult review = review(incident, evidence, conflicts, gaps);
+            incident = incidentStore.updateDetails(
+                    incidentId, incident.version(), null, review.reviewerRunId(), null, null, false);
+            if (review.draft().clarificationRequest() != null
+                    && incident.clarificationCount() < incident.maxClarifications()) {
+                ClarificationResult clarified = clarify(incident, review, conflicts, gaps, plan);
+                incident = clarified.incident();
+                evidence = clarified.evidence();
+                conflicts = clarified.conflicts();
+                gaps = clarified.gaps();
+                review = clarified.review();
+            } else {
+                continuationRuntime.completeWaitingInput(review.reviewerRunId());
+                completeWaitingTasks(incidentId);
+            }
+            ReviewerAssessmentDraft authoritativeDraft = validOrFallbackDraft(
+                    incident.snapshot(), evidence, conflicts, review.draft());
+            IncidentAssessment assessment = assessmentAssembler.assemble(
+                    incident.snapshot(), evidence, conflicts, gaps, authoritativeDraft);
+            incident = current(incidentId);
+            incident = incidentStore.updateDetails(
+                    incidentId, incident.version(), null, null, null,
+                    objectMapper.convertValue(assessment, Map.class), false);
+            IncidentStatus terminal = switch (assessment.outcome()) {
+                case ASSESSED -> IncidentStatus.ASSESSED;
+                case PARTIAL -> IncidentStatus.PARTIAL;
+                case MANUAL_REVIEW -> IncidentStatus.MANUAL_REVIEW;
+            };
+            incident = transition(incident, terminal, "phase3-incident-terminal-" + terminal.name().toLowerCase());
+            IncidentAggregate aggregate = incidentStore.findAggregate(incidentId, 10_000).orElseThrow();
+            return Optional.of(new IncidentInvestigationResult(incident, assessment, aggregate));
+        } catch (com.agent.platform.ordercare.incident.persistence.IncidentCasConflictException contention) {
+            return Optional.empty();
+        } catch (RuntimeException exception) {
+            failIncident(incidentId, exception);
+            throw exception;
+        }
+    }
+
     private PlanningResult plan(IncidentRecord incident, IncidentInvestigationRequest request) {
         String prompt = """
                 生成 delegation-plan-v1 JSON。只能选择 ORDER_ANALYST、INVENTORY_ANALYST、MQ_ANALYST、SOP_ANALYST 中 1 到 3 个不同角色。
@@ -242,7 +311,7 @@ public class IncidentInvestigationOrchestrator {
                     Map.of("snapshotId", incident.snapshot().snapshotId(),
                             "scopeHash", incident.snapshot().scopeHash()),
                     Map.of(), AgentTaskStatus.PENDING, 0, 2, null, null,
-                    incident.snapshot().deadlineAt(), null, null, "", 0, now, now)));
+                    incident.snapshot().deadlineAt(), null, null, 0, null, "", 0, now, now)));
         }
         return List.copyOf(tasks);
     }

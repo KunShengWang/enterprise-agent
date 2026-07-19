@@ -9,23 +9,30 @@ import com.agent.platform.ordercare.application.RecoveryOutcomeReconciler;
 import com.agent.platform.ordercare.client.FlowOrderApiException;
 import com.agent.platform.ordercare.client.FlowOrderClient;
 import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
+import com.agent.platform.ordercare.incident.config.IncidentWorkerIdentity;
 import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlanItem;
 import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlanRecord;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanDecisionRequest;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanItemStatus;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanOutcome;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStatus;
+import com.agent.platform.ordercare.incident.recovery.model.RecoveryItemLeaseClaim;
 import com.agent.platform.ordercare.incident.recovery.persistence.IncidentRecoveryPlanStore;
 import com.agent.platform.ordercare.model.OrderCareConvergenceResult;
 import com.agent.platform.ordercare.model.OrderCareProposalExecuteCommand;
 import com.agent.platform.ordercare.model.OrderCareRecoveryProposal;
 import com.agent.platform.ordercare.model.OrderCareRecoveryReconciliationResult;
+import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class IncidentRecoveryExecutionService {
@@ -36,25 +43,36 @@ public class IncidentRecoveryExecutionService {
     private final FlowOrderClient flowOrderClient;
     private final RecoveryConvergenceChecker convergenceChecker;
     private final RecoveryOutcomeReconciler outcomeReconciler;
+    private final IncidentWorkerIdentity workerIdentity;
+    private final ScheduledExecutorService leaseHeartbeatExecutor = Executors.newSingleThreadScheduledExecutor(task -> {
+        Thread thread = new Thread(task, "incident-recovery-lease-heartbeat");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     public IncidentRecoveryExecutionService(IncidentCommandProperties properties,
                                             IncidentRecoveryPlanStore planStore,
                                             ApprovalService approvalService,
-                                            FlowOrderClient flowOrderClient,
-                                            RecoveryConvergenceChecker convergenceChecker,
-                                            RecoveryOutcomeReconciler outcomeReconciler) {
+                                             FlowOrderClient flowOrderClient,
+                                             RecoveryConvergenceChecker convergenceChecker,
+                                             RecoveryOutcomeReconciler outcomeReconciler,
+                                             IncidentWorkerIdentity workerIdentity) {
         this.properties = properties;
         this.planStore = planStore;
         this.approvalService = approvalService;
         this.flowOrderClient = flowOrderClient;
         this.convergenceChecker = convergenceChecker;
         this.outcomeReconciler = outcomeReconciler;
+        this.workerIdentity = workerIdentity;
     }
 
     public IncidentRecoveryPlanRecord decideAndExecute(String planId,
                                                        String itemId,
                                                        RecoveryPlanDecisionRequest request) {
         requireEnabled();
+        if (properties.isExecutionKillSwitch()) {
+            throw new IllegalStateException("Incident recovery execution is disabled by kill switch");
+        }
         IncidentRecoveryPlanRecord initial = requirePlan(planId);
         IncidentRecoveryPlanItem initialItem = requireItem(initial, itemId);
         if (initialItem.approvalId().isBlank()) {
@@ -79,13 +97,35 @@ public class IncidentRecoveryExecutionService {
         if (!claimed.claimed()) {
             return claimed.plan();
         }
-        return execute(claimed.plan(), claimed.item(), decision);
+        return execute(claimed.plan(), claimed.item(), decision, claimed.owner(), claimed.fencingToken());
+    }
+
+    public IncidentRecoveryPlanRecord recoverStaleExecution(String planId, String itemId) {
+        requireEnabled();
+        if (!properties.isPhase3Enabled() || properties.isExecutionKillSwitch()) {
+            return requirePlan(planId);
+        }
+        String owner = workerIdentity.value();
+        RecoveryItemLeaseClaim claim = planStore.claimItem(
+                planId, itemId, owner,
+                Instant.now().plusSeconds(properties.getRecoveryLeaseSeconds()), true);
+        if (!claim.claimed()) return claim.plan();
+        IncidentRecoveryPlanItem item = claim.item();
+        ApprovalDecision decision = approvalService.find(item.approvalId())
+                .filter(record -> record.status() == ApprovalStatus.APPROVED)
+                .map(record -> new ApprovalDecision(record.approvalId(), record.status(), record.reviewer(),
+                        record.decisionReason(), record.decidedAt()))
+                .orElseThrow(() -> new IllegalStateException("stale recovery item lost approved decision"));
+        return reconcileTakeover(claim.plan(), item, decision, owner, item.fencingToken());
     }
 
     private IncidentRecoveryPlanRecord execute(IncidentRecoveryPlanRecord plan,
                                                IncidentRecoveryPlanItem item,
-                                               ApprovalDecision decision) {
+                                               ApprovalDecision decision,
+                                               String owner,
+                                               long fencingToken) {
         OrderCareRecoveryProposal immutable = item.proposal();
+        ScheduledFuture<?> heartbeat = startHeartbeat(plan.planId(), item.itemId(), owner, fencingToken);
         try {
             ApprovalRecord approval = approvalService.find(item.approvalId())
                     .filter(record -> record.status() == ApprovalStatus.APPROVED)
@@ -96,8 +136,8 @@ public class IncidentRecoveryExecutionService {
             ensureSamePreview(immutable, current);
             if (!"ACTIVE".equals(current.proposalStatus()) || !Boolean.TRUE.equals(current.canExecute())) {
                 return finish(plan.planId(), item.itemId(), RecoveryPlanItemStatus.MANUAL_REVIEW,
-                        approval.status().name(), current.actionStatus(), current.caseOutcome(), null,
-                        "Proposal expired or became ineligible before execution");
+                         approval.status().name(), current.actionStatus(), current.caseOutcome(), null,
+                        "Proposal expired or became ineligible before execution", owner, fencingToken);
             }
             OrderCareProposalExecuteCommand command = new OrderCareProposalExecuteCommand(
                     current.proposalId(), current.proposalVersion(), current.stateFingerprint(),
@@ -109,8 +149,8 @@ public class IncidentRecoveryExecutionService {
             } catch (FlowOrderApiException exception) {
                 if (!exception.outcomeUnknown()) {
                     return finish(plan.planId(), item.itemId(), RecoveryPlanItemStatus.MANUAL_REVIEW,
-                            "APPROVED", current.actionStatus(), current.caseOutcome(), null,
-                            "FlowOrder rejected approved Proposal: " + exception.getMessage());
+                             "APPROVED", current.actionStatus(), current.caseOutcome(), null,
+                            "FlowOrder rejected approved Proposal: " + exception.getMessage(), owner, fencingToken);
                 }
                 OrderCareRecoveryReconciliationResult reconciliation = outcomeReconciler.reconcile(
                         immutable, command,
@@ -119,34 +159,82 @@ public class IncidentRecoveryExecutionService {
                 OrderCareConvergenceResult convergence = reconciliation.convergence();
                 boolean resolved = "RESOLVED".equals(reconciliation.status()) && convergence != null;
                 return finish(plan.planId(), item.itemId(),
-                        resolved ? RecoveryPlanItemStatus.RESOLVED : RecoveryPlanItemStatus.MANUAL_REVIEW,
+                         resolved ? RecoveryPlanItemStatus.RESOLVED : RecoveryPlanItemStatus.MANUAL_REVIEW,
                         "APPROVED",
                         convergence == null ? safeAction(reconciliation) : convergence.actionStatus(),
                         convergence == null ? "MANUAL_REVIEW" : convergence.caseOutcome(),
                         convergence,
-                        resolved ? "" : "UNKNOWN execution could not be proven resolved");
+                        resolved ? "" : "UNKNOWN execution could not be proven resolved", owner, fencingToken);
             }
             OrderCareConvergenceResult convergence = convergenceChecker.await(
                     current.proposalId(), traceId(plan, item, "convergence"));
             boolean resolved = "RESOLVED".equals(convergence.status());
             return finish(plan.planId(), item.itemId(),
-                    resolved ? RecoveryPlanItemStatus.RESOLVED : RecoveryPlanItemStatus.MANUAL_REVIEW,
-                    "APPROVED", convergence.actionStatus(), convergence.caseOutcome(), convergence,
-                    resolved ? "" : "business convergence was not proven");
+                     resolved ? RecoveryPlanItemStatus.RESOLVED : RecoveryPlanItemStatus.MANUAL_REVIEW,
+                     "APPROVED", convergence.actionStatus(), convergence.caseOutcome(), convergence,
+                    resolved ? "" : "business convergence was not proven", owner, fencingToken);
         } catch (RuntimeException exception) {
             return finish(plan.planId(), item.itemId(), RecoveryPlanItemStatus.MANUAL_REVIEW,
                     decision.status().name(), immutable == null ? "NOT_STARTED" : immutable.actionStatus(),
                     immutable == null ? "NOT_CONVERGED" : immutable.caseOutcome(), null,
-                    "recovery execution coordination failed: " + exception.getClass().getSimpleName());
+                    "recovery execution coordination failed: " + exception.getClass().getSimpleName(),
+                    owner, fencingToken);
+        } finally {
+            if (heartbeat != null) heartbeat.cancel(false);
+        }
+    }
+
+    private IncidentRecoveryPlanRecord reconcileTakeover(IncidentRecoveryPlanRecord plan,
+                                                          IncidentRecoveryPlanItem item,
+                                                          ApprovalDecision decision,
+                                                          String owner,
+                                                          long fencingToken) {
+        ScheduledFuture<?> heartbeat = startHeartbeat(plan.planId(), item.itemId(), owner, fencingToken);
+        try {
+            ApprovalRecord approval = approvalService.find(item.approvalId())
+                    .filter(record -> record.status() == ApprovalStatus.APPROVED)
+                    .orElseThrow(() -> new IllegalStateException("approved record disappeared"));
+            ensureApprovalBound(plan, item, approval);
+            OrderCareRecoveryProposal current = flowOrderClient.getProposal(
+                    item.proposal().proposalId(), traceId(plan, item, "takeover-proposal-check"));
+            ensureSamePreview(item.proposal(), current);
+            OrderCareProposalExecuteCommand command = new OrderCareProposalExecuteCommand(
+                    current.proposalId(), current.proposalVersion(), current.stateFingerprint(),
+                    current.effectsDigest(), current.warningsDigest(), current.previewDigest(),
+                    approval.approvalId(), approval.reviewer(), approval.decisionReason(),
+                    "incident-recovery-plan:" + plan.planId() + ":" + item.itemId());
+            heartbeat(plan.planId(), item.itemId(), owner, fencingToken);
+            OrderCareRecoveryReconciliationResult reconciliation = outcomeReconciler.reconcile(
+                    current, command, owner, traceId(plan, item, "takeover-reconcile"), true);
+            OrderCareConvergenceResult convergence = reconciliation.convergence();
+            boolean resolved = "RESOLVED".equals(reconciliation.status()) && convergence != null;
+            return finish(plan.planId(), item.itemId(),
+                    resolved ? RecoveryPlanItemStatus.RESOLVED : RecoveryPlanItemStatus.MANUAL_REVIEW,
+                    decision.status().name(), convergence == null ? safeAction(reconciliation) : convergence.actionStatus(),
+                    convergence == null ? "MANUAL_REVIEW" : convergence.caseOutcome(), convergence,
+                    resolved ? "" : "stale execution takeover could not prove convergence", owner, fencingToken);
+        } catch (RuntimeException exception) {
+            return finish(plan.planId(), item.itemId(), RecoveryPlanItemStatus.MANUAL_REVIEW,
+                    decision.status().name(), item.actionStatus(), item.caseOutcome(), null,
+                    "stale execution takeover failed: " + exception.getClass().getSimpleName(), owner, fencingToken);
+        } finally {
+            if (heartbeat != null) heartbeat.cancel(false);
         }
     }
 
     private ClaimedItem claimExecution(String planId, String itemId) {
+        if (properties.isPhase3Enabled()) {
+            RecoveryItemLeaseClaim claim = planStore.claimItem(
+                    planId, itemId, workerIdentity.value(),
+                    Instant.now().plusSeconds(properties.getRecoveryLeaseSeconds()), false);
+            return new ClaimedItem(claim.plan(), claim.item(), claim.claimed(),
+                    claim.claimed() ? workerIdentity.value() : "", claim.item().fencingToken());
+        }
         for (int attempt = 0; attempt < 4; attempt++) {
             IncidentRecoveryPlanRecord plan = requirePlan(planId);
             IncidentRecoveryPlanItem item = requireItem(plan, itemId);
             if (item.status() == RecoveryPlanItemStatus.EXECUTING || item.status().terminal()) {
-                return new ClaimedItem(plan, item, false);
+                return new ClaimedItem(plan, item, false, "", 0);
             }
             if (item.status() != RecoveryPlanItemStatus.WAITING_APPROVAL) {
                 throw new IllegalStateException("recovery plan item is not waiting approval: " + item.status());
@@ -155,7 +243,7 @@ public class IncidentRecoveryExecutionService {
                     "APPROVED", item.actionStatus(), item.caseOutcome(), item.convergence(), "");
             try {
                 IncidentRecoveryPlanRecord updated = updateItem(plan, claimed);
-                return new ClaimedItem(updated, claimed, true);
+                return new ClaimedItem(updated, claimed, true, "", 0);
             } catch (com.agent.platform.ordercare.incident.persistence.IncidentCasConflictException ignored) {
                 // A different item or duplicate decision advanced the same aggregate. Reload and retry.
             }
@@ -191,7 +279,9 @@ public class IncidentRecoveryExecutionService {
                                               String actionStatus,
                                               String caseOutcome,
                                               OrderCareConvergenceResult convergence,
-                                              String error) {
+                                              String error,
+                                              String owner,
+                                              long fencingToken) {
         for (int attempt = 0; attempt < 4; attempt++) {
             IncidentRecoveryPlanRecord plan = requirePlan(planId);
             IncidentRecoveryPlanItem item = requireItem(plan, itemId);
@@ -199,8 +289,12 @@ public class IncidentRecoveryExecutionService {
                 return plan;
             }
             try {
-                return updateItem(plan, copy(item, status, approvalStatus,
-                        actionStatus, caseOutcome, convergence, error));
+                IncidentRecoveryPlanItem replacement = copy(item, status, approvalStatus,
+                        actionStatus, caseOutcome, convergence, error);
+                if (properties.isPhase3Enabled() && fencingToken > 0) {
+                    return planStore.updateItemFenced(planId, replacement, owner, fencingToken);
+                }
+                return updateItem(plan, replacement);
             } catch (com.agent.platform.ordercare.incident.persistence.IncidentCasConflictException ignored) {
                 // Reload aggregate; FlowOrder idempotency remains authoritative.
             }
@@ -263,7 +357,33 @@ public class IncidentRecoveryExecutionService {
                 item.itemId(), item.clientItemKey(), item.identifierType(), item.identifierValue(),
                 item.actionType(), item.suggestedReason(), item.evidenceIds(), item.conflictIds(),
                 status, item.proposal(), item.approvalId(), approvalStatus, actionStatus,
-                caseOutcome, convergence, error, Instant.now());
+                caseOutcome, convergence, error, item.executionOwner(), item.fencingToken(),
+                status.terminal() ? null : item.leaseUntil(),
+                item.executionOwner().isBlank() ? item.lastHeartbeatAt() : Instant.now(),
+                item.takeoverCount(), Instant.now());
+    }
+
+    private void heartbeat(String planId, String itemId, String owner, long fencingToken) {
+        if (!properties.isPhase3Enabled() || fencingToken <= 0) return;
+        planStore.renewItemLease(planId, itemId, owner, fencingToken,
+                Instant.now().plusSeconds(properties.getRecoveryLeaseSeconds()));
+    }
+
+    private ScheduledFuture<?> startHeartbeat(String planId, String itemId, String owner, long fencingToken) {
+        if (!properties.isPhase3Enabled() || fencingToken <= 0) return null;
+        long interval = Math.max(1, properties.getLeaseHeartbeatSeconds());
+        return leaseHeartbeatExecutor.scheduleAtFixedRate(() -> {
+            try {
+                heartbeat(planId, itemId, owner, fencingToken);
+            } catch (RuntimeException ignored) {
+                // A newer fencing token owns the item; the stale worker will also be rejected at terminal write.
+            }
+        }, interval, interval, TimeUnit.SECONDS);
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        leaseHeartbeatExecutor.shutdownNow();
     }
 
     private void ensureSamePreview(OrderCareRecoveryProposal expected, OrderCareRecoveryProposal current) {
@@ -329,7 +449,9 @@ public class IncidentRecoveryExecutionService {
 
     private record ClaimedItem(IncidentRecoveryPlanRecord plan,
                                IncidentRecoveryPlanItem item,
-                               boolean claimed) { }
+                               boolean claimed,
+                               String owner,
+                               long fencingToken) { }
 
     private record DerivedState(RecoveryPlanStatus status, RecoveryPlanOutcome outcome) { }
 }

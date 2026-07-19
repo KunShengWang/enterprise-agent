@@ -1,7 +1,7 @@
 # Enterprise Agent 项目总蓝图：OrderCare Incident Agent
 
 > 状态：项目级实施蓝图；按阶段验收，不代表全部已实现
-> 版本：Blueprint V1.6
+> 版本：Blueprint V1.7
 > 更新日期：2026-07-19 CST
 > 主仓库：`enterprise-agent`
 > 业务系统：`floworder`
@@ -25,6 +25,7 @@
 > 2026-07-18 20:22 CST 结论：独立场景 [OrderCare Incident Command V1.3](ordercare-incident-command-v1-design.md) 已冻结 M0 并完成 M1-A～M1-E。M1-C 同 childRunId Runtime 门禁已通过；Phase 1 已实现受限 Commander、最多三个并行 Specialist、结构化 Evidence、显式跨 subtype ComparisonRule、一次定向补证、强类型 Assessment、synthetic coordinator Trace、三条纵向 E2E、10 条核心 Eval 和单窗口工作台。Task 当前仍只实现 version CAS、幂等防重、单实例调度保护和一次有界重试，不宣称多实例 lease 恢复、通用 Mailbox 或自动批量恢复。证据见 [Phase 1 报告](reports/ordercare/incident-command-phase1-evidence.md)。
 
 > 2026-07-19 结论：Incident Command V1.4 的 Phase 2 Recovery Planner 已完成并通过外部门禁。它使用独立 Planner Run 输出最多 5 个带 Evidence 引用的 `ProposalRequest`，Java 对 Assessment、开放冲突、证据缺口、scopeHash、目标范围和动作类型 fail closed；FlowOrder 继续逐项生成不可变 Proposal；Recovery Plan 逐项创建 Approval、CAS claim、执行原 `actionRequestId`、UNKNOWN 对账和确定性收敛。未增加 FlowOrder 批量写接口，Specialist/Reviewer 权限保持只读，`DefaultAgentRuntime.run()` 未加入事故恢复分支。真实 PostgreSQL requestKey 幂等/version CAS 门禁 1/1 通过，Phase 1 三场景与 Phase 2 完整 Runtime 纵向 E2E 4/4 通过。证据见 [Phase 2 报告](reports/ordercare/incident-command-phase2-evidence.md)。
+> 2026-07-19 Phase 3 结论：Incident Command V1.5 已实现多实例可靠性内核。Task 与 Recovery Item 使用 PostgreSQL lease、heartbeat、stale scan 和单调 fencing token；旧实例迟到提交会被拒绝，恢复项接管只协调原 actionRequestId，Task 接管完成后可从持久化 Incident 检查点继续冲突检查和 Reviewer。提供 kill switch、手动扫描和状态接口。真实 PostgreSQL 双 owner 接管、旧 token 拒绝及开启 Phase 3 的 4 条 Runtime E2E 已通过。外部告警、统一认证和完整租户治理不在本地实现范围。证据见 [Phase 3 报告](reports/ordercare/incident-command-phase3-evidence.md)。
 
 已有的 [OrderCare × FlowOrder 异常订单恢复闭环设计稿](ordercare-floworder-integration-design.md) 作为早期业务子设计保留。若两份文档冲突，以本总蓝图为准；原子设计中的“模型循环回查”和“5 个模型可见工具”不再作为实施方案。
 

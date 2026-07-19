@@ -1,10 +1,10 @@
 # OrderCare Incident Command V1：事故调查与受控恢复 Multi-Agent 设计
 
-> 文档状态：`M0_FROZEN / M1-C_GATE_PASSED / PHASE_1_IMPLEMENTED / PHASE_2_IMPLEMENTED / PHASE_2_E2E_PASSED`
+> 文档状态：`M0_FROZEN / M1-C_GATE_PASSED / PHASE_1_IMPLEMENTED / PHASE_2_IMPLEMENTED / PHASE_3_RELIABILITY_KERNEL_IMPLEMENTED`
 >
 > 场景 ID：`ordercare-incident-command-v1`
 >
-> 版本：V1.4
+> 版本：V1.5
 >
 > 更新日期：2026-07-19 CST
 >
@@ -1576,6 +1576,35 @@ UNKNOWN 对账和确定性收敛。进程若恰好在“CAS 标记 EXECUTING 后
 - 身份、服务认证、租户隔离；
 - 容量、告警、SLO 和 kill switch；
 - 更大 Eval 与线上反馈闭环。
+
+#### Phase 3 V1.5 实施冻结
+
+Phase 3 不把系统扩展为通用 Workflow 平台。本阶段冻结并实现的生产可靠性内核为：
+
+```text
+Task / Recovery Item 执行前数据库 claim
+-> owner + leaseUntil + 单调递增 fencingToken
+-> 执行期间 heartbeat 续租
+-> 结果提交再次校验 owner/token/lease
+-> stale scanner 发现过期执行
+-> 新实例以更大 token 接管
+-> 旧实例迟到结果被数据库拒绝
+-> Recovery Item 只对账原 actionRequestId
+-> Task 完成后从持久化 Incident 检查点继续一致性检查和 Reviewer
+```
+
+- `agent_task.claimed_by/claim_until/fencing_token/last_heartbeat_at` 是 Task 租约事实；
+- Recovery Item 在有界 Recovery Plan JSON 中保存 owner、TTL、token、heartbeat 和 takeoverCount；
+- 每次 claim 或过期接管递增 token，续租不递增；
+- Evidence/Task 结果提交同时满足 version CAS 和有效 token；
+- Recovery Item 终态写入携带当前 token，旧 owner 不能覆盖接管结果；
+- stale Recovery Item 接管后只查询和协调原 Proposal/actionRequestId；
+- stale Task 接管增加 attempt，并受原 maxAttempts/deadline 约束；
+- Scanner 只读取持久化事实，不依赖旧 JVM 的 Future、线程或回调；
+- kill switch 打开时禁止新执行和自动接管，只读查询仍可用；
+- Phase 3 默认关闭，双实例竞争和旧 token 拒绝必须在真实 PostgreSQL 验证。
+
+本阶段不宣称已完成企业告警平台、统一身份认证、完整租户隔离或任意复杂 DAG；这些继续作为外部部署治理扩展。
 
 ## 20. 最小代码改动原则
 

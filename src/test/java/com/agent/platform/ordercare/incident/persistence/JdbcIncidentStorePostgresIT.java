@@ -153,13 +153,76 @@ class JdbcIncidentStorePostgresIT {
                 key(fixture.incidentId(), "stale"),
                 AgentTaskStatus.SUCCEEDED,
                 Map.of("count", 1),
-                List.of(evidence(fixture, "stale")));
+                List.of(evidence(fixture, "stale")), "", 0);
 
         assertThrows(IncidentCasConflictException.class, () -> store.commitTaskResult(stale));
 
         assertTrue(store.listEvidence(fixture.incidentId()).isEmpty());
         assertEquals(3, store.loadEventsAfter(fixture.incidentId(), -1, 100).size());
         assertEquals(4, store.find(fixture.incidentId()).orElseThrow().nextEventSequence());
+    }
+
+    @Test
+    void expiredTaskLeaseIsTakenOverAndOldFencingTokenCannotCommit() throws Exception {
+        JdbcIncidentStore first = new JdbcIncidentStore(properties, objectMapper);
+        JdbcIncidentStore second = new JdbcIncidentStore(properties, objectMapper);
+        Fixture fixture = runningTask(first);
+        try (Connection connection = DriverManager.getConnection(
+                properties.getDatasource().getUrl(), properties.getDatasource().getUsername(),
+                properties.getDatasource().getPassword());
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE agent_task SET claimed_by = 'worker-a', claim_until = ?,
+                         fencing_token = 1, last_heartbeat_at = ? WHERE task_id = ?
+                     """)) {
+            statement.setObject(1, java.time.OffsetDateTime.now().minusSeconds(1));
+            statement.setObject(2, java.time.OffsetDateTime.now().minusSeconds(2));
+            statement.setString(3, fixture.taskId());
+            statement.executeUpdate();
+        }
+
+        AgentTaskRecord stale = first.findTask(fixture.taskId()).orElseThrow();
+        var takeover = second.claimTask(stale.taskId(), stale.version(), "worker-b",
+                Instant.now().plusSeconds(30), true);
+
+        assertTrue(takeover.claimed());
+        assertTrue(takeover.takeover());
+        assertEquals(2, takeover.task().fencingToken());
+        assertEquals(1, takeover.task().attempt());
+        AgentTaskRecord running = second.transitionLeasedTask(
+                takeover.task().taskId(), takeover.task().version(), AgentTaskStatus.RUNNING,
+                takeover.task().childRunId(), "", "worker-b", takeover.task().fencingToken(),
+                TaskEventActorType.SYSTEM, "worker-b", key(fixture.incidentId(), "takeover-running"));
+        assertThrows(IncidentCasConflictException.class, () -> first.commitTaskResult(
+                new TaskResultSubmission(
+                        fixture.incidentId(), fixture.taskId(), fixture.childRunId(), running.version(),
+                        key(fixture.incidentId(), "old-owner-result"), AgentTaskStatus.SUCCEEDED,
+                        Map.of("owner", "worker-a"), List.of(evidence(fixture, "old-owner")),
+                        "worker-a", 1)));
+        AgentTaskRecord renewed = second.renewTaskLease(
+                running.taskId(), "worker-b", running.fencingToken(), Instant.now().plusSeconds(30));
+        assertEquals("worker-b", renewed.claimedBy());
+        assertEquals(2, renewed.fencingToken());
+        assertTrue(first.listEvidence(fixture.incidentId()).isEmpty());
+        assertEquals(1, first.loadEventsAfter(fixture.incidentId(), -1, 100).stream()
+                .filter(event -> event.eventType() == TaskEventType.TASK_LEASE_RECOVERED)
+                .count());
+
+        try (Connection connection = DriverManager.getConnection(
+                properties.getDatasource().getUrl(), properties.getDatasource().getUsername(),
+                properties.getDatasource().getPassword());
+             PreparedStatement statement = connection.prepareStatement(
+                     "UPDATE agent_task SET claim_until = ? WHERE task_id = ?")) {
+            statement.setObject(1, java.time.OffsetDateTime.now().minusSeconds(1));
+            statement.setString(2, fixture.taskId());
+            statement.executeUpdate();
+        }
+        AgentTaskRecord expiredAgain = first.findTask(fixture.taskId()).orElseThrow();
+        var exhausted = first.claimTask(expiredAgain.taskId(), expiredAgain.version(), "worker-c",
+                Instant.now().plusSeconds(30), true);
+        assertFalse(exhausted.claimed());
+        assertTrue(exhausted.takeover());
+        assertEquals(AgentTaskStatus.FAILED, exhausted.task().status());
+        assertEquals("stale task takeover retry budget exhausted", exhausted.task().lastError());
     }
 
     private Fixture runningTask(JdbcIncidentStore store) {
@@ -218,6 +281,8 @@ class JdbcIncidentStorePostgresIT {
                 now.plusSeconds(120),
                 null,
                 null,
+                0,
+                null,
                 null,
                 0,
                 now,
@@ -254,7 +319,7 @@ class JdbcIncidentStorePostgresIT {
                 key(fixture.incidentId(), idempotencySuffix),
                 AgentTaskStatus.SUCCEEDED,
                 output,
-                List.of(evidence(fixture, idempotencySuffix)));
+                List.of(evidence(fixture, idempotencySuffix)), "", 0);
     }
 
     private EvidenceCandidate evidence(Fixture fixture, String suffix) {

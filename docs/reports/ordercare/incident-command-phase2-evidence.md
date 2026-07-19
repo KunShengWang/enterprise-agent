@@ -73,10 +73,6 @@ mvn.cmd -q '-Dtest=JdbcIncidentRecoveryPlanStorePostgresIT,IncidentCommandRuntim
 
 结果：`JdbcIncidentRecoveryPlanStorePostgresIT` 1/1 通过；`IncidentCommandRuntimeE2ETests` 4/4 通过。纵向场景覆盖 Phase 1 调查、权威 Assessment 引用、独立 Planner Run、不可变 Proposal、人工批准、原 actionRequestId 执行、确定性收敛与 Trace 投影。首次执行还证明 Planner 会拒绝未被权威 Assessment 引用的 Evidence；修正测试 Reviewer 的真实引用语义后放行，生产校验规则未被放宽。
 
-## 6. Phase 3 明确未实现
+## 6. 后续状态
 
-- 多实例 Recovery Plan/Task lease；
-- stale EXECUTING 自动回收；
-- 进程崩溃后的其他实例接管；
-- fencing token；
-- 自动告警接入、身份/租户治理、SLO 和 kill switch。
+多实例 Recovery Plan/Task lease、stale 回收、崩溃接管、fencing token 和 kill switch 已在 Incident Command V1.5 Phase 3 可靠性内核中实现并独立验收。证据见 [Phase 3 报告](incident-command-phase3-evidence.md)。自动告警接入、统一身份和完整租户治理仍属于外部部署扩展。

@@ -80,6 +80,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "enterprise-agent.mock-mode=true",
         "enterprise-agent.ordercare.incident-command.enabled=true",
         "enterprise-agent.ordercare.incident-command.recovery-planner-enabled=true",
+        "enterprise-agent.ordercare.incident-command.phase3-enabled=true",
+        "enterprise-agent.ordercare.incident-command.stale-scan-interval-millis=3600000",
+        "enterprise-agent.ordercare.incident-command.instance-id=incident-e2e-worker",
+        "enterprise-agent.ordercare.incident-command.task-lease-seconds=30",
+        "enterprise-agent.ordercare.incident-command.recovery-lease-seconds=30",
         "enterprise-agent.ordercare.inspect-max-attempts=1",
         "enterprise-agent.ordercare.incident.rabbitmq-management.max-attempts=1",
         "enterprise-agent.ordercare.incident.rabbitmq-management.connect-timeout-millis=100",
@@ -234,6 +239,8 @@ class IncidentCommandRuntimeE2ETests {
         assertEquals(RecoveryPlanStatus.COMPLETED, completed.status());
         assertEquals(RecoveryPlanOutcome.RESOLVED, completed.outcome());
         assertEquals(RecoveryPlanItemStatus.RESOLVED, completed.items().get(0).status());
+        assertEquals(1, completed.items().get(0).fencingToken());
+        assertEquals("incident-e2e-worker", completed.items().get(0).executionOwner());
         assertEquals(1, RECOVERY_EXECUTE_CALLS.get());
         var trace = traceProjector.project(result.incident().incidentId()).orElseThrow();
         assertEquals(6, trace.modelMetrics().get("modelRunCount"));

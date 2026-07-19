@@ -10,11 +10,13 @@ import com.agent.platform.ordercare.incident.model.IncidentTrace;
 import com.agent.platform.ordercare.incident.model.TaskEventRecord;
 import com.agent.platform.ordercare.incident.application.IncidentInvestigationLauncher;
 import com.agent.platform.ordercare.incident.application.IncidentTraceProjector;
+import com.agent.platform.ordercare.incident.application.IncidentTaskLeaseRecoveryCoordinator;
 import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
 import com.agent.platform.ordercare.incident.persistence.IncidentStore;
 import com.agent.platform.ordercare.incident.persistence.TaskEventStore;
 import com.agent.platform.ordercare.incident.recovery.application.IncidentRecoveryExecutionService;
 import com.agent.platform.ordercare.incident.recovery.application.IncidentRecoveryPlanLauncher;
+import com.agent.platform.ordercare.incident.recovery.application.IncidentPhase3RecoveryCoordinator;
 import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlanRecord;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanDecisionRequest;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStartRequest;
@@ -35,6 +37,7 @@ import reactor.core.scheduler.Schedulers;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/incidents")
@@ -48,15 +51,19 @@ public class IncidentController {
     private final IncidentRecoveryPlanStore recoveryPlanStore;
     private final IncidentRecoveryPlanLauncher recoveryPlanLauncher;
     private final IncidentRecoveryExecutionService recoveryExecutionService;
+    private final IncidentPhase3RecoveryCoordinator phase3RecoveryCoordinator;
+    private final IncidentTaskLeaseRecoveryCoordinator taskLeaseRecoveryCoordinator;
 
     public IncidentController(IncidentStore incidentStore,
                               TaskEventStore taskEventStore,
                               IncidentInvestigationLauncher launcher,
                               IncidentTraceProjector traceProjector,
                               IncidentCommandProperties properties,
-                              IncidentRecoveryPlanStore recoveryPlanStore,
-                              IncidentRecoveryPlanLauncher recoveryPlanLauncher,
-                              IncidentRecoveryExecutionService recoveryExecutionService) {
+                               IncidentRecoveryPlanStore recoveryPlanStore,
+                               IncidentRecoveryPlanLauncher recoveryPlanLauncher,
+                               IncidentRecoveryExecutionService recoveryExecutionService,
+                               IncidentPhase3RecoveryCoordinator phase3RecoveryCoordinator,
+                               IncidentTaskLeaseRecoveryCoordinator taskLeaseRecoveryCoordinator) {
         this.incidentStore = incidentStore;
         this.taskEventStore = taskEventStore;
         this.launcher = launcher;
@@ -65,6 +72,27 @@ public class IncidentController {
         this.recoveryPlanStore = recoveryPlanStore;
         this.recoveryPlanLauncher = recoveryPlanLauncher;
         this.recoveryExecutionService = recoveryExecutionService;
+        this.phase3RecoveryCoordinator = phase3RecoveryCoordinator;
+        this.taskLeaseRecoveryCoordinator = taskLeaseRecoveryCoordinator;
+    }
+
+    @GetMapping("/phase3/status")
+    public ApiResponse<Map<String, Object>> phase3Status() {
+        return ApiResponse.success(Map.of(
+                "enabled", properties.isPhase3Enabled(),
+                "killSwitchActive", properties.isExecutionKillSwitch(),
+                "recovery", phase3RecoveryCoordinator.statistics(),
+                "tasks", taskLeaseRecoveryCoordinator.statistics()));
+    }
+
+    @PostMapping("/phase3/scan")
+    public ApiResponse<Map<String, Object>> scanPhase3Now() {
+        if (!properties.isPhase3Enabled()) {
+            return ApiResponse.failure(ErrorCode.BAD_REQUEST, "Incident Command Phase 3 is disabled");
+        }
+        taskLeaseRecoveryCoordinator.scan();
+        phase3RecoveryCoordinator.scan();
+        return phase3Status();
     }
 
     @PostMapping("/{incidentId}/recovery-plans")
