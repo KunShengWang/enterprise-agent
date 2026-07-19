@@ -1,6 +1,6 @@
 # Unified Agent Workbench V1：自然语言任务路由与统一执行体验设计
 
-> 文档状态：Blueprint V0.2.1 / FINAL FOR M0 FREEZE
+> 文档状态：Blueprint V0.2.3 / FINAL
 > 更新时间：2026-07-19 CST
 > 当前阶段：仅设计，不进入功能编码
 > 上位设计：[enterprise-agent-master-blueprint.md](./enterprise-agent-master-blueprint.md)
@@ -151,10 +151,15 @@ flowchart TD
     C --> IN["agent_work_input 先落库"]
     IN --> F["Conversation Focus"]
     F --> CC["WorkCommandClassifier"]
-    CC -->|WorkCommand| CH["WorkCommandHandler"]
-    CC -->|NORMAL_GOAL| W["WorkItemService"]
-    W -->|CAS 切换 Focus| F
-    W --> R["UnifiedTaskRouter"]
+    CC -->|其他 WorkCommand| CH["WorkCommandHandler"]
+    CC -->|START_NEW_WORK| CH
+    CC -->|NORMAL_GOAL| NG["NormalGoalEnvelope"]
+    CH -->|DerivedNormalGoal| NG
+    NG --> W["WorkItemService：先创建 ROUTING WorkItem"]
+    W -->|本地事务内切换 Focus| F
+    W --> LE["M1-A：最小 agent_work_event"]
+    W --> RC["M1-B：RoutingCoordinator"]
+    RC --> R["UnifiedTaskRouter"]
     R --> M["ExecutionTargetRegistry"]
     R --> V["RoutePolicyValidator"]
     V -->|GENERAL_AGENT| A["GeneralAgentExecutionAdapter"]
@@ -168,10 +173,11 @@ flowchart TD
     AR --> AE["Agent Event / Run Store"]
     IC --> IE["Incident Task Event / Evidence Store"]
     RP --> IE
-    AE --> EP["UnifiedWorkEventProjector"]
+    AE --> EP["M2：UnifiedWorkEventProjector"]
     IE --> EP
-    EP --> WE["agent_work_event"]
-    WE --> SSE["统一 SSE + Replay"]
+    EP --> LE
+    LE --> WE["统一 WorkEvent 查询模型"]
+    WE --> SSE["M2：统一 SSE + Replay"]
     SSE --> U
 ```
 
@@ -196,8 +202,10 @@ AuthenticatedPrincipal + conversationId + clientInputId + content
 → 校验 conversation 所有权
 → AgentConversationTurn / agent_work_input 持久化
 → WorkCommandClassifier
-→ WorkCommandHandler 或 UnifiedTaskRouter
-→ NORMAL_GOAL 或 START_NEW_WORK 携带的新 Goal 创建 AgentWorkItem
+→ NORMAL_GOAL 直接形成 NormalGoalEnvelope
+→ START_NEW_WORK 先写 command decision，再形成 DerivedNormalGoal/NormalGoalEnvelope
+→ 只有 NormalGoalEnvelope 可以创建 AgentWorkItem
+→ 先创建 controlState=ROUTING 的 WorkItem，再调用 UnifiedTaskRouter
 ```
 
 建议模型名为 `AgentConversationTurn`，表名为 `agent_work_input`，避免与现有 `agent_message` 的 Runtime 上下文语义混淆。
@@ -226,7 +234,7 @@ version
 - 身份和租户来自 `AuthenticatedPrincipal`，不接受请求体覆盖；
 - conversationId 必须属于当前 Principal/tenant；
 - `RESUME_ACTIVE_WORK`、`ABANDON_ACTIVE_WORK`、`PAUSE_ACTIVE_WORK`、`CANCEL_ACTIVE_WORK`、`ADD_INPUT_TO_ACTIVE_WORK` 不创建 WorkItem；
-- `START_NEW_WORK` 是命令语义：将命令携带的新目标作为同一输入的派生 Goal 创建一个新 WorkItem，并把 Conversation Focus 切换到新 WorkItem；它默认不暂停、不取消、不放弃旧 WorkItem；
+- `START_NEW_WORK` 是命令语义：先完成命令审计，再从同一 inputId 派生 `NormalGoalEnvelope`；它本身不直接创建 WorkItem、不选择 ExecutionTarget；
 - 分类失败时输入保持可恢复状态，不得静默丢失或默认启动危险目标。
 
 ### 6.2 agent_work_input 与 agent_message 的边界
@@ -247,7 +255,56 @@ agent_message
 - Incident 的用户目标由 Incident Launcher 转换为冻结范围和任务事实，仍不得把所有产品控制消息广播给子 Agent；
 - `agent_message` 必须保留 `sourceInputId` 或其他可审计来源，避免同一输入被重复投影。
 
-### 6.3 Conversation Focus
+### 6.3 NormalGoalEnvelope 与 DerivedNormalGoal
+
+所有新 WorkItem 只有一个创建入口：`NormalGoalEnvelope`。
+
+```java
+record NormalGoalEnvelope(
+    String sourceInputId,
+    String goalText,
+    GoalOrigin goalOrigin,
+    String commandDecisionId,
+    String parentWorkItemId,
+    String relationType
+) {}
+
+enum GoalOrigin {
+    DIRECT_NORMAL_GOAL,
+    DERIVED_FROM_START_NEW_WORK
+}
+```
+
+唯一流程：
+
+```text
+agent_work_input 已落库
+→ WorkCommandClassifier
+→ NORMAL_GOAL 直接生成 NormalGoalEnvelope
+  或 START_NEW_WORK 写 agent_work_command_decision 后生成 DerivedNormalGoal
+→ DerivedNormalGoal 规范化为 NormalGoalEnvelope
+→ 创建 AgentWorkItem(controlState=ROUTING, sourceInputId=原 inputId)
+→ CAS 切换 Conversation Focus
+→ UnifiedTaskRouter(workItemId, NormalGoalEnvelope)
+→ agent_routing_decision(workItemId)
+→ RoutePolicyValidator
+→ WAITING_INPUT / WAITING_CONFIRMATION / READY_TO_DISPATCH / CLOSED
+```
+
+冻结规则：
+
+1. `NORMAL_GOAL` 直接生成 `goalOrigin=DIRECT_NORMAL_GOAL` 的 Envelope；
+2. `START_NEW_WORK` 先作为 WorkCommand 审计，再生成 `goalOrigin=DERIVED_FROM_START_NEW_WORK` 的 Envelope；
+3. 只有 `NormalGoalEnvelope` 可以创建 WorkItem；
+4. 其他 WorkCommand 均不得创建 WorkItem；
+5. 派生目标继续使用原始 inputId 作为 `source_input_id`；
+6. START_NEW_WORK 不注册为 ExecutionTarget，也不直接选择 General、OrderCare 或 Incident；
+7. 两种 goalOrigin 使用完全相同的 WorkItem/Router/Validator 流程；
+8. 派生 Goal 不得伪造第二条 `agent_work_input`；
+9. 复合 `ABANDON_ACTIVE_WORK → START_NEW_WORK` 分别审计，前一步失败时后一步默认不执行；
+10. `commandDecisionId` 对 DIRECT_NORMAL_GOAL 为空，对派生目标必须引用唯一 EFFECTIVE command decision。
+
+### 6.4 Conversation Focus
 
 同一 Conversation 可以存在多个 WorkItem，也可以有多个后台 `RUNNING` WorkItem，因此：
 
@@ -279,13 +336,16 @@ updated_at
 9. 不得通过扫描所有 `RUNNING` WorkItem 推断 Focus；
 10. 显式选择历史 WorkItem 可以切换 Focus，但仍需所有权校验和 CAS。
 
-创建新 WorkItem 与 Focus 切换必须在同一个 PostgreSQL 本地事务中完成：先验证 expected focus version，再写 WorkItem/Relation/WorkEvent 并更新 Focus。CAS 冲突时整体回滚，不留下“已创建但用户不可见”的孤立 WorkItem；客户端重新读取 Focus 后再决定是否重试。
+创建新 WorkItem 与 Focus 切换必须在同一个 PostgreSQL 本地事务中完成：先验证 expected focus version，再写 `controlState=ROUTING` 且包含稳定 `routingRequestId` 的 WorkItem、可选 Relation、M1-A 本地 `WORK_ITEM_CREATED` Event 并更新 Focus。CAS 或事件追加冲突时整体回滚，不留下“已创建但用户不可见”的孤立 WorkItem；客户端重新读取 Focus 后再决定是否重试。RoutingCoordinator 只能在该事务成功提交之后领取。
 
 `START_NEW_WORK` 的冻结语义：
 
 ```text
 START_NEW_WORK
-→ 创建新的 WorkItem
+→ 写入唯一生效的 command decision
+→ 从同一 inputId 派生 DerivedNormalGoal
+→ 规范化为 NormalGoalEnvelope
+→ 创建新的 ROUTING WorkItem
 → CAS 将 Conversation Focus 切换到新 WorkItem
 → 默认不修改旧 WorkItem 的控制、执行、结果或权限
 ```
@@ -310,7 +370,7 @@ ABANDON_ACTIVE_WORK
 
 两个动作必须分别写 `agent_work_command_decision` 和 WorkEvent，具有独立 commandDecisionId、causationId 和 CAS 结果；前一个失败时后一个默认不执行，除非用户明确允许降级为仅创建新任务。
 
-### 6.4 WorkCommandClassifier
+### 6.5 WorkCommandClassifier
 
 `WorkCommandClassifier` 与 `UnifiedTaskRouter` 完全分离。Classifier 只判断当前输入如何作用于会话内既有任务：
 
@@ -335,10 +395,10 @@ Classifier 可以采用结构化语义模型，按钮命令和严格协议可走
 - 调用底层 Run/Incident 的受控 command；
 - 保存 command result 和 causationId；
 - 对 Focus 不存在、已不可操作、多个候选或状态不允许 fail-closed；
-- `START_NEW_WORK` 创建新 WorkItem 并 CAS 切换 Focus，不隐式终止旧任务；
-- `NORMAL_GOAL` 直接交给 `UnifiedTaskRouter`；`START_NEW_WORK` 在命令审计与新 Goal 完整性校验后，把其新 Goal 交给同一个 Router，再创建 WorkItem 和切换 Focus；其他 WorkCommand 不进入 Router。
+- `START_NEW_WORK` 只生成经审计的 DerivedNormalGoal，不直接创建 WorkItem或选择 Target；
+- `NORMAL_GOAL` 和 DerivedNormalGoal 都先规范化为 `NormalGoalEnvelope`；其他 WorkCommand 不进入新目标流程。
 
-### 6.5 WorkCommandClassifier 独立审计
+### 6.6 WorkCommandClassifier 独立审计
 
 Classifier 的决定会影响 Resume、Abandon、Pause、Cancel、Add Input 和 Start New Work，必须像 Router 一样独立、可重放、可 Eval。新增 `agent_work_command_decision`：
 
@@ -357,7 +417,7 @@ decision_json
 prompt_tokens
 completion_tokens
 latency_ms
-status
+failure_code
 failure_reason
 created_at
 ```
@@ -399,6 +459,11 @@ active_recovery_plan_id   // 可空
 route_decision_id
 source_input_id
 parent_work_item_id        // 可空；快捷读取，关系表仍为完整事实
+routing_request_id         // 创建时生成一次，路由全部 attempt 复用
+routing_attempt_count
+routing_last_attempt_at
+routing_next_retry_at
+routing_failure_code
 dispatch_request_id
 next_event_sequence
 version                   // CAS
@@ -409,7 +474,7 @@ completed_at
 
 约束：
 
-- 只有分类为 `NORMAL_GOAL` 的持久化输入创建 WorkItem；
+- 只有由 DIRECT_NORMAL_GOAL 或 DERIVED_FROM_START_NEW_WORK 形成的 `NormalGoalEnvelope` 创建 WorkItem；
 - WorkItem 可以关联多个 Run，但任一时刻只能有一个 active command；
 - Incident 仍以 `agent_incident` 为协调根，WorkItem 只保存引用；
 - Coordinator 继续是 synthetic span，不写入 `agent_run_state`；
@@ -427,6 +492,7 @@ completed_at
 ROUTING
 WAITING_INPUT
 WAITING_CONFIRMATION
+MANUAL_REVIEW
 READY_TO_DISPATCH
 DISPATCHING
 DISPATCHED
@@ -479,6 +545,8 @@ stateDiagram-v2
     [*] --> ROUTING
     ROUTING --> WAITING_INPUT: 缺少关键范围
     ROUTING --> WAITING_CONFIRMATION: Incident preview 或策略确认
+    ROUTING --> MANUAL_REVIEW: 有界重试耗尽或危险歧义
+    ROUTING --> CLOSED: 不支持或不可恢复失败
     ROUTING --> READY_TO_DISPATCH: 路由与校验通过
     WAITING_INPUT --> ROUTING: 补充信息
     WAITING_CONFIRMATION --> READY_TO_DISPATCH: 用户确认
@@ -494,6 +562,40 @@ stateDiagram-v2
 ```
 
 `WAITING_APPROVAL` 不进入 WorkControlState，而进入 WorkExecutionState；Approval 仍是权威事实。`CLOSED` 只表示控制生命周期结束，最终结论必须读取 WorkOutcome。
+
+### 7.5 WorkItem-before-Router 执行顺序
+
+Router 调用前必须已有稳定、已提交的 `workItemId`。冻结顺序：
+
+```text
+agent_work_input 已落库
+→ WorkCommandClassifier
+→ NormalGoalEnvelope
+→ PostgreSQL 本地事务：
+   - 创建 AgentWorkItem(controlState=ROUTING, routingRequestId=稳定值)
+   - 写 WORK_ITEM_CREATED
+   - 写可选 WorkRelation
+   - CAS 切换 Conversation Focus
+→ 事务提交
+→ RoutingCoordinator CAS claim
+→ UnifiedTaskRouter(workItemId, routingRequestId)
+→ agent_routing_decision(workItemId NOT NULL, routingRequestId, attemptNo)
+→ RoutePolicyValidator
+→ 推进 WorkControlState
+```
+
+规则：
+
+- Router Token、Trace、失败、重试和降级全部归属该 WorkItem；
+- Router 超时或结构化解析失败不删除 WorkItem，保留失败 decision 并进入 WAITING_INPUT、MANUAL_REVIEW 或明确失败终态；
+- 缺字段时 WorkItem 保留并进入 `WAITING_INPUT`；
+- Incident 路由通过但未确认时进入 `WAITING_CONFIRMATION`；
+- 路由拒绝或目标不支持时保留审计并进入 `CLOSED/REJECTED` 或人工复核；
+- `agent_routing_decision.work_item_id` 为非空外键，不允许孤立 Decision；
+- `routingRequestId` 在 WorkItem 创建事务中生成一次且不可替换，所有重试复用该值；
+- WorkItem 提交后、Router 前崩溃时，由 M1-B 扫描器重新领取；已有 EFFECTIVE decision 时禁止再次调用 Router；
+- DIRECT 与 DERIVED 两种 Envelope 走同一条创建和路由链；
+- WorkItem/Relation/Event/Focus CAS 任一步失败时本地事务整体回滚，Router 不得启动。
 
 ## 8. Execution Target Catalog
 
@@ -535,6 +637,56 @@ Registry 根据配置和运行态动态启用目标：
 - FlowOrder 不健康时，OrderCare 可降级为“解释/转人工”，不可伪装成可恢复；
 - Kill Switch 开启时，可以调查和预演，但禁止执行副作用。
 - `GENERAL_AGENT` 固定画像不包含 Incident Controller、FlowOrder 管理写工具、`floworder_recovery_execute`、任意 URL、任意 SQL 或动态工具注册能力；General 路径不得成为绕过 Router 的高权限跳板。
+
+### 8.3 M1 ExecutionTarget Command Capability Matrix
+
+冻结原则：
+
+```text
+WorkCommandClassifier 正确识别命令
+!= 目标执行器一定支持该命令
+```
+
+能力由 Java 注册表决定，不由模型决定：
+
+```java
+record ExecutionCommandCapabilities(
+    boolean addInputSupported,
+    boolean pauseSupported,
+    boolean resumeSupported,
+    boolean cancelSupported,
+    boolean abandonSupported,
+    Set<String> constraints
+) {}
+```
+
+对当前代码的只读审计结果：
+
+- `AgentRuntime` 已提供 Run 级 pause、resume、cancel；
+- 通用 General/OrderCare Run 默认没有 `WAITING_INPUT` continuation 入口，现有 `AgentContinuationRuntime` 仅被 Incident 专项定向澄清使用；
+- Incident Controller/Application Service 没有对整个 Incident 的 pause、resume、cancel 命令接口；存在 `CANCELLED` 枚举和内部 Task 取消逻辑不等于具备公开受控命令能力；
+- Recovery Plan 当前只有创建、查询和 Item 审批决定接口，没有 Plan 级 pause、resume、cancel 或通用 add-input 接口；
+- 因此不得根据状态枚举推断命令已实现。
+
+| ExecutionTarget | ADD_INPUT | PAUSE | RESUME | CANCEL | ABANDON |
+|---|---|---|---|---|---|
+| `GENERAL_AGENT` | `UNSUPPORTED_IN_M1`：默认 Run 未启用通用 input checkpoint | `SUPPORTED_EXISTING_RUNTIME`：安全检查点暂停 | `SUPPORTED_EXISTING_RUNTIME`：仅 PAUSED/PAUSE_REQUESTED 等现有可恢复状态 | `SUPPORTED_EXISTING_RUNTIME`：持久化取消请求 | `PRODUCT_ONLY`：关闭用户关注，不保证底层停止 |
+| `ORDERCARE_CASE` | `UNSUPPORTED_IN_M1`：不得借补充输入修改不可变 Proposal/审批语义 | `SUPPORTED_EXISTING_RUNTIME`：仅复用当前 Run 能力 | `SUPPORTED_EXISTING_RUNTIME`：仅复用当前 Run/审批恢复边界 | `SUPPORTED_EXISTING_RUNTIME`：不回滚已提交副作用，仍需 UNKNOWN 对账 | `PRODUCT_ONLY`：不撤销审批、Proposal 或已提交动作 |
+| `INCIDENT_INVESTIGATION` | `UNSUPPORTED_IN_M1`：内部 Reviewer 定向澄清不是通用输入，禁止广播 Specialist | `UNSUPPORTED_IN_M1`：无 Incident 级暂停服务 | `UNSUPPORTED_IN_M1`：无 Incident 级恢复服务 | `UNSUPPORTED_IN_M1`：虽有 CANCELLED 状态但无受控取消入口 | `PRODUCT_ONLY`：只改变 WorkItem 关注状态，不宣称 Incident 已停止 |
+| `INCIDENT_RECOVERY_PLAN` | `UNSUPPORTED_IN_M1`：审批决定不等于通用补充输入 | `UNSUPPORTED_IN_M1`：无 Plan 级暂停服务 | `UNSUPPORTED_IN_M1`：无 Plan 级恢复服务 | `UNSUPPORTED_IN_M1`：无 Plan 级取消入口；不得忽略已提交副作用 | `PRODUCT_ONLY`：不撤销已审批/已提交动作，继续 UNKNOWN 对账与收敛 |
+
+`WorkCommandHandler` 必须：
+
+1. 根据 ExecutionTarget 查询 `ExecutionCommandCapabilities`；
+2. 校验 WorkItem 与底层 Run/Incident/Plan 当前状态；
+3. `SUPPORTED_EXISTING_RUNTIME` 时调用已有受控应用服务；
+4. `UNSUPPORTED_IN_M1` 时返回结构化 `UNSUPPORTED_FOR_TARGET`；
+5. 不得仅修改 WorkExecutionState 投影来伪装底层命令成功；
+6. `PRODUCT_ONLY` 的 ABANDON 只表示用户不再关注，必须分别记录 `underlyingExecutionStopped=false/unknown`；
+7. 已提交副作用不因 Abandon 被回滚或忽略，继续 UNKNOWN 对账和收敛；
+8. Incident 自然语言补充信息不得广播给全部 Specialist；
+9. M1 只适配现有能力，不新增跨执行器统一暂停协议；
+10. M3 才负责跨执行器、跨进程和多实例的暂停恢复强化。
 
 ## 9. 语义路由设计
 
@@ -669,6 +821,35 @@ confirmed_at
 
 降级规则用于可用性，不应重新变成完整关键词路由器。
 
+### 9.6 M1-B Routing Recovery
+
+`RoutingCoordinator` 负责首次路由与 stale ROUTING 恢复，Router 只负责一次结构化模型调用：
+
+```java
+interface RoutingCoordinator {
+    void route(String workItemId, String routingRequestId);
+    void reconcileStaleRoutingWorkItems();
+}
+```
+
+冻结协议：
+
+1. WorkItem 创建时生成并持久化唯一 `routingRequestId`，此后不可替换；
+2. Coordinator 使用 WorkItem version CAS 做单实例 claim，增加 `routingAttemptCount` 并记录 attempt 时间；
+3. Coordinator 在调用模型前先持久化 `STARTED` attempt 和 `ROUTING_STARTED`；调用结束后在事务中更新 Decision、WorkItem 和本地事件；成功或失败均尽可能保留模型、Prompt digest、Token、延迟和 failure code；
+4. 同一 WorkItem 最多一个 `EFFECTIVE` decision；状态至少包含 `STARTED / RESULT_UNKNOWN / FAILED_ATTEMPT / EFFECTIVE / SUPERSEDED`；
+   EFFECTIVE 落库时必须在同一事务更新 `routeDecisionId`、推进 WorkControlState 并追加 `ROUTING_DECIDED`；失败/未知 attempt 同事务追加 `ROUTING_FAILED` 并更新重试字段；
+5. 所有 attempt 复用原 `routingRequestId`，不得创建新 WorkItem；
+6. WorkItem 提交后、Router 前崩溃时，扫描器领取没有 EFFECTIVE decision 的 stale ROUTING WorkItem；
+7. Router 返回后、Decision 落库前崩溃时，原 `STARTED` attempt 转为 `RESULT_UNKNOWN`，使用预算预留上界避免低估成本；允许重新调用模型，但必须形成新 attempt 并累计可观测 Token；
+8. M1 只使用数据库 CAS、单实例有界扫描和一次有界重试语义；具体次数与退避由配置和 Eval 校准，不提前实现多实例 lease；
+9. 达到上限后必须离开 ROUTING：缺少可补充字段进入 `WAITING_INPUT`，危险或不可确定错误进入 `MANUAL_REVIEW`，明确不可恢复错误进入 `CLOSED` 且 `WorkOutcome=FAILED`；
+10. `STRUCTURED_OUTPUT_INVALID`、`MODEL_TIMEOUT`、`PROVIDER_ERROR`、`POLICY_REJECTED`、`RESULT_PERSISTENCE_UNKNOWN` 等 failure code 分开记录；
+11. 已有 EFFECTIVE decision 时扫描器不得再次调用 Router；
+12. 恢复得到的决定仍必须通过 `RoutePolicyValidator`，不得直接 Dispatch；Incident 仍进入 Preview/`WAITING_CONFIRMATION`，显式确认前子 Agent Run 数为 0；
+13. Routing 扫描重复运行不得重复 Dispatch；只有状态推进到 `READY_TO_DISPATCH` 后，独立的 DispatchCoordinator 才能领取；
+14. Routing Recovery 解决“尚未形成有效路由决定”，Dispatch Reconciliation 解决“目标对象已经或可能已经创建”，两者使用不同 correlation span、指标和故障码。
+
 ## 10. Handoff、Sub-Agent 与 Workflow 的边界
 
 ### 10.1 Handoff
@@ -718,7 +899,10 @@ Router 调用模型，但 Router 不是业务 Agent，因此不建议伪造 `age
 
 ```text
 decision_id
-work_item_id
+work_item_id                     // NOT NULL；Router 前已创建
+routing_request_id               // 同一 WorkItem 全部 attempt 稳定不变
+attempt_no
+decision_status                  // STARTED / RESULT_UNKNOWN / FAILED_ATTEMPT / EFFECTIVE / SUPERSEDED
 model_name
 target_catalog_version
 prompt_digest
@@ -732,6 +916,14 @@ failure_reason
 created_at
 ```
 
+数据库门禁：
+
+```text
+UNIQUE(work_item_id, attempt_no)
+UNIQUE(routing_request_id, attempt_no)
+UNIQUE(work_item_id) WHERE decision_status = 'EFFECTIVE'
+```
+
 原则：
 
 - 路由 Token 计入 WorkItem 总成本；
@@ -739,6 +931,8 @@ created_at
 - Trace 中生成真实 `ROUTER_MODEL_CALL` span，而不是 synthetic Agent Run；
 - 原始 Prompt 是否持久化遵循现有敏感信息策略，默认保存摘要和 digest；
 - 相同用户提交不会因为 HTTP 重试创建多个执行目标，依靠 idempotency key 防重。
+- Router 不得在没有 workItemId 时调用模型或写 Decision；超时、解析失败和重试记录均引用同一 WorkItem。
+- 失败 attempt 也必须落库；同一 WorkItem 的 Token 成本按全部 attempt 累计，不能只统计 EFFECTIVE decision。
 
 ## 12. 幂等 Dispatch 与崩溃协调
 
@@ -809,7 +1003,7 @@ M1 只要求单实例重复调度保护、CAS 和崩溃 reconciliation；多实�
 - 多实例投影一致性；
 - 同一事件实时流与重放去重。
 
-因此增加只读派生时间线 `agent_work_event`。它是 WorkItem 体验层的事实源，但不取代 Run、Incident、Approval 和 Proposal 的业务事实源。
+因此建立 `agent_work_event`。M1-A 先承载 WorkItem 产品控制面的本地持久化事件，M2 再承载 Run、Incident、Recovery Plan 的异步投影。它是 WorkItem 体验层的事实源，但不取代 Run、Incident、Approval 和 Proposal 的业务事实源。
 
 ### 13.2 事件信封
 
@@ -853,7 +1047,8 @@ UNIQUE(work_item_id, source_type, source_id, source_event_id)
 
 ### 13.4 顺序分配与投影一致性
 
-- WorkItem 自身事件与 WorkItem 状态在一个 PostgreSQL 本地事务提交；
+- M1-A 即建立 `agent_work_event` 表和本地 append 能力；WorkItem 自身事件与 WorkItem/Relation/Focus 状态在一个 PostgreSQL 本地事务提交；
+- Routing claim/attempt 开始、Decision 完成/失败、WorkControlState 推进与对应本地事件也分别在各自 PostgreSQL 本地事务中提交；
 - Runtime/Incident 事件先落各自权威表，再由 idempotent projector 投影；
 - projector 以 `sourceType + sourceId + sourceEventId` 防重；
 - 每次 append 必须锁定 `agent_work_item` 当前行，读取并递增 `next_event_sequence`，在同一 PostgreSQL 事务中写 WorkEvent；
@@ -863,6 +1058,8 @@ UNIQUE(work_item_id, source_type, source_id, source_event_id)
 - 若投影失败，统一 UI 显示“时间线同步中”，不得把业务任务标记失败；
 - SSE 和历史接口返回同一个 `eventId + sequence`；
 - 客户端按 sequence 检测 gap，按 eventId 去重并从数据库补拉。
+
+本地事件 append 失败时，触发它的 WorkItem 创建或状态迁移事务必须整体回滚。`WORK_ITEM_CREATED` 必须真实持久化，禁止仅写日志、内存队列或依赖 SSE 模拟成功。
 
 统一 `sequence` 只表示“产品投影被成功提交的顺序”，不宣称是 Runtime Store、Incident Store 和 Recovery Store 之间的分布式真实发生顺序。原始因果和时间分析必须同时参考 `sourceSequence`、`sourceCreatedAt`、`projectedAt`、`correlationId` 和 `causationId`。
 
@@ -897,6 +1094,46 @@ WORK_ITEM_FAILED
 - 断线恢复正文时从 Run timeline 回放；
 - UI 用 source cursor 管理增量，不将 token 当业务状态事件。
 
+### 13.6 M1-A 与 M2 阶段边界
+
+M1-A 的最小 WorkEvent 只包含 WorkItem 产品控制面直接产生的本地事件：
+
+```text
+WORK_ITEM_CREATED
+ROUTING_STARTED
+ROUTING_DECIDED
+ROUTING_FAILED
+CLARIFICATION_REQUIRED
+ROUTE_CONFIRMATION_REQUIRED
+DISPATCH_READY
+DISPATCH_STARTED
+DISPATCH_RECONCILED
+EXECUTION_DISPATCHED
+WORK_ITEM_ABANDONED
+```
+
+M1-A 冻结要求：
+
+- 建立 `agent_work_event` 表与 `WorkEventStore.appendLocal(...)`；
+- 本地事件固定 `sourceType=WORK_ITEM`、`sourceId=workItemId`；
+- 每条事件包含 `eventId/workItemId/sequence/eventType/correlationId/causationId/sourceCreatedAt/projectedAt`；
+- 使用 WorkItem `next_event_sequence` 行锁/CAS 在同一事务分配单调 sequence；
+- M1 只要求数据库基础查询，不要求统一 SSE、跨源投影、gap recovery 或完整历史执行树；
+- 数据库事件是恢复依据，不能依赖内存 SSE 才能重建控制状态。
+
+M2 负责：
+
+```text
+Agent Run Event / Incident Event / Recovery Plan Event
+→ UnifiedWorkEventProjector
+→ agent_work_event
+→ 统一 SSE
+→ afterSequence Replay
+→ gap 检测与去重
+```
+
+M2 增加跨来源 `sourceSequence/sourceCreatedAt/projectedAt`、幂等 Projector、MODEL_DELTA 双通道和 Multi-Agent 执行树历史回放；不得修改 M1 已冻结的 WorkEvent Schema、`next_event_sequence` 或产品 sequence 语义。
+
 ## 14. 统一 API 草案
 
 ### 14.1 提交统一输入
@@ -916,7 +1153,20 @@ Accept: text/event-stream | application/json
 
 Principal、tenant 和 roles 全部来自认证上下文。服务端必须验证 conversationId 所有权。请求体不接受 `userId`，`metadata` 不允许携带 executionProfile、tool whitelist、approvedBy、tenant、roles 或内部 scenarioId。
 
-响应先返回 `inputId` 和分类状态；NORMAL_GOAL 返回新建的 `workItemId`；RESUME/ABANDON/PAUSE/CANCEL/ADD_INPUT 返回目标既有 WorkItem；START_NEW_WORK 在新 Goal 路由成功并完成 Focus CAS 后返回新 `workItemId`。
+响应先返回 `inputId` 和分类状态。NORMAL_GOAL 与 START_NEW_WORK 派生目标都会先规范化为 `NormalGoalEnvelope`，再创建 `controlState=ROUTING` 的 WorkItem 并按需切换 Focus；因此即使 Router 随后超时或要求补充信息，响应仍返回稳定 `workItemId`。RESUME/ABANDON/PAUSE/CANCEL/ADD_INPUT 返回目标既有 WorkItem。
+
+创建新目标的同步响应不等待最终 Dispatch，可以返回：
+
+```json
+{
+  "inputId": "input-...",
+  "workItemId": "work-...",
+  "controlState": "ROUTING",
+  "goalOrigin": "DIRECT_NORMAL_GOAL | DERIVED_FROM_START_NEW_WORK"
+}
+```
+
+后续 ROUTING/WAITING_INPUT/WAITING_CONFIRMATION/READY_TO_DISPATCH 通过 WorkItem 查询和事件流观察。
 
 ### 14.2 查询与事件
 
@@ -947,6 +1197,21 @@ PUT  /api/agent/conversations/{conversationId}/focus
 所有人类发起的显式按钮命令也必须先保存对应 `AgentConversationTurn/agent_work_input`（可使用结构化 command payload），再由 Handler 执行；不得产生无法关联 inputId/causationId 的控制操作。
 
 无显式 workItemId 的命令默认解析 focused WorkItem。显式命令虽然携带 workItemId，也必须验证其 tenant、owner Principal、Conversation 和可操作状态。`PUT focus` 必须携带 expectedVersion 并使用 CAS；切换 Focus 不触发底层 pause/cancel/abandon。
+
+命令错误采用结构化模型：
+
+```json
+{
+  "code": "UNSUPPORTED_FOR_TARGET",
+  "command": "PAUSE_ACTIVE_WORK",
+  "executionTarget": "INCIDENT_INVESTIGATION",
+  "workItemId": "work-...",
+  "underlyingExecutionChanged": false,
+  "message": "M1 does not provide incident-level pause"
+}
+```
+
+至少区分：`UNSUPPORTED_FOR_TARGET`、`INVALID_TARGET_STATE`、`FOCUS_NOT_FOUND`、`FOCUS_AMBIGUOUS`、`COMMAND_CAS_CONFLICT`、`FORBIDDEN`。不支持时不能返回 200/成功文案，也不能只改 WorkItem 投影。
 
 ### 14.4 兼容策略
 
@@ -1026,25 +1291,22 @@ NORMAL_GOAL
 AMBIGUOUS
 ```
 
-这些值不是 ExecutionTarget。主路径可以使用结构化语义分类，确定性规则只处理按钮命令和极明确短语。高歧义时只追问一次。除 `NORMAL_GOAL`/携带新目标的 `START_NEW_WORK` 外，其余命令均作用于已有 WorkItem。
+这些值不是 ExecutionTarget。主路径可以使用结构化语义分类，确定性规则只处理按钮命令和极明确短语。高歧义时只追问一次。NORMAL_GOAL 直接形成 Envelope；START_NEW_WORK 先审计再形成 DerivedNormalGoal/Envelope；其余命令均作用于已有 WorkItem，并受 Command Capability Matrix 约束。
 
 ### 16.2 普通/OrderCare Run
 
 - 在安全检查点暂停；
 - 恢复保持同一个 `runId`、执行画像、审批上下文和累计预算；
-- 用户输入新目标时默认创建新 WorkItem 并切换 Focus，原 Run 继续运行；只有显式 Pause/Cancel/Abandon 才改变原 Run；
+- General/OrderCare 的 Pause/Resume/Cancel 仅复用现有 AgentRuntime，必须先校验 Run 状态；
+- M1 不支持对默认 General/OrderCare Run 的通用 ADD_INPUT；
+- 用户输入新目标时先形成 NormalGoalEnvelope，再创建新 WorkItem 并切换 Focus，原 Run 继续运行；只有显式且目标支持的 Pause/Cancel 才改变原 Run，ABANDON 仅改变产品关注状态；
 - 不把新目标追加到旧 Run 的不可变任务语义中。
 
 ### 16.3 Incident
 
-Incident 暂停是协作式暂停，不强杀正在进行的数据库事务：
+M1 不提供 Incident 级 Pause、Resume、Cancel 或通用 Add Input。现有内部 Reviewer 定向澄清和 Task 取消是专项编排细节，不能映射成通用 WorkCommand 成功。
 
-- 停止调度新的 Task；
-- 已领取 Task 在下一个 Runtime 安全检查点暂停，或完成当前有界只读调用后停止；
-- Incident 和 Task 状态、lease、预算落库；
-- 恢复时由 Phase 3 claim/lease 机制继续；
-- 已完成 Evidence 不重复生成；
-- 副作用执行仍遵守 UNKNOWN 对账和 fencing token。
+M3 若实现 Incident 协作式暂停，至少需要停止新 Task 调度、让已领取 Task 到安全检查点、持久化 Incident/Task/lease/预算并保证已完成 Evidence 不重复；这属于后续门禁，不在 M1 虚构支持。副作用执行始终遵守 UNKNOWN 对账和 fencing token。
 
 ### 16.4 新任务与恢复计划子目标
 
@@ -1055,7 +1317,7 @@ Incident 暂停是协作式暂停，不强杀正在进行的数据库事务：
 - UI 默认一次只聚焦一个 focused WorkItem；focused 不等于 running；
 - 后台可继续的任务必须显式展示，禁止悄悄运行；
 - 若用户切换到无关目标，系统不能把旧 Incident Evidence 注入新 Agent 上下文。
-- “基于刚才事故生成恢复计划”创建新的 `INCIDENT_RECOVERY_PLAN` WorkItem；新 WorkItem 通过 `parentWorkItemId` 和 `agent_work_relation(type=RECOVERY_OF)` 关联原调查 WorkItem，并引用原 Incident 的权威 Assessment。
+- “基于刚才事故生成恢复计划”先形成带 `parentWorkItemId/relationType=RECOVERY_OF` 的 NormalGoalEnvelope，再创建新的 `INCIDENT_RECOVERY_PLAN` WorkItem，并引用原 Incident 的权威 Assessment。
 - 父调查 WorkItem 保持原 `ASSESSED` outcome，不因子恢复计划的审批、失败或执行结果而改写。
 - 新 WorkItem 创建成功后 CAS 切换 Conversation Focus；父调查 WorkItem 可以继续在后台运行或保持终态，不能被隐式修改。
 
@@ -1078,7 +1340,7 @@ Incident 暂停是协作式暂停，不强杀正在进行的数据库事务：
 - Multi-Agent 启动前给出成本级别，不承诺精确金额；
 - 达到 WorkItem 总预算后停止创建新 Run，但已提交的副作用必须继续进入对账；
 - 预算耗尽是可解释终态或人工复核，不应被伪装成 Guardrail 失败。
-- M0 只冻结预算层级、配置项、累计不重置和 fail-closed 语义；默认 Token、工具次数、时长和金额阈值必须经过 Eval/本地成本数据校准后配置，V0.2.1 不冻结具体数字。
+- M0 只冻结预算层级、配置项、累计不重置和 fail-closed 语义；默认 Token、工具次数、时长和金额阈值必须经过 Eval/本地成本数据校准后配置，V0.2.3 不冻结具体数字。
 
 M0 冻结的配置类别为：Router 调用上限、WorkItem 总 Token/工具/时长/成本上限、各 Target 子预算、Incident 角色级预算、重试预算和 reconciliation 时间窗。配置缺失、解析失败或无法取得剩余预算时，低风险只读回答可按明确降级策略处理，Incident Start、Recovery Plan 和任何副作用路径一律 fail-closed。
 
@@ -1213,18 +1475,53 @@ create table agent_work_item (
     route_decision_id varchar(64),
     source_input_id varchar(64) not null,
     parent_work_item_id varchar(64),
+    routing_request_id varchar(64) not null,
+    routing_attempt_count integer not null default 0,
+    routing_last_attempt_at timestamptz,
+    routing_next_retry_at timestamptz,
+    routing_failure_code varchar(64),
     dispatch_request_id varchar(64),
     next_event_sequence bigint not null default 0,
     version bigint not null,
     created_at timestamptz not null,
     updated_at timestamptz not null,
-    completed_at timestamptz
+    completed_at timestamptz,
+    unique (routing_request_id)
 );
 ```
 
 ### 19.4 agent_routing_decision
 
-保存结构化路由、模型成本、catalog 版本、失败与降级原因。通过 workItemId 确定 tenant/owner；`decision_json` 必须按 Schema 校验后才能持久化为成功。
+保存结构化路由、模型成本、catalog 版本、失败与降级原因：
+
+```sql
+create table agent_routing_decision (
+    decision_id varchar(64) primary key,
+    work_item_id varchar(64) not null,
+    routing_request_id varchar(64) not null,
+    attempt_no integer not null,
+    decision_status varchar(32) not null,
+    model_name varchar(128),
+    target_catalog_version varchar(64) not null,
+    prompt_digest varchar(128),
+    raw_output_digest varchar(128),
+    decision_json jsonb,
+    prompt_tokens bigint not null default 0,
+    completion_tokens bigint not null default 0,
+    latency_ms bigint,
+    failure_code varchar(64),
+    failure_reason text,
+    created_at timestamptz not null,
+    unique (work_item_id, attempt_no),
+    unique (routing_request_id, attempt_no)
+);
+
+create unique index uk_routing_effective_per_work
+    on agent_routing_decision(work_item_id)
+    where decision_status = 'EFFECTIVE';
+```
+
+通过 workItemId 确定 tenant/owner；`decision_json` 必须按 Schema 校验后才能成为 `EFFECTIVE`。失败 attempt 不能覆盖或删除，全部 Token 计入 WorkItem 累计预算。
 
 ### 19.5 agent_work_command_decision
 
@@ -1269,40 +1566,80 @@ Relation 创建事务必须验证两端 `tenant_id` 相同；子 WorkItem 的 ow
 
 ### 19.9 agent_work_event
 
-保存统一投影 sequence、sourceSequence、sourceCreatedAt、projectedAt、correlationId、causationId、来源、摘要和有界 payload。不得把它作为审批、Proposal 或 Evidence 的写入接口。
+M1-A 建立该表；M2 复用同一 Schema 扩展跨源投影：
+
+```sql
+create table agent_work_event (
+    event_id varchar(64) primary key,
+    work_item_id varchar(64) not null,
+    sequence bigint not null,
+    source_type varchar(32) not null,
+    source_id varchar(64) not null,
+    source_event_id varchar(64) not null,
+    source_sequence bigint,
+    event_type varchar(64) not null,
+    phase varchar(64),
+    summary text,
+    payload jsonb,
+    correlation_id varchar(64) not null,
+    causation_id varchar(64),
+    source_created_at timestamptz not null,
+    projected_at timestamptz not null,
+    unique (work_item_id, sequence),
+    unique (work_item_id, source_type, source_id, source_event_id)
+);
+```
+
+M1 本地事件使用 `source_type=WORK_ITEM`；M2 投影事件使用权威来源 ID/sequence。不得把本表作为审批、Proposal 或 Evidence 的写入接口。
 
 ## 20. M1：统一自然语言入口与可靠 Dispatch
 
 ### 20.1 交付范围
 
 1. `AgentConversationTurn/agent_work_input` 先落库和输入幂等；
-2. `AgentWorkItem`、三维状态、Relation/Link Store 和 CAS；
-3. `agent_conversation_work_state`、Focus 所有权校验和 CAS；
-4. 独立 `WorkCommandClassifier`、审计 Store 与 `WorkCommandHandler`；
-5. `ExecutionTargetRegistry`；
-6. 结构化 `UnifiedTaskRouter`、`ValidatedExecutionInput` 与 `RoutePolicyValidator`；
-7. 四个 ExecutionAdapter：General、OrderCare、Incident Investigation、Incident Recovery Plan；
-8. 稳定 `dispatchRequestId`、`READY_TO_DISPATCH → DISPATCHING → DISPATCHED`；
-9. Adapter 幂等查询和目标创建后/WorkLink 前崩溃 reconciliation；
-10. Incident Preview → Explicit Confirmation → Start；
-11. 输入、Focus、查询、确认和显式 command API；
-12. 统一工作台输入框和路由/Incident Preview 卡片；
-13. 路由、命令、安全与 dispatch 故障测试。
+2. `NormalGoalEnvelope/DerivedNormalGoal` 唯一新目标入口；
+3. `AgentWorkItem`、三维状态、Relation/Link Store 和 CAS；
+4. M1-A 最小 `agent_work_event`、本地 append、`next_event_sequence` 与 WorkItem/Relation/Focus 同事务一致性；
+5. WorkItem-before-Router 顺序、稳定 `routingRequestId`、非空 routing decision 外键和失败保留；
+6. M1-B `RoutingCoordinator`、有界 attempt、stale ROUTING 扫描与 EFFECTIVE decision 唯一门禁；
+7. `agent_conversation_work_state`、Focus 所有权校验和 CAS；
+8. 独立 `WorkCommandClassifier`、审计 Store 与 `WorkCommandHandler`；
+9. `ExecutionTargetRegistry` 与 `ExecutionCommandCapabilityRegistry`；
+10. 结构化 `UnifiedTaskRouter`、`ValidatedExecutionInput` 与 `RoutePolicyValidator`；
+11. 四个 ExecutionAdapter：General、OrderCare、Incident Investigation、Incident Recovery Plan；
+12. 稳定 `dispatchRequestId`、`READY_TO_DISPATCH → DISPATCHING → DISPATCHED`；
+13. Adapter 幂等查询和目标创建后/WorkLink 前崩溃 reconciliation；
+14. Incident Preview → Explicit Confirmation → Start；
+15. 输入、Focus、基础 WorkEvent 查询、确认和显式 command API；
+16. 统一工作台输入框和路由/Incident Preview 卡片；
+17. 本地事件、Routing Recovery、命令能力、安全与 dispatch 故障测试。
 
 ### 20.2 M1 不做
 
-- 不统一全部底层事件；
+- 不投影 Runtime、Incident、Recovery Plan 等底层事件；但必须持久化 M1 WorkItem 本地事件；
+- 不提供统一 SSE、afterSequence Replay、gap recovery 或 Multi-Agent 历史执行树；
 - 不删除现有页面和接口；
-- 不实现跨执行器暂停；
+- 不新增跨执行器暂停/恢复/取消协议，只适配 Command Capability Matrix 中现有支持项；
+- 不为默认 Run 新增通用 ADD_INPUT，不把 Incident 内部澄清暴露成广播输入；
 - 不重构 Incident Orchestrator；
 - 不修改 `DefaultAgentRuntime.run()` 主循环。
 
 ### 20.3 M1 Definition of Done
 
 - 同一输入框可可靠进入四类目标，命令不进入 Target Registry；
-- 每次输入先落库，RESUME/ABANDON/ADD_INPUT 不创建 WorkItem；
-- Focus 与 Running 独立；START_NEW_WORK 只新建任务并切换 Focus，不隐式停止旧任务；
+- 每次输入先落库，只有 `NormalGoalEnvelope` 创建 WorkItem，且沿用原 sourceInputId；
+- NORMAL_GOAL 与 START_NEW_WORK 派生目标走完全相同的 WorkItem-before-Router 链路；
+- Router 前已有稳定 workItemId；Router 超时/拒绝/缺字段不删除 WorkItem 或产生孤立 Decision；
+- WorkItem 创建成功必有持久化 `WORK_ITEM_CREATED`；本地事件 append 失败时 WorkItem/Relation/Focus 事务整体回滚；
+- M1 本地 WorkEvent sequence 并发不重复，且无需内存 SSE 即可查询恢复；
+- WorkItem 创建时持久化稳定 routingRequestId；创建后/Router 前崩溃可由扫描器继续，且不创建第二个 WorkItem；
+- Router 返回后/Decision 前崩溃可形成新 attempt，但同一 WorkItem 最多一个 EFFECTIVE decision，全部 attempt Token 累计；
+- 重试耗尽后 WorkItem 必须离开 ROUTING；恢复后的决定仍经过 RoutePolicyValidator，Incident 未确认时子 Agent Run 数为 0；
+- Routing Recovery 不得重复 Dispatch，并能与 Dispatch Reconciliation 在 Trace 中区分；
+- RESUME/ABANDON/PAUSE/CANCEL/ADD_INPUT 不创建 WorkItem；
+- Focus 与 Running 独立；START_NEW_WORK 先审计、派生 Envelope、创建任务并切换 Focus，不隐式停止旧任务；
 - 按钮和模型命令分类均有唯一生效的 `agent_work_command_decision`；
+- 每个 Target 的命令严格符合 M1 Matrix；不支持项返回 `UNSUPPORTED_FOR_TARGET` 且底层状态不变；
 - 路由结果有结构化理由和提取字段；
 - Java 基于风险、完整性、来源和唯一性决定执行/确认/澄清，不使用模型 confidence 放行；
 - 所有 Incident 启动都能证明 Preview 版本与显式确认绑定；
@@ -1317,8 +1654,8 @@ Relation 创建事务必须验证两端 `tenant_id` 相同；子 WorkItem 的 ow
 
 ### 21.1 交付范围
 
-1. `agent_work_event` 与 idempotent projector；
-2. Runtime、Incident、Recovery Plan 到 WorkEvent 的投影；
+1. 在 M1-A 既有 `agent_work_event` Schema 上增加 idempotent projector，不重建表或改变 sequence 语义；
+2. Runtime、Incident、Recovery Plan 到 WorkEvent 的跨源投影；
 3. 统一 SSE、断线续传、gap 检测和去重；
 4. 普通回答真实增量透传；
 5. 聊天内嵌 Multi-Agent 执行树；
@@ -1337,6 +1674,7 @@ Relation 创建事务必须验证两端 `tenant_id` 相同；子 WorkItem 的 ow
 - Coordinator 显示 synthetic span 且模型调用数为 0；
 - 同角色重试正确聚合为 Attempt；
 - 投影延迟或失败不改变底层任务状态。
+- M2 migration 只能兼容性扩展 M1 Schema，不能重解释本地事件、重置 `next_event_sequence` 或改变既有 sequence。
 
 ### 21.3 M2 Definition of Done
 
@@ -1356,7 +1694,7 @@ Relation 创建事务必须验证两端 `tenant_id` 相同；子 WorkItem 的 ow
 
 ### 22.1 交付范围
 
-1. 将 M1 已有 WorkCommand 扩展为跨执行器、跨进程的可靠暂停、恢复、取消和放弃；
+1. 评审并实现 M1 Matrix 中 `UNSUPPORTED_IN_M1` 的跨执行器、跨进程暂停/恢复/取消/有界输入能力；未通过专项门禁前继续保持不支持；
 2. 自然语言命令分类的生产化恢复和歧义 Eval，不依赖精确“继续”二字；
 3. 同会话多后台任务与 focused WorkItem 的生产化管理；
 4. Router/WorkItem/Run/Incident 分层预算；
@@ -1372,6 +1710,7 @@ Relation 创建事务必须验证两端 `tenant_id` 相同；子 WorkItem 的 ow
 - M1 的 dispatch 幂等/reconciliation 在双实例竞争和 owner 崩溃下仍不会重复创建 Incident；
 - 普通 Run 暂停恢复保持同一 runId；
 - Incident 暂停不重复提交 Evidence；
+- 新增 Incident/Recovery Plan 命令前必须有权威 Application Service、状态机和幂等证据，不能只改变 WorkItem 投影；
 - 子 Agent lease 过期后只有一个新 owner 接管；
 - 重复 resume、approve、cancel 均幂等；
 - 写操作超时进入 UNKNOWN，不换新幂等键盲重试；
@@ -1417,13 +1756,18 @@ com.agent.platform.workbench
 │  ├─ WorkCommandHandler
 │  ├─ WorkCommandDecisionRecorder
 │  ├─ UnifiedTaskRouter
+│  ├─ RoutingCoordinator
+│  ├─ RoutingRecoveryScanner
 │  ├─ RoutePolicyValidator
 │  ├─ DispatchCoordinator
 │  ├─ DispatchReconciler
+│  ├─ LocalWorkEventAppender
 │  └─ UnifiedWorkEventProjector
 ├─ target
 │  ├─ ExecutionTargetRegistry
 │  ├─ ExecutionTargetDefinition
+│  ├─ ExecutionCommandCapabilityRegistry
+│  ├─ ExecutionCommandCapabilities
 │  ├─ ExecutionAdapter
 │  ├─ GeneralAgentExecutionAdapter
 │  ├─ OrderCareExecutionAdapter
@@ -1431,6 +1775,7 @@ com.agent.platform.workbench
 │  └─ IncidentRecoveryPlanAdapter
 ├─ model
 │  ├─ AgentConversationTurn
+│  ├─ NormalGoalEnvelope
 │  ├─ AgentWorkItem
 │  ├─ ConversationWorkState
 │  ├─ ExecutionDecision
@@ -1485,10 +1830,15 @@ UnifiedWorkbench.vue
 
 - target catalog 启用/禁用；
 - input 幂等、conversation 所有权与 command/goal 分类；
-- RESUME/ABANDON/ADD_INPUT 不创建 WorkItem；
+- NORMAL_GOAL 与 START_NEW_WORK 派生目标都形成 `NormalGoalEnvelope`，且只有 Envelope 可以创建 WorkItem；
+- START_NEW_WORK 沿用原 inputId、只生成一条 `DerivedNormalGoal`，不得伪造第二条用户输入；
+- RESUME/ABANDON/PAUSE/CANCEL/ADD_INPUT 不创建 WorkItem；
 - focused WorkItem 与 running WorkItem 独立，Focus 切换使用 version CAS；
 - START_NEW_WORK 不改变旧 WorkItem；复合 Abandon → Start 产生两条独立审计和 causationId；
 - 同 inputId 只能有一个 EFFECTIVE command decision；
+- WorkItem 必须先于 Router 创建，routing decision 的 workItemId 永不为空；
+- 四类 ExecutionTarget 的 M1 Command Capability Matrix 逐项校验；
+- `UNSUPPORTED_IN_M1` 返回结构化 `UNSUPPORTED_FOR_TARGET`，不得修改底层状态或伪造投影成功；
 - ExecutionDecision Schema；
 - RoutePolicyValidator；
 - model confidence 仅审计，Java disposition 与澄清策略；
@@ -1497,25 +1847,43 @@ UnifiedWorkbench.vue
 - adapter 参数映射；
 - 相同 dispatchRequestId 返回原目标；
 - WorkEvent 防重和 sequence；
+- M1 本地事件字段、`sourceType=WORK_ITEM` 与允许事件类型白名单；
+- RoutingCoordinator attempt 状态迁移、failure code 分类、有界重试和退出 ROUTING 策略；
+- 同 WorkItem 最多一个 EFFECTIVE routing decision；
 - 语义命令分类；
 - 分层预算计算。
 
 ### 24.2 集成测试
 
-- input 先落库、WorkItem + routing decision 本地事务；
+- input 先落库；WorkItem、可选 Relation、`WORK_ITEM_CREATED` 与 Focus CAS 在 Router 前完成同一 PostgreSQL 本地事务；
+- 创建 WorkItem 成功时数据库存在 `WORK_ITEM_CREATED`；
+- WorkItem 创建事务回滚时不存在孤立 WorkEvent；
+- WorkItem、Relation、Focus 与本地事件在同一事务中一致；
+- 同一 WorkItem 并发 append 的 sequence 不重复；
+- 清空内存流并重启后仍可从数据库基础查询恢复 M1 本地事件；
+- Focus CAS 回滚时不创建 WorkItem、不调用 Router；
+- Router 超时、解析失败或策略拒绝时保留 WorkItem 和失败 routing decision，不产生无 workItemId 的孤立决策；
+- WorkItem 提交后、Router 调用前注入崩溃；重启扫描使用原 routingRequestId，且不创建第二个 WorkItem；
+- Router 返回后、Decision 落库前注入崩溃；恢复形成新 attempt，但最多一个 EFFECTIVE decision；
+- 重复扫描不重复形成有效决定，已有 EFFECTIVE decision 时不再调用模型；
+- 路由失败重试累计全部 attempt Token，超过上限后离开 ROUTING；
+- 恢复后的 Incident 路由停留在 WAITING_CONFIRMATION，未确认时 Commander/Specialist/Reviewer Run 数为 0；
+- Routing Recovery 不触发两次 Dispatch，并通过独立 Trace span 与 Dispatch Reconciliation 区分；
 - Focus 所有权、跨 tenant 拒绝和并发 CAS；
 - deterministic/model command decision 的持久化、重放与唯一生效约束；
 - agent_work_input 只按规则投影到 agent_message，控制命令不进入模型上下文；
 - 目标创建成功但 WorkLink 前崩溃后的 reconciliation；
 - Incident 未确认 Preview 时零 Commander/Specialist Run；
-- Runtime/Incident 事件投影；
-- SSE replay/gap；
+- M2：Runtime/Incident/Recovery Plan 事件投影；
+- M2：统一 SSE replay/gap；
 - 同一幂等键并发提交；
 - 同一 Conversation 多个 RUNNING WorkItem 时，无 ID 命令只作用于 Focus；Focus 无效时不猜测其他 RUNNING WorkItem；
 - 权限上下文不能被 metadata 覆盖；
 - WorkRelation 禁止跨 tenant，Recovery 子 WorkItem 不继承父权限；
 - WorkLink 只接受匹配当前 dispatchRequestId 的目标对象；
 - 普通 Run pause/resume 回归；
+- General/OrderCare 的 Pause/Resume/Cancel 只调用现有 AgentRuntime，并校验底层 Run 状态；
+- Incident Investigation/Recovery Plan 的 ADD_INPUT、Pause、Resume、Cancel 在 M1 返回 `UNSUPPORTED_FOR_TARGET`，且 Incident、Plan、Run 和 WorkItem 执行投影不变；
 - Incident Phase 1/2/3 全量回归。
 
 ### 24.3 E2E
@@ -1529,13 +1897,20 @@ UnifiedWorkbench.vue
 5. Incident ASSESSED 后自然语言创建恢复计划；
 6. 存在 HIGH OPEN conflict 时禁止计划；
 7. 模糊“帮我看看订单问题”触发澄清；
-8. 暂停后“接着完成刚才的调查”恢复；
+8. General/OrderCare Run 暂停后“接着完成刚才的任务”复用原 runId 恢复；
 9. “事故调查继续在后台，先解释 Java 熔断”创建 General WorkItem、切换 Focus 且 Incident 不停；
 10. SSE 中断后页面完整恢复执行树；
-11. Router 超时不触发危险执行；
-12. 重启后恢复未完成任务且不重复副作用。
-13. “放弃之前的调查，开始新任务”分别审计 Abandon 与 Start，前者失败时后者默认不执行。
-14. 两个后台 RUNNING WorkItem 并存时，“暂停它”只暂停 focused WorkItem；切换 Focus 不改变另一个任务。
+11. START_NEW_WORK 经 DerivedNormalGoal/Envelope 创建新 WorkItem，原 inputId 不变且 Router decision 绑定该 WorkItem；
+12. “放弃旧任务并开始新任务”分别产生 Abandon 与 Start command decision，前一步失败时默认不创建新 WorkItem；
+13. 对 Incident 调用“暂停”返回 `UNSUPPORTED_FOR_TARGET`，底层 Incident 和 WorkItem 状态不变；
+14. Router 超时不触发危险执行；
+15. 重启后恢复未完成任务且不重复副作用；
+16. “放弃之前的调查，开始新任务”分别审计 Abandon 与 Start，前者失败时后者默认不执行；
+17. 两个后台 General/OrderCare RUNNING WorkItem 并存时，“暂停它”只暂停 focused WorkItem；切换 Focus 不改变另一个任务。
+18. WorkItem 创建后/Router 前故障注入，重启后以原 routingRequestId 完成路由且只有一个 WorkItem；
+19. Router 返回后/Decision 前故障注入，恢复后 attempt 增加、Token 累计且只有一个 EFFECTIVE decision；
+20. Routing Recovery 得到 Incident 目标后仍要求 Preview/显式确认，确认前不启动 Multi-Agent；
+21. 重复执行 Routing Recovery 扫描不会产生重复 Dispatch。
 
 ## 25. 可观测性与指标
 
@@ -1545,7 +1920,8 @@ UnifiedWorkbench.vue
 conversationId
 → inputId
 → workItemId
-→ routeDecisionId
+→ routingRequestId / routingAttemptNo / routeDecisionId
+→ dispatchRequestId
 → runId / incidentId
 → childRunId / recoveryPlanId
 → approvalId / proposalId / actionRequestId
@@ -1554,6 +1930,10 @@ conversationId
 ### 25.2 指标
 
 - route decision latency / error / fallback；
+- routing stale work item count / recovery scan count / claim conflict；
+- routing attempt count / retry exhausted / failure code distribution；
+- routing recovery latency / duplicate effective decision anomaly；
+- routing recovery triggered dispatch count / routing-dispatch phase confusion anomaly；
 - command resume/new/abandon/add-input accuracy；
 - command ambiguous rate / wrong-focus rate / latency / Token cost；
 - dangerous command misclassification count；
@@ -1576,12 +1956,12 @@ conversationId
 
 ```text
 M0 设计评审与 Schema 冻结
-→ M1-A AgentWorkItem / Input / Relation / Conversation Focus
-→ M1-B Router / WorkCommandClassifier
+→ M1-A AgentWorkItem / Input / Relation / Conversation Focus / Minimal WorkEvent
+→ M1-B Router / WorkCommandClassifier / Routing Recovery
 → M1-C Idempotent Adapter / Dispatch Reconciliation
 → M1-D 统一入口最小前端
 → M1-E 路由 Eval 门禁
-→ M2-A WorkEvent + Projector
+→ M2-A 跨源 WorkEvent Projector（复用 M1 Schema）
 → M2-B 统一 SSE/Replay
 → M2-C 聊天内执行树
 → M2-D 历史回放与前端回归
@@ -1623,23 +2003,28 @@ M0 设计评审与 Schema 冻结
 
 ## 28. M0 冻结决策表
 
-| # | V0.2.1 决策 | 状态 | 冻结结论/实现验收约束 |
+| # | V0.2.3 决策 | 状态 | 冻结结论/实现验收约束 |
 |---:|---|---|---|
-| 1 | `AgentWorkItem` + WorkItem relation/input | 通过 | 输入先落库；除 START_NEW_WORK 外控制命令不创建 WorkItem；Recovery Plan 新建子 WorkItem |
+| 1 | `AgentWorkItem` + WorkItem relation/input | 通过 | 输入先落库；只有 `NormalGoalEnvelope` 创建 WorkItem；Recovery Plan 新建子 WorkItem |
 | 2 | Router 独立审计，不伪装成 Agent Run | 通过 | 路由 Token 计入 WorkItem，单独记录 routing decision |
-| 3 | 四个 ExecutionTarget，命令另行分类 | 通过 | WorkCommandClassifier/Handler 与 Router/Registry 完全分离 |
-| 4 | WorkEvent 是派生统一时间线 | 通过 | sourceSequence、双时间、因果字段和事务 sequence 分配协议已冻结 |
+| 3 | 四个 ExecutionTarget，命令另行分类 | 通过 | WorkCommandClassifier/Handler 与 Router/Registry 完全分离；WorkCommand 不进入 Target Catalog |
+| 4 | WorkEvent 是统一产品时间线 | 通过 | M1 本地事件与 M2 跨源投影共享 Schema；sourceSequence、双时间、因果字段和事务 sequence 协议已冻结 |
 | 5 | `MODEL_DELTA` 使用实时透传 + Run timeline 回放双通道 | 通过 | 不逐 token 复制到 WorkEvent |
 | 6 | M1 保留旧入口，M2 后再评估默认首页切换 | 通过 | 旧入口继续用于回归和高级调试 |
 | 7 | 所有 Incident Start 均 Preview + Explicit Confirmation | 通过 | 任何 confidence、范围或成本等级都不得跳过确认 |
 | 8 | 预算只冻结语义、配置项和 fail-closed 规则 | 通过 | 具体数字由 Eval/成本数据校准，不属于 M0 架构分支 |
 | 9 | Conversation Focus | 通过 | focused != running；单 Focus、CAS、所有权、fail-closed 已冻结 |
-| 10 | START_NEW_WORK 语义 | 通过 | 新建并切换 Focus，不隐式停止旧任务；复合动作分别审计 |
+| 10 | START_NEW_WORK 语义 | 通过 | 先审计命令，再从同一 inputId 派生 DerivedNormalGoal/Envelope；不直接创建 WorkItem 或选择 Target |
 | 11 | Principal/Tenant 一致性 | 通过 | 产品控制面统一 tenant_id + owner_principal_id，跨 tenant 禁止关联 |
 | 12 | WorkCommandClassifier 独立审计 | 通过 | deterministic/model 都落 command decision，同 inputId 唯一生效 |
 | 13 | ValidatedExecutionInput 来源 | 通过 | MODEL_INFERRED 危险标识禁止 Dispatch，来源进入校验与 Eval |
+| 14 | NormalGoalEnvelope / DerivedNormalGoal | 通过 | DIRECT_NORMAL_GOAL 与派生目标共享唯一 WorkItem/Router 链路，不生成第二条用户输入 |
+| 15 | WorkItem-before-Router | 通过 | WorkItem/Relation/Event/Focus 事务先提交；routing decision 的 workItemId 非空；Router 失败保留审计根 |
+| 16 | M1 ExecutionTarget Command Capability Matrix | 通过 | General/OrderCare 仅复用现有 Runtime 控制；Incident/Plan 不支持项明确返回 `UNSUPPORTED_FOR_TARGET`，不得伪造成功 |
+| 17 | M1 Minimal WorkEvent Boundary | 通过 | M1-A 建表并同事务追加 WorkItem 本地事件；M2 只扩展跨源投影、统一 SSE 与 Replay，不改变 Schema/sequence 语义 |
+| 18 | Routing Recovery Before Decision | 通过 | WorkItem 创建时固定 routingRequestId；M1-B CAS 扫描 stale ROUTING、有界 attempt、唯一 EFFECTIVE decision，恢复后仍经 Validator |
 
-详细复审表另见：[unified-agent-workbench-v1-m0-decision-table.md](./unified-agent-workbench-v1-m0-decision-table.md)。V0.2.1 已不存在剩余架构分支，M0 冻结结论为 `PASSED`；允许后续从 M1-A 开始，但本轮不进入编码。
+详细复审表另见：[unified-agent-workbench-v1-m0-decision-table.md](./unified-agent-workbench-v1-m0-decision-table.md)。V0.2.3 已不存在剩余架构分支，M0 冻结结论为 `PASSED`；允许后续从 M1-A 开始，但本轮不进入编码。
 
 ## 29. 最终 Definition of Done
 
@@ -1657,4 +2042,4 @@ M0 设计评审与 Schema 冻结
 - 不是用模型替代审批、幂等和业务收敛；
 - 有路由 Eval、故障门禁和可重复 E2E 证据。
 
-Blueprint V0.2.1 与 M0 决策表已完成一致性复审并冻结。后续可按既定顺序从 M1-A 开始；本轮在文档冻结后停止，不修改任何生产功能代码。
+Blueprint V0.2.3 / FINAL 与 M0 决策表已完成一致性复审并冻结。后续可先建立 docs-only 基线，再按既定顺序从 M1-A 开始；本轮在文档冻结后停止，不修改任何生产功能代码。
