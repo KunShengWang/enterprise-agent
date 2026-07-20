@@ -95,7 +95,7 @@ class UnifiedWorkHistoryReplayPostgresIT {
         streamProperties.setPollIntervalMillis(100);
         streamProperties.setBatchSize(1000);
         UnifiedWorkEventStreamService restartedStream = new UnifiedWorkEventStreamService(
-                restartedWorkbench, restartedTimeline, streamProperties);
+                restartedWorkbench, restartedTimeline, restartedRunStore, streamProperties);
 
         List<UnifiedWorkStreamItem> firstReplay = restartedStream.stream(
                         principal, workItemId,
@@ -116,7 +116,8 @@ class UnifiedWorkHistoryReplayPostgresIT {
 
         UnifiedWorkEventStreamService secondRestart = new UnifiedWorkEventStreamService(
                 new JdbcWorkbenchStore(storage, new ObjectMapper()),
-                new JdbcAgentTimelineStore(storage, new ObjectMapper()), streamProperties);
+                new JdbcAgentTimelineStore(storage, new ObjectMapper()),
+                new JdbcAgentRuntimeStore(storage, new ObjectMapper()), streamProperties);
         List<UnifiedWorkStreamItem> secondReplay = secondRestart.stream(
                         principal, workItemId,
                         new UnifiedWorkStreamCursor(FIRST_PAGE_LAST_SEQUENCE, -1))

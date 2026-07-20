@@ -2,6 +2,7 @@ package com.agent.platform.workbench.persistence;
 
 import com.agent.platform.workbench.model.ProjectedWorkEventDraft;
 import com.agent.platform.workbench.model.WorkEvent;
+import com.agent.platform.workbench.model.WorkExecutionProjection;
 import com.agent.platform.workbench.model.WorkProjectionSource;
 import com.agent.platform.workbench.model.WorkProjectionClaim;
 
@@ -26,4 +27,7 @@ public interface WorkEventProjectionStore {
         advanceProjectionCursor(source.workItemId(), source.sourceType(), source.sourceId(), sourceSequence);
     }
     default void releaseProjectionClaim(WorkProjectionClaim claim) { }
+    default boolean reconcileExecutionState(WorkProjectionClaim claim, WorkExecutionProjection projection) {
+        return false;
+    }
 }

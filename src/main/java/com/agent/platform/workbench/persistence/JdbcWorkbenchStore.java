@@ -17,6 +17,7 @@ import com.agent.platform.workbench.model.WorkEvent;
 import com.agent.platform.workbench.model.WorkEventDraft;
 import com.agent.platform.workbench.model.WorkEventType;
 import com.agent.platform.workbench.model.WorkExecutionState;
+import com.agent.platform.workbench.model.WorkExecutionProjection;
 import com.agent.platform.workbench.model.WorkInputKind;
 import com.agent.platform.workbench.model.WorkLink;
 import com.agent.platform.workbench.model.WorkLinkRelation;
@@ -798,6 +799,183 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
         } catch (SQLException exception) {
             throw storageFailure("Failed to release work event projection claim", exception);
         }
+    }
+
+    @Override
+    public boolean reconcileExecutionState(WorkProjectionClaim claim, WorkExecutionProjection projection) {
+        if (claim == null || projection == null
+                || !claim.source().sourceType().equals(projection.sourceType())
+                || !claim.source().sourceId().equals(projection.sourceId())) {
+            throw new IllegalArgumentException("projection claim and execution snapshot must identify one source");
+        }
+        ensureSchema();
+        try (Connection connection = openConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                requireProjectionClaim(connection, claim);
+                AgentWorkItem work = lockProjectionWorkItem(connection, claim.source().workItemId());
+                requireProjectionSourceLink(connection, work.workItemId(), projection.sourceType(), projection.sourceId());
+                if (!isActiveProjectionSource(work, projection) || suppressForControlIntent(work, projection)) {
+                    connection.commit();
+                    return false;
+                }
+                AuthoritativeProjection authority = readAuthoritativeProjection(connection, projection);
+                if (!authority.matches(projection)) {
+                    connection.commit();
+                    return false;
+                }
+                ProjectionWatermark watermark = readProjectionWatermark(connection, claim.source());
+                if (projection.sourceVersion() < watermark.sourceVersion()
+                        || (projection.sourceVersion() == watermark.sourceVersion()
+                        && projection.sourceAttempt() < watermark.sourceAttempt())) {
+                    connection.commit();
+                    return false;
+                }
+                if (projection.sourceVersion() == watermark.sourceVersion()
+                        && projection.sourceAttempt() == watermark.sourceAttempt()) {
+                    connection.commit();
+                    return false;
+                }
+                boolean workChanged = work.controlState() != projection.controlState()
+                        || work.executionState() != projection.executionState()
+                        || work.outcome() != projection.outcome()
+                        || !java.util.Objects.equals(work.completedAt(), projection.completedAt());
+                if (workChanged) updateProjectedWorkState(connection, work.workItemId(), projection);
+                updateProjectionWatermark(connection, claim.source(), projection);
+                connection.commit();
+                return workChanged;
+            } catch (RuntimeException | SQLException exception) {
+                rollbackQuietly(connection);
+                throw exception;
+            }
+        } catch (SQLException exception) {
+            throw storageFailure("Failed to reconcile work execution state", exception);
+        }
+    }
+
+    private AgentWorkItem lockProjectionWorkItem(Connection connection, String workItemId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT * FROM agent_work_item WHERE work_item_id=? FOR UPDATE")) {
+            statement.setString(1, workItemId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) throw new WorkbenchNotFoundException("work item not found: " + workItemId);
+                return mapWorkItem(resultSet);
+            }
+        }
+    }
+
+    private boolean isActiveProjectionSource(AgentWorkItem work, WorkExecutionProjection projection) {
+        String activeId = switch (projection.sourceType()) {
+            case "AGENT_RUN" -> work.activeRunId();
+            case "INCIDENT" -> work.activeIncidentId();
+            case "RECOVERY_PLAN" -> work.activeRecoveryPlanId();
+            default -> "";
+        };
+        return projection.sourceId().equals(activeId);
+    }
+
+    private boolean suppressForControlIntent(AgentWorkItem work, WorkExecutionProjection projection) {
+        if (work.controlState() == WorkControlState.ABANDONED) return true;
+        boolean sourceStillActive = projection.controlState() == WorkControlState.DISPATCHED
+                && projection.executionState() == WorkExecutionState.RUNNING;
+        return sourceStillActive && (work.controlState() == WorkControlState.CANCEL_REQUESTED
+                || work.controlState() == WorkControlState.PAUSE_REQUESTED);
+    }
+
+    private AuthoritativeProjection readAuthoritativeProjection(Connection connection,
+                                                                WorkExecutionProjection projection) throws SQLException {
+        String sql = switch (projection.sourceType()) {
+            case "AGENT_RUN" -> "SELECT status, NULL::text AS outcome, version, "
+                    + "COALESCE((record_json::jsonb ->> 'resumeCount')::int, 0) AS source_attempt, updated_at "
+                    + "FROM agent_run_state WHERE run_id=?";
+            case "INCIDENT" -> "SELECT status, NULL::text AS outcome, version, 0 AS source_attempt, updated_at "
+                    + "FROM agent_incident WHERE incident_id=?";
+            case "RECOVERY_PLAN" -> "SELECT status, outcome, version, 0 AS source_attempt, updated_at "
+                    + "FROM agent_incident_recovery_plan WHERE plan_id=?";
+            default -> throw new IllegalArgumentException("unsupported execution projection source");
+        };
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, projection.sourceId());
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) return AuthoritativeProjection.missing();
+                return new AuthoritativeProjection(true, resultSet.getString("status"),
+                        normalize(resultSet.getString("outcome"), ""), resultSet.getLong("version"),
+                        resultSet.getInt("source_attempt"),
+                        resultSet.getTimestamp("updated_at").toInstant());
+            }
+        }
+    }
+
+    private ProjectionWatermark readProjectionWatermark(Connection connection,
+                                                         WorkProjectionSource source) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT last_state_version, last_state_attempt
+                FROM agent_work_projection_cursor
+                WHERE work_item_id=? AND source_type=? AND source_id=?
+                """)) {
+            statement.setString(1, source.workItemId());
+            statement.setString(2, source.sourceType());
+            statement.setString(3, source.sourceId());
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next()
+                        ? new ProjectionWatermark(resultSet.getLong(1), resultSet.getInt(2))
+                        : new ProjectionWatermark(-1, -1);
+            }
+        }
+    }
+
+    private void updateProjectedWorkState(Connection connection, String workItemId,
+                                          WorkExecutionProjection projection) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                UPDATE agent_work_item
+                SET control_state=?, execution_state=?, outcome=?, completed_at=?, version=version+1, updated_at=?
+                WHERE work_item_id=?
+                """)) {
+            statement.setString(1, projection.controlState().name());
+            statement.setString(2, projection.executionState().name());
+            statement.setString(3, projection.outcome().name());
+            statement.setTimestamp(4, projection.completedAt() == null ? null : Timestamp.from(projection.completedAt()));
+            statement.setTimestamp(5, Timestamp.from(Instant.now()));
+            statement.setString(6, workItemId);
+            if (statement.executeUpdate() != 1) throw new WorkbenchCasConflictException("work item state changed");
+        }
+    }
+
+    private void updateProjectionWatermark(Connection connection, WorkProjectionSource source,
+                                           WorkExecutionProjection projection) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                UPDATE agent_work_projection_cursor
+                SET last_state_version=?, last_state_attempt=?, projected_control_state=?,
+                    projected_execution_state=?, projected_outcome=?, updated_at=?
+                WHERE work_item_id=? AND source_type=? AND source_id=?
+                """)) {
+            statement.setLong(1, projection.sourceVersion());
+            statement.setInt(2, projection.sourceAttempt());
+            statement.setString(3, projection.controlState().name());
+            statement.setString(4, projection.executionState().name());
+            statement.setString(5, projection.outcome().name());
+            statement.setTimestamp(6, Timestamp.from(Instant.now()));
+            statement.setString(7, source.workItemId());
+            statement.setString(8, source.sourceType());
+            statement.setString(9, source.sourceId());
+            if (statement.executeUpdate() != 1) throw new WorkbenchCasConflictException("projection cursor disappeared");
+        }
+    }
+
+    private record AuthoritativeProjection(boolean present, String status, String outcome,
+                                           long version, int attempt, Instant updatedAt) {
+        private static AuthoritativeProjection missing() {
+            return new AuthoritativeProjection(false, "", "", -1, -1, Instant.EPOCH);
+        }
+
+        private boolean matches(WorkExecutionProjection projection) {
+            return present && status.equals(projection.sourceStatus())
+                    && (projection.sourceOutcome().isBlank() || outcome.equals(projection.sourceOutcome()))
+                    && version == projection.sourceVersion() && attempt == projection.sourceAttempt();
+        }
+    }
+
+    private record ProjectionWatermark(long sourceVersion, int sourceAttempt) {
     }
 
     @Override
@@ -1800,6 +1978,11 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
                 "ALTER TABLE agent_work_projection_cursor ADD COLUMN IF NOT EXISTS lease_owner TEXT",
                 "ALTER TABLE agent_work_projection_cursor ADD COLUMN IF NOT EXISTS lease_until TIMESTAMPTZ",
                 "ALTER TABLE agent_work_projection_cursor ADD COLUMN IF NOT EXISTS fencing_token BIGINT NOT NULL DEFAULT 0",
+                "ALTER TABLE agent_work_projection_cursor ADD COLUMN IF NOT EXISTS last_state_version BIGINT NOT NULL DEFAULT -1",
+                "ALTER TABLE agent_work_projection_cursor ADD COLUMN IF NOT EXISTS last_state_attempt INT NOT NULL DEFAULT -1",
+                "ALTER TABLE agent_work_projection_cursor ADD COLUMN IF NOT EXISTS projected_control_state TEXT",
+                "ALTER TABLE agent_work_projection_cursor ADD COLUMN IF NOT EXISTS projected_execution_state TEXT",
+                "ALTER TABLE agent_work_projection_cursor ADD COLUMN IF NOT EXISTS projected_outcome TEXT",
                 "CREATE INDEX IF NOT EXISTS idx_work_projection_lease ON agent_work_projection_cursor(lease_until, updated_at)"
         );
     }

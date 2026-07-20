@@ -4,6 +4,10 @@ import com.agent.platform.config.WorkbenchStreamProperties;
 import com.agent.platform.runtime.AgentEvent;
 import com.agent.platform.runtime.AgentEventType;
 import com.agent.platform.runtime.AgentTimelineStore;
+import com.agent.platform.runtime.AgentRunStore;
+import com.agent.platform.runtime.AgentRunRecord;
+import com.agent.platform.runtime.AgentRunState;
+import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.workbench.model.AgentWorkItem;
 import com.agent.platform.workbench.model.WorkControlState;
 import com.agent.platform.workbench.model.WorkEvent;
@@ -53,10 +57,11 @@ class UnifiedWorkEventStreamServiceTests {
     void sseUsesCompositeResumeTokenAsEventId() {
         WorkbenchStore workbench = mock(WorkbenchStore.class);
         AgentTimelineStore timeline = mock(AgentTimelineStore.class);
+        AgentRunStore runs = mock(AgentRunStore.class);
         when(workbench.findWorkItem(principal, "work-1")).thenReturn(Optional.of(work("")));
         when(workbench.loadEvents(principal, "work-1", -1, 500)).thenReturn(List.of(workEvent(0)));
         UnifiedWorkEventStreamService service = new UnifiedWorkEventStreamService(
-                workbench, timeline, new WorkbenchStreamProperties());
+                workbench, timeline, runs, new WorkbenchStreamProperties());
 
         var event = service.stream(principal, "work-1", new UnifiedWorkStreamCursor(-1, -1))
                 .blockFirst(Duration.ofSeconds(2));
@@ -70,6 +75,7 @@ class UnifiedWorkEventStreamServiceTests {
     void replaysWorkEventsAndOnlyPrimaryRunModelDelta() {
         WorkbenchStore workbench = mock(WorkbenchStore.class);
         AgentTimelineStore timeline = mock(AgentTimelineStore.class);
+        AgentRunStore runs = mock(AgentRunStore.class);
         AgentWorkItem work = work("run-primary");
         when(workbench.findWorkItem(principal, "work-1")).thenReturn(Optional.of(work));
         when(workbench.loadEvents(principal, "work-1", -1, 500)).thenReturn(List.of(workEvent(0)));
@@ -83,7 +89,7 @@ class UnifiedWorkEventStreamServiceTests {
                 runEvent("tool-2", 2, AgentEventType.TOOL_COMPLETED, "tool"),
                 runEvent("delta-3", 3, AgentEventType.MODEL_DELTA, "world")));
         UnifiedWorkEventStreamService service = new UnifiedWorkEventStreamService(
-                workbench, timeline, new WorkbenchStreamProperties());
+                workbench, timeline, runs, new WorkbenchStreamProperties());
         AtomicLong workCursor = new AtomicLong(-1);
         AtomicLong runCursor = new AtomicLong(-1);
 
@@ -99,9 +105,45 @@ class UnifiedWorkEventStreamServiceTests {
     }
 
     @Test
+    void discoversRunningPrimaryRunByDispatchRequestBeforeWorkLinkExists() {
+        WorkbenchStore workbench = mock(WorkbenchStore.class);
+        AgentTimelineStore timeline = mock(AgentTimelineStore.class);
+        AgentRunStore runs = mock(AgentRunStore.class);
+        AgentWorkItem work = work("");
+        AgentRequest request = new AgentRequest(work.conversationId(), principal.principalId(), "goal", Map.of(
+                "workItemId", work.workItemId(),
+                AgentRunStore.DISPATCH_REQUEST_METADATA_KEY, work.dispatchRequestId()));
+        AgentRunRecord running = AgentRunRecord.create(
+                "run-primary", "trace-primary", work.conversationId(), request);
+        when(workbench.findWorkItem(principal, work.workItemId())).thenReturn(Optional.of(work));
+        when(workbench.loadEvents(principal, work.workItemId(), -1, 500)).thenReturn(List.of());
+        when(workbench.listLinks(principal, work.workItemId())).thenReturn(List.of());
+        when(runs.findByDispatchRequestId(work.dispatchRequestId())).thenReturn(Optional.of(running));
+        when(timeline.loadEventsAfter("run-primary", -1, 500)).thenReturn(List.of(
+                runEvent("delta-1", 0, AgentEventType.MODEL_DELTA, "live "),
+                runEvent("delta-2", 1, AgentEventType.MODEL_DELTA, "answer")));
+        UnifiedWorkEventStreamService service = new UnifiedWorkEventStreamService(
+                workbench, timeline, runs, new WorkbenchStreamProperties());
+
+        AtomicLong runCursor = new AtomicLong(-1);
+        var first = service.poll(principal, work.workItemId(), new AtomicLong(-1), runCursor, 1);
+        var reconnect = service.poll(principal, work.workItemId(), new AtomicLong(-1), runCursor, 2);
+        AgentRunRecord completed = running.finished(AgentRunState.COMPLETED,
+                com.agent.platform.runtime.AgentRunPhase.FINISHED, "live answer", "",
+                List.of(), List.of(), false, false);
+
+        assertEquals(AgentRunState.RUNNING, running.state());
+        assertEquals("live answer", first.stream().map(UnifiedWorkStreamItem::content).reduce("", String::concat));
+        assertEquals(completed.answer(), first.stream().map(UnifiedWorkStreamItem::content).reduce("", String::concat));
+        assertTrue(reconnect.isEmpty());
+        assertEquals(1, runCursor.get());
+    }
+
+    @Test
     void incidentChildRunWithoutPrimaryRunLinkNeverEntersMainAnswer() {
         WorkbenchStore workbench = mock(WorkbenchStore.class);
         AgentTimelineStore timeline = mock(AgentTimelineStore.class);
+        AgentRunStore runs = mock(AgentRunStore.class);
         AgentWorkItem work = work("");
         when(workbench.findWorkItem(principal, "work-1")).thenReturn(Optional.of(work));
         when(workbench.loadEvents(principal, "work-1", -1, 500)).thenReturn(List.of());
@@ -109,7 +151,7 @@ class UnifiedWorkEventStreamServiceTests {
                 new WorkLink("work-1", "dispatch", WorkLinkType.INCIDENT, "incident-1",
                         WorkLinkRelation.PRIMARY, Instant.now())));
         UnifiedWorkEventStreamService service = new UnifiedWorkEventStreamService(
-                workbench, timeline, new WorkbenchStreamProperties());
+                workbench, timeline, runs, new WorkbenchStreamProperties());
 
         var items = service.poll(principal, "work-1", new AtomicLong(-1), new AtomicLong(-1), 1);
 
@@ -121,10 +163,11 @@ class UnifiedWorkEventStreamServiceTests {
     void sequenceGapIsExplicitAndCursorDoesNotJump() {
         WorkbenchStore workbench = mock(WorkbenchStore.class);
         AgentTimelineStore timeline = mock(AgentTimelineStore.class);
+        AgentRunStore runs = mock(AgentRunStore.class);
         when(workbench.findWorkItem(principal, "work-1")).thenReturn(Optional.of(work("")));
         when(workbench.loadEvents(principal, "work-1", 0, 500)).thenReturn(List.of(workEvent(2)));
         UnifiedWorkEventStreamService service = new UnifiedWorkEventStreamService(
-                workbench, timeline, new WorkbenchStreamProperties());
+                workbench, timeline, runs, new WorkbenchStreamProperties());
         AtomicLong workCursor = new AtomicLong(0);
 
         var items = service.poll(principal, "work-1", workCursor, new AtomicLong(-1), 1);

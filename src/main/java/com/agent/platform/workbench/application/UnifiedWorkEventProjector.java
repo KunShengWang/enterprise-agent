@@ -2,13 +2,22 @@ package com.agent.platform.workbench.application;
 
 import com.agent.platform.config.WorkbenchProjectionProperties;
 import com.agent.platform.ordercare.incident.model.TaskEventRecord;
+import com.agent.platform.ordercare.incident.model.IncidentRecord;
+import com.agent.platform.ordercare.incident.persistence.IncidentStore;
 import com.agent.platform.ordercare.incident.persistence.TaskEventStore;
+import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlanRecord;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanEventRecord;
 import com.agent.platform.ordercare.incident.recovery.persistence.IncidentRecoveryPlanStore;
 import com.agent.platform.runtime.AgentEvent;
 import com.agent.platform.runtime.AgentEventType;
 import com.agent.platform.runtime.AgentTimelineStore;
+import com.agent.platform.runtime.AgentRunRecord;
+import com.agent.platform.runtime.AgentRunStore;
 import com.agent.platform.workbench.model.ProjectedWorkEventDraft;
+import com.agent.platform.workbench.model.WorkControlState;
+import com.agent.platform.workbench.model.WorkExecutionProjection;
+import com.agent.platform.workbench.model.WorkExecutionState;
+import com.agent.platform.workbench.model.WorkOutcome;
 import com.agent.platform.workbench.model.WorkEventType;
 import com.agent.platform.workbench.model.WorkProjectionSource;
 import com.agent.platform.workbench.model.WorkProjectionClaim;
@@ -31,19 +40,25 @@ public class UnifiedWorkEventProjector {
 
     private final WorkEventProjectionStore projectionStore;
     private final AgentTimelineStore timelineStore;
+    private final AgentRunStore runStore;
     private final TaskEventStore taskEventStore;
+    private final IncidentStore incidentStore;
     private final IncidentRecoveryPlanStore recoveryPlanStore;
     private final WorkbenchProjectionProperties properties;
     private final String leaseOwner;
 
     public UnifiedWorkEventProjector(WorkEventProjectionStore projectionStore,
                                      AgentTimelineStore timelineStore,
+                                     AgentRunStore runStore,
                                      TaskEventStore taskEventStore,
+                                     IncidentStore incidentStore,
                                      IncidentRecoveryPlanStore recoveryPlanStore,
                                      WorkbenchProjectionProperties properties) {
         this.projectionStore = projectionStore;
         this.timelineStore = timelineStore;
+        this.runStore = runStore;
         this.taskEventStore = taskEventStore;
+        this.incidentStore = incidentStore;
         this.recoveryPlanStore = recoveryPlanStore;
         this.properties = properties;
         this.leaseOwner = properties.getInstanceId().isBlank()
@@ -97,7 +112,100 @@ public class UnifiedWorkEventProjector {
         if (projected == 0) {
             projectionStore.advanceProjectionCursor(claim, cursor);
         }
+        reconcileExecutionState(claim);
         return projected;
+    }
+
+    private void reconcileExecutionState(WorkProjectionClaim claim) {
+        WorkProjectionSource source = claim.source();
+        WorkExecutionProjection projection = switch (source.sourceType()) {
+            case "AGENT_RUN" -> runStore.find(source.sourceId()).map(this::runProjection).orElse(null);
+            case "INCIDENT" -> incidentStore.find(source.sourceId()).map(this::incidentProjection).orElse(null);
+            case "RECOVERY_PLAN" -> recoveryPlanStore.find(source.sourceId())
+                    .map(this::recoveryPlanProjection).orElse(null);
+            default -> null;
+        };
+        if (projection != null) projectionStore.reconcileExecutionState(claim, projection);
+    }
+
+    private WorkExecutionProjection runProjection(AgentRunRecord run) {
+        ProjectionState state = switch (run.state()) {
+            case CREATED, RUNNING -> active();
+            case WAITING_APPROVAL -> state(WorkControlState.DISPATCHED,
+                    WorkExecutionState.WAITING_APPROVAL, WorkOutcome.UNDETERMINED, false);
+            case WAITING_INPUT, NEEDS_CLARIFICATION -> state(WorkControlState.WAITING_INPUT,
+                    WorkExecutionState.WAITING_INPUT, WorkOutcome.UNDETERMINED, false);
+            case PAUSE_REQUESTED -> state(WorkControlState.PAUSE_REQUESTED,
+                    WorkExecutionState.RUNNING, WorkOutcome.UNDETERMINED, false);
+            case PAUSED -> state(WorkControlState.PAUSED,
+                    WorkExecutionState.PAUSED, WorkOutcome.UNDETERMINED, false);
+            case COMPLETED -> terminal(WorkExecutionState.COMPLETED, WorkOutcome.ANSWERED);
+            case FAILED, BLOCKED -> terminal(WorkExecutionState.FAILED, WorkOutcome.FAILED);
+            case REJECTED -> "CANCELLED".equals(run.failureReason())
+                    ? terminal(WorkExecutionState.CANCELLED, WorkOutcome.CANCELLED)
+                    : terminal(WorkExecutionState.CANCELLED, WorkOutcome.REJECTED);
+            case MANUAL_REVIEW -> state(WorkControlState.MANUAL_REVIEW,
+                    WorkExecutionState.UNKNOWN, WorkOutcome.MANUAL_REVIEW, true);
+        };
+        return projection("AGENT_RUN", run.runId(), run.version(), run.resumeCount(), run.state().name(),
+                run.failureReason(), run.updatedAt(), state);
+    }
+
+    private WorkExecutionProjection incidentProjection(IncidentRecord incident) {
+        ProjectionState state = switch (incident.status()) {
+            case CREATED, PLANNING, INVESTIGATING, CHECKING_CONSISTENCY, REVIEWING -> active();
+            case CLARIFYING -> state(WorkControlState.WAITING_INPUT,
+                    WorkExecutionState.WAITING_INPUT, WorkOutcome.UNDETERMINED, false);
+            case ASSESSED -> terminal(WorkExecutionState.COMPLETED, WorkOutcome.ASSESSED);
+            case PARTIAL -> terminal(WorkExecutionState.COMPLETED, WorkOutcome.NOT_CONVERGED);
+            case MANUAL_REVIEW -> state(WorkControlState.MANUAL_REVIEW,
+                    WorkExecutionState.UNKNOWN, WorkOutcome.MANUAL_REVIEW, true);
+            case FAILED -> terminal(WorkExecutionState.FAILED, WorkOutcome.FAILED);
+            case CANCELLED -> terminal(WorkExecutionState.CANCELLED, WorkOutcome.CANCELLED);
+        };
+        return projection("INCIDENT", incident.incidentId(), incident.version(), 0, incident.status().name(),
+                "", incident.updatedAt(), state);
+    }
+
+    private WorkExecutionProjection recoveryPlanProjection(IncidentRecoveryPlanRecord plan) {
+        ProjectionState state = switch (plan.status()) {
+            case CREATED, PLANNING, PREVIEWING, EXECUTING -> active();
+            case WAITING_APPROVAL -> state(WorkControlState.DISPATCHED,
+                    WorkExecutionState.WAITING_APPROVAL, WorkOutcome.UNDETERMINED, false);
+            case FAILED -> terminal(WorkExecutionState.FAILED, WorkOutcome.FAILED);
+            case CANCELLED -> terminal(WorkExecutionState.CANCELLED, WorkOutcome.CANCELLED);
+            case COMPLETED -> switch (plan.outcome()) {
+                case RESOLVED -> terminal(WorkExecutionState.COMPLETED, WorkOutcome.RESOLVED);
+                case PARTIAL -> terminal(WorkExecutionState.COMPLETED, WorkOutcome.NOT_CONVERGED);
+                case REJECTED -> terminal(WorkExecutionState.COMPLETED, WorkOutcome.REJECTED);
+                case MANUAL_REVIEW -> state(WorkControlState.MANUAL_REVIEW,
+                        WorkExecutionState.UNKNOWN, WorkOutcome.MANUAL_REVIEW, true);
+                case READY, NOT_STARTED -> terminal(WorkExecutionState.COMPLETED, WorkOutcome.ASSESSED);
+            };
+        };
+        return projection("RECOVERY_PLAN", plan.planId(), plan.version(), 0, plan.status().name(),
+                plan.outcome().name(), plan.updatedAt(), state);
+    }
+
+    private WorkExecutionProjection projection(String sourceType, String sourceId, long sourceVersion,
+                                                int sourceAttempt, String sourceStatus, String sourceOutcome,
+                                                Instant updatedAt, ProjectionState state) {
+        return new WorkExecutionProjection(sourceType, sourceId, sourceVersion, sourceAttempt,
+                sourceStatus, sourceOutcome, state.controlState(), state.executionState(), state.outcome(),
+                updatedAt, state.completed() ? updatedAt : null);
+    }
+
+    private ProjectionState active() {
+        return state(WorkControlState.DISPATCHED, WorkExecutionState.RUNNING, WorkOutcome.UNDETERMINED, false);
+    }
+
+    private ProjectionState terminal(WorkExecutionState executionState, WorkOutcome outcome) {
+        return state(WorkControlState.CLOSED, executionState, outcome, true);
+    }
+
+    private ProjectionState state(WorkControlState controlState, WorkExecutionState executionState,
+                                  WorkOutcome outcome, boolean completed) {
+        return new ProjectionState(controlState, executionState, outcome, completed);
     }
 
     private int projectRun(WorkProjectionClaim claim, long cursor) {
@@ -175,5 +283,9 @@ public class UnifiedWorkEventProjector {
     }
 
     public record ProjectionBatchResult(int sourceCount, int projectedEventCount, int failedSourceCount) {
+    }
+
+    private record ProjectionState(WorkControlState controlState, WorkExecutionState executionState,
+                                   WorkOutcome outcome, boolean completed) {
     }
 }

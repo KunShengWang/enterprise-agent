@@ -4,6 +4,8 @@ import com.agent.platform.config.WorkbenchStreamProperties;
 import com.agent.platform.runtime.AgentEvent;
 import com.agent.platform.runtime.AgentEventType;
 import com.agent.platform.runtime.AgentTimelineStore;
+import com.agent.platform.runtime.AgentRunRecord;
+import com.agent.platform.runtime.AgentRunStore;
 import com.agent.platform.workbench.model.AgentWorkItem;
 import com.agent.platform.workbench.model.WorkEvent;
 import com.agent.platform.workbench.model.WorkLinkRelation;
@@ -30,13 +32,16 @@ public class UnifiedWorkEventStreamService {
 
     private final WorkbenchStore workbenchStore;
     private final AgentTimelineStore timelineStore;
+    private final AgentRunStore runStore;
     private final WorkbenchStreamProperties properties;
 
     public UnifiedWorkEventStreamService(WorkbenchStore workbenchStore,
                                          AgentTimelineStore timelineStore,
+                                         AgentRunStore runStore,
                                          WorkbenchStreamProperties properties) {
         this.workbenchStore = workbenchStore;
         this.timelineStore = timelineStore;
+        this.runStore = runStore;
         this.properties = properties;
     }
 
@@ -135,12 +140,29 @@ public class UnifiedWorkEventStreamService {
     }
 
     private String primaryRunId(AuthenticatedPrincipal principal, AgentWorkItem workItem) {
-        return workbenchStore.listLinks(principal, workItem.workItemId()).stream()
+        String linkedRunId = workbenchStore.listLinks(principal, workItem.workItemId()).stream()
                 .filter(link -> link.linkType() == WorkLinkType.RUN)
                 .filter(link -> link.relation() == WorkLinkRelation.PRIMARY)
                 .map(link -> link.linkedId())
                 .filter(runId -> workItem.activeRunId().isBlank() || workItem.activeRunId().equals(runId))
                 .findFirst().orElse("");
+        if (workItem.dispatchRequestId() == null || workItem.dispatchRequestId().isBlank()) {
+            return linkedRunId;
+        }
+        if (!linkedRunId.isBlank()) return linkedRunId;
+        String discoveredRunId = runStore.findByDispatchRequestId(workItem.dispatchRequestId())
+                .filter(run -> belongsToWorkItem(run, workItem))
+                .map(AgentRunRecord::runId)
+                .orElse("");
+        return discoveredRunId;
+    }
+
+    private boolean belongsToWorkItem(AgentRunRecord run, AgentWorkItem workItem) {
+        if (run.request() == null || !workItem.conversationId().equals(run.conversationId())) return false;
+        Map<String, Object> metadata = run.request().metadata();
+        return workItem.workItemId().equals(String.valueOf(metadata.getOrDefault("workItemId", "")))
+                && workItem.dispatchRequestId().equals(String.valueOf(
+                metadata.getOrDefault(AgentRunStore.DISPATCH_REQUEST_METADATA_KEY, "")));
     }
 
     private ServerSentEvent<UnifiedWorkStreamItem> sse(UnifiedWorkStreamItem item) {

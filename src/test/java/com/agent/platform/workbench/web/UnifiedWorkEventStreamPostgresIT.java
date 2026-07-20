@@ -6,6 +6,12 @@ import com.agent.platform.runtime.AgentEventDraft;
 import com.agent.platform.runtime.AgentEventType;
 import com.agent.platform.runtime.AgentTimelineStore;
 import com.agent.platform.runtime.JdbcAgentTimelineStore;
+import com.agent.platform.runtime.JdbcAgentRuntimeStore;
+import com.agent.platform.runtime.AgentRunRecord;
+import com.agent.platform.runtime.AgentRunState;
+import com.agent.platform.runtime.AgentRunPhase;
+import com.agent.platform.runtime.AgentRunStore;
+import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.workbench.application.SubmitWorkInputCommand;
 import com.agent.platform.workbench.application.WorkInputService;
 import com.agent.platform.workbench.application.WorkItemService;
@@ -45,16 +51,31 @@ class UnifiedWorkEventStreamPostgresIT {
     @AfterEach
     void cleanup() throws Exception {
         try (Connection connection = openConnection()) {
+            connection.setAutoCommit(false);
+            lockWorkItems(connection);
+            execute(connection, "DELETE FROM agent_dispatch_attempt WHERE work_item_id IN "
+                    + "(SELECT work_item_id FROM agent_work_item WHERE tenant_id = ?)");
+            execute(connection, "DELETE FROM agent_route_preview WHERE work_item_id IN "
+                    + "(SELECT work_item_id FROM agent_work_item WHERE tenant_id = ?)");
+            execute(connection, "DELETE FROM agent_routing_decision WHERE work_item_id IN "
+                    + "(SELECT work_item_id FROM agent_work_item WHERE tenant_id = ?)");
+            execute(connection, "DELETE FROM agent_work_command_decision WHERE tenant_id = ?");
             execute(connection, "DELETE FROM agent_work_event WHERE work_item_id IN "
                     + "(SELECT work_item_id FROM agent_work_item WHERE tenant_id = ?)");
             execute(connection, "DELETE FROM agent_work_projection_cursor WHERE work_item_id IN "
                     + "(SELECT work_item_id FROM agent_work_item WHERE tenant_id = ?)");
             execute(connection, "DELETE FROM agent_work_link WHERE work_item_id IN "
                     + "(SELECT work_item_id FROM agent_work_item WHERE tenant_id = ?)");
+            execute(connection, "DELETE FROM agent_work_relation WHERE source_work_item_id IN "
+                    + "(SELECT work_item_id FROM agent_work_item WHERE tenant_id = ?) OR target_work_item_id IN "
+                    + "(SELECT work_item_id FROM agent_work_item WHERE tenant_id = ?)");
             execute(connection, "DELETE FROM agent_conversation_work_state WHERE tenant_id = ?");
             execute(connection, "DELETE FROM agent_work_item WHERE tenant_id = ?");
             execute(connection, "DELETE FROM agent_work_input WHERE tenant_id = ?");
+            executeValue(connection, "DELETE FROM agent_run_state WHERE dispatch_request_id = ?",
+                    "dispatch-live-" + suffix);
             executeValue(connection, "DELETE FROM agent_session WHERE session_id = ?", sessionId);
+            connection.commit();
         }
     }
 
@@ -118,7 +139,8 @@ class UnifiedWorkEventStreamPostgresIT {
         timeline.appendEvent(sessionId, principal.principalId(), childRunId,
                 new AgentEventDraft(AgentEventType.MODEL_DELTA, "child secret", Map.of()));
         UnifiedWorkEventStreamService service = new UnifiedWorkEventStreamService(
-                workbench, timeline, new WorkbenchStreamProperties());
+                workbench, timeline, new com.agent.platform.runtime.JdbcAgentRuntimeStore(storage, new ObjectMapper()),
+                new WorkbenchStreamProperties());
 
         var items = service.poll(principal, workItemId,
                 new AtomicLong(0), new AtomicLong(-1), 1);
@@ -128,9 +150,51 @@ class UnifiedWorkEventStreamPostgresIT {
                 .map(UnifiedWorkStreamItem::content).toList());
     }
 
+    @Test
+    void discoversPersistedRunningRunBeforePrimaryLinkAndReconnectsWithoutDuplicateDelta() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        JdbcWorkbenchStore workbench = new JdbcWorkbenchStore(storage, mapper);
+        var created = new WorkInputService(new WorkItemService(workbench)).submit(
+                principal, SubmitWorkInputCommand.direct(
+                        "client-live-" + suffix, "conversation-live-" + suffix, "live stream goal", 0));
+        String workItemId = created.workItem().workItemId();
+        String dispatchRequestId = "dispatch-live-" + suffix;
+        String runId = "run-live-" + suffix;
+        updateWorkForDispatch(workItemId, dispatchRequestId);
+
+        JdbcAgentRuntimeStore runs = new JdbcAgentRuntimeStore(storage, mapper);
+        AgentRequest request = new AgentRequest(created.workItem().conversationId(), principal.principalId(),
+                "live stream goal", Map.of("workItemId", workItemId,
+                AgentRunStore.DISPATCH_REQUEST_METADATA_KEY, dispatchRequestId));
+        runs.create(AgentRunRecord.create(runId, "trace-live-" + suffix,
+                created.workItem().conversationId(), request));
+        JdbcAgentTimelineStore timeline = new JdbcAgentTimelineStore(storage, mapper);
+        timeline.openSession(sessionId, principal.principalId());
+        timeline.appendEvent(sessionId, principal.principalId(), runId,
+                new AgentEventDraft(AgentEventType.MODEL_DELTA, "real ", Map.of()));
+        timeline.appendEvent(sessionId, principal.principalId(), runId,
+                new AgentEventDraft(AgentEventType.MODEL_DELTA, "time", Map.of()));
+        UnifiedWorkEventStreamService service = new UnifiedWorkEventStreamService(
+                workbench, timeline, runs, new WorkbenchStreamProperties());
+        AtomicLong runCursor = new AtomicLong(-1);
+
+        var live = service.poll(principal, workItemId, new AtomicLong(0), runCursor, 1);
+        String liveBuffer = live.stream().filter(item -> "MODEL_DELTA".equals(item.kind()))
+                .map(UnifiedWorkStreamItem::content).reduce("", String::concat);
+        assertEquals(AgentRunState.RUNNING, runs.find(runId).orElseThrow().state());
+        assertEquals("real time", liveBuffer);
+        assertEquals(List.of(), service.poll(principal, workItemId, new AtomicLong(0), runCursor, 2));
+
+        AgentRunRecord completed = runs.update(runId, current -> current.finished(
+                AgentRunState.COMPLETED, AgentRunPhase.FINISHED, liveBuffer, "",
+                List.of(), List.of(), false, false));
+        assertEquals(completed.answer(), liveBuffer);
+    }
+
     private UnifiedWorkEventStreamService stream(JdbcWorkbenchStore workbench) {
         return new UnifiedWorkEventStreamService(
-                workbench, mock(AgentTimelineStore.class), new WorkbenchStreamProperties());
+                workbench, mock(AgentTimelineStore.class), mock(com.agent.platform.runtime.AgentRunStore.class),
+                new WorkbenchStreamProperties());
     }
 
     private WorkEventDraft event(String sourceEventId, int index) {
@@ -159,8 +223,22 @@ class UnifiedWorkEventStreamPostgresIT {
 
     private void execute(Connection connection, String sql) throws Exception {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, principal.tenantId());
+            for (int index = 1; index <= countParameters(sql); index++) {
+                statement.setString(index, principal.tenantId());
+            }
             statement.executeUpdate();
+        }
+    }
+
+    private int countParameters(String sql) {
+        return (int) sql.chars().filter(character -> character == '?').count();
+    }
+
+    private void lockWorkItems(Connection connection) throws Exception {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT work_item_id FROM agent_work_item WHERE tenant_id=? FOR UPDATE")) {
+            statement.setString(1, principal.tenantId());
+            statement.executeQuery();
         }
     }
 
@@ -184,6 +262,19 @@ class UnifiedWorkEventStreamPostgresIT {
             statement.setString(3, runId);
             statement.setString(4, relation);
             statement.setTimestamp(5, java.sql.Timestamp.from(Instant.now()));
+            statement.executeUpdate();
+        }
+    }
+
+    private void updateWorkForDispatch(String workItemId, String dispatchRequestId) throws Exception {
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE agent_work_item
+                     SET control_state='DISPATCHING', execution_state='STARTING', dispatch_request_id=?
+                     WHERE work_item_id=?
+                     """)) {
+            statement.setString(1, dispatchRequestId);
+            statement.setString(2, workItemId);
             statement.executeUpdate();
         }
     }
