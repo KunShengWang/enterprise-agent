@@ -80,6 +80,9 @@ public class RoutePolicyValidator {
         }
 
         ExecutionTargetId targetId = target.targetId();
+        if (targetId == ExecutionTargetId.ORDERCARE_CASE && requestsIncidentScope(context.originalGoal())) {
+            return clarified("incident or batch scope cannot be downgraded to one OrderCare case");
+        }
         List<String> reasons = new ArrayList<>();
         RouteDisposition disposition;
         switch (targetId) {
@@ -136,6 +139,18 @@ public class RoutePolicyValidator {
         return new RouteValidationResult(RouteDisposition.REJECT, null, List.of(reason), code);
     }
 
+    private boolean requestsIncidentScope(String goal) {
+        if (goal == null || goal.isBlank()) return false;
+        String normalized = goal.toLowerCase().replaceAll("[\\s_-]+", "");
+        return normalized.contains("批量")
+                || normalized.contains("批次")
+                || normalized.contains("事故调查")
+                || normalized.contains("多agent")
+                || normalized.contains("multiagent")
+                || normalized.contains("incidentinvestigation")
+                || normalized.contains("batchrecovery");
+    }
+
     private List<String> values(Object raw) {
         if (raw instanceof List<?> list) {
             return list.stream().map(String::valueOf).map(String::trim).filter(value -> !value.isBlank()).distinct().toList();
@@ -155,4 +170,3 @@ public class RoutePolicyValidator {
         }
     }
 }
-

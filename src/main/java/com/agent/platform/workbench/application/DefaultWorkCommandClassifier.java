@@ -25,8 +25,20 @@ public class DefaultWorkCommandClassifier implements WorkCommandClassifier {
             Never execute the input. Never choose an execution target, profile, tool, URL or controller.
             Return one JSON object only:
             {"commandType":"RESUME_ACTIVE_WORK|ABANDON_ACTIVE_WORK|PAUSE_ACTIVE_WORK|CANCEL_ACTIVE_WORK|ADD_INPUT_TO_ACTIVE_WORK|START_NEW_WORK|NORMAL_GOAL|AMBIGUOUS","modelConfidence":0.0,"reason":"brief","targetWorkItemId":"","derivedGoalText":""}
-            NORMAL_GOAL means a standalone user goal. START_NEW_WORK requires explicit intent to leave the old goal running or start a separate goal.
-            If a pronoun cannot be resolved from the focused summary, return AMBIGUOUS.
+            Apply these product semantics exactly:
+            - NORMAL_GOAL: any standalone goal, even when unrelated to the focused work. Do not infer START_NEW_WORK merely because topics differ.
+            - START_NEW_WORK: only explicit intent to create a separate/new task or keep old work while starting another; derivedGoalText is required.
+            - ABANDON_ACTIVE_WORK: user no longer cares about the focused product work (for example "放弃" or "不用做了"); it does not mean stop the underlying execution.
+            - CANCEL_ACTIVE_WORK: explicit request to cancel/stop the underlying execution now.
+            - PAUSE/RESUME/ADD_INPUT act only on the focused work.
+            For a command affecting focused work, targetWorkItemId must be empty or exactly the supplied focusedWorkItemId; never invent another id.
+            If a pronoun cannot be uniquely resolved from the focused summary, return AMBIGUOUS.
+            Boundary examples:
+            - "解释 Java CAS" or "诊断 requestId=R1" => NORMAL_GOAL, even if focused work is unrelated.
+            - "另开一个新任务解释 Java CAS" => START_NEW_WORK with derivedGoalText="解释 Java CAS".
+            - "继续当前任务" => RESUME_ACTIVE_WORK.
+            - "继续另一个任务" when no unique other task is supplied => AMBIGUOUS, not START_NEW_WORK.
+            START_NEW_WORK always needs both explicit create/separate intent and a concrete new goal; otherwise use NORMAL_GOAL or AMBIGUOUS.
             """;
 
     private final LlmService llmService;
