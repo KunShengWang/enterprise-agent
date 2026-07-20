@@ -3,6 +3,7 @@ import type { AgentConversationMessage, ApprovalRecord } from '../types/agent'
 import type { PrimaryAnswerState, PrimaryAnswerView } from '../types/conversation'
 import type { PublicPresentation, WorkInput, WorkItemDetail, WorkStreamItem } from '../types/workbench'
 import { projectConversationItems } from '../utils/conversationItems'
+import { isToolCallProtocolEnvelope } from '../utils/publicContent'
 
 export interface WorkbenchConversationSources {
   detail: Ref<WorkItemDetail | null>
@@ -78,7 +79,7 @@ export function useWorkbenchConversation(sources: WorkbenchConversationSources) 
     if (!primaryRunId.value) return false
     const message = messages.filter(item => item.role === 'ASSISTANT' && item.runId === primaryRunId.value)
       .sort((left, right) => right.sequence - left.sequence)[0]
-    if (!message) return false
+    if (!message || isToolCallProtocolEnvelope(message.content)) return false
     persistedAnswer.value = message
     liveAnswerBuffer.value = message.content
     answerCreatedAt.value = message.createdAt

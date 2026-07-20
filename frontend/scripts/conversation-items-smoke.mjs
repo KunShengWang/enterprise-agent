@@ -35,6 +35,10 @@ assert.equal(items[0].type, 'USER_MESSAGE')
 assert.equal(items.at(-1).type, 'FINAL_ANSWER')
 assert.equal(items.filter(item => item.type === 'TOOL_CALL').length, 1)
 assert.equal(items.find(item => item.type === 'TOOL_CALL')?.tool?.summary, '工具调用已完成，返回 4 条结果。')
+assert.equal(items.find(item => item.type === 'TOOL_CALL')?.tool?.actionSummary, '正在检索相关知识')
+assert.equal(items.find(item => item.type === 'TOOL_CALL')?.tool?.resultCount, 4)
+assert.equal(items.find(item => item.type === 'TOOL_CALL')?.tool?.attemptLabel, 'Attempt 1')
+assert.deepEqual(items.find(item => item.type === 'TOOL_CALL')?.tool?.arguments, { query: 'Spring 三级缓存' })
 assert.ok(items.some(item => item.type === 'ROUTE_SUMMARY'))
 assert.ok(items.some(item => item.type === 'TASK_PLAN'))
 assert.ok(!items.some(item => item.content.includes('internal reason') || item.content.includes('modelConfidence')))
@@ -70,5 +74,13 @@ assert.equal(deduplicated.filter(item => item.type === 'TASK_PLAN').length, 1)
 assert.equal(deduplicated.filter(item => item.type === 'FINAL_ANSWER').length, 1)
 assert.ok(!deduplicated.some(item => item.content.includes('hidden reasoning') || item.content.includes('technical only')))
 assert.ok(deduplicated.some(item => item.content.includes('Primary Run')))
+
+const failed = projectConversationItems({
+  detail: { workItem: { ...work, executionState: 'FAILED' }, routingDecision: null, links: [], events: [] },
+  inputs: [], presentations: [], approval: null,
+  answer: { state: 'FAILED', content: '', persistedMessageId: '', createdAt: work.updatedAt },
+})
+assert.equal(failed.at(-1)?.type, 'FINAL_ANSWER')
+assert.equal(failed.at(-1)?.answerState, 'FAILED')
 
 console.log(`conversation projection smoke passed (${items.length} visible items)`)

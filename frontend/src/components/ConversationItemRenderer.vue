@@ -40,18 +40,25 @@ const answerStatus = computed(() => ({
   WAITING: '等待模型输出', STREAMING: '正在生成', FINALIZING: '正在确认最终结果',
   COMPLETED: '已完成', FAILED: '执行失败', CANCELLED: '已取消', IDLE: '',
 } as Record<string, string>)[props.item.answerState ?? 'IDLE'])
+const collapsibleSummary = computed(() => ['TASK_UNDERSTANDING', 'ROUTE_SUMMARY']
+  .includes(props.item.presentationKind ?? ''))
 </script>
 
 <template>
-  <article class="conversation-item" :data-type="item.type.toLowerCase()" :data-status="item.status">
+  <article class="conversation-item" :data-type="item.type.toLowerCase()" :data-status="item.status" :data-presentation="item.presentationKind?.toLowerCase()">
     <div class="conversation-item-icon">{{ itemIcon }}</div>
     <div class="conversation-item-body">
-      <header v-if="item.type !== 'USER_MESSAGE'">
+      <header v-if="item.type !== 'USER_MESSAGE' && !collapsibleSummary">
         <div><strong>{{ item.title }}</strong><span v-if="item.live" class="live-label">{{ answerStatus || '正在生成' }}</span></div>
         <small v-if="!['FINAL_ANSWER', 'ROUTE_SUMMARY'].includes(item.type)" class="item-state"><i />{{ statusLabel(item.status) }}</small>
       </header>
 
       <p v-if="item.type === 'USER_MESSAGE'" class="user-message-text">{{ item.content }}</p>
+
+      <details v-else-if="collapsibleSummary" class="public-summary" open>
+        <summary><strong>任务理解</strong><span>{{ statusLabel(item.status) }}</span></summary>
+        <p>{{ item.content }}</p>
+      </details>
 
       <template v-else-if="item.type === 'TASK_PLAN'">
         <p class="item-description">{{ item.content }}</p>
@@ -63,13 +70,15 @@ const answerStatus = computed(() => ({
           <div><span>工具</span><strong>{{ item.tool?.displayName }}</strong></div>
           <div><span>状态</span><strong>{{ statusLabel(item.status) }}</strong></div>
           <div v-if="item.tool?.durationMs !== undefined"><span>耗时</span><strong>{{ item.tool.durationMs }} ms</strong></div>
+          <div v-if="item.tool?.resultCount !== undefined"><span>结果</span><strong>{{ item.tool.resultCount }} 条</strong></div>
+          <div v-if="item.tool?.attemptLabel"><span>尝试</span><strong>{{ item.tool.attemptLabel }}</strong></div>
         </div>
+        <p v-if="item.tool?.actionSummary" class="tool-action-summary">{{ item.tool.actionSummary }}</p>
         <p class="tool-result-summary">{{ item.tool?.summary }}</p>
         <details v-if="item.tool">
           <summary>查看输入与结果</summary>
-          <div class="tool-detail-grid">
+          <div class="tool-detail-grid single">
             <section><strong>输入参数</strong><dl><template v-for="(value, key) in item.tool.arguments" :key="key"><dt>{{ key }}</dt><dd>{{ shortValue(value) }}</dd></template></dl></section>
-            <section v-if="item.tool.result && Object.keys(item.tool.result).length"><strong>结果摘要</strong><dl><template v-for="(value, key) in item.tool.result.metadata as Record<string, unknown>" :key="key"><dt>{{ key }}</dt><dd>{{ shortValue(value) }}</dd></template></dl></section>
           </div>
         </details>
       </template>
@@ -106,7 +115,11 @@ const answerStatus = computed(() => ({
 
       <template v-else-if="item.type === 'FINAL_ANSWER'">
         <button class="copy-answer-button" type="button" title="复制回答" @click="emit('copy', item.content)">复制</button>
-        <div class="conversation-markdown" v-html="markdown" />
+        <div v-if="item.content" class="conversation-markdown" :class="{ streaming: item.answerState === 'STREAMING' }" v-html="markdown" />
+        <div v-else class="answer-placeholder" :data-state="item.answerState">
+          <i v-if="['WAITING', 'FINALIZING'].includes(item.answerState ?? '')" />
+          <span>{{ answerStatus }}</span>
+        </div>
       </template>
 
       <p v-else-if="item.type === 'ERROR'" class="error-copy">{{ item.content }}</p>

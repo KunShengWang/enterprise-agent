@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "test": "node scripts/conversation-items-smoke.mjs && node scripts/workbench-p3-smoke.mjs",
+    "test": "node scripts/conversation-items-smoke.mjs && node scripts/workbench-p3-smoke.mjs && node scripts/workbench-p4-smoke.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -18,6 +18,7 @@
   "devDependencies": {
     "@types/node": "^24.10.0",
     "@vitejs/plugin-vue": "^6.0.1",
+    "jsdom": "^29.1.1",
     "typescript": "^5.9.3",
     "vite": "^7.2.4",
     "vue-tsc": "^3.1.8"

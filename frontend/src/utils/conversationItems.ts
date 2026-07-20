@@ -66,6 +66,7 @@ function publicItems(presentations: PublicPresentation[], approval: ApprovalReco
         content: item.summary,
         steps: item.steps,
         status: presentationStatus(item.status),
+        presentationKind: item.kind,
         approval: item.kind === 'APPROVAL_REQUIRED' ? approval ?? undefined : undefined,
         tool: item.detail.tool ? {
           callId: item.detail.referenceId,
@@ -73,7 +74,10 @@ function publicItems(presentations: PublicPresentation[], approval: ApprovalReco
           displayName: item.detail.tool.displayName,
           arguments: item.detail.tool.publicArguments,
           summary: item.detail.tool.resultSummary || item.detail.tool.actionSummary,
+          actionSummary: item.detail.tool.actionSummary,
+          resultCount: item.detail.tool.resultCount,
           durationMs: item.detail.tool.durationMs,
+          attemptLabel: item.detail.tool.attemptLabel,
         } : undefined,
       }]
     })
@@ -125,7 +129,7 @@ export function projectConversationItems(source: ConversationProjectionInput): C
     approval,
   })
 
-  if (answer.content || answer.state === 'WAITING' || answer.state === 'FINALIZING') items.push({
+  if (answer.content || !['IDLE', 'COMPLETED'].includes(answer.state)) items.push({
     id: `answer-${work.workItemId}`,
     type: 'FINAL_ANSWER',
     createdAt: answer.createdAt || work.updatedAt,

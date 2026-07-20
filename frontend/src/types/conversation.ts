@@ -1,5 +1,5 @@
 import type { ApprovalRecord } from './agent'
-import type { RoutePreview } from './workbench'
+import type { PublicPresentationKind, RoutePreview } from './workbench'
 
 export type PrimaryAnswerState =
   | 'IDLE' | 'WAITING' | 'STREAMING' | 'FINALIZING' | 'COMPLETED' | 'FAILED' | 'CANCELLED'
@@ -26,7 +26,10 @@ export interface ConversationToolData {
   arguments: Record<string, unknown>
   result?: Record<string, unknown>
   summary: string
+  actionSummary: string
+  resultCount?: number
   durationMs?: number
+  attemptLabel: string
 }
 
 export interface ConversationItem {
@@ -42,6 +45,7 @@ export interface ConversationItem {
   approval?: ApprovalRecord
   live?: boolean
   answerState?: PrimaryAnswerState
+  presentationKind?: PublicPresentationKind
 }
 
 export interface PrimaryAnswerView {
