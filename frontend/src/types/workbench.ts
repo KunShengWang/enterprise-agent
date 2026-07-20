@@ -48,6 +48,64 @@ export interface WorkStreamItem {
   createdAt: string
   resumeToken: string
 }
+export interface ExecutionNodeMetrics {
+  modelCalls: number
+  toolCalls: number
+  promptTokens: number
+  completionTokens: number
+  estimatedCost: number
+  durationMs: number
+}
+export interface ExecutionTreeMetrics extends Omit<ExecutionNodeMetrics, 'durationMs'> {
+  agentNodes: number
+  evidenceCount: number
+  conflictCount: number
+  syntheticCoordinatorModelCalls: number
+}
+export interface ExecutionCoordinatorNode {
+  nodeId: string
+  label: string
+  status: string
+  synthetic: boolean
+  modelCalls: number
+  span: RuntimeTraceSpan
+}
+export interface ExecutionAgentNode {
+  nodeId: string
+  role: string
+  taskId: string
+  runId: string
+  attempt: number
+  maxAttempts: number
+  status: string
+  objective: string
+  error: string
+  trace?: RuntimeRunTrace
+  evidence: IncidentEvidence[]
+  metrics: ExecutionNodeMetrics
+}
+export interface ExecutionConflict {
+  conflictId: string
+  conflictType: string
+  severity: string
+  metricKey: string
+  evidenceIds: string[]
+  status: string
+  details: Record<string, unknown>
+}
+export interface WorkExecutionTree {
+  workItemId: string
+  executionTarget: string
+  treeType: string
+  executionId: string
+  coordinator?: ExecutionCoordinatorNode
+  agents: ExecutionAgentNode[]
+  evidence: IncidentEvidence[]
+  conflicts: ExecutionConflict[]
+  assessment: Record<string, unknown>
+  recoveryPlans: IncidentRecoveryPlan[]
+  metrics: ExecutionTreeMetrics
+}
 export interface WorkLink { linkType: string; linkedId: string; relation: string }
 export interface RoutePreview {
   previewId: string
@@ -62,3 +120,4 @@ export interface RoutePreview {
 export interface RoutingDecision { decisionId: string; decision: Record<string, unknown>; validation: Record<string, unknown>; failureCode: string; failureReason: string }
 export interface WorkItemDetail { workItem: WorkItem; focus?: WorkFocus; routingDecision?: RoutingDecision; preview?: RoutePreview; links: WorkLink[]; events: WorkEvent[] }
 export interface UnifiedInputResponse { inputId: string; workItemId: string; controlState: string; commandType: string; commandOnly: boolean }
+import type { IncidentEvidence, IncidentRecoveryPlan, RuntimeRunTrace, RuntimeTraceSpan } from './incident'

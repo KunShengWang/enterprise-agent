@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { workbenchApi } from '../api/workbench'
 import { renderMarkdown } from '../utils/markdown'
-import type { WorkEvent, WorkFocus, WorkInput, WorkItem, WorkItemDetail, WorkLink, WorkStreamItem } from '../types/workbench'
+import type { ExecutionAgentNode, WorkEvent, WorkExecutionTree, WorkFocus, WorkInput, WorkItem, WorkItemDetail, WorkLink, WorkStreamItem } from '../types/workbench'
 
 const conversationId = ref(localStorage.getItem('unified-workbench-conversation') || `workbench-${new Date().toISOString().slice(0, 10)}`)
 const content = ref('')
@@ -15,6 +15,8 @@ const detail = ref<WorkItemDetail | null>(null)
 const busy = ref(false)
 const error = ref('')
 const streamEvents = ref<WorkEvent[]>([])
+const executionTree = ref<WorkExecutionTree | null>(null)
+const expandedNodeId = ref('')
 const answer = ref('')
 const streamState = ref<'idle' | 'connecting' | 'live' | 'recovering' | 'error'>('idle')
 const workCursor = ref(-1)
@@ -23,12 +25,59 @@ let timer = 0
 let reconnectTimer = 0
 let eventSource: EventSource | null = null
 let streamGeneration = 0
+let treeRefreshBusy = false
 const seenWorkEvents = new Set<string>()
 const seenRunEvents = new Set<string>()
 
 const selected = computed(() => workItems.value.find(item => item.workItemId === selectedId.value) ?? null)
 const routeReason = computed(() => String(detail.value?.routingDecision?.decision?.reason ?? '等待 Router 形成可审计决策'))
 const renderedAnswer = computed(() => renderMarkdown(answer.value))
+const assessmentPresent = computed(() => Object.keys(executionTree.value?.assessment ?? {}).length > 0)
+
+function compactId(value: string) {
+  return value.length > 22 ? `${value.slice(0, 10)}…${value.slice(-8)}` : value
+}
+
+function roleLabel(role: string) {
+  if (role === 'COMMANDER') return 'Commander · 调查指挥'
+  if (role === 'REVIEWER') return 'Reviewer · 证据审查'
+  if (role === 'RECOVERY_PLANNER') return 'Recovery Planner · 恢复规划'
+  if (role === 'GENERAL_AGENT') return 'General Agent'
+  if (role === 'ORDERCARE_CASE') return 'OrderCare Agent'
+  const specialist = role.match(/^SPECIALIST:([^:]+)/)?.[1]
+  const labels: Record<string, string> = {
+    ORDER_ANALYST: 'Order Specialist', INVENTORY_ANALYST: 'Inventory Specialist',
+    MQ_ANALYST: 'MQ Specialist', SOP_ANALYST: 'SOP Specialist',
+  }
+  return specialist ? (labels[specialist] ?? specialist) : role
+}
+
+function nodeState(node: ExecutionAgentNode) {
+  const status = node.status.toUpperCase()
+  if (['FAILED', 'CANCELLED', 'TIMED_OUT', 'REJECTED', 'MANUAL_REVIEW'].some(value => status.includes(value))) return 'failed'
+  if (['COMPLETED', 'SUCCEEDED', 'ASSESSED', 'CLOSED'].some(value => status.includes(value))) return 'completed'
+  if (['PENDING', 'CREATED', 'TRACE_UNAVAILABLE'].some(value => status.includes(value))) return 'pending'
+  return 'active'
+}
+
+function toolSpans(node: ExecutionAgentNode) {
+  return node.trace?.spans.filter(span => ['TOOL', 'RAG'].includes(span.kind)) ?? []
+}
+
+function lastStage(node: ExecutionAgentNode) {
+  return node.trace?.replayEvents.at(-1)?.eventType || node.status
+}
+
+async function refreshExecutionTree(workItemId: string) {
+  if (treeRefreshBusy) return
+  treeRefreshBusy = true
+  try {
+    const next = await workbenchApi.executionTree(workItemId)
+    if (selectedId.value === workItemId) executionTree.value = next
+  } catch (cause) {
+    if (selectedId.value === workItemId) error.value = cause instanceof Error ? cause.message : '执行树加载失败'
+  } finally { treeRefreshBusy = false }
+}
 
 function closeStream() {
   streamGeneration += 1
@@ -113,6 +162,9 @@ function connectStream(workItemId: string) {
       summary: event.content,
       projectedAt: event.createdAt,
     })
+    if (['AGENT_RUN', 'INCIDENT', 'RECOVERY_PLAN'].includes(event.sourceType)) {
+      void refreshExecutionTree(workItemId)
+    }
   })
   source.addEventListener('model-delta', raw => {
     if (generation !== streamGeneration) return
@@ -165,8 +217,11 @@ async function refresh() {
     if (!selectedId.value) selectedId.value = focus.value?.focusedWorkItemId || nextItems[0]?.workItemId || ''
     if (selectedId.value) {
       const previousId = detail.value?.workItem.workItemId
-      const nextDetail = await workbenchApi.detail(selectedId.value)
+      const [nextDetail, nextTree] = await Promise.all([
+        workbenchApi.detail(selectedId.value), workbenchApi.executionTree(selectedId.value),
+      ])
       detail.value = nextDetail
+      executionTree.value = nextTree
       if (previousId !== nextDetail.workItem.workItemId || !eventSource) resetStream(nextDetail)
     }
   } catch (cause) {
@@ -190,8 +245,12 @@ async function submit() {
 async function choose(item: WorkItem) {
   if (item.workItemId === selectedId.value && detail.value) return
   selectedId.value = item.workItemId
-  const nextDetail = await workbenchApi.detail(item.workItemId)
+  const [nextDetail, nextTree] = await Promise.all([
+    workbenchApi.detail(item.workItemId), workbenchApi.executionTree(item.workItemId),
+  ])
   detail.value = nextDetail
+  executionTree.value = nextTree
+  expandedNodeId.value = ''
   resetStream(nextDetail)
 }
 async function makeFocus(item: WorkItem) { if (!focus.value) return; await workbenchApi.switchFocus(conversationId.value, item.workItemId, focus.value.version); await refresh() }
@@ -272,6 +331,66 @@ onBeforeUnmount(() => { window.clearInterval(timer); closeStream() })
             <strong>{{ link.linkType }}</strong><code>{{ link.linkedId }}</code><span>打开专项视图 →</span>
           </RouterLink>
         </article>
+
+        <section v-if="executionTree && (executionTree.coordinator || executionTree.agents.length)" class="execution-tree">
+          <header class="execution-tree-head">
+            <div><p class="eyebrow">EXECUTION TREE · {{ executionTree.treeType }}</p><h3>Agent 执行过程</h3></div>
+            <div class="tree-metrics">
+              <span><strong>{{ executionTree.metrics.agentNodes }}</strong>Agent</span>
+              <span><strong>{{ executionTree.metrics.modelCalls }}</strong>模型轮次</span>
+              <span><strong>{{ executionTree.metrics.toolCalls }}</strong>工具</span>
+              <span><strong>{{ executionTree.metrics.promptTokens + executionTree.metrics.completionTokens }}</strong>Token</span>
+            </div>
+          </header>
+
+          <article v-if="executionTree.coordinator" class="coordinator-row">
+            <span class="node-icon">C</span>
+            <div><strong>{{ executionTree.coordinator.label }}</strong><p>{{ executionTree.coordinator.span.summary }}</p></div>
+            <code>synthetic · model calls {{ executionTree.coordinator.modelCalls }}</code>
+          </article>
+
+          <div class="agent-node-grid">
+            <article v-for="node in executionTree.agents" :key="node.nodeId" class="agent-node" :data-state="nodeState(node)">
+              <header>
+                <span class="node-icon">{{ roleLabel(node.role).slice(0, 1) }}</span>
+                <div><strong>{{ roleLabel(node.role) }}</strong><small>Attempt {{ node.attempt }}/{{ node.maxAttempts }} · {{ node.status }}</small></div>
+                <i />
+              </header>
+              <p>{{ node.objective }}</p>
+              <div class="node-stage"><span>当前阶段</span><strong>{{ lastStage(node) }}</strong></div>
+              <div class="node-metrics">
+                <span>模型 {{ node.metrics.modelCalls }}</span><span>工具 {{ node.metrics.toolCalls }}</span>
+                <span>Token {{ node.metrics.promptTokens + node.metrics.completionTokens }}</span><span>{{ Math.round(node.metrics.durationMs) }}ms</span>
+              </div>
+              <code v-if="node.runId" class="node-run-id">{{ compactId(node.runId) }}</code>
+              <p v-if="node.error" class="node-error">{{ node.error }}</p>
+              <button class="node-detail-button" type="button" @click="expandedNodeId = expandedNodeId === node.nodeId ? '' : node.nodeId">
+                {{ expandedNodeId === node.nodeId ? '收起详情' : '查看阶段、工具与证据' }}
+              </button>
+              <div v-if="expandedNodeId === node.nodeId" class="node-details">
+                <div><strong>阶段</strong><ol><li v-for="stage in node.trace?.replayEvents.slice(-8)" :key="stage.sequence"><span>{{ stage.eventType }}</span><small>{{ stage.summary }}</small></li></ol><p v-if="!node.trace?.replayEvents.length">尚无 Runtime 阶段事件</p></div>
+                <div><strong>工具</strong><ol><li v-for="tool in toolSpans(node)" :key="tool.spanId"><span>{{ tool.name }}</span><small>{{ tool.status }} · {{ tool.durationMs }}ms</small></li></ol><p v-if="!toolSpans(node).length">该 Agent 尚无工具调用</p></div>
+                <div><strong>Evidence</strong><ol><li v-for="item in node.evidence" :key="item.evidenceId"><span>{{ item.evidenceSubtype }}</span><small>{{ compactId(item.evidenceId) }}</small></li></ol><p v-if="!node.evidence.length">该节点未产生业务 Evidence</p></div>
+              </div>
+            </article>
+          </div>
+
+          <div v-if="executionTree.conflicts.length || assessmentPresent || executionTree.recoveryPlans.length" class="execution-artifacts">
+            <section v-if="executionTree.conflicts.length">
+              <p class="eyebrow">JAVA CONFLICTS</p>
+              <article v-for="conflict in executionTree.conflicts" :key="conflict.conflictId"><strong>{{ conflict.severity }} · {{ conflict.conflictType }}</strong><span>{{ conflict.metricKey }}</span><code>{{ compactId(conflict.conflictId) }}</code></article>
+            </section>
+            <section v-if="assessmentPresent">
+              <p class="eyebrow">REVIEWER ASSESSMENT</p>
+              <strong>{{ executionTree.assessment.outcome || 'ASSESSMENT' }} · {{ executionTree.assessment.riskLevel || '' }}</strong>
+              <details><summary>查看结构化结论</summary><pre>{{ JSON.stringify(executionTree.assessment, null, 2) }}</pre></details>
+            </section>
+            <section v-if="executionTree.recoveryPlans.length">
+              <p class="eyebrow">RECOVERY PROPOSALS</p>
+              <article v-for="plan in executionTree.recoveryPlans" :key="plan.planId"><strong>{{ plan.status }} · {{ plan.outcome }}</strong><span>{{ plan.items.length }} 个处置项</span><code>{{ compactId(plan.planId) }}</code></article>
+            </section>
+          </div>
+        </section>
 
         <article v-if="detail.workItem.activeExecutionTarget === 'GENERAL_AGENT' || answer" class="stream-answer">
           <div>

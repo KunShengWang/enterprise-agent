@@ -4,6 +4,7 @@ import com.agent.platform.common.ApiResponse;
 import com.agent.platform.workbench.application.ConversationFocusService;
 import com.agent.platform.workbench.application.RouteConfirmationService;
 import com.agent.platform.workbench.application.UnifiedWorkInputRequest;
+import com.agent.platform.workbench.application.UnifiedWorkExecutionTreeService;
 import com.agent.platform.workbench.application.UnifiedWorkIntakeResult;
 import com.agent.platform.workbench.application.UnifiedWorkIntakeService;
 import com.agent.platform.workbench.application.UnifiedWorkLauncher;
@@ -14,6 +15,7 @@ import com.agent.platform.workbench.model.ClassifierType;
 import com.agent.platform.workbench.model.ConversationWorkState;
 import com.agent.platform.workbench.model.WorkCommandType;
 import com.agent.platform.workbench.model.WorkEvent;
+import com.agent.platform.workbench.model.UnifiedWorkExecutionTree;
 import com.agent.platform.workbench.persistence.RoutingStore;
 import com.agent.platform.workbench.persistence.WorkbenchStore;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
@@ -58,6 +60,7 @@ public class UnifiedWorkController {
     private final WorkbenchStore workbench;
     private final RoutingStore routing;
     private final UnifiedWorkEventStreamService eventStream;
+    private final UnifiedWorkExecutionTreeService executionTrees;
 
     public UnifiedWorkController(WorkbenchPrincipalProvider principals,
                                  UnifiedWorkIntakeService intake,
@@ -67,10 +70,12 @@ public class UnifiedWorkController {
                                  ConversationFocusService focusService,
                                  WorkbenchStore workbench,
                                  RoutingStore routing,
-                                 UnifiedWorkEventStreamService eventStream) {
+                                 UnifiedWorkEventStreamService eventStream,
+                                 UnifiedWorkExecutionTreeService executionTrees) {
         this.principals = principals; this.intake = intake; this.launcher = launcher;
         this.queries = queries; this.confirmations = confirmations; this.focusService = focusService;
         this.workbench = workbench; this.routing = routing; this.eventStream = eventStream;
+        this.executionTrees = executionTrees;
     }
 
     @PostMapping("/conversations/{conversationId}/inputs")
@@ -158,6 +163,11 @@ public class UnifiedWorkController {
         UnifiedWorkStreamCursor cursor = UnifiedWorkStreamCursor.resolve(
                 afterSequence, afterRunSequence, lastEventId);
         return eventStream.stream(principals.current(), workItemId, cursor);
+    }
+
+    @GetMapping("/work-items/{workItemId}/execution-tree")
+    public ApiResponse<UnifiedWorkExecutionTree> executionTree(@PathVariable String workItemId) {
+        return ApiResponse.success(executionTrees.project(principals.current(), workItemId));
     }
 
     @PostMapping("/work-items/{workItemId}/confirm-route")

@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiRequest, jsonBody } from './http'
-import type { RoutePreview, UnifiedInputResponse, WorkEvent, WorkFocus, WorkInput, WorkItem, WorkItemDetail } from '../types/workbench'
+import type { RoutePreview, UnifiedInputResponse, WorkEvent, WorkExecutionTree, WorkFocus, WorkInput, WorkItem, WorkItemDetail } from '../types/workbench'
 
 const id = () => crypto.randomUUID()
 
@@ -12,6 +12,9 @@ export const workbenchApi = {
   inputs: (conversationId: string) => apiRequest<WorkInput[]>(`/api/agent/conversations/${encodeURIComponent(conversationId)}/inputs`),
   focus: (conversationId: string) => apiRequest<WorkFocus>(`/api/agent/conversations/${encodeURIComponent(conversationId)}/focus`),
   detail: (workItemId: string) => apiRequest<WorkItemDetail>(`/api/agent/work-items/${encodeURIComponent(workItemId)}`),
+  executionTree: (workItemId: string) => apiRequest<WorkExecutionTree>(
+    `/api/agent/work-items/${encodeURIComponent(workItemId)}/execution-tree`,
+  ),
   events: (workItemId: string, afterSequence = -1, limit = 500) => apiRequest<WorkEvent[]>(
     `/api/agent/work-items/${encodeURIComponent(workItemId)}/events?afterSequence=${afterSequence}&limit=${limit}`,
   ),

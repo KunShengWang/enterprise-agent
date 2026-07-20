@@ -3,6 +3,7 @@ package com.agent.platform.workbench.web;
 import com.agent.platform.workbench.application.ConversationFocusService;
 import com.agent.platform.workbench.application.RouteConfirmationService;
 import com.agent.platform.workbench.application.UnifiedWorkInputRequest;
+import com.agent.platform.workbench.application.UnifiedWorkExecutionTreeService;
 import com.agent.platform.workbench.application.UnifiedWorkIntakeResult;
 import com.agent.platform.workbench.application.UnifiedWorkIntakeService;
 import com.agent.platform.workbench.application.UnifiedWorkLauncher;
@@ -47,8 +48,10 @@ class UnifiedWorkControllerTests {
     private final WorkbenchStore workbench = mock(WorkbenchStore.class);
     private final RoutingStore routing = mock(RoutingStore.class);
     private final UnifiedWorkEventStreamService eventStream = mock(UnifiedWorkEventStreamService.class);
+    private final UnifiedWorkExecutionTreeService executionTrees = mock(UnifiedWorkExecutionTreeService.class);
     private final UnifiedWorkController controller = new UnifiedWorkController(
-            principals, intake, launcher, queries, confirmations, focus, workbench, routing, eventStream);
+            principals, intake, launcher, queries, confirmations, focus, workbench, routing,
+            eventStream, executionTrees);
 
     @Test
     void requestMetadataCannotOverrideTrustedIdentityOrExecutionProfile() {
@@ -101,6 +104,17 @@ class UnifiedWorkControllerTests {
         controller.eventStream("work-1", 10, 9, "w:12;r:7");
 
         verify(eventStream).stream(principal, "work-1", new UnifiedWorkStreamCursor(12, 9));
+    }
+
+    @Test
+    void executionTreeEndpointUsesAuthenticatedWorkItemProjection() {
+        var tree = mock(com.agent.platform.workbench.model.UnifiedWorkExecutionTree.class);
+        when(executionTrees.project(principal, "work-1")).thenReturn(tree);
+
+        var response = controller.executionTree("work-1");
+
+        assertEquals(tree, response.data());
+        verify(executionTrees).project(principal, "work-1");
     }
 
     private AgentWorkItem work() {
