@@ -20,7 +20,9 @@ import com.agent.platform.workbench.security.AuthenticatedPrincipal;
 import com.agent.platform.workbench.security.WorkbenchPrincipalProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +38,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import reactor.core.publisher.Flux;
 
 @RestController
 @RequestMapping("/api/agent")
@@ -54,6 +57,7 @@ public class UnifiedWorkController {
     private final ConversationFocusService focusService;
     private final WorkbenchStore workbench;
     private final RoutingStore routing;
+    private final UnifiedWorkEventStreamService eventStream;
 
     public UnifiedWorkController(WorkbenchPrincipalProvider principals,
                                  UnifiedWorkIntakeService intake,
@@ -62,10 +66,11 @@ public class UnifiedWorkController {
                                  RouteConfirmationService confirmations,
                                  ConversationFocusService focusService,
                                  WorkbenchStore workbench,
-                                 RoutingStore routing) {
+                                 RoutingStore routing,
+                                 UnifiedWorkEventStreamService eventStream) {
         this.principals = principals; this.intake = intake; this.launcher = launcher;
         this.queries = queries; this.confirmations = confirmations; this.focusService = focusService;
-        this.workbench = workbench; this.routing = routing;
+        this.workbench = workbench; this.routing = routing; this.eventStream = eventStream;
     }
 
     @PostMapping("/conversations/{conversationId}/inputs")
@@ -141,6 +146,18 @@ public class UnifiedWorkController {
                                                @RequestParam(defaultValue = "500") int limit) {
         return ApiResponse.success(workbench.loadEvents(
                 principals.current(), workItemId, afterSequence, limit));
+    }
+
+    @GetMapping(value = "/work-items/{workItemId}/events/stream",
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<UnifiedWorkStreamItem>> eventStream(
+            @PathVariable String workItemId,
+            @RequestParam(defaultValue = "-1") long afterSequence,
+            @RequestParam(defaultValue = "-1") long afterRunSequence,
+            @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) {
+        UnifiedWorkStreamCursor cursor = UnifiedWorkStreamCursor.resolve(
+                afterSequence, afterRunSequence, lastEventId);
+        return eventStream.stream(principals.current(), workItemId, cursor);
     }
 
     @PostMapping("/work-items/{workItemId}/confirm-route")

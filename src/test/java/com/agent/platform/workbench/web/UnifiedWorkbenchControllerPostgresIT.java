@@ -71,7 +71,7 @@ class UnifiedWorkbenchControllerPostgresIT {
         UnifiedWorkController controller = new UnifiedWorkController(
                 () -> principal, intake, launcher, queries,
                 mock(RouteConfirmationService.class), new ConversationFocusService(workbench),
-                workbench, routing);
+                workbench, routing, mock(UnifiedWorkEventStreamService.class));
         WebTestClient client = WebTestClient.bindToController(controller).build();
         String conversationId = "conversation-m1d-" + suffix;
 

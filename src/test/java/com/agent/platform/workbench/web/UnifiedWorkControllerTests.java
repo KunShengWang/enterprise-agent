@@ -19,6 +19,7 @@ import com.agent.platform.workbench.persistence.WorkbenchStore;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
 import com.agent.platform.workbench.security.WorkbenchPrincipalProvider;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 
 import java.time.Instant;
 import java.util.Map;
@@ -45,8 +46,9 @@ class UnifiedWorkControllerTests {
     private final ConversationFocusService focus = mock(ConversationFocusService.class);
     private final WorkbenchStore workbench = mock(WorkbenchStore.class);
     private final RoutingStore routing = mock(RoutingStore.class);
+    private final UnifiedWorkEventStreamService eventStream = mock(UnifiedWorkEventStreamService.class);
     private final UnifiedWorkController controller = new UnifiedWorkController(
-            principals, intake, launcher, queries, confirmations, focus, workbench, routing);
+            principals, intake, launcher, queries, confirmations, focus, workbench, routing, eventStream);
 
     @Test
     void requestMetadataCannotOverrideTrustedIdentityOrExecutionProfile() {
@@ -89,6 +91,16 @@ class UnifiedWorkControllerTests {
 
         assertEquals(409, response.getStatusCode().value());
         assertEquals("UNSUPPORTED_FOR_TARGET", response.getBody().code());
+    }
+
+    @Test
+    void eventStreamUsesMonotonicMaximumOfQueryAndLastEventIdCursors() {
+        when(eventStream.stream(eq(principal), eq("work-1"), any(UnifiedWorkStreamCursor.class)))
+                .thenReturn(Flux.empty());
+
+        controller.eventStream("work-1", 10, 9, "w:12;r:7");
+
+        verify(eventStream).stream(principal, "work-1", new UnifiedWorkStreamCursor(12, 9));
     }
 
     private AgentWorkItem work() {

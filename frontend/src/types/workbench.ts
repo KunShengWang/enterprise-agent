@@ -27,7 +27,27 @@ export interface WorkItem {
 }
 
 export interface WorkFocus { focusedWorkItemId: string; version: number }
-export interface WorkEvent { eventId: string; sequence: number; eventType: string; phase: string; summary: string; projectedAt: string }
+export interface WorkEvent {
+  eventId: string
+  sequence: number
+  eventType: string
+  phase?: string
+  summary: string
+  projectedAt: string
+}
+export interface WorkStreamItem {
+  kind: 'WORK_EVENT' | 'MODEL_DELTA' | 'GAP' | 'HEARTBEAT' | 'SYNC_ERROR'
+  eventId: string
+  workSequence: number
+  sourceType: string
+  sourceId: string
+  sourceSequence?: number
+  eventType: string
+  content: string
+  payload: Record<string, unknown>
+  createdAt: string
+  resumeToken: string
+}
 export interface WorkLink { linkType: string; linkedId: string; relation: string }
 export interface RoutePreview {
   previewId: string

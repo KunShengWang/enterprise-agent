@@ -1,5 +1,5 @@
-import { apiRequest, jsonBody } from './http'
-import type { RoutePreview, UnifiedInputResponse, WorkFocus, WorkInput, WorkItem, WorkItemDetail } from '../types/workbench'
+import { API_BASE_URL, apiRequest, jsonBody } from './http'
+import type { RoutePreview, UnifiedInputResponse, WorkEvent, WorkFocus, WorkInput, WorkItem, WorkItemDetail } from '../types/workbench'
 
 const id = () => crypto.randomUUID()
 
@@ -12,6 +12,11 @@ export const workbenchApi = {
   inputs: (conversationId: string) => apiRequest<WorkInput[]>(`/api/agent/conversations/${encodeURIComponent(conversationId)}/inputs`),
   focus: (conversationId: string) => apiRequest<WorkFocus>(`/api/agent/conversations/${encodeURIComponent(conversationId)}/focus`),
   detail: (workItemId: string) => apiRequest<WorkItemDetail>(`/api/agent/work-items/${encodeURIComponent(workItemId)}`),
+  events: (workItemId: string, afterSequence = -1, limit = 500) => apiRequest<WorkEvent[]>(
+    `/api/agent/work-items/${encodeURIComponent(workItemId)}/events?afterSequence=${afterSequence}&limit=${limit}`,
+  ),
+  streamUrl: (workItemId: string, afterSequence: number, afterRunSequence: number) =>
+    `${API_BASE_URL}/api/agent/work-items/${encodeURIComponent(workItemId)}/events/stream?afterSequence=${afterSequence}&afterRunSequence=${afterRunSequence}`,
   switchFocus: (conversationId: string, workItemId: string, expectedVersion: number) => apiRequest<WorkFocus>(
     `/api/agent/conversations/${encodeURIComponent(conversationId)}/focus`,
     { method: 'PUT', ...jsonBody({ workItemId, expectedVersion, clientInputId: `focus-${id()}` }) },

@@ -231,6 +231,10 @@ enterprise-agent:
       scan-delay-millis: ${WORKBENCH_PROJECTION_SCAN_DELAY_MILLIS:2000}
       source-batch-size: ${WORKBENCH_PROJECTION_SOURCE_BATCH_SIZE:200}
       event-batch-size: ${WORKBENCH_PROJECTION_EVENT_BATCH_SIZE:500}
+    stream:
+      poll-interval-millis: ${WORKBENCH_STREAM_POLL_INTERVAL_MILLIS:500}
+      batch-size: ${WORKBENCH_STREAM_BATCH_SIZE:500}
+      heartbeat-every-polls: ${WORKBENCH_STREAM_HEARTBEAT_EVERY_POLLS:20}
 llm:
   http-log:
     enabled: ${LLM_HTTP_LOG_ENABLED:false}
