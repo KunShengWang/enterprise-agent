@@ -11,6 +11,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -92,12 +93,23 @@ public class JsonAgentModelGateway implements AgentModelGateway {
         if (!looksLikeStructuredToolCall(raw)) {
             return new AgentModelTurn(raw, List.of(), raw, usage, "final_answer");
         }
+        String structuredCandidate = raw == null ? "" : raw.stripLeading();
+        if (!structuredCandidate.startsWith("{")) {
+            throw new LlmCallException(
+                    "MODEL_PROTOCOL_ERROR",
+                    "模型返回了无效的工具调用协议，系统已阻止该内容作为最终回答输出。",
+                    null
+            );
+        }
         try {
             return parseTurn(raw, usage);
         }
         catch (RuntimeException invalidStructuredOutput) {
-            // 兼容不支持 JSON 输出或降级模型。普通文本只能成为最终回答，不能触发工具。
-            return new AgentModelTurn(raw, List.of(), raw, usage, "plain_text_fallback");
+            throw new LlmCallException(
+                    "MODEL_PROTOCOL_ERROR",
+                    "模型返回了无效的工具调用协议，系统已阻止该内容作为最终回答输出。",
+                    invalidStructuredOutput
+            );
         }
     }
 
@@ -176,6 +188,8 @@ public class JsonAgentModelGateway implements AgentModelGateway {
      */
     private static final class StreamingResponseRouter {
 
+        private static final int SAFETY_TAIL_CHARS = 256;
+
         private final AgentModelDeltaListener listener;
         private final boolean toolCallsAllowed;
         private final StringBuilder undecided = new StringBuilder();
@@ -194,7 +208,12 @@ public class JsonAgentModelGateway implements AgentModelGateway {
             }
             // ① 已经确定是普通文本 → 直接透传
             if (kind == ResponseKind.FINAL_TEXT) {
-                listener.onDelta(delta);// → modelDeltaPublisher → SSE
+                undecided.append(delta);
+                if (suspectedEnvelope(undecided.toString())) {
+                    kind = ResponseKind.STRUCTURED_TOOL_CALL;
+                    return;
+                }
+                flushSafePrefix();
                 return;
             }
             // ② 已经确定是工具调用 → 吞掉，不推送
@@ -226,14 +245,28 @@ public class JsonAgentModelGateway implements AgentModelGateway {
             }
             // if (确认是普通文本) → kind=FINAL_TEXT → 把缓存的+后续的全部透传
             kind = ResponseKind.FINAL_TEXT;
-            listener.onDelta(undecided.toString());
-            undecided.setLength(0);
+            flushSafePrefix();
         }
 
         private void complete(AgentModelTurn turn) {
-            if (kind != ResponseKind.FINAL_TEXT && !turn.hasToolCalls() && !turn.assistantText().isBlank()) {
+            if (kind == ResponseKind.FINAL_TEXT && !turn.hasToolCalls() && undecided.length() > 0) {
+                listener.onDelta(undecided.toString());
+                undecided.setLength(0);
+            }
+            else if (kind == ResponseKind.UNDECIDED && !turn.hasToolCalls() && !turn.assistantText().isBlank()) {
                 listener.onDelta(turn.assistantText());
             }
+        }
+
+        private void flushSafePrefix() {
+            int flushLength = undecided.length() - SAFETY_TAIL_CHARS;
+            if (flushLength <= 0) return;
+            listener.onDelta(undecided.substring(0, flushLength));
+            undecided.delete(0, flushLength);
+        }
+
+        private boolean suspectedEnvelope(String value) {
+            return value.contains("\"toolCalls\"") || value.toLowerCase(Locale.ROOT).contains("```json");
         }
     }
 

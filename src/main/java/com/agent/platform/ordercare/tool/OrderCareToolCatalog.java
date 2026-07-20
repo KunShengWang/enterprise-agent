@@ -23,7 +23,9 @@ public class OrderCareToolCatalog implements ToolCatalogContributor {
                     """.strip(),
             ToolRiskLevel.LOW,
             Map.of("provider", "floworder", "domain", "ordercare", "readOnly", true,
-                    "contractVersion", "floworder-recovery-case-v1")
+                    "contractVersion", "floworder-recovery-case-v1",
+                    "publicDisplayName", "订单案例查询", "publicActionSummary", "正在读取订单恢复事实",
+                    "publicArgumentKeys", List.of("identifierType", "identifierValue"))
     );
 
     private static final ToolDefinition RECOVERY_PREVIEW_DEFINITION = new ToolDefinition(
@@ -34,7 +36,9 @@ public class OrderCareToolCatalog implements ToolCatalogContributor {
                     """.strip(),
             ToolRiskLevel.LOW,
             Map.of("provider", "floworder", "domain", "ordercare", "readOnly", true,
-                    "contractVersion", "floworder-recovery-proposal-v1")
+                    "contractVersion", "floworder-recovery-proposal-v1",
+                    "publicDisplayName", "恢复预演", "publicActionSummary", "正在创建无副作用恢复预演",
+                    "publicArgumentKeys", List.of("identifierType", "identifierValue"))
     );
 
     private static final ToolDefinition RECOVERY_EXECUTE_DEFINITION = new ToolDefinition(
@@ -45,7 +49,9 @@ public class OrderCareToolCatalog implements ToolCatalogContributor {
                     """.strip(),
             ToolRiskLevel.HIGH,
             Map.of("provider", "floworder", "domain", "ordercare", "readOnly", false,
-                    "sideEffect", true, "contractVersion", "floworder-recovery-proposal-v1")
+                    "sideEffect", true, "contractVersion", "floworder-recovery-proposal-v1",
+                    "publicDisplayName", "执行恢复", "publicActionSummary", "正在执行已审批的恢复方案",
+                    "publicArgumentKeys", List.of("proposalId"))
     );
 
     @Override

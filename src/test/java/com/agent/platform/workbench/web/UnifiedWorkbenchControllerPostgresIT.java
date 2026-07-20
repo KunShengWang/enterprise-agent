@@ -74,7 +74,9 @@ class UnifiedWorkbenchControllerPostgresIT {
                 workbench, routing, mock(UnifiedWorkEventStreamService.class),
                 mock(com.agent.platform.workbench.application.UnifiedWorkExecutionTreeService.class),
                 mock(com.agent.platform.workbench.application.WorkCommandHandler.class),
-                mock(com.agent.platform.workbench.application.WorkItemBudgetQueryService.class));
+                mock(com.agent.platform.workbench.application.WorkItemBudgetQueryService.class),
+                mock(com.agent.platform.workbench.presentation.PublicPresentationService.class),
+                mock(com.agent.platform.workbench.presentation.PublicPresentationStreamService.class));
         WebTestClient client = WebTestClient.bindToController(controller).build();
         String conversationId = "conversation-m1d-" + suffix;
 

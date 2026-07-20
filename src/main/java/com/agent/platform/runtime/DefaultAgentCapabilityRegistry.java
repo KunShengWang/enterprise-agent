@@ -39,7 +39,10 @@ public class DefaultAgentCapabilityRegistry implements AgentCapabilityRegistry {
                     {"type":"object","properties":{"query":{"type":"string"},"topK":{"type":"integer","minimum":1,"maximum":10}},"required":["query"]}
                     """.strip(),
             ToolRiskLevel.LOW,
-            Map.of("provider", "rag", "readOnly", true)
+            Map.of("provider", "rag", "readOnly", true,
+                    "publicDisplayName", "知识检索",
+                    "publicActionSummary", "正在检索相关知识",
+                    "publicArgumentKeys", List.of("query", "topK"))
     );
 
     private static final ToolDefinition SKILL_CATALOG_DEFINITION = new ToolDefinition(
@@ -49,7 +52,10 @@ public class DefaultAgentCapabilityRegistry implements AgentCapabilityRegistry {
                     {"type":"object","properties":{"name":{"type":"string","description":"Optional exact skill name"}}}
                     """.strip(),
             ToolRiskLevel.LOW,
-            Map.of("provider", "skill-registry", "readOnly", true, "grantsPermissions", false)
+            Map.of("provider", "skill-registry", "readOnly", true, "grantsPermissions", false,
+                    "publicDisplayName", "Skill 检索",
+                    "publicActionSummary", "正在查询可用 Skill",
+                    "publicArgumentKeys", List.of("name"))
     );
 
     private final ToolRegistry toolRegistry;

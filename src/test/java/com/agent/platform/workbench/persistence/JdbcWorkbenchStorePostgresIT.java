@@ -57,6 +57,22 @@ class JdbcWorkbenchStorePostgresIT {
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             execute(connection, """
+                    DELETE FROM agent_dispatch_attempt WHERE work_item_id IN (
+                        SELECT work_item_id FROM agent_work_item WHERE tenant_id LIKE ?)
+                    """, "tenant-m1a-%");
+            execute(connection, """
+                    DELETE FROM agent_route_preview WHERE work_item_id IN (
+                        SELECT work_item_id FROM agent_work_item WHERE tenant_id LIKE ?)
+                    """, "tenant-m1a-%");
+            execute(connection, """
+                    DELETE FROM agent_routing_decision WHERE work_item_id IN (
+                        SELECT work_item_id FROM agent_work_item WHERE tenant_id LIKE ?)
+                    """, "tenant-m1a-%");
+            execute(connection, """
+                    DELETE FROM agent_work_command_execution WHERE work_item_id IN (
+                        SELECT work_item_id FROM agent_work_item WHERE tenant_id LIKE ?)
+                    """, "tenant-m1a-%");
+            execute(connection, """
                     DELETE FROM agent_work_event WHERE work_item_id IN (
                         SELECT work_item_id FROM agent_work_item WHERE tenant_id LIKE ?)
                     """, "tenant-m1a-%");

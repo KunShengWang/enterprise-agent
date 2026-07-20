@@ -24,7 +24,9 @@ public class LocalToolRegistry implements ToolRegistry {
                             {"type":"object","properties":{"ticketId":{"type":"string","description":"Ticket id such as T1001"}},"required":["ticketId"]}
                             """.strip(),
                     ToolRiskLevel.LOW,
-                    Map.of("provider", "local")
+                    Map.of("provider", "local", "publicDisplayName", "工单状态查询",
+                            "publicActionSummary", "正在查询工单状态",
+                            "publicArgumentKeys", List.of("ticketId"))
             ),
             new ToolDefinition(
                     "ticket_create",
@@ -33,7 +35,9 @@ public class LocalToolRegistry implements ToolRegistry {
                             {"type":"object","properties":{"title":{"type":"string","description":"Issue title"},"priority":{"type":"string","enum":["P0","P1","P2","P3"],"description":"Business priority"}},"required":["title"]}
                             """.strip(),
                     ToolRiskLevel.MEDIUM,
-                    Map.of("provider", "local")
+                    Map.of("provider", "local", "publicDisplayName", "创建支持工单",
+                            "publicActionSummary", "正在创建支持工单",
+                            "publicArgumentKeys", List.of("title", "priority"))
             ),
             new ToolDefinition(
                     "ticket_priority_update",
@@ -42,7 +46,9 @@ public class LocalToolRegistry implements ToolRegistry {
                             {"type":"object","properties":{"ticketId":{"type":"string"},"priority":{"type":"string","enum":["P0","P1","P2","P3"]}},"required":["ticketId","priority"]}
                             """.strip(),
                     ToolRiskLevel.HIGH,
-                    Map.of("provider", "local")
+                    Map.of("provider", "local", "publicDisplayName", "更新工单优先级",
+                            "publicActionSummary", "正在更新已审批的工单优先级",
+                            "publicArgumentKeys", List.of("ticketId", "priority"))
             ),
             new ToolDefinition(
                     "ticket_close",
@@ -51,7 +57,9 @@ public class LocalToolRegistry implements ToolRegistry {
                             {"type":"object","properties":{"ticketId":{"type":"string"},"closeReason":{"type":"string"}},"required":["ticketId","closeReason"]}
                             """.strip(),
                     ToolRiskLevel.HIGH,
-                    Map.of("provider", "local")
+                    Map.of("provider", "local", "publicDisplayName", "关闭支持工单",
+                            "publicActionSummary", "正在关闭已审批的支持工单",
+                            "publicArgumentKeys", List.of("ticketId"))
             )
     );
 

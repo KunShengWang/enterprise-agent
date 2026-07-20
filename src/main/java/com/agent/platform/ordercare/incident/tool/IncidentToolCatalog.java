@@ -22,15 +22,15 @@ public class IncidentToolCatalog implements ToolCatalogContributor {
     @Override
     public List<ToolDefinition> definitions() {
         return List.of(
-                definition(ORDER_FACTS,
+                definition(ORDER_FACTS, "订单事实查询",
                         "Read bounded order facts for an immutable incident snapshot. Never accepts requestIds directly."),
-                definition(INVENTORY_FACTS,
+                definition(INVENTORY_FACTS, "库存事实查询",
                         "Read bounded deduct and inventory invariant facts for an immutable incident snapshot."),
-                definition(MQ_FACTS,
+                definition(MQ_FACTS, "消息事实查询",
                         "Read persisted dead-letter facts first, then observe RabbitMQ queue runtime; Broker timeout returns partial facts."));
     }
 
-    private ToolDefinition definition(String name, String description) {
+    private ToolDefinition definition(String name, String displayName, String description) {
         return new ToolDefinition(
                 name,
                 description,
@@ -40,7 +40,10 @@ public class IncidentToolCatalog implements ToolCatalogContributor {
                         "provider", "floworder-incident",
                         "domain", "ordercare-incident",
                         "readOnly", true,
-                        "scopeAuthority", "incident-store"
+                        "scopeAuthority", "incident-store",
+                        "publicDisplayName", displayName,
+                        "publicActionSummary", "正在读取事故范围内的权威事实",
+                        "publicArgumentKeys", List.of("snapshotId")
                 )
         );
     }

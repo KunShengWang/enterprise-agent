@@ -2,6 +2,7 @@ package com.agent.platform.runtime;
 
 import com.agent.platform.config.AgentProperties;
 import com.agent.platform.llm.LlmService;
+import com.agent.platform.llm.LlmCallException;
 import com.agent.platform.prompt.PromptRequest;
 import com.agent.platform.tool.ToolCallResult;
 import com.agent.platform.tool.ToolDefinition;
@@ -19,6 +20,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -58,7 +60,7 @@ class ToolResultBoundaryTests {
     }
 
     @Test
-    void recoversToolCallEnvelopeAfterProviderReasoningPrefix() {
+    void malformedToolCallAfterProviderReasoningPrefixFailsClosed() {
         LlmService llmService = mock(LlmService.class);
         when(llmService.complete(any())).thenReturn("""
                 需要先查询权威事实。
@@ -66,11 +68,28 @@ class ToolResultBoundaryTests {
                 """);
         JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
 
-        AgentModelTurn turn = gateway.nextTurn(modelRequestWithTool());
+        LlmCallException failure = assertThrows(LlmCallException.class,
+                () -> gateway.nextTurn(modelRequestWithTool()));
 
-        assertEquals(1, turn.toolCalls().size());
-        assertEquals("ticket_status", turn.toolCalls().get(0).toolName());
-        assertEquals(Map.of("id", "T1"), turn.toolCalls().get(0).arguments());
+        assertEquals("MODEL_PROTOCOL_ERROR", failure.errorType());
+        assertFalse(failure.safeMessage().contains("toolCalls"));
+    }
+
+    @Test
+    void malformedStreamingToolCallNeverPublishesRawEnvelope() {
+        LlmService llmService = mock(LlmService.class);
+        when(llmService.stream(any())).thenReturn(Flux.just(
+                "先分析一下。\n",
+                "{\"assistantText\":\"\",\"toolCalls\":[{\"name\":\"ticket_status\"}]"
+        ));
+        JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
+        List<String> deltas = new ArrayList<>();
+
+        LlmCallException failure = assertThrows(LlmCallException.class,
+                () -> gateway.nextTurn(modelRequestWithTool(), deltas::add));
+
+        assertEquals("MODEL_PROTOCOL_ERROR", failure.errorType());
+        assertTrue(deltas.stream().noneMatch(delta -> delta.contains("toolCalls")));
     }
 
     @Test

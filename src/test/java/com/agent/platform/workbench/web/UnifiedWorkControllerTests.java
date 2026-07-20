@@ -20,6 +20,8 @@ import com.agent.platform.workbench.model.WorkCommandExecutionStatus;
 import com.agent.platform.workbench.model.WorkExecutionState;
 import com.agent.platform.workbench.model.WorkOutcome;
 import com.agent.platform.workbench.budget.BudgetAccount;
+import com.agent.platform.workbench.presentation.PublicPresentationService;
+import com.agent.platform.workbench.presentation.PublicPresentationStreamService;
 import com.agent.platform.workbench.persistence.RoutingStore;
 import com.agent.platform.workbench.persistence.WorkbenchStore;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
@@ -28,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -56,9 +59,11 @@ class UnifiedWorkControllerTests {
     private final UnifiedWorkExecutionTreeService executionTrees = mock(UnifiedWorkExecutionTreeService.class);
     private final WorkCommandHandler commandHandler = mock(WorkCommandHandler.class);
     private final WorkItemBudgetQueryService budgetQueries = mock(WorkItemBudgetQueryService.class);
+    private final PublicPresentationService presentations = mock(PublicPresentationService.class);
+    private final PublicPresentationStreamService presentationStream = mock(PublicPresentationStreamService.class);
     private final UnifiedWorkController controller = new UnifiedWorkController(
             principals, intake, launcher, queries, confirmations, focus, workbench, routing,
-            eventStream, executionTrees, commandHandler, budgetQueries);
+            eventStream, executionTrees, commandHandler, budgetQueries, presentations, presentationStream);
 
     @Test
     void requestMetadataCannotOverrideTrustedIdentityOrExecutionProfile() {
@@ -138,6 +143,29 @@ class UnifiedWorkControllerTests {
 
         assertEquals(account, response.data());
         verify(budgetQueries).require(principal, "work-1");
+    }
+
+    @Test
+    void publicPresentationEndpointsUseAuthenticatedPrincipalAndRequestedCursor() {
+        when(presentations.publicTimeline(principal, "work-1", 20, 25)).thenReturn(List.of());
+        when(presentations.inspectorTimeline(principal, "work-1", 30, 50)).thenReturn(List.of());
+
+        controller.presentations("work-1", 20, 25);
+        controller.inspectorPresentations("work-1", 30, 50);
+
+        verify(presentations).publicTimeline(principal, "work-1", 20, 25);
+        verify(presentations).inspectorTimeline(principal, "work-1", 30, 50);
+    }
+
+    @Test
+    void publicPresentationStreamUsesAuthenticatedPrincipalAndResumeCursor() {
+        when(presentationStream.resolveCursor(20, "p:30")).thenReturn(30L);
+        when(presentationStream.stream(principal, "work-1", 30)).thenReturn(Flux.empty());
+
+        controller.presentationStream("work-1", 20, "p:30");
+
+        verify(presentationStream).resolveCursor(20, "p:30");
+        verify(presentationStream).stream(principal, "work-1", 30);
     }
 
     private AgentWorkItem work() {

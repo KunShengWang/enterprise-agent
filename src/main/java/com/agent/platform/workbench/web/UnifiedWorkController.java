@@ -21,6 +21,9 @@ import com.agent.platform.workbench.model.ConversationWorkState;
 import com.agent.platform.workbench.model.WorkCommandType;
 import com.agent.platform.workbench.model.WorkEvent;
 import com.agent.platform.workbench.model.UnifiedWorkExecutionTree;
+import com.agent.platform.workbench.presentation.PublicPresentation;
+import com.agent.platform.workbench.presentation.PublicPresentationService;
+import com.agent.platform.workbench.presentation.PublicPresentationStreamService;
 import com.agent.platform.workbench.persistence.RoutingStore;
 import com.agent.platform.workbench.persistence.WorkbenchStore;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
@@ -70,6 +73,8 @@ public class UnifiedWorkController {
     private final UnifiedWorkExecutionTreeService executionTrees;
     private final WorkCommandHandler commandHandler;
     private final WorkItemBudgetQueryService budgetQueries;
+    private final PublicPresentationService presentations;
+    private final PublicPresentationStreamService presentationStream;
 
     public UnifiedWorkController(WorkbenchPrincipalProvider principals,
                                  UnifiedWorkIntakeService intake,
@@ -82,13 +87,17 @@ public class UnifiedWorkController {
                                  UnifiedWorkEventStreamService eventStream,
                                  UnifiedWorkExecutionTreeService executionTrees,
                                  WorkCommandHandler commandHandler,
-                                 WorkItemBudgetQueryService budgetQueries) {
+                                 WorkItemBudgetQueryService budgetQueries,
+                                 PublicPresentationService presentations,
+                                 PublicPresentationStreamService presentationStream) {
         this.principals = principals; this.intake = intake; this.launcher = launcher;
         this.queries = queries; this.confirmations = confirmations; this.focusService = focusService;
         this.workbench = workbench; this.routing = routing; this.eventStream = eventStream;
         this.executionTrees = executionTrees;
         this.commandHandler = commandHandler;
         this.budgetQueries = budgetQueries;
+        this.presentations = presentations;
+        this.presentationStream = presentationStream;
     }
 
     @PostMapping("/conversations/{conversationId}/inputs")
@@ -160,6 +169,34 @@ public class UnifiedWorkController {
     @GetMapping("/work-items/{workItemId}/budget")
     public ApiResponse<BudgetAccount> budget(@PathVariable String workItemId) {
         return ApiResponse.success(budgetQueries.require(principals.current(), workItemId));
+    }
+
+    @GetMapping("/work-items/{workItemId}/presentations")
+    public ApiResponse<List<PublicPresentation>> presentations(
+            @PathVariable String workItemId,
+            @RequestParam(defaultValue = "-1") long afterSequence,
+            @RequestParam(defaultValue = "500") int limit) {
+        return ApiResponse.success(presentations.publicTimeline(
+                principals.current(), workItemId, afterSequence, limit));
+    }
+
+    @GetMapping("/work-items/{workItemId}/presentations/inspector")
+    public ApiResponse<List<PublicPresentation>> inspectorPresentations(
+            @PathVariable String workItemId,
+            @RequestParam(defaultValue = "-1") long afterSequence,
+            @RequestParam(defaultValue = "500") int limit) {
+        return ApiResponse.success(presentations.inspectorTimeline(
+                principals.current(), workItemId, afterSequence, limit));
+    }
+
+    @GetMapping(value = "/work-items/{workItemId}/presentations/stream",
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<PublicPresentation>> presentationStream(
+            @PathVariable String workItemId,
+            @RequestParam(defaultValue = "-1") long afterSequence,
+            @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) {
+        return presentationStream.stream(principals.current(), workItemId,
+                presentationStream.resolveCursor(afterSequence, lastEventId));
     }
 
     @PostMapping("/work-items/{workItemId}/confirm-route")
