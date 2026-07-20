@@ -17,7 +17,8 @@
 | M2-D | PASSED | `d22ccfc` | 历史重启 1/1；SSE 单元 5/5；PostgreSQL 57/57；全量 180，0 failure/error；前端 build + 9 routes smoke | 521 WorkEvent 分页、25 delta 双重启、执行树重建、conversation generation、SSE Overflow 修复 |
 | M3-A | PASSED | `fd6c8b7` | M3-A 单元 8/8；PostgreSQL 新增 8/8、专项实际执行 51；全量 183，0 failure/error，11 个既有环境跳过；前端 build 通过 | Capability Matrix、统一 Handler、Runtime Adapter、command claim/lease/fencing、Focus/CAS/幂等、结构化结果 |
 | M3-B | PASSED | `65db7ab` | Budget Eval 15/15；策略/准入 5/5；Budget PostgreSQL 5/5；PostgreSQL 实际执行 56；全量 204，0 failure/error，11 个既有环境跳过；前端 build 通过 | 五维账户/账本、Router/Target 预留、Run snapshot 结算、Incident/Plan 父子预算、确定性 RPC 计量、fail-closed |
-| M3-C | PASSED | 本报告所在本地 checkpoint | 专项 PostgreSQL 12/12；全部 PostgreSQL 70，实际执行 58；全量 206，0 failure/error，11 个既有环境跳过；前端 build 通过 | claim/lease/heartbeat/fencing、过期接管、旧 owner 拒绝、原幂等键对账、Projector cursor 恢复 |
+| M3-C | PASSED | `a0b8805` | 专项 PostgreSQL 12/12；全部 PostgreSQL 70，实际执行 58；全量 206，0 failure/error，11 个既有环境跳过；前端 build 通过 | claim/lease/heartbeat/fencing、过期接管、旧 owner 拒绝、原幂等键对账、Projector cursor 恢复 |
+| M3-D | PASSED | 本报告所在本地 checkpoint | 确定性 Eval 106/106；真实路由模型 79/80；业务模型 19/20；故障 31/31；PostgreSQL 72/72；全量 271，0 failure/error；前端 build 通过 | 80 条路由、60 条参数/安全策略样本、真实业务 Eval、可重复证据脚本、面试运行手册 |
 
-当前停止原因：无。M3-C 未修改 Runtime 主循环，旧 owner 的迟到终态写入由 PostgreSQL fencing 拒绝。
-下一步：完成 M3-C 全量回归与本地 checkpoint，然后进入 M3-D Eval/最终证据包。禁止 push。
+当前停止原因：无。冻结蓝图 M0～M3-D 已全部通过。
+下一步：创建 M3-D 本地 checkpoint；禁止 push。后续工作属于新的产品迭代，不得伪装为本蓝图未完成项。

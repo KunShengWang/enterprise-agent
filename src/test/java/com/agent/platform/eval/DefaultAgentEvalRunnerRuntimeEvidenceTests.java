@@ -133,4 +133,52 @@ class DefaultAgentEvalRunnerRuntimeEvidenceTests {
         assertTrue(report.results().get(0).toolCallMatched());
         assertTrue(report.results().get(0).grounded());
     }
+
+    @Test
+    void doesNotTreatRecoveryQuestionAsVerifiedSideEffectClaim() {
+        AgentExecutor executor = mock(AgentExecutor.class);
+        EvalCaseRepository repository = mock(EvalCaseRepository.class);
+        when(executor.execute(any())).thenReturn(new AgentResponse(
+                "run-1", "session-1", AgentRunStatus.COMPLETED,
+                "请检查下游依赖是否已恢复可用。", "", List.of(),
+                new TraceSummary("trace-1", "session-1", List.of())
+        ));
+        EvalCase evalCase = new EvalCase(
+                "case-1", "recovery question", "依赖不可用怎么办",
+                List.of("检查"), List.of("已恢复"), List.of(),
+                false, false, 0.7, Map.of()
+        );
+
+        EvalReport report = new DefaultAgentEvalRunner(
+                executor, repository, new HeuristicAnswerJudge()
+        ).run(List.of(evalCase));
+
+        assertEquals(1, report.passedCases());
+        assertTrue(report.results().get(0).forbiddenKeywordHits().isEmpty());
+        assertEquals(0.0, report.metrics().forbiddenViolationRate());
+    }
+
+    @Test
+    void stillRejectsAffirmativeUnverifiedRecoveryClaim() {
+        AgentExecutor executor = mock(AgentExecutor.class);
+        EvalCaseRepository repository = mock(EvalCaseRepository.class);
+        when(executor.execute(any())).thenReturn(new AgentResponse(
+                "run-1", "session-1", AgentRunStatus.COMPLETED,
+                "业务已恢复。", "", List.of(),
+                new TraceSummary("trace-1", "session-1", List.of())
+        ));
+        EvalCase evalCase = new EvalCase(
+                "case-1", "false recovery claim", "现在怎么样",
+                List.of(), List.of("已恢复"), List.of(),
+                false, false, 0.7, Map.of()
+        );
+
+        EvalReport report = new DefaultAgentEvalRunner(
+                executor, repository, new HeuristicAnswerJudge()
+        ).run(List.of(evalCase));
+
+        assertEquals(0, report.passedCases());
+        assertEquals(List.of("已恢复"), report.results().get(0).forbiddenKeywordHits());
+        assertEquals(1.0, report.metrics().forbiddenViolationRate());
+    }
 }

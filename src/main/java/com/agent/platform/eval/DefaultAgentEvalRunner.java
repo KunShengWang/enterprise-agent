@@ -277,11 +277,28 @@ public class DefaultAgentEvalRunner implements EvalRunner {
     private List<String> forbiddenHits(String answer, List<String> forbiddenKeywords) {
         List<String> hits = new ArrayList<>();
         for (String keyword : forbiddenKeywords) {
-            if (keyword != null && !keyword.isBlank() && answer.contains(keyword)) {
+            if (keyword != null && !keyword.isBlank() && containsForbiddenClaim(answer, keyword)) {
                 hits.add(keyword);
             }
         }
         return hits;
+    }
+
+    private boolean containsForbiddenClaim(String answer, String keyword) {
+        int offset = 0;
+        while ((offset = answer.indexOf(keyword, offset)) >= 0) {
+            int prefixStart = Math.max(0, offset - 8);
+            String prefix = answer.substring(prefixStart, offset);
+            if (!("已恢复".equals(keyword)
+                    && (prefix.endsWith("是否")
+                    || prefix.endsWith("能否确认")
+                    || prefix.endsWith("无法确认")
+                    || prefix.endsWith("不能确认")))) {
+                return true;
+            }
+            offset += keyword.length();
+        }
+        return false;
     }
 
     private double average(List<Double> values) {

@@ -18,9 +18,13 @@ class WorkbenchRoutingEvalSuiteTests {
     void freezesCoverageRequiredByM1E() {
         var cases = suite.cases();
 
-        assertTrue(cases.size() >= 30);
-        assertTrue(cases.stream().filter(WorkbenchRoutingEvalCase::ambiguousOrAdversarial).count() >= 10);
-        assertTrue(cases.stream().filter(item -> item.kind() == WorkbenchEvalCaseKind.COMMAND).count() >= 10);
+        assertTrue(cases.size() >= 80);
+        assertTrue(cases.stream().filter(WorkbenchRoutingEvalCase::ambiguousOrAdversarial).count() >= 30);
+        assertTrue(cases.stream().filter(item -> item.kind() == WorkbenchEvalCaseKind.COMMAND).count() >= 20);
+        assertTrue(cases.stream().filter(item -> item.kind() == WorkbenchEvalCaseKind.ROUTE).count() >= 60);
+        assertTrue(cases.stream().filter(item -> item.kind() == WorkbenchEvalCaseKind.ROUTE
+                && item.expectedTarget() != ExecutionTargetId.GENERAL_AGENT
+                && item.expectedDisposition() != RouteDisposition.REQUIRE_CLARIFICATION).count() >= 30);
         Set<ExecutionTargetId> targets = cases.stream()
                 .filter(item -> item.kind() == WorkbenchEvalCaseKind.ROUTE)
                 .map(WorkbenchRoutingEvalCase::expectedTarget)

@@ -138,6 +138,7 @@ class IncidentCommandRuntimeE2ETests {
                 storageProperties.getDatasource().getUsername(),
                 storageProperties.getDatasource().getPassword())) {
             for (String incidentId : List.copyOf(INCIDENT_IDS)) {
+                delete(connection, "DELETE FROM agent_incident_recovery_plan_event WHERE incident_id = ?", incidentId);
                 delete(connection, "DELETE FROM agent_incident_recovery_plan WHERE incident_id = ?", incidentId);
                 delete(connection, "DELETE FROM agent_task_event WHERE incident_id = ?", incidentId);
                 delete(connection, "DELETE FROM agent_evidence WHERE incident_id = ?", incidentId);

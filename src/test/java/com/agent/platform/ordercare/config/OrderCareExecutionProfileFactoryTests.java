@@ -30,6 +30,7 @@ class OrderCareExecutionProfileFactoryTests {
         assertFalse(profile.longTermMemoryEnabled());
         assertEquals(6, profile.limits().maxToolCalls());
         assertTrue(profile.systemPrompt().contains("必须调用 knowledge_search"));
+        assertTrue(profile.systemPrompt().contains("禁止用 unknown、UNKNOWN、示例值或猜测值调用工具"));
         assertTrue(profile.systemPrompt().contains("Runtime 会自动暂停等待人工审批"));
         assertTrue(profile.systemPrompt().contains("proposalStatus、actionStatus 和 caseOutcome"));
     }

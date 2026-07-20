@@ -78,6 +78,19 @@ public class RoutePolicyValidator {
         if (!untrusted.isEmpty()) {
             return clarified("identifier source is MODEL_INFERRED: " + String.join(",", untrusted));
         }
+        Map<String, Set<String>> typesByValue = new LinkedHashMap<>();
+        identifiers.values().stream()
+                .filter(identifier -> DANGEROUS_IDENTIFIERS.contains(identifier.type()))
+                .forEach(identifier -> typesByValue.computeIfAbsent(identifier.value(), ignored -> new java.util.HashSet<>())
+                        .add(identifier.type()));
+        List<String> crossTypeCollisions = typesByValue.entrySet().stream()
+                .filter(entry -> entry.getValue().size() > 1)
+                .map(entry -> entry.getKey() + "=" + entry.getValue())
+                .toList();
+        if (!crossTypeCollisions.isEmpty()) {
+            return clarified("one identifier value cannot satisfy multiple identifier types: "
+                    + String.join(",", crossTypeCollisions));
+        }
 
         ExecutionTargetId targetId = target.targetId();
         if (targetId == ExecutionTargetId.ORDERCARE_CASE && requestsIncidentScope(context.originalGoal())) {

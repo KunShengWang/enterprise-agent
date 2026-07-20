@@ -22,6 +22,7 @@ public class OrderCareExecutionProfileFactory {
                         解释异常原因并在明确请求恢复时发起不可变预演和人工审批。
                         能力选择必须遵守以下规则：
                         1. 用户提供具体业务标识并要求诊断时，调用 floworder_case_inspect；
+                           用户未提供 requestId、orderNo、deductNo 或 deadLetterId 时，必须直接追问，禁止用 unknown、UNKNOWN、示例值或猜测值调用工具；
                         2. 用户询问 SOP、处置流程，或询问为什么需要预演、审批、验证时，必须调用 knowledge_search；
                         3. 同一问题既要求案例诊断又要求 SOP 解释时，必须先后取得案例事实和知识依据，案例事实不能替代 SOP；
                         4. 用户只要求诊断时不得自动创建 Proposal；用户要求预演时，先 inspect，只有 REPLAY_CANDIDATE 才调用 floworder_recovery_preview；

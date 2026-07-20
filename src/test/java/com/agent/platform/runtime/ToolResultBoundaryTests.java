@@ -58,6 +58,22 @@ class ToolResultBoundaryTests {
     }
 
     @Test
+    void recoversToolCallEnvelopeAfterProviderReasoningPrefix() {
+        LlmService llmService = mock(LlmService.class);
+        when(llmService.complete(any())).thenReturn("""
+                需要先查询权威事实。
+                {"assistantText":"","toolCalls":[{"id":"call-1","name":"ticket_status","arguments":{"id":"T1"},"reason":"query"}]}
+                """);
+        JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
+
+        AgentModelTurn turn = gateway.nextTurn(modelRequestWithTool());
+
+        assertEquals(1, turn.toolCalls().size());
+        assertEquals("ticket_status", turn.toolCalls().get(0).toolName());
+        assertEquals(Map.of("id", "T1"), turn.toolCalls().get(0).arguments());
+    }
+
+    @Test
     void domainJsonIsFinalAnswerWhenProfileHasNoCapabilities() {
         LlmService llmService = mock(LlmService.class);
         String delegationPlan = "{\"schemaVersion\":\"delegation-plan-v1\",\"tasks\":[]}";
