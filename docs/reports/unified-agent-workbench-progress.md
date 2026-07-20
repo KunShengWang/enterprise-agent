@@ -13,7 +13,8 @@
 | M1-E | PASSED | `2c5701e` | Eval 38 条：真实模型 37/38；安全门禁 7/7；PostgreSQL 47/47；全量 166，0 failure/error；前端 build 通过 | 命令 100%、Target 95.8%、处置 100%；所有危险指标为 0 |
 | M2-A | PASSED | `30c7b9f` | Projector 单元 2/2；PostgreSQL 52/52；全量 168，0 failure/error；前端 build 通过 | 三权威来源、幂等 cursor、WorkLink 约束、并发产品 sequence、失败隔离；默认关闭 |
 | M2-B | PASSED | `9b662d3` | SSE/Controller 9/9；SSE PostgreSQL 3/3；PostgreSQL 55/55；全量 174，0 failure/error；前端 build 通过 | 复合 cursor、断线 replay、gap、eventId 去重、PRIMARY RUN delta、child Run 隔离 |
-| M2-C | PASSED | 本报告所在本地 checkpoint | 执行树/Controller 10/10；执行树 PostgreSQL 1/1；PostgreSQL 56/56；全量 180，0 failure/error；前端 build 通过 | synthetic Coordinator=0、角色/Attempt/Trace/Token/Tool/Evidence、Conflict/Assessment/Proposal、单 Agent 树 |
+| M2-C | PASSED | `77f7a50` | 执行树/Controller 10/10；执行树 PostgreSQL 1/1；PostgreSQL 56/56；全量 180，0 failure/error；前端 build 通过 | synthetic Coordinator=0、角色/Attempt/Trace/Token/Tool/Evidence、Conflict/Assessment/Proposal、单 Agent 树 |
+| M2-D | PASSED | 本报告所在本地 checkpoint | 历史重启 1/1；SSE 单元 5/5；PostgreSQL 57/57；全量 180，0 failure/error；前端 build + 9 routes smoke | 521 WorkEvent 分页、25 delta 双重启、执行树重建、conversation generation、SSE Overflow 修复 |
 
-当前停止原因：无。应用内浏览器自动化运行时不可用，已在 M2-C evidence 中记录，不影响冻结硬门禁。
-下一步：提交 M2-C 独立本地 checkpoint；重新读取冻结蓝图与 M2-D 门禁后进入历史回放与前端回归。禁止 push。
+当前停止原因：无。应用内浏览器自动化运行时不可用，已在 M2-D evidence 中记录，不影响冻结硬门禁。
+下一步：提交 M2-D 独立本地 checkpoint；重新读取冻结蓝图与 M3-A 门禁后进入 WorkCommand 多实例与跨执行器强化。禁止 push。

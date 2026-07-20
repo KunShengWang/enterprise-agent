@@ -46,10 +46,11 @@ public class UnifiedWorkEventStreamService {
         AtomicLong workCursor = new AtomicLong(initialCursor.workSequence());
         AtomicLong runCursor = new AtomicLong(initialCursor.primaryRunSequence());
         AtomicLong polls = new AtomicLong();
-        return Flux.interval(Duration.ZERO, Duration.ofMillis(properties.getPollIntervalMillis()))
-                .concatMap(ignored -> Mono.fromCallable(() -> poll(
+        return Flux.defer(() -> Mono.fromCallable(() -> poll(
                                 principal, workItemId, workCursor, runCursor, polls.incrementAndGet()))
                         .subscribeOn(Schedulers.boundedElastic()))
+                .repeatWhen(completed -> completed.delayElements(
+                        Duration.ofMillis(properties.getPollIntervalMillis())))
                 .flatMapIterable(items -> items)
                 .map(this::sse)
                 .onErrorResume(error -> {

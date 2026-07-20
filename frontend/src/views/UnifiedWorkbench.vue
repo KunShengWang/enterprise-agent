@@ -26,6 +26,7 @@ let reconnectTimer = 0
 let eventSource: EventSource | null = null
 let streamGeneration = 0
 let treeRefreshBusy = false
+let refreshGeneration = 0
 const seenWorkEvents = new Set<string>()
 const seenRunEvents = new Set<string>()
 
@@ -206,26 +207,69 @@ function resetStream(next: WorkItemDetail) {
   connectStream(next.workItem.workItemId)
 }
 
+function clearSelectedWork() {
+  closeStream()
+  selectedId.value = ''
+  detail.value = null
+  executionTree.value = null
+  expandedNodeId.value = ''
+  streamEvents.value = []
+  answer.value = ''
+  seenWorkEvents.clear()
+  seenRunEvents.clear()
+  workCursor.value = -1
+  runCursor.value = -1
+  streamState.value = 'idle'
+}
+
+async function changeConversation() {
+  localStorage.setItem('unified-workbench-conversation', conversationId.value)
+  clearSelectedWork()
+  inputs.value = []
+  workItems.value = []
+  focus.value = null
+  await refresh()
+}
+
 async function refresh() {
+  const requestGeneration = ++refreshGeneration
+  const requestedConversation = conversationId.value
   try {
     const [nextInputs, nextItems] = await Promise.all([
       workbenchApi.inputs(conversationId.value), workbenchApi.workItems(conversationId.value),
     ])
+    if (requestGeneration !== refreshGeneration || requestedConversation !== conversationId.value) return
     inputs.value = nextInputs
     workItems.value = nextItems
-    try { focus.value = await workbenchApi.focus(conversationId.value) } catch { focus.value = null }
-    if (!selectedId.value) selectedId.value = focus.value?.focusedWorkItemId || nextItems[0]?.workItemId || ''
+    let nextFocus: WorkFocus | null = null
+    try { nextFocus = await workbenchApi.focus(conversationId.value) } catch { nextFocus = null }
+    if (requestGeneration !== refreshGeneration || requestedConversation !== conversationId.value) return
+    focus.value = nextFocus
+    if (!nextItems.some(item => item.workItemId === selectedId.value)) {
+      selectedId.value = focus.value?.focusedWorkItemId || nextItems[0]?.workItemId || ''
+    }
+    if (!selectedId.value) {
+      clearSelectedWork()
+      return
+    }
     if (selectedId.value) {
+      const requestedWorkItem = selectedId.value
       const previousId = detail.value?.workItem.workItemId
       const [nextDetail, nextTree] = await Promise.all([
         workbenchApi.detail(selectedId.value), workbenchApi.executionTree(selectedId.value),
       ])
+      if (requestGeneration !== refreshGeneration
+          || requestedConversation !== conversationId.value
+          || requestedWorkItem !== selectedId.value) return
       detail.value = nextDetail
       executionTree.value = nextTree
       if (previousId !== nextDetail.workItem.workItemId || !eventSource) resetStream(nextDetail)
     }
+    error.value = ''
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '统一工作台加载失败'
+    if (requestGeneration === refreshGeneration && requestedConversation === conversationId.value) {
+      error.value = cause instanceof Error ? cause.message : '统一工作台加载失败'
+    }
   }
 }
 
@@ -287,7 +331,7 @@ onBeforeUnmount(() => { window.clearInterval(timer); closeStream() })
       <p class="eyebrow">UNIFIED AGENT WORKBENCH · M2</p>
       <h2>一个入口，四种执行目标</h2>
       <label class="field-label">Conversation ID</label>
-      <input v-model="conversationId" @change="refresh" />
+      <input v-model="conversationId" @change="changeConversation" />
       <div class="unified-task-list">
         <button v-for="item in workItems" :key="item.workItemId" :class="{ selected: item.workItemId === selectedId }" @click="choose(item)">
           <span :class="stateClass(item.controlState)" />
