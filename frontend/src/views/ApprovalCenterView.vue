@@ -39,10 +39,10 @@ async function load() {
 function openInWorkbench() {
   if (!selected.value) return
   if (!selected.value.runId) {
-    error.value = '这条旧审批记录没有关联 Run ID，无法进入运行台。'
+    error.value = '这条旧审批记录没有关联 Run ID，无法定位统一任务。'
     return
   }
-  void router.push({ name: 'runtime', query: { runId: selected.value.runId } })
+  void router.push({ name: 'workbench', query: { runId: selected.value.runId } })
 }
 
 onMounted(load)
@@ -53,7 +53,7 @@ onMounted(load)
     <PageIntro
       kicker="HUMAN IN THE LOOP"
       title="把高风险工具停在执行之前"
-      description="审批中心用于检索待办和查看审计记录；实际批准、拒绝与流式恢复统一回到对应 Run 的 Agent 运行台完成。"
+      description="审批中心用于检索待办和查看审计记录；任务上下文、执行进度与恢复结果统一回到 Agent 工作台查看。"
       :endpoints="['GET /api/agent/guardrails/approvals', 'GET /api/agent/guardrails/approvals/{approvalId}', 'GET /api/agent/runs/{runId}']"
     >
       <div class="counter-chip"><strong>{{ pendingCount }}</strong><span>待审批</span></div>
@@ -104,16 +104,16 @@ onMounted(load)
           <JsonViewer :value="selected.toolCallRequest" :collapsed="false" label="ToolCall 参数" />
 
           <div v-if="selected.status === 'REQUESTED'" class="decision-form">
-            <p>这条 Run 尚未执行高风险工具。进入运行台后，可以在同一条事件时间线中完成审批并继续执行。</p>
+            <p>这条 Run 尚未执行高风险工具。进入统一工作台后，可以结合任务上下文和执行时间线继续处理。</p>
             <div class="action-row">
-              <button class="primary-button" type="button" @click="openInWorkbench">进入运行台处理</button>
+              <button class="primary-button" type="button" @click="openInWorkbench">进入统一工作台处理</button>
             </div>
           </div>
           <div v-else class="decision-result">
             <span>最终决策</span>
             <strong>{{ selected.status }}</strong>
             <p>{{ selected.reviewer || '—' }} · {{ selected.decisionReason || '未填写理由' }}</p>
-            <button class="secondary-button" type="button" @click="openInWorkbench">在运行台查看完整 Run</button>
+            <button class="secondary-button" type="button" @click="openInWorkbench">在统一工作台查看任务</button>
           </div>
         </template>
       </section>

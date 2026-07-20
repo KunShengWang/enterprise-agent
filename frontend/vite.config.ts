@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 const backendProxy = {
-  '/api': {
+  '^/api/': {
     target: 'http://localhost:8083',
     changeOrigin: true,
   },

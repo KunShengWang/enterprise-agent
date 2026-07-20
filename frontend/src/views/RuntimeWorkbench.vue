@@ -105,7 +105,8 @@ const currentState = computed(() => {
   if (stream.approvalId.value) return 'WAITING_APPROVAL'
   const type = stream.lastEvent.value?.type
   if (type === 'run_completed') return 'COMPLETED'
-  if (type === 'run_failed' || type === 'transport_error') return 'FAILED'
+  if (type === 'run_failed') return 'FAILED'
+  if (type === 'transport_error' || type === 'stream_gap') return 'TRANSPORT_INTERRUPTED'
   if (type === 'run_cancelled') return 'CANCELLED'
   return 'READY'
 })
@@ -681,8 +682,8 @@ onBeforeUnmount(() => {
         <button type="button" title="复制 Run ID" @click="copyRunId">复制</button>
       </div>
 
-      <div v-if="stream.error.value" class="stream-warning">
-        <strong>执行提示</strong>
+      <div v-if="stream.error.value" class="stream-warning" :class="{ 'transport-warning': currentState === 'TRANSPORT_INTERRUPTED' }">
+        <strong>{{ currentState === 'TRANSPORT_INTERRUPTED' ? '连接提示' : '执行提示' }}</strong>
         <p>{{ stream.error.value }}</p>
       </div>
 

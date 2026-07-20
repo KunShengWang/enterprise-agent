@@ -20,10 +20,13 @@ export interface WorkItem {
   activeRunId: string
   activeIncidentId: string
   activeRecoveryPlanId: string
+  sourceInputId: string
+  routeDecisionId?: string
   routingFailureCode: string
   version: number
   createdAt: string
   updatedAt: string
+  completedAt?: string | null
 }
 
 export interface WorkFocus { focusedWorkItemId: string; version: number }
@@ -34,6 +37,11 @@ export interface WorkEvent {
   phase?: string
   summary: string
   projectedAt: string
+  sourceType?: string
+  sourceId?: string
+  sourceSequence?: number
+  sourceCreatedAt?: string
+  payload?: Record<string, unknown>
 }
 export interface WorkStreamItem {
   kind: 'WORK_EVENT' | 'MODEL_DELTA' | 'GAP' | 'HEARTBEAT' | 'SYNC_ERROR'
@@ -47,6 +55,44 @@ export interface WorkStreamItem {
   payload: Record<string, unknown>
   createdAt: string
   resumeToken: string
+}
+export type PublicPresentationKind =
+  | 'TASK_UNDERSTANDING' | 'ROUTE_SUMMARY' | 'STANDARD_PROCESS' | 'EXECUTION_PLAN'
+  | 'ACTION_STARTED' | 'ACTION_COMPLETED' | 'TOOL_ACTIVITY' | 'AGENT_DELEGATION'
+  | 'WAITING_FOR_USER' | 'APPROVAL_REQUIRED' | 'RETRY' | 'RECOVERY' | 'FINAL_RESULT' | 'ERROR'
+export type PublicPresentationStatus = 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'FAILED' | 'WAITING'
+export interface PublicToolPresentation {
+  toolName: string
+  displayName: string
+  actionSummary: string
+  publicArguments: Record<string, unknown>
+  resultSummary: string
+  resultCount?: number
+  durationMs?: number
+  attemptLabel: string
+}
+export interface PublicPresentation {
+  presentationId: string
+  workItemId: string
+  sequence: number
+  schemaVersion: number
+  kind: PublicPresentationKind
+  status: PublicPresentationStatus
+  title: string
+  summary: string
+  steps: string[]
+  detail: {
+    targetLabel: string
+    referenceType: string
+    referenceId: string
+    tool?: PublicToolPresentation
+    attributes: Record<string, string>
+  }
+  sourceType: string
+  sourceId: string
+  sourceEventId: string
+  occurredAt: string
+  visibility: 'PUBLIC' | 'INSPECTOR_ONLY'
 }
 export interface ExecutionNodeMetrics {
   modelCalls: number

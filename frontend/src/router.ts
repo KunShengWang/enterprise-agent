@@ -1,5 +1,4 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import RuntimeWorkbench from './views/RuntimeWorkbench.vue'
 import RunHistoryView from './views/RunHistoryView.vue'
 import ApprovalCenterView from './views/ApprovalCenterView.vue'
 import CapabilitiesView from './views/CapabilitiesView.vue'
@@ -12,8 +11,9 @@ import UnifiedWorkbench from './views/UnifiedWorkbench.vue'
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    { path: '/workbench', name: 'workbench', component: UnifiedWorkbench, meta: { title: '统一 Agent 工作台' } },
-    { path: '/', name: 'runtime', component: RuntimeWorkbench, meta: { title: 'Agent 运行台' } },
+    { path: '/', name: 'workbench', component: UnifiedWorkbench, meta: { title: '统一 Agent 工作台' } },
+    { path: '/workbench', redirect: to => ({ name: 'workbench', query: to.query }) },
+    { path: '/runtime', name: 'runtime', redirect: to => ({ name: 'workbench', query: to.query }) },
     { path: '/runs', name: 'runs', component: RunHistoryView, meta: { title: 'Run 历史与回放' } },
     { path: '/approvals', name: 'approvals', component: ApprovalCenterView, meta: { title: '人工审批中心' } },
     { path: '/incident-command', name: 'incident-command', component: IncidentCommandView, meta: { title: '事故调查指挥台' } },

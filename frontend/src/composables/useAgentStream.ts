@@ -4,7 +4,7 @@ import { ApiError } from '../api/http'
 import { resumeAgentEvents, streamAgentEvents } from '../api/stream'
 import type { AgentEvent, AgentRequest, AgentRunRecord, AgentStreamEvent } from '../types/agent'
 
-const terminalTypes = new Set(['run_completed', 'run_failed', 'run_cancelled', 'transport_error'])
+const terminalTypes = new Set(['run_completed', 'run_failed', 'run_cancelled'])
 
 function fromStoredEvent(event: AgentEvent): AgentStreamEvent {
   return {
@@ -91,6 +91,9 @@ export function useAgentStream() {
       ])
       runRecord.value = record
       approvalId.value = record.state === 'WAITING_APPROVAL' ? record.approvalId : ''
+      if (!['FAILED', 'REJECTED', 'BLOCKED'].includes(record.state)) {
+        error.value = ''
+      }
       if (record.answer) {
         answer.value = record.answer
       }

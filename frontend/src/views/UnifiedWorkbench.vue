@@ -1,83 +1,129 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
+import ConversationItemRenderer from '../components/ConversationItemRenderer.vue'
+import ExecutionInspector from '../components/ExecutionInspector.vue'
+import StatusBadge from '../components/StatusBadge.vue'
+import { agentApi } from '../api/agent'
 import { workbenchApi } from '../api/workbench'
-import { renderMarkdown } from '../utils/markdown'
-import type { ExecutionAgentNode, WorkEvent, WorkExecutionTree, WorkFocus, WorkInput, WorkItem, WorkItemDetail, WorkLink, WorkStreamItem } from '../types/workbench'
+import { projectConversationItems } from '../utils/conversationItems'
+import type { AgentConversationMessage, ApprovalRecord } from '../types/agent'
+import type { PublicPresentation, WorkEvent, WorkExecutionTree, WorkFocus, WorkInput, WorkItem, WorkItemBudget, WorkItemDetail, WorkStreamItem } from '../types/workbench'
 
-const conversationId = ref(localStorage.getItem('unified-workbench-conversation') || `workbench-${new Date().toISOString().slice(0, 10)}`)
+const CONVERSATION_KEY = 'unified-workbench-conversation'
+const HISTORY_KEY = 'unified-workbench-conversations'
+
+function newConversationId() {
+  const suffix = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}`
+  return `workbench-${suffix}`
+}
+
+function knownConversations() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
+    return Array.isArray(parsed) ? parsed.filter(value => typeof value === 'string').slice(0, 20) : []
+  } catch { return [] }
+}
+
+function rememberConversation(value: string) {
+  const next = [value, ...knownConversations().filter(item => item !== value)].slice(0, 20)
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(next))
+}
+
+const route = useRoute()
+const conversationId = ref(localStorage.getItem(CONVERSATION_KEY) || newConversationId())
+rememberConversation(conversationId.value)
+
 const content = ref('')
+const search = ref('')
 const inputs = ref<WorkInput[]>([])
+const conversationMessages = ref<AgentConversationMessage[]>([])
 const workItems = ref<WorkItem[]>([])
+const historyWorkItems = ref<WorkItem[]>([])
 const focus = ref<WorkFocus | null>(null)
 const selectedId = ref('')
 const detail = ref<WorkItemDetail | null>(null)
-const busy = ref(false)
-const error = ref('')
-const streamEvents = ref<WorkEvent[]>([])
 const executionTree = ref<WorkExecutionTree | null>(null)
-const expandedNodeId = ref('')
-const answer = ref('')
+const budget = ref<WorkItemBudget | null>(null)
+const pendingApproval = ref<ApprovalRecord | null>(null)
+const streamEvents = ref<WorkEvent[]>([])
+const presentations = ref<PublicPresentation[]>([])
+const liveAnswer = ref('')
 const streamState = ref<'idle' | 'connecting' | 'live' | 'recovering' | 'error'>('idle')
-const workCursor = ref(-1)
-const runCursor = ref(-1)
+const busy = ref(false)
+const controlBusy = ref(false)
+const error = ref('')
+const reviewer = ref('workbench-reviewer')
+const decisionReason = ref('已核对工具参数、影响范围与恢复边界')
+const copied = ref(false)
+const followOutput = ref(true)
+const leftDrawerOpen = ref(false)
+const rightDrawerOpen = ref(false)
+const conversationFeed = ref<HTMLElement | null>(null)
+
 let timer = 0
 let reconnectTimer = 0
 let eventSource: EventSource | null = null
 let streamGeneration = 0
-let treeRefreshBusy = false
 let refreshGeneration = 0
+let workCursor = -1
+let runCursor = -1
 const seenWorkEvents = new Set<string>()
 const seenRunEvents = new Set<string>()
 
-const selected = computed(() => workItems.value.find(item => item.workItemId === selectedId.value) ?? null)
-const routeReason = computed(() => String(detail.value?.routingDecision?.decision?.reason ?? '等待 Router 形成可审计决策'))
-const renderedAnswer = computed(() => renderMarkdown(answer.value))
-const assessmentPresent = computed(() => Object.keys(executionTree.value?.assessment ?? {}).length > 0)
+const selected = computed(() => historyWorkItems.value.find(item => item.workItemId === selectedId.value)
+  ?? workItems.value.find(item => item.workItemId === selectedId.value) ?? null)
+const filteredHistory = computed(() => {
+  const keyword = search.value.trim().toLowerCase()
+  return historyWorkItems.value.filter(item => !keyword || [item.originalGoal, item.activeExecutionTarget, item.controlState]
+    .some(value => String(value ?? '').toLowerCase().includes(keyword)))
+})
+const timeline = computed(() => detail.value ? projectConversationItems({
+  detail: detail.value,
+  inputs: inputs.value,
+  messages: conversationMessages.value,
+  presentations: presentations.value,
+  tree: executionTree.value,
+  approval: pendingApproval.value,
+  liveAnswer: liveAnswer.value,
+}) : [])
+const finalAnswerAt = computed(() => timeline.value.find(item => item.type === 'FINAL_ANSWER' && !item.live)?.createdAt)
 
-function compactId(value: string) {
-  return value.length > 22 ? `${value.slice(0, 10)}…${value.slice(-8)}` : value
-}
-
-function roleLabel(role: string) {
-  if (role === 'COMMANDER') return 'Commander · 调查指挥'
-  if (role === 'REVIEWER') return 'Reviewer · 证据审查'
-  if (role === 'RECOVERY_PLANNER') return 'Recovery Planner · 恢复规划'
-  if (role === 'GENERAL_AGENT') return 'General Agent'
-  if (role === 'ORDERCARE_CASE') return 'OrderCare Agent'
-  const specialist = role.match(/^SPECIALIST:([^:]+)/)?.[1]
-  const labels: Record<string, string> = {
-    ORDER_ANALYST: 'Order Specialist', INVENTORY_ANALYST: 'Inventory Specialist',
-    MQ_ANALYST: 'MQ Specialist', SOP_ANALYST: 'SOP Specialist',
-  }
-  return specialist ? (labels[specialist] ?? specialist) : role
-}
-
-function nodeState(node: ExecutionAgentNode) {
-  const status = node.status.toUpperCase()
-  if (['FAILED', 'CANCELLED', 'TIMED_OUT', 'REJECTED', 'MANUAL_REVIEW'].some(value => status.includes(value))) return 'failed'
-  if (['COMPLETED', 'SUCCEEDED', 'ASSESSED', 'CLOSED'].some(value => status.includes(value))) return 'completed'
-  if (['PENDING', 'CREATED', 'TRACE_UNAVAILABLE'].some(value => status.includes(value))) return 'pending'
+function stateTone(item: WorkItem) {
+  const value = `${item.controlState} ${item.executionState} ${item.outcome}`.toUpperCase()
+  if (/(FAILED|CANCELLED|REJECTED|MANUAL_REVIEW|ABANDONED)/.test(value)) return 'failed'
+  if (/(COMPLETED|CLOSED|RESOLVED)/.test(value)) return 'completed'
+  if (/(WAITING|PAUSED)/.test(value)) return 'waiting'
   return 'active'
 }
 
-function toolSpans(node: ExecutionAgentNode) {
-  return node.trace?.spans.filter(span => ['TOOL', 'RAG'].includes(span.kind)) ?? []
+function targetLabel(target: string) {
+  return ({ GENERAL_AGENT: 'General', ORDERCARE_CASE: 'OrderCare', INCIDENT_INVESTIGATION: 'Incident', INCIDENT_RECOVERY_PLAN: 'Planner' } as Record<string, string>)[target] ?? target ?? 'Routing'
 }
 
-function lastStage(node: ExecutionAgentNode) {
-  return node.trace?.replayEvents.at(-1)?.eventType || node.status
+function relativeTime(value: string) {
+  const seconds = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 1000))
+  if (seconds < 60) return '刚刚'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小时前`
+  return new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' }).format(new Date(value))
 }
 
-async function refreshExecutionTree(workItemId: string) {
-  if (treeRefreshBusy) return
-  treeRefreshBusy = true
-  try {
-    const next = await workbenchApi.executionTree(workItemId)
-    if (selectedId.value === workItemId) executionTree.value = next
-  } catch (cause) {
-    if (selectedId.value === workItemId) error.value = cause instanceof Error ? cause.message : '执行树加载失败'
-  } finally { treeRefreshBusy = false }
+async function scrollToBottom(force = false) {
+  await nextTick()
+  if (!force && !followOutput.value) return
+  if (conversationFeed.value) conversationFeed.value.scrollTop = conversationFeed.value.scrollHeight
+}
+
+function handleConversationScroll() {
+  const element = conversationFeed.value
+  if (!element) return
+  followOutput.value = element.scrollHeight - element.scrollTop - element.clientHeight < 96
+}
+
+function resumeFollowingOutput() {
+  followOutput.value = true
+  void scrollToBottom(true)
 }
 
 function closeStream() {
@@ -90,8 +136,8 @@ function closeStream() {
 function applyResumeToken(token: string) {
   const match = /^w:(-?\d+);r:(-?\d+)$/.exec(token)
   if (!match) return
-  workCursor.value = Math.max(workCursor.value, Number(match[1]))
-  runCursor.value = Math.max(runCursor.value, Number(match[2]))
+  workCursor = Math.max(workCursor, Number(match[1]))
+  runCursor = Math.max(runCursor, Number(match[2]))
 }
 
 function parseStreamEvent(event: MessageEvent<string>): WorkStreamItem | null {
@@ -100,20 +146,36 @@ function parseStreamEvent(event: MessageEvent<string>): WorkStreamItem | null {
 }
 
 async function loadAllEvents(workItemId: string) {
-  const events: WorkEvent[] = []
+  const result: WorkEvent[] = []
   let cursor = -1
   for (;;) {
     const page = await workbenchApi.events(workItemId, cursor, 500)
     if (!page.length) break
-    events.push(...page)
-    cursor = page[page.length - 1].sequence
+    result.push(...page)
+    cursor = page.at(-1)?.sequence ?? cursor
     if (page.length < 500) break
   }
-  return events
+  return result
 }
 
-function historyIsContinuous(events: WorkEvent[]) {
-  return events.every((event, index) => index === 0 || event.sequence === events[index - 1].sequence + 1)
+async function loadAllPresentations(workItemId: string) {
+  const result: PublicPresentation[] = []
+  let cursor = -1
+  for (;;) {
+    const page = await workbenchApi.presentations(workItemId, cursor, 500)
+    if (!page.length) break
+    result.push(...page)
+    cursor = page.at(-1)?.sequence ?? cursor
+    if (page.length < 500) break
+  }
+  return result
+}
+
+async function refreshPresentations(workItemId: string) {
+  try {
+    const next = await loadAllPresentations(workItemId)
+    if (selectedId.value === workItemId) presentations.value = next
+  } catch { /* Presentation projection may briefly lag the raw WorkEvent stream. */ }
 }
 
 async function recoverGap(workItemId: string) {
@@ -121,17 +183,14 @@ async function recoverGap(workItemId: string) {
   streamState.value = 'recovering'
   try {
     const historical = await loadAllEvents(workItemId)
-    if (!historyIsContinuous(historical)) {
-      streamState.value = 'error'
-      error.value = '执行时间线存在持久化序号缺口，已停止增量追加'
-      return
-    }
+    const continuous = historical.every((event, index) => index === 0 || event.sequence === historical[index - 1].sequence + 1)
+    if (!continuous) throw new Error('执行事件存在持久化序号缺口')
     streamEvents.value = historical
     seenWorkEvents.clear()
     historical.forEach(event => seenWorkEvents.add(event.eventId))
-    workCursor.value = historical.at(-1)?.sequence ?? -1
-    runCursor.value = -1
-    answer.value = ''
+    workCursor = historical.at(-1)?.sequence ?? -1
+    runCursor = -1
+    liveAnswer.value = ''
     seenRunEvents.clear()
     connectStream(workItemId)
   } catch (cause) {
@@ -144,28 +203,26 @@ function connectStream(workItemId: string) {
   closeStream()
   const generation = streamGeneration
   streamState.value = 'connecting'
-  const source = new EventSource(workbenchApi.streamUrl(workItemId, workCursor.value, runCursor.value))
+  const source = new EventSource(workbenchApi.streamUrl(workItemId, workCursor, runCursor))
   eventSource = source
   source.onopen = () => { if (generation === streamGeneration) streamState.value = 'live' }
   source.addEventListener('work-event', raw => {
     if (generation !== streamGeneration) return
     const event = parseStreamEvent(raw as MessageEvent<string>)
     if (!event) return
-    if (event.workSequence > workCursor.value + 1) { void recoverGap(workItemId); return }
+    if (event.workSequence > workCursor + 1) { void recoverGap(workItemId); return }
     applyResumeToken(event.resumeToken || (raw as MessageEvent<string>).lastEventId)
     if (!event.eventId || seenWorkEvents.has(event.eventId)) return
     seenWorkEvents.add(event.eventId)
     streamEvents.value.push({
-      eventId: event.eventId,
-      sequence: event.workSequence,
-      eventType: event.eventType,
-      phase: String(event.payload.phase ?? ''),
-      summary: event.content,
-      projectedAt: event.createdAt,
+      eventId: event.eventId, sequence: event.workSequence, eventType: event.eventType,
+      phase: String(event.payload.runtimeEventType ?? event.payload.incidentEventType
+        ?? event.payload.recoveryPlanEventType ?? event.payload.phase ?? event.eventType), summary: event.content,
+      projectedAt: event.createdAt, sourceType: event.sourceType, sourceId: event.sourceId,
+      sourceSequence: event.sourceSequence, sourceCreatedAt: event.createdAt, payload: event.payload,
     })
-    if (['AGENT_RUN', 'INCIDENT', 'RECOVERY_PLAN'].includes(event.sourceType)) {
-      void refreshExecutionTree(workItemId)
-    }
+    void refreshPresentations(workItemId)
+    if (['AGENT_RUN', 'INCIDENT', 'RECOVERY_PLAN'].includes(event.sourceType)) void refreshSelectedProjection(workItemId)
   })
   source.addEventListener('model-delta', raw => {
     if (generation !== streamGeneration) return
@@ -174,7 +231,7 @@ function connectStream(workItemId: string) {
     applyResumeToken(event.resumeToken || (raw as MessageEvent<string>).lastEventId)
     if (!event.eventId || seenRunEvents.has(event.eventId)) return
     seenRunEvents.add(event.eventId)
-    answer.value += event.content
+    liveAnswer.value += event.content
   })
   source.addEventListener('heartbeat', raw => {
     if (generation !== streamGeneration) return
@@ -182,11 +239,7 @@ function connectStream(workItemId: string) {
     if (event) applyResumeToken(event.resumeToken || (raw as MessageEvent<string>).lastEventId)
   })
   source.addEventListener('gap', () => { if (generation === streamGeneration) void recoverGap(workItemId) })
-  source.addEventListener('sync-error', () => {
-    if (generation !== streamGeneration) return
-    streamState.value = 'error'
-    source.close()
-  })
+  source.addEventListener('sync-error', () => { if (generation === streamGeneration) streamState.value = 'error' })
   source.onerror = () => {
     if (generation !== streamGeneration) return
     source.close()
@@ -201,82 +254,110 @@ function resetStream(next: WorkItemDetail) {
   seenWorkEvents.clear()
   streamEvents.value.forEach(event => seenWorkEvents.add(event.eventId))
   seenRunEvents.clear()
-  workCursor.value = streamEvents.value.at(-1)?.sequence ?? -1
-  runCursor.value = -1
-  answer.value = ''
+  workCursor = streamEvents.value.at(-1)?.sequence ?? -1
+  runCursor = -1
+  liveAnswer.value = ''
   connectStream(next.workItem.workItemId)
 }
 
-function clearSelectedWork() {
-  closeStream()
-  selectedId.value = ''
-  detail.value = null
-  executionTree.value = null
-  expandedNodeId.value = ''
-  streamEvents.value = []
-  answer.value = ''
-  seenWorkEvents.clear()
-  seenRunEvents.clear()
-  workCursor.value = -1
-  runCursor.value = -1
-  streamState.value = 'idle'
+async function loadHistory(currentItems: WorkItem[]) {
+  const ids = knownConversations().filter(id => id !== conversationId.value).slice(0, 11)
+  const lists = await Promise.all(ids.map(id => workbenchApi.workItems(id).catch(() => [])))
+  const unique = new Map<string, WorkItem>()
+  ;[...currentItems, ...lists.flat()].forEach(item => unique.set(item.workItemId, item))
+  historyWorkItems.value = [...unique.values()].sort((left, right) =>
+    new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())
 }
 
-async function changeConversation() {
-  localStorage.setItem('unified-workbench-conversation', conversationId.value)
-  clearSelectedWork()
-  inputs.value = []
-  workItems.value = []
-  focus.value = null
-  await refresh()
+async function refreshSelectedProjection(workItemId: string) {
+  if (selectedId.value !== workItemId) return
+  try {
+    const tree = await workbenchApi.executionTree(workItemId)
+    if (selectedId.value === workItemId) executionTree.value = tree
+  } catch { /* Tree can be temporarily unavailable while dispatch is being linked. */ }
 }
 
 async function refresh() {
-  const requestGeneration = ++refreshGeneration
+  const generation = ++refreshGeneration
   const requestedConversation = conversationId.value
   try {
-    const [nextInputs, nextItems] = await Promise.all([
-      workbenchApi.inputs(conversationId.value), workbenchApi.workItems(conversationId.value),
+    const [nextInputs, nextItems, nextMessages] = await Promise.all([
+      workbenchApi.inputs(requestedConversation), workbenchApi.workItems(requestedConversation),
+      agentApi.conversationMessages(requestedConversation, 500),
     ])
-    if (requestGeneration !== refreshGeneration || requestedConversation !== conversationId.value) return
+    if (generation !== refreshGeneration || requestedConversation !== conversationId.value) return
     inputs.value = nextInputs
     workItems.value = nextItems
-    let nextFocus: WorkFocus | null = null
-    try { nextFocus = await workbenchApi.focus(conversationId.value) } catch { nextFocus = null }
-    if (requestGeneration !== refreshGeneration || requestedConversation !== conversationId.value) return
-    focus.value = nextFocus
-    if (!nextItems.some(item => item.workItemId === selectedId.value)) {
-      selectedId.value = focus.value?.focusedWorkItemId || nextItems[0]?.workItemId || ''
-    }
+    conversationMessages.value = nextMessages
+    await loadHistory(nextItems)
+    if (generation !== refreshGeneration || requestedConversation !== conversationId.value) return
+    try { focus.value = await workbenchApi.focus(requestedConversation) } catch { focus.value = null }
+
+    const linkedRunId = String(route.query.runId ?? '')
+    if (linkedRunId) selectedId.value = historyWorkItems.value.find(item => item.activeRunId === linkedRunId)?.workItemId ?? selectedId.value
+    if (!nextItems.some(item => item.workItemId === selectedId.value)) selectedId.value = focus.value?.focusedWorkItemId || nextItems[0]?.workItemId || ''
     if (!selectedId.value) {
-      clearSelectedWork()
-      return
+      closeStream(); detail.value = null; executionTree.value = null; budget.value = null; pendingApproval.value = null
+      streamEvents.value = []; presentations.value = []; streamState.value = 'idle'; return
     }
-    if (selectedId.value) {
-      const requestedWorkItem = selectedId.value
-      const previousId = detail.value?.workItem.workItemId
-      const [nextDetail, nextTree] = await Promise.all([
-        workbenchApi.detail(selectedId.value), workbenchApi.executionTree(selectedId.value),
-      ])
-      if (requestGeneration !== refreshGeneration
-          || requestedConversation !== conversationId.value
-          || requestedWorkItem !== selectedId.value) return
-      detail.value = nextDetail
-      executionTree.value = nextTree
-      if (previousId !== nextDetail.workItem.workItemId || !eventSource) resetStream(nextDetail)
-    }
+
+    const requestedWorkItem = selectedId.value
+    const previousId = detail.value?.workItem.workItemId
+    const [nextDetail, nextTree, nextBudget, nextPresentations] = await Promise.all([
+      workbenchApi.detail(requestedWorkItem), workbenchApi.executionTree(requestedWorkItem).catch(() => null),
+      workbenchApi.budget(requestedWorkItem).catch(() => null),
+      loadAllPresentations(requestedWorkItem),
+    ])
+    if (generation !== refreshGeneration || requestedWorkItem !== selectedId.value) return
+    detail.value = nextDetail
+    executionTree.value = nextTree
+    budget.value = nextBudget
+    presentations.value = nextPresentations
+    if (nextDetail.workItem.activeRunId) {
+      const approvals = await agentApi.approvals(100)
+      if (generation !== refreshGeneration || requestedWorkItem !== selectedId.value) return
+      pendingApproval.value = approvals.find(item => item.runId === nextDetail.workItem.activeRunId && item.status === 'REQUESTED') ?? null
+    } else pendingApproval.value = null
+    if (previousId !== requestedWorkItem || !eventSource) resetStream(nextDetail)
     error.value = ''
   } catch (cause) {
-    if (requestGeneration === refreshGeneration && requestedConversation === conversationId.value) {
-      error.value = cause instanceof Error ? cause.message : '统一工作台加载失败'
-    }
+    if (generation === refreshGeneration) error.value = cause instanceof Error ? cause.message : '工作台加载失败'
   }
+}
+
+async function newTask() {
+  const next = newConversationId()
+  conversationId.value = next
+  localStorage.setItem(CONVERSATION_KEY, next)
+  rememberConversation(next)
+  selectedId.value = ''
+  detail.value = null
+  inputs.value = []
+  conversationMessages.value = []
+  workItems.value = []
+  streamEvents.value = []
+  presentations.value = []
+  followOutput.value = true
+  leftDrawerOpen.value = false
+  await refresh()
+}
+
+async function choose(item: WorkItem) {
+  leftDrawerOpen.value = false
+  followOutput.value = true
+  if (item.conversationId !== conversationId.value) {
+    conversationId.value = item.conversationId
+    localStorage.setItem(CONVERSATION_KEY, item.conversationId)
+    rememberConversation(item.conversationId)
+  }
+  selectedId.value = item.workItemId
+  await refresh()
 }
 
 async function submit() {
   if (!content.value.trim() || busy.value) return
+  followOutput.value = true
   busy.value = true; error.value = ''
-  localStorage.setItem('unified-workbench-conversation', conversationId.value)
   try {
     const result = await workbenchApi.submit(conversationId.value, content.value.trim())
     content.value = ''
@@ -286,181 +367,105 @@ async function submit() {
   finally { busy.value = false }
 }
 
-async function choose(item: WorkItem) {
-  if (item.workItemId === selectedId.value && detail.value) return
-  selectedId.value = item.workItemId
-  const [nextDetail, nextTree] = await Promise.all([
-    workbenchApi.detail(item.workItemId), workbenchApi.executionTree(item.workItemId),
-  ])
-  detail.value = nextDetail
-  executionTree.value = nextTree
-  expandedNodeId.value = ''
-  resetStream(nextDetail)
-}
-async function makeFocus(item: WorkItem) { if (!focus.value) return; await workbenchApi.switchFocus(conversationId.value, item.workItemId, focus.value.version); await refresh() }
-async function decide(approved: boolean) {
-  const preview = detail.value?.preview
-  if (!preview || !selected.value) return
-  busy.value = true; error.value = ''
-  try { approved ? await workbenchApi.confirm(selected.value.workItemId, preview) : await workbenchApi.reject(selected.value.workItemId, preview.previewId); await refresh() }
-  catch (cause) { error.value = cause instanceof Error ? cause.message : '确认失败' }
-  finally { busy.value = false }
-}
-function targetRoute(link: WorkLink) {
-  if (link.linkType === 'INCIDENT') return { path: '/incident-command', query: { incidentId: link.linkedId } }
-  if (link.linkType === 'RECOVERY_PLAN') {
-    const typedPayload = detail.value?.routingDecision?.validation?.typedPayload as Record<string, unknown> | undefined
-    const incidentId = detail.value?.workItem.activeIncidentId || String(typedPayload?.incidentId ?? '')
-    return { path: '/incident-command', query: { incidentId, planId: link.linkedId } }
-  }
-  return { path: '/', query: { runId: link.linkedId } }
-}
-function stateClass(state: string) {
-  if (['DISPATCHED', 'CLOSED'].includes(state)) return 'work-ok'
-  if (['MANUAL_REVIEW', 'ABANDONED'].includes(state)) return 'work-bad'
-  return 'work-active'
+async function makeFocus() {
+  if (!selected.value || !focus.value) return
+  await workbenchApi.switchFocus(conversationId.value, selected.value.workItemId, focus.value.version)
+  await refresh()
 }
 
-onMounted(() => { refresh(); timer = window.setInterval(refresh, 5000) })
+async function decidePreview(approved: boolean) {
+  if (!detail.value?.preview || !selected.value || busy.value) return
+  busy.value = true
+  try {
+    approved
+      ? await workbenchApi.confirm(selected.value.workItemId, detail.value.preview)
+      : await workbenchApi.reject(selected.value.workItemId, detail.value.preview.previewId)
+    await refresh()
+  } catch (cause) { error.value = cause instanceof Error ? cause.message : '确认失败' }
+  finally { busy.value = false }
+}
+
+async function decideApproval(approved: boolean) {
+  if (!pendingApproval.value || !selected.value || controlBusy.value) return
+  controlBusy.value = true
+  try {
+    await agentApi.decideApproval(pendingApproval.value.approvalId, approved,
+      reviewer.value.trim() || 'workbench-reviewer', decisionReason.value.trim())
+    await workbenchApi.command(selected.value.workItemId, 'resume', selected.value.version)
+    await refresh()
+  } catch (cause) { error.value = cause instanceof Error ? cause.message : '审批操作失败' }
+  finally { controlBusy.value = false }
+}
+
+async function executeCommand(command: 'pause' | 'resume' | 'cancel') {
+  if (!selected.value || controlBusy.value) return
+  controlBusy.value = true
+  try { await workbenchApi.command(selected.value.workItemId, command, selected.value.version); await refresh() }
+  catch (cause) { error.value = cause instanceof Error ? cause.message : `${command} 操作失败` }
+  finally { controlBusy.value = false }
+}
+
+async function copyAnswer(value: string) {
+  await navigator.clipboard.writeText(value)
+  copied.value = true
+  window.setTimeout(() => { copied.value = false }, 1400)
+}
+
+onMounted(() => { void refresh(); timer = window.setInterval(refresh, 5000) })
 onBeforeUnmount(() => { window.clearInterval(timer); closeStream() })
+watch(() => [timeline.value.length, liveAnswer.value.length], () => {
+  if (followOutput.value) void scrollToBottom()
+})
 </script>
 
 <template>
-  <div class="unified-workbench">
-    <aside class="panel unified-history">
-      <p class="eyebrow">UNIFIED AGENT WORKBENCH · M2</p>
-      <h2>一个入口，四种执行目标</h2>
-      <label class="field-label">Conversation ID</label>
-      <input v-model="conversationId" @change="changeConversation" />
-      <div class="unified-task-list">
-        <button v-for="item in workItems" :key="item.workItemId" :class="{ selected: item.workItemId === selectedId }" @click="choose(item)">
-          <span :class="stateClass(item.controlState)" />
-          <strong>{{ item.originalGoal }}</strong>
-          <small>{{ item.activeExecutionTarget || 'ROUTING' }} · {{ item.controlState }}</small>
-          <code>{{ item.workItemId }}</code>
+  <div class="task-workbench-shell" :class="{ 'left-open': leftDrawerOpen, 'right-open': rightDrawerOpen }">
+    <div v-if="leftDrawerOpen || rightDrawerOpen" class="workbench-scrim" @click="leftDrawerOpen = false; rightDrawerOpen = false" />
+
+    <aside class="task-sidebar">
+      <header class="task-sidebar-brand"><span>A</span><div><strong>Agent Workbench</strong><small>Enterprise Agent</small></div><button type="button" title="关闭任务栏" @click="leftDrawerOpen = false">×</button></header>
+      <button class="task-new-button" type="button" @click="newTask"><span>＋</span>新建任务</button>
+      <label class="task-search"><span>⌕</span><input v-model="search" placeholder="搜索任务" /></label>
+      <section class="task-history">
+        <h2>最近任务</h2>
+        <button v-for="item in filteredHistory" :key="item.workItemId" type="button" :class="{ selected: item.workItemId === selectedId }" @click="choose(item)">
+          <i :data-tone="stateTone(item)" /><div><strong>{{ item.originalGoal }}</strong><span><em>{{ targetLabel(item.activeExecutionTarget) }}</em><time>{{ relativeTime(item.updatedAt) }}</time></span></div>
         </button>
-        <p v-if="!workItems.length" class="compact-empty">还没有任务。直接描述目标，系统会选择执行方式。</p>
-      </div>
+        <p v-if="!filteredHistory.length">还没有任务</p>
+      </section>
+      <nav class="task-product-nav" aria-label="产品导航">
+        <RouterLink to="/approvals"><span>✓</span>审批中心</RouterLink>
+        <RouterLink to="/incident-command"><span>△</span>事故调查</RouterLink>
+        <RouterLink to="/capabilities"><span>⌘</span>能力地图</RouterLink>
+        <RouterLink to="/knowledge"><span>◇</span>知识与记忆</RouterLink>
+        <RouterLink to="/observability"><span>⌁</span>可观测性</RouterLink>
+      </nav>
     </aside>
 
-    <main class="panel unified-main">
-      <header class="unified-header">
-        <div><p class="eyebrow">GOAL ROUTING</p><h2>{{ selected?.originalGoal || '描述你想完成的目标' }}</h2></div>
-        <div v-if="selected" class="action-row">
-          <button v-if="focus && focus.focusedWorkItemId !== selected.workItemId" class="secondary-button" @click="makeFocus(selected)">设为当前任务</button>
-          <span class="status-badge"><i />{{ selected.controlState }}</span>
-        </div>
+    <main class="task-conversation-column">
+      <header class="task-header">
+        <button class="task-mobile-toggle" type="button" title="打开任务列表" @click="leftDrawerOpen = true">☰</button>
+        <div><h1>{{ selected?.originalGoal || '新任务' }}</h1><span v-if="selected">{{ targetLabel(selected.activeExecutionTarget) }} · {{ selected.controlState }}</span><span v-else>描述目标，系统会选择合适的执行方式</span></div>
+        <div class="task-header-actions"><span v-if="copied" class="copy-confirmation">已复制</span><StatusBadge v-if="selected" :value="selected.executionState" compact /><button v-if="focus && selected && focus.focusedWorkItemId !== selected.workItemId" type="button" title="设为当前任务" @click="makeFocus">聚焦</button><button class="inspector-mobile-toggle" type="button" title="打开执行检查器" @click="rightDrawerOpen = true">◎</button></div>
       </header>
 
-      <section v-if="detail" class="unified-detail">
-        <article class="route-card">
-          <div><span>系统选择</span><strong>{{ detail.workItem.activeExecutionTarget || '正在路由' }}</strong></div>
-          <p>{{ routeReason }}</p>
-          <div class="route-meta"><code>{{ detail.routingDecision?.decisionId || detail.workItem.routingFailureCode || 'routing pending' }}</code><span>{{ detail.workItem.executionState }}</span></div>
-        </article>
-
-        <article v-if="detail.preview" class="preview-card">
-          <div><p class="eyebrow">EXPLICIT CONFIRMATION</p><h3>启动事故调查前确认范围</h3></div>
-          <p>Preview {{ detail.preview.previewId }} · v{{ detail.preview.previewVersion }} · {{ detail.preview.status }}</p>
-          <pre>{{ JSON.stringify(detail.preview.payload, null, 2) }}</pre>
-          <div v-if="detail.preview.status === 'ACTIVE'" class="action-row">
-            <button class="primary-button" :disabled="busy" @click="decide(true)">确认并启动</button>
-            <button class="danger-button" :disabled="busy" @click="decide(false)">拒绝</button>
-          </div>
-        </article>
-
-        <article v-if="detail.links.length" class="target-links">
-          <p class="eyebrow">EXECUTION TARGET</p>
-          <RouterLink v-for="link in detail.links" :key="link.linkedId" :to="targetRoute(link)">
-            <strong>{{ link.linkType }}</strong><code>{{ link.linkedId }}</code><span>打开专项视图 →</span>
-          </RouterLink>
-        </article>
-
-        <section v-if="executionTree && (executionTree.coordinator || executionTree.agents.length)" class="execution-tree">
-          <header class="execution-tree-head">
-            <div><p class="eyebrow">EXECUTION TREE · {{ executionTree.treeType }}</p><h3>Agent 执行过程</h3></div>
-            <div class="tree-metrics">
-              <span><strong>{{ executionTree.metrics.agentNodes }}</strong>Agent</span>
-              <span><strong>{{ executionTree.metrics.modelCalls }}</strong>模型轮次</span>
-              <span><strong>{{ executionTree.metrics.toolCalls }}</strong>工具</span>
-              <span><strong>{{ executionTree.metrics.promptTokens + executionTree.metrics.completionTokens }}</strong>Token</span>
-            </div>
-          </header>
-
-          <article v-if="executionTree.coordinator" class="coordinator-row">
-            <span class="node-icon">C</span>
-            <div><strong>{{ executionTree.coordinator.label }}</strong><p>{{ executionTree.coordinator.span.summary }}</p></div>
-            <code>synthetic · model calls {{ executionTree.coordinator.modelCalls }}</code>
-          </article>
-
-          <div class="agent-node-grid">
-            <article v-for="node in executionTree.agents" :key="node.nodeId" class="agent-node" :data-state="nodeState(node)">
-              <header>
-                <span class="node-icon">{{ roleLabel(node.role).slice(0, 1) }}</span>
-                <div><strong>{{ roleLabel(node.role) }}</strong><small>Attempt {{ node.attempt }}/{{ node.maxAttempts }} · {{ node.status }}</small></div>
-                <i />
-              </header>
-              <p>{{ node.objective }}</p>
-              <div class="node-stage"><span>当前阶段</span><strong>{{ lastStage(node) }}</strong></div>
-              <div class="node-metrics">
-                <span>模型 {{ node.metrics.modelCalls }}</span><span>工具 {{ node.metrics.toolCalls }}</span>
-                <span>Token {{ node.metrics.promptTokens + node.metrics.completionTokens }}</span><span>{{ Math.round(node.metrics.durationMs) }}ms</span>
-              </div>
-              <code v-if="node.runId" class="node-run-id">{{ compactId(node.runId) }}</code>
-              <p v-if="node.error" class="node-error">{{ node.error }}</p>
-              <button class="node-detail-button" type="button" @click="expandedNodeId = expandedNodeId === node.nodeId ? '' : node.nodeId">
-                {{ expandedNodeId === node.nodeId ? '收起详情' : '查看阶段、工具与证据' }}
-              </button>
-              <div v-if="expandedNodeId === node.nodeId" class="node-details">
-                <div><strong>阶段</strong><ol><li v-for="stage in node.trace?.replayEvents.slice(-8)" :key="stage.sequence"><span>{{ stage.eventType }}</span><small>{{ stage.summary }}</small></li></ol><p v-if="!node.trace?.replayEvents.length">尚无 Runtime 阶段事件</p></div>
-                <div><strong>工具</strong><ol><li v-for="tool in toolSpans(node)" :key="tool.spanId"><span>{{ tool.name }}</span><small>{{ tool.status }} · {{ tool.durationMs }}ms</small></li></ol><p v-if="!toolSpans(node).length">该 Agent 尚无工具调用</p></div>
-                <div><strong>Evidence</strong><ol><li v-for="item in node.evidence" :key="item.evidenceId"><span>{{ item.evidenceSubtype }}</span><small>{{ compactId(item.evidenceId) }}</small></li></ol><p v-if="!node.evidence.length">该节点未产生业务 Evidence</p></div>
-              </div>
-            </article>
-          </div>
-
-          <div v-if="executionTree.conflicts.length || assessmentPresent || executionTree.recoveryPlans.length" class="execution-artifacts">
-            <section v-if="executionTree.conflicts.length">
-              <p class="eyebrow">JAVA CONFLICTS</p>
-              <article v-for="conflict in executionTree.conflicts" :key="conflict.conflictId"><strong>{{ conflict.severity }} · {{ conflict.conflictType }}</strong><span>{{ conflict.metricKey }}</span><code>{{ compactId(conflict.conflictId) }}</code></article>
-            </section>
-            <section v-if="assessmentPresent">
-              <p class="eyebrow">REVIEWER ASSESSMENT</p>
-              <strong>{{ executionTree.assessment.outcome || 'ASSESSMENT' }} · {{ executionTree.assessment.riskLevel || '' }}</strong>
-              <details><summary>查看结构化结论</summary><pre>{{ JSON.stringify(executionTree.assessment, null, 2) }}</pre></details>
-            </section>
-            <section v-if="executionTree.recoveryPlans.length">
-              <p class="eyebrow">RECOVERY PROPOSALS</p>
-              <article v-for="plan in executionTree.recoveryPlans" :key="plan.planId"><strong>{{ plan.status }} · {{ plan.outcome }}</strong><span>{{ plan.items.length }} 个处置项</span><code>{{ compactId(plan.planId) }}</code></article>
-            </section>
-          </div>
-        </section>
-
-        <article v-if="detail.workItem.activeExecutionTarget === 'GENERAL_AGENT' || answer" class="stream-answer">
-          <div>
-            <div><p class="eyebrow">PRIMARY RUN</p><h3>Agent 回答</h3></div>
-            <span class="stream-indicator" :data-state="streamState">{{ streamState }}</span>
-          </div>
-          <div v-if="answer" class="answer-content" v-html="renderedAnswer" />
-          <p v-else class="compact-empty">等待主 Run 输出。子 Agent 的模型增量不会混入这里。</p>
-        </article>
-
-        <article class="local-events">
-          <div><h3>统一执行时间线</h3><small>SSE · cursor w:{{ workCursor }} / r:{{ runCursor }}</small></div>
-          <ol>
-            <li v-for="event in streamEvents" :key="event.eventId">
-              <span :class="stateClass(event.phase || event.eventType)" /><div><strong>{{ event.summary }}</strong><code>#{{ event.sequence }} · {{ event.eventType }}<template v-if="event.phase"> · {{ event.phase }}</template></code></div>
-            </li>
-          </ol>
-        </article>
+      <section ref="conversationFeed" class="task-conversation-feed" @scroll.passive="handleConversationScroll">
+        <div v-if="!detail" class="task-welcome"><span>A</span><h2>今天要完成什么？</h2><p>直接描述目标。普通问答、OrderCare、事故调查和恢复规划都从这里开始。</p></div>
+        <div v-else class="conversation-stream">
+          <ConversationItemRenderer v-for="item in timeline" :key="item.id" :item="item" :busy="busy || controlBusy" :reviewer="reviewer" :decision-reason="decisionReason" @update:reviewer="reviewer = $event" @update:decision-reason="decisionReason = $event" @confirm-preview="decidePreview" @decide-approval="decideApproval" @copy="copyAnswer" />
+          <article v-if="busy && !liveAnswer" class="conversation-loading"><span>A</span><div><i /><i /><i /><small>正在理解目标并选择执行方式</small></div></article>
+        </div>
       </section>
 
-      <section v-else class="unified-empty"><strong>无需先选择页面</strong><p>普通问答、OrderCare 单案例、事故调查和恢复计划都从同一个输入框开始。</p></section>
+      <button v-if="!followOutput" class="follow-output-button" type="button" @click="resumeFollowingOutput">回到底部 ↓</button>
 
-      <footer class="unified-composer">
-        <textarea v-model="content" rows="3" placeholder="例如：调查批次 BATCH-20260720-01 的异常订单与死信，并说明是否需要人工确认" @keydown.ctrl.enter.prevent="submit" />
-        <div><span v-if="error" class="inline-error">{{ error }}</span><small>Ctrl + Enter 发送 · 身份由服务端注入</small><button class="primary-button" :disabled="busy || !content.trim()" @click="submit">{{ busy ? '处理中…' : '发送目标' }}</button></div>
+      <footer class="task-composer">
+        <div><textarea v-model="content" rows="2" placeholder="描述目标，或为当前任务补充要求…" @keydown.ctrl.enter.prevent="submit" /><button type="button" title="发送" :disabled="busy || !content.trim()" @click="submit">↑</button></div>
+        <p><span v-if="error" class="composer-error">{{ error }}</span><span v-else>Ctrl + Enter 发送 · 运行中的任务可接收补充指令</span></p>
       </footer>
     </main>
+
+    <ExecutionInspector v-if="detail" :detail="detail" :tree="executionTree" :events="streamEvents" :budget="budget" :approval="pendingApproval" :stream-state="streamState" :final-answer-at="finalAnswerAt" :busy="controlBusy" @command="executeCommand" />
+    <aside v-else class="execution-inspector inspector-placeholder"><span>◎</span><strong>执行检查器</strong><p>任务开始后，这里会显示状态、活动、Agents 与证据。</p></aside>
   </div>
 </template>

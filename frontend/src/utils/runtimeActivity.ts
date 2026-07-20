@@ -53,6 +53,8 @@ function activityFromRunState(runState: string): RuntimeActivity | null {
       return activity('人工审批已拒绝，高风险操作未执行。', 'error', false)
     case 'MANUAL_REVIEW':
       return activity('工具执行结果不确定，正在等待人工核对。', 'waiting', false)
+    case 'TRANSPORT_INTERRUPTED':
+      return activity('SSE 连接已中断，任务状态未知；请以持久化 Run 状态为准。', 'waiting', false)
     default:
       return null
   }
@@ -119,7 +121,7 @@ function activityFromEvent(event: AgentStreamEvent): RuntimeActivity | null {
     case 'stream_gap':
       return activity('事件流出现缺口，正在从持久化时间线补拉进度…', 'waiting')
     case 'transport_error':
-      return activity('流式连接异常，正在核对服务端 Run 状态…', 'error')
+      return activity('流式连接异常，正在核对服务端 Run 状态…', 'waiting')
     default:
       return null
   }

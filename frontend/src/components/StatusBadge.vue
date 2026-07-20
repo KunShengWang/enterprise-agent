@@ -24,6 +24,8 @@ const label = computed(() => {
     cancelled: '已取消',
     needs_clarification: '待澄清',
     'needs-clarification': '待澄清',
+    transport_interrupted: '连接中断',
+    'transport-interrupted': '连接中断',
   }
   return labels[props.value?.toLowerCase()] ?? labels[normalized.value] ?? props.value ?? '未知'
 })

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import { agentApi } from '../api/agent'
 import JsonViewer from '../components/JsonViewer.vue'
 import PageIntro from '../components/PageIntro.vue'
@@ -95,6 +96,7 @@ onMounted(load)
       description="Trace 回答“发生了什么”，Replay 回答“如何重现过程”，Eval 回答“结果是否符合预期”，AgentOps 则把分散记录聚合成工程指标。"
       :endpoints="['GET /api/agent/ops/summary', 'GET /api/agent/traces', 'GET /api/agent/traces/{id}/replay', 'GET /api/agent/evals/reports']"
     >
+      <RouterLink class="secondary-button" to="/runs">高级 Run 调试</RouterLink>
       <button class="secondary-button" type="button" :disabled="loading" @click="load">刷新数据</button>
     </PageIntro>
     <p v-if="error" class="inline-error">{{ error }}</p>

@@ -7,11 +7,12 @@ import { agentApi } from './api/agent'
 const route = useRoute()
 const router = useRouter()
 const sidebarOpen = ref(false)
-const runtimeViewVersion = ref(0)
+const workbenchViewVersion = ref(0)
 const backendOnline = ref(false)
 const backendLabel = ref('检测中')
 
 const pageTitle = computed(() => String(route.meta.title ?? route.name ?? 'Runtime Lab'))
+const isWorkbench = computed(() => route.name === 'workbench')
 
 async function checkHealth() {
   try {
@@ -26,31 +27,34 @@ async function checkHealth() {
 
 async function createNewAgentTask() {
   sidebarOpen.value = false
-  if (route.name === 'runtime') {
+  const nextConversationId = `workbench-${typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now()}`
+  localStorage.setItem('unified-workbench-conversation', nextConversationId)
+  if (route.name === 'workbench') {
     if (Object.keys(route.query).length > 0) {
-      await router.replace({ name: 'runtime' })
+      await router.replace({ name: 'workbench' })
     }
-    runtimeViewVersion.value += 1
+    workbenchViewVersion.value += 1
     return
   }
 
-  runtimeViewVersion.value += 1
-  await router.push({ name: 'runtime' })
+  workbenchViewVersion.value += 1
+  await router.push({ name: 'workbench' })
 }
 
 onMounted(checkHealth)
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'workbench-app-shell': isWorkbench }">
     <AppSidebar
+      v-if="!isWorkbench"
       :open="sidebarOpen"
       @close="sidebarOpen = false"
       @new-task="createNewAgentTask"
     />
 
     <main class="app-main">
-      <header class="topbar">
+      <header v-if="!isWorkbench" class="topbar">
         <button class="icon-button mobile-menu" type="button" aria-label="打开导航" @click="sidebarOpen = true">
           ☰
         </button>
@@ -64,11 +68,11 @@ onMounted(checkHealth)
         </button>
       </header>
 
-      <section class="page-frame">
+      <section class="page-frame" :class="{ 'workbench-page-frame': isWorkbench }">
         <RouterView v-slot="{ Component }">
           <component
             :is="Component"
-            :key="route.name === 'runtime' ? `runtime-${runtimeViewVersion}` : String(route.name)"
+            :key="route.name === 'workbench' ? `workbench-${workbenchViewVersion}` : String(route.name)"
           />
         </RouterView>
       </section>

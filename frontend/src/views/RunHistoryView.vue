@@ -90,7 +90,7 @@ async function cancelSelected() {
 
 function openInWorkbench() {
   if (!selectedRun.value) return
-  void router.push({ name: 'runtime', query: { runId: selectedRun.value.runId } })
+  void router.push({ name: 'workbench', query: { runId: selectedRun.value.runId } })
 }
 
 onMounted(() => loadRuns(false))
@@ -101,7 +101,7 @@ onMounted(() => loadRuns(false))
     <PageIntro
       kicker="PERSISTED RUNS"
       title="从状态记录回放一条 Agent 执行"
-      description="这里负责检索和检查持久化事实；需要审批、恢复或继续执行时，统一回到 Agent 运行台处理同一个 Run。"
+      description="这里负责检索和检查持久化事实；需要继续查看任务上下文时，回到统一 Agent 工作台定位对应 WorkItem。"
       :endpoints="['GET /api/agent/runs', 'GET /api/agent/runs/{runId}', 'GET /api/agent/runs/{runId}/events']"
     >
       <button class="secondary-button" type="button" :disabled="loading" @click="loadRuns()">刷新列表</button>
@@ -165,10 +165,10 @@ onMounted(() => loadRuns(false))
             <button v-if="selectedRun.state === 'RUNNING'" class="danger-button" type="button" @click="cancelSelected">请求取消</button>
             <button class="primary-button" type="button" @click="openInWorkbench">
               {{ selectedRun.state === 'WAITING_APPROVAL'
-                ? '进入运行台审批'
+                ? '进入统一工作台审批'
                 : selectedRun.state === 'PAUSED'
-                  ? '进入运行台继续'
-                  : '在运行台打开' }}
+                  ? '进入统一工作台继续'
+                  : '在统一工作台打开' }}
             </button>
           </div>
 

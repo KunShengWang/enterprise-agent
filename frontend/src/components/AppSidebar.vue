@@ -5,9 +5,7 @@ defineProps<{ open: boolean }>()
 defineEmits<{ close: []; newTask: [] }>()
 
 const navigation = [
-  { to: '/workbench', icon: 'U', label: '统一 Agent 工作台', hint: '自然语言路由与任务切换' },
-  { to: '/', icon: '✦', label: 'Agent 运行台', hint: '对话与实时执行' },
-  { to: '/runs', icon: '◷', label: 'Run 历史', hint: '状态与事件回放' },
+  { to: '/', icon: '✦', label: '统一 Agent 工作台', hint: '对话、路由与实时执行' },
   { to: '/approvals', icon: '✓', label: '审批中心', hint: 'HITL 决策与恢复' },
   { to: '/incident-command', icon: '△', label: '事故调查', hint: '只读 Multi-Agent 指挥台' },
   { to: '/capabilities', icon: '⌘', label: '能力地图', hint: 'Tool 与 Skill' },
