@@ -100,7 +100,8 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
                 }
                 failureInjector.after(M1ACommitStage.INPUT_PERSISTED);
 
-                Optional<AgentWorkItem> existing = readWorkItemBySourceInput(connection, input.inputId(), false);
+                Optional<AgentWorkItem> existing = readWorkItemBySourceInput(
+                        connection, principal, input.inputId(), false);
                 if (existing.isPresent()) {
                     WorkItemCreationResult result = duplicateResult(connection, input, existing.get(), principal);
                     connection.commit();
@@ -155,6 +156,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
 
                 WorkEvent createdEvent = appendLocalEvent(
                         connection,
+                        principal,
                         created,
                         new WorkEventDraft(
                                 "work-item-created:" + input.inputId(),
@@ -196,13 +198,10 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
-                AgentConversationTurn input = readInputById(connection, persistedCommand.inputId(), true)
+                AgentConversationTurn input = readInputById(
+                        connection, principal, persistedCommand.inputId(), true)
                         .orElseThrow(() -> new WorkbenchNotFoundException(
                                 "work input not found: " + persistedCommand.inputId()));
-                if (!input.tenantId().equals(principal.tenantId())
-                        || !input.ownerPrincipalId().equals(principal.principalId())) {
-                    throw new WorkbenchAccessDeniedException("work input belongs to another principal");
-                }
                 boolean directGoal = input.inputKind() == WorkInputKind.NORMAL_GOAL
                         && persistedCommand.goalOrigin() == GoalOrigin.DIRECT_NORMAL_GOAL;
                 boolean derivedGoal = input.inputKind() == WorkInputKind.WORK_COMMAND
@@ -223,7 +222,8 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
                         input.clientInputId(), input.conversationId(), input.content(), envelope,
                         persistedCommand.expectedFocusVersion());
 
-                Optional<AgentWorkItem> existing = readWorkItemBySourceInput(connection, input.inputId(), false);
+                Optional<AgentWorkItem> existing = readWorkItemBySourceInput(
+                        connection, principal, input.inputId(), false);
                 if (existing.isPresent()) {
                     WorkItemCreationResult result = duplicateResult(connection, input, existing.get(), principal);
                     connection.commit();
@@ -255,7 +255,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
                 ConversationWorkState focus = updateFocus(
                         connection, principal, input.conversationId(), created.workItemId(),
                         command.expectedFocusVersion(), now);
-                WorkEvent createdEvent = appendLocalEvent(connection, created, new WorkEventDraft(
+                WorkEvent createdEvent = appendLocalEvent(connection, principal, created, new WorkEventDraft(
                         "work-item-created:" + input.inputId(), WorkEventType.WORK_ITEM_CREATED,
                         "CREATED", "WorkItem created and focused",
                         Map.of("inputId", input.inputId(), "routingRequestId", routingRequestId,
@@ -333,9 +333,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
         }
         ensureSchema();
         try (Connection connection = openConnection()) {
-            Optional<ConversationWorkState> state = readConversation(connection, conversationId.trim(), false);
-            state.ifPresent(value -> verifyOwner(value, principal));
-            return state;
+            return readConversation(connection, principal, conversationId.trim(), false);
         }
         catch (SQLException exception) {
             throw storageFailure("Failed to find conversation work state", exception);
@@ -355,13 +353,12 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
-                ConversationWorkState current = readConversation(connection, conversationId.trim(), true)
+                ConversationWorkState current = readConversation(
+                        connection, principal, conversationId.trim(), true)
                         .orElseThrow(() -> new WorkbenchNotFoundException(
                                 "conversation work state not found: " + conversationId));
-                verifyOwner(current, principal);
-                AgentWorkItem target = readWorkItemById(connection, workItemId.trim(), true)
+                AgentWorkItem target = readWorkItemById(connection, principal, workItemId.trim(), true)
                         .orElseThrow(() -> new WorkbenchNotFoundException("work item not found: " + workItemId));
-                verifyWorkOwner(target, principal);
                 if (!target.conversationId().equals(current.conversationId())) {
                     throw new WorkbenchAccessDeniedException("focus target belongs to another conversation");
                 }
@@ -392,16 +389,15 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
-                AgentWorkItem locked = readWorkItemById(connection, workItemId.trim(), true)
+                AgentWorkItem locked = readWorkItemById(connection, principal, workItemId.trim(), true)
                         .orElseThrow(() -> new WorkbenchNotFoundException("work item not found: " + workItemId));
-                verifyWorkOwner(locked, principal);
                 Optional<WorkEvent> duplicate = readEventBySource(
                         connection, locked.workItemId(), event.sourceEventId());
                 if (duplicate.isPresent()) {
                     connection.commit();
                     return duplicate.get();
                 }
-                WorkEvent persisted = appendLocalEvent(connection, locked, event);
+                WorkEvent persisted = appendLocalEvent(connection, principal, locked, event);
                 connection.commit();
                 return persisted;
             }
@@ -428,9 +424,8 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
-                AgentWorkItem locked = readWorkItemById(connection, workItemId.trim(), true)
+                AgentWorkItem locked = readWorkItemById(connection, principal, workItemId.trim(), true)
                         .orElseThrow(() -> new WorkbenchNotFoundException("work item not found: " + workItemId));
-                verifyWorkOwner(locked, principal);
                 if (locked.version() != expectedVersion) {
                     throw new WorkbenchCasConflictException("work item version mismatch");
                 }
@@ -438,16 +433,18 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
                 try (PreparedStatement statement = connection.prepareStatement("""
                         UPDATE agent_work_item
                         SET control_state = 'ABANDONED', version = version + 1, updated_at = ?
-                        WHERE work_item_id = ? AND version = ?
+                        WHERE work_item_id = ? AND tenant_id = ? AND owner_principal_id = ? AND version = ?
                         """)) {
                     statement.setTimestamp(1, Timestamp.from(now));
                     statement.setString(2, locked.workItemId());
-                    statement.setLong(3, expectedVersion);
+                    statement.setString(3, principal.tenantId());
+                    statement.setString(4, principal.principalId());
+                    statement.setLong(5, expectedVersion);
                     if (statement.executeUpdate() != 1) {
                         throw new WorkbenchCasConflictException("work item version changed while abandoning");
                     }
                 }
-                appendLocalEvent(connection, locked, new WorkEventDraft(
+                appendLocalEvent(connection, principal, locked, new WorkEventDraft(
                         "work-item-abandoned:" + normalize(causationId, UUID.randomUUID().toString()),
                         WorkEventType.WORK_ITEM_ABANDONED,
                         "ABANDONED",
@@ -477,14 +474,18 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
         int safeLimit = Math.max(1, Math.min(limit, MAX_QUERY_LIMIT));
         try (Connection connection = openConnection();
              PreparedStatement statement = connection.prepareStatement("""
-                     SELECT * FROM agent_work_event
-                     WHERE work_item_id = ? AND sequence > ?
-                     ORDER BY sequence ASC
+                     SELECT e.* FROM agent_work_event e
+                     JOIN agent_work_item w ON w.work_item_id = e.work_item_id
+                     WHERE e.work_item_id = ? AND w.tenant_id = ? AND w.owner_principal_id = ?
+                       AND e.sequence > ?
+                     ORDER BY e.sequence ASC
                      LIMIT ?
                      """)) {
             statement.setString(1, workItem.workItemId());
-            statement.setLong(2, afterSequence);
-            statement.setInt(3, safeLimit);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
+            statement.setLong(4, afterSequence);
+            statement.setInt(5, safeLimit);
             try (ResultSet resultSet = statement.executeQuery()) {
                 List<WorkEvent> events = new ArrayList<>();
                 while (resultSet.next()) {
@@ -503,12 +504,15 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
         AgentWorkItem workItem = requireOwnedWorkItem(principal, workItemId);
         try (Connection connection = openConnection();
              PreparedStatement statement = connection.prepareStatement("""
-                     SELECT * FROM agent_work_relation
-                     WHERE source_work_item_id = ? OR target_work_item_id = ?
-                     ORDER BY created_at ASC
+                     SELECT r.* FROM agent_work_relation r
+                     JOIN agent_work_item w ON w.work_item_id = ?
+                     WHERE w.tenant_id = ? AND w.owner_principal_id = ?
+                       AND (r.source_work_item_id = w.work_item_id OR r.target_work_item_id = w.work_item_id)
+                     ORDER BY r.created_at ASC
                      """)) {
             statement.setString(1, workItem.workItemId());
-            statement.setString(2, workItem.workItemId());
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
             try (ResultSet resultSet = statement.executeQuery()) {
                 List<WorkRelation> relations = new ArrayList<>();
                 while (resultSet.next()) {
@@ -554,7 +558,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
             statement.setString(5, link.relation().name());
             statement.setTimestamp(6, Timestamp.from(now));
             statement.executeUpdate();
-            return findLink(connection, link.workItemId(), link.linkType(), link.linkedId())
+            return findLink(connection, principal, link.workItemId(), link.linkType(), link.linkedId())
                     .orElseThrow(() -> new AgentStorageException("Failed to read persisted work link", null));
         }
         catch (SQLException exception) {
@@ -567,9 +571,14 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
         AgentWorkItem workItem = requireOwnedWorkItem(principal, workItemId);
         try (Connection connection = openConnection();
              PreparedStatement statement = connection.prepareStatement("""
-                     SELECT * FROM agent_work_link WHERE work_item_id = ? ORDER BY created_at ASC
+                     SELECT l.* FROM agent_work_link l
+                     JOIN agent_work_item w ON w.work_item_id = l.work_item_id
+                     WHERE l.work_item_id = ? AND w.tenant_id = ? AND w.owner_principal_id = ?
+                     ORDER BY l.created_at ASC
                      """)) {
             statement.setString(1, workItem.workItemId());
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
             try (ResultSet resultSet = statement.executeQuery()) {
                 List<WorkLink> links = new ArrayList<>();
                 while (resultSet.next()) {
@@ -587,11 +596,10 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
                                                    AgentConversationTurn input,
                                                    AgentWorkItem workItem,
                                                    AuthenticatedPrincipal principal) throws SQLException {
-        verifyWorkOwner(workItem, principal);
         WorkRelation relation = findSourceRelation(connection, workItem.workItemId()).orElse(null);
-        ConversationWorkState focus = readConversation(connection, workItem.conversationId(), false)
+        ConversationWorkState focus = readConversation(
+                connection, principal, workItem.conversationId(), false)
                 .orElseThrow(() -> new AgentStorageException("Conversation focus missing for duplicate input", null));
-        verifyOwner(focus, principal);
         WorkEvent createdEvent = readEventByType(
                 connection, workItem.workItemId(), WorkEventType.WORK_ITEM_CREATED)
                 .orElseThrow(() -> new AgentStorageException("WORK_ITEM_CREATED missing for duplicate input", null));
@@ -614,9 +622,8 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
             statement.setTimestamp(4, Timestamp.from(Instant.now()));
             statement.executeUpdate();
         }
-        ConversationWorkState state = readConversation(connection, conversationId, true)
+        ConversationWorkState state = readConversation(connection, principal, conversationId, true)
                 .orElseThrow(() -> new AgentStorageException("Conversation state disappeared", null));
-        verifyOwner(state, principal);
         return state;
     }
 
@@ -670,11 +677,15 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
     }
 
     private Optional<AgentConversationTurn> readInputById(Connection connection,
+                                                           AuthenticatedPrincipal principal,
                                                            String inputId,
                                                            boolean forUpdate) throws SQLException {
-        String sql = "SELECT * FROM agent_work_input WHERE input_id = ?" + (forUpdate ? " FOR UPDATE" : "");
+        String sql = "SELECT * FROM agent_work_input WHERE input_id = ? AND tenant_id = ? AND owner_principal_id = ?"
+                + (forUpdate ? " FOR UPDATE" : "");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, inputId);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next() ? Optional.of(mapInput(resultSet)) : Optional.empty();
             }
@@ -687,15 +698,10 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
         if (!hasText(command.goal().parentWorkItemId())) {
             return null;
         }
-        AgentWorkItem parent = readWorkItemById(connection, command.goal().parentWorkItemId(), true)
+        AgentWorkItem parent = readWorkItemById(
+                connection, principal, command.goal().parentWorkItemId(), true)
                 .orElseThrow(() -> new WorkbenchNotFoundException(
                         "parent work item not found: " + command.goal().parentWorkItemId()));
-        if (!parent.tenantId().equals(principal.tenantId())) {
-            throw new WorkbenchAccessDeniedException("cross-tenant WorkRelation is forbidden");
-        }
-        if (!parent.ownerPrincipalId().equals(principal.principalId())) {
-            throw new WorkbenchAccessDeniedException("current principal cannot access parent WorkItem");
-        }
         return parent;
     }
 
@@ -781,13 +787,15 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
                 throw new WorkbenchCasConflictException("conversation focus CAS failed");
             }
         }
-        return readConversation(connection, conversationId, false).orElseThrow();
+        return readConversation(connection, principal, conversationId, false).orElseThrow();
     }
 
     private WorkEvent appendLocalEvent(Connection connection,
+                                       AuthenticatedPrincipal principal,
                                        AgentWorkItem knownWorkItem,
                                        WorkEventDraft draft) throws SQLException {
-        AgentWorkItem locked = readWorkItemById(connection, knownWorkItem.workItemId(), true)
+        AgentWorkItem locked = readWorkItemById(
+                connection, principal, knownWorkItem.workItemId(), true)
                 .orElseThrow(() -> new WorkbenchNotFoundException(
                         "work item not found while appending event: " + knownWorkItem.workItemId()));
         Optional<WorkEvent> duplicate = readEventBySource(
@@ -860,13 +868,17 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
     }
 
     private Optional<ConversationWorkState> readConversation(Connection connection,
+                                                              AuthenticatedPrincipal principal,
                                                               String conversationId,
                                                               boolean forUpdate) throws SQLException {
         String sql = """
-                SELECT * FROM agent_conversation_work_state WHERE conversation_id = ?
+                SELECT * FROM agent_conversation_work_state
+                WHERE conversation_id = ? AND tenant_id = ? AND owner_principal_id = ?
                 """ + (forUpdate ? " FOR UPDATE" : "");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, conversationId);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next() ? Optional.of(mapConversation(resultSet)) : Optional.empty();
             }
@@ -876,15 +888,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
     private Optional<AgentWorkItem> readWorkItemById(String workItemId,
                                                       AuthenticatedPrincipal principal) {
         try (Connection connection = openConnection()) {
-            Optional<AgentWorkItem> item = readWorkItemById(connection, workItemId, false);
-            if (item.isEmpty()) {
-                return Optional.empty();
-            }
-            if (!item.get().tenantId().equals(principal.tenantId())
-                    || !item.get().ownerPrincipalId().equals(principal.principalId())) {
-                return Optional.empty();
-            }
-            return item;
+            return readWorkItemById(connection, principal, workItemId, false);
         }
         catch (SQLException exception) {
             throw storageFailure("Failed to read work item", exception);
@@ -892,12 +896,16 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
     }
 
     private Optional<AgentWorkItem> readWorkItemById(Connection connection,
+                                                      AuthenticatedPrincipal principal,
                                                       String workItemId,
                                                       boolean forUpdate) throws SQLException {
-        String sql = "SELECT * FROM agent_work_item WHERE work_item_id = ?"
+        String sql = "SELECT * FROM agent_work_item"
+                + " WHERE work_item_id = ? AND tenant_id = ? AND owner_principal_id = ?"
                 + (forUpdate ? " FOR UPDATE" : "");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, workItemId);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next() ? Optional.of(mapWorkItem(resultSet)) : Optional.empty();
             }
@@ -905,12 +913,16 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
     }
 
     private Optional<AgentWorkItem> readWorkItemBySourceInput(Connection connection,
+                                                               AuthenticatedPrincipal principal,
                                                                String inputId,
                                                                boolean forUpdate) throws SQLException {
-        String sql = "SELECT * FROM agent_work_item WHERE source_input_id = ?"
+        String sql = "SELECT * FROM agent_work_item"
+                + " WHERE source_input_id = ? AND tenant_id = ? AND owner_principal_id = ?"
                 + (forUpdate ? " FOR UPDATE" : "");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, inputId);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next() ? Optional.of(mapWorkItem(resultSet)) : Optional.empty();
             }
@@ -964,16 +976,21 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
     }
 
     private Optional<WorkLink> findLink(Connection connection,
+                                         AuthenticatedPrincipal principal,
                                          String workItemId,
                                          WorkLinkType type,
                                          String linkedId) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
-                SELECT * FROM agent_work_link
-                WHERE work_item_id = ? AND link_type = ? AND linked_id = ?
+                SELECT l.* FROM agent_work_link l
+                JOIN agent_work_item w ON w.work_item_id = l.work_item_id
+                WHERE l.work_item_id = ? AND w.tenant_id = ? AND w.owner_principal_id = ?
+                  AND l.link_type = ? AND l.linked_id = ?
                 """)) {
             statement.setString(1, workItemId);
-            statement.setString(2, type.name());
-            statement.setString(3, linkedId);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
+            statement.setString(4, type.name());
+            statement.setString(5, linkedId);
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next() ? Optional.of(mapLink(resultSet)) : Optional.empty();
             }
@@ -993,27 +1010,12 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
     private void verifyRelatedWorkItems(Connection connection,
                                         AuthenticatedPrincipal principal,
                                         WorkRelation relation) throws SQLException {
-        AgentWorkItem source = readWorkItemById(connection, relation.sourceWorkItemId(), false).orElseThrow();
-        AgentWorkItem target = readWorkItemById(connection, relation.targetWorkItemId(), false).orElseThrow();
-        verifyWorkOwner(source, principal);
-        verifyWorkOwner(target, principal);
+        AgentWorkItem source = readWorkItemById(
+                connection, principal, relation.sourceWorkItemId(), false).orElseThrow();
+        AgentWorkItem target = readWorkItemById(
+                connection, principal, relation.targetWorkItemId(), false).orElseThrow();
         if (!source.tenantId().equals(target.tenantId())) {
             throw new WorkbenchAccessDeniedException("cross-tenant WorkRelation detected");
-        }
-    }
-
-    private void verifyOwner(ConversationWorkState state, AuthenticatedPrincipal principal) {
-        if (!state.tenantId().equals(principal.tenantId())
-                || !state.ownerPrincipalId().equals(principal.principalId())) {
-            throw new WorkbenchAccessDeniedException(
-                    "conversation is owned by another tenant or principal: " + state.conversationId());
-        }
-    }
-
-    private void verifyWorkOwner(AgentWorkItem workItem, AuthenticatedPrincipal principal) {
-        if (!workItem.tenantId().equals(principal.tenantId())
-                || !workItem.ownerPrincipalId().equals(principal.principalId())) {
-            throw new WorkbenchAccessDeniedException("work item is owned by another tenant or principal");
         }
     }
 
@@ -1293,9 +1295,12 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
                     focused_work_item_id TEXT REFERENCES agent_work_item(work_item_id),
                     version BIGINT NOT NULL DEFAULT 0,
                     updated_at TIMESTAMPTZ NOT NULL,
-                    PRIMARY KEY(tenant_id, owner_principal_id, conversation_id),
-                    UNIQUE(conversation_id)
+                    PRIMARY KEY(tenant_id, owner_principal_id, conversation_id)
                 )
+                """,
+                """
+                ALTER TABLE agent_conversation_work_state
+                DROP CONSTRAINT IF EXISTS agent_conversation_work_state_conversation_id_key
                 """,
                 """
                 CREATE TABLE IF NOT EXISTS agent_work_relation (

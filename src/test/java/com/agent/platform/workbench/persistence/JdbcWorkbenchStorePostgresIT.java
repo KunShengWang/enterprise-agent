@@ -304,7 +304,7 @@ class JdbcWorkbenchStorePostgresIT {
         WorkItemCreationResult parent = submit(store, principal, "tenant-parent", conversation("parent"), 0);
         AuthenticatedPrincipal otherTenant = principal("tenant-m1a-other-" + testPrefix, "alice");
 
-        assertThrows(WorkbenchAccessDeniedException.class, () -> service(store).submit(
+        assertThrows(WorkbenchNotFoundException.class, () -> service(store).submit(
                 otherTenant,
                 new SubmitWorkInputCommand(
                         "cross-tenant-child", conversation("cross-tenant-child"), "child", "child",
@@ -397,16 +397,16 @@ class JdbcWorkbenchStorePostgresIT {
     }
 
     @Test
-    void conversationOwnershipAndCrossConversationFocusFailClosed() {
+    void conversationOwnershipIsPrincipalScopedAndCrossConversationFocusFailsClosed() {
         JdbcWorkbenchStore store = store();
         String firstConversation = conversation("owned");
         WorkItemCreationResult first = submit(store, principal, "owned", firstConversation, 0);
         AuthenticatedPrincipal intruder = principal(principal.tenantId(), "mallory");
 
-        assertThrows(WorkbenchAccessDeniedException.class,
-                () -> submit(store, intruder, "intrude", firstConversation, 0));
-        assertThrows(WorkbenchAccessDeniedException.class,
-                () -> store.findConversationState(intruder, firstConversation));
+        WorkItemCreationResult intruderWork = submit(store, intruder, "intrude", firstConversation, 0);
+        assertNotEquals(first.workItem().workItemId(), intruderWork.workItem().workItemId());
+        assertEquals(intruderWork.workItem().workItemId(),
+                store.findConversationState(intruder, firstConversation).orElseThrow().focusedWorkItemId());
 
         WorkItemCreationResult second = submit(
                 store, principal, "other-conversation", conversation("other"), 0);

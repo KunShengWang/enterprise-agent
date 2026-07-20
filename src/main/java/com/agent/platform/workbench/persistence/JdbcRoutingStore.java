@@ -139,7 +139,7 @@ public class JdbcRoutingStore implements RoutingStore {
                 int attemptNo = nextCommandAttempt(connection, input.inputId());
                 String decisionId = "cmddec-" + UUID.randomUUID();
                 Instant now = Instant.now();
-                String focusedWorkItemId = focusedWorkItem(connection, input.conversationId());
+                String focusedWorkItemId = focusedWorkItem(connection, principal, input.conversationId());
                 try (PreparedStatement statement = connection.prepareStatement("""
                         INSERT INTO agent_work_command_decision(
                             command_decision_id, input_id, conversation_id, tenant_id,
@@ -165,7 +165,7 @@ public class JdbcRoutingStore implements RoutingStore {
                 }
                 updateInputClassificationStatus(connection, input.inputId(), "CLASSIFYING", null);
                 connection.commit();
-                return findCommandById(decisionId).orElseThrow();
+                return findCommandById(principal, decisionId).orElseThrow();
             }
             catch (RuntimeException | SQLException exception) {
                 rollback(connection);
@@ -187,8 +187,7 @@ public class JdbcRoutingStore implements RoutingStore {
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
-                WorkCommandDecision current = requireCommand(connection, commandDecisionId, true);
-                verifyDecisionOwner(current.tenantId(), current.ownerPrincipalId(), principal);
+                WorkCommandDecision current = requireCommand(connection, principal, commandDecisionId, true);
                 AgentConversationTurn input = requireInput(connection, principal, current.inputId(), true);
                 Optional<WorkCommandDecision> existing = findEffectiveCommand(connection, input.inputId());
                 if (existing.isPresent() && !existing.get().commandDecisionId().equals(commandDecisionId)) {
@@ -251,7 +250,7 @@ public class JdbcRoutingStore implements RoutingStore {
                     statement.executeUpdate();
                 }
                 connection.commit();
-                return findCommandById(commandDecisionId).orElseThrow();
+                return findCommandById(principal, commandDecisionId).orElseThrow();
             }
             catch (RuntimeException | SQLException exception) {
                 rollback(connection);
@@ -273,8 +272,7 @@ public class JdbcRoutingStore implements RoutingStore {
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
-                WorkCommandDecision current = requireCommand(connection, commandDecisionId, true);
-                verifyDecisionOwner(current.tenantId(), current.ownerPrincipalId(), principal);
+                WorkCommandDecision current = requireCommand(connection, principal, commandDecisionId, true);
                 try (PreparedStatement statement = connection.prepareStatement("""
                         UPDATE agent_work_command_decision SET decision_status='FAILED_ATTEMPT',
                             failure_code=?, failure_reason=?, completed_at=?
@@ -288,7 +286,7 @@ public class JdbcRoutingStore implements RoutingStore {
                 }
                 updateInputClassificationStatus(connection, current.inputId(), "FAILED", failureReason);
                 connection.commit();
-                return findCommandById(commandDecisionId).orElseThrow();
+                return findCommandById(principal, commandDecisionId).orElseThrow();
             }
             catch (RuntimeException | SQLException exception) {
                 rollback(connection);
@@ -305,8 +303,7 @@ public class JdbcRoutingStore implements RoutingStore {
         requirePrincipal(principal);
         ensureSchema();
         try (Connection connection = openConnection()) {
-            requireInput(connection, principal, inputId, false);
-            return findEffectiveCommand(connection, inputId);
+            return findEffectiveCommand(connection, principal, inputId);
         }
         catch (SQLException exception) { throw storage("Failed to find effective command", exception); }
     }
@@ -316,11 +313,13 @@ public class JdbcRoutingStore implements RoutingStore {
         requirePrincipal(principal);
         ensureSchema();
         try (Connection connection = openConnection()) {
-            requireInput(connection, principal, inputId, false);
             try (PreparedStatement statement = connection.prepareStatement("""
-                    SELECT * FROM agent_work_command_decision WHERE input_id=? ORDER BY attempt_no
+                    SELECT * FROM agent_work_command_decision
+                    WHERE input_id=? AND tenant_id=? AND owner_principal_id=? ORDER BY attempt_no
                     """)) {
                 statement.setString(1, inputId);
+                statement.setString(2, principal.tenantId());
+                statement.setString(3, principal.principalId());
                 try (ResultSet rs = statement.executeQuery()) {
                     List<WorkCommandDecision> result = new ArrayList<>();
                     while (rs.next()) result.add(mapCommand(rs));
@@ -427,7 +426,10 @@ public class JdbcRoutingStore implements RoutingStore {
             connection.setAutoCommit(false);
             try {
                 AgentWorkItem work = requireWork(connection, principal, attempt.workItemId(), true);
-                RoutingDecisionRecord current = requireRouting(connection, attempt.decisionId(), true);
+                RoutingDecisionRecord current = requireRouting(connection, principal, attempt.decisionId(), true);
+                if (!current.workItemId().equals(work.workItemId())) {
+                    throw new WorkbenchNotFoundException("routing decision not found for work item");
+                }
                 Optional<RoutingDecisionRecord> effective = findEffectiveRouting(connection, work.workItemId());
                 if (effective.isPresent() && !effective.get().decisionId().equals(current.decisionId())) {
                     markRoutingSuperseded(connection, current.decisionId());
@@ -491,7 +493,7 @@ public class JdbcRoutingStore implements RoutingStore {
                                 "traceId", current.traceId()), current.decisionId());
                 appendDispositionEvent(connection, work.workItemId(), current.decisionId(), validation, dispatchRequestId);
                 connection.commit();
-                return findRoutingById(current.decisionId()).orElseThrow();
+                return findRoutingById(principal, current.decisionId()).orElseThrow();
             }
             catch (RuntimeException | SQLException exception) {
                 rollback(connection);
@@ -515,7 +517,10 @@ public class JdbcRoutingStore implements RoutingStore {
             connection.setAutoCommit(false);
             try {
                 AgentWorkItem work = requireWork(connection, principal, attempt.workItemId(), true);
-                RoutingDecisionRecord current = requireRouting(connection, attempt.decisionId(), true);
+                RoutingDecisionRecord current = requireRouting(connection, principal, attempt.decisionId(), true);
+                if (!current.workItemId().equals(work.workItemId())) {
+                    throw new WorkbenchNotFoundException("routing decision not found for work item");
+                }
                 Instant now = Instant.now();
                 RouterFailureObservation observed = observation == null
                         ? RouterFailureObservation.empty() : observation;
@@ -556,7 +561,7 @@ public class JdbcRoutingStore implements RoutingStore {
                         Map.of("decisionId", current.decisionId(), "failureCode", failureCode,
                                 "attemptNo", current.attemptNo(), "exhausted", exhausted), current.decisionId());
                 connection.commit();
-                return findRoutingById(current.decisionId()).orElseThrow();
+                return findRoutingById(principal, current.decisionId()).orElseThrow();
             }
             catch (RuntimeException | SQLException exception) {
                 rollback(connection);
@@ -605,8 +610,7 @@ public class JdbcRoutingStore implements RoutingStore {
         requirePrincipal(principal);
         ensureSchema();
         try (Connection connection = openConnection()) {
-            requireWork(connection, principal, workItemId, false);
-            return findEffectiveRouting(connection, workItemId);
+            return findEffectiveRouting(connection, principal, workItemId);
         }
         catch (SQLException exception) { throw storage("Failed to find effective routing", exception); }
     }
@@ -616,11 +620,15 @@ public class JdbcRoutingStore implements RoutingStore {
         requirePrincipal(principal);
         ensureSchema();
         try (Connection connection = openConnection()) {
-            requireWork(connection, principal, workItemId, false);
             try (PreparedStatement statement = connection.prepareStatement("""
-                    SELECT * FROM agent_routing_decision WHERE work_item_id=? ORDER BY attempt_no
+                    SELECT d.* FROM agent_routing_decision d
+                    JOIN agent_work_item w ON w.work_item_id=d.work_item_id
+                    WHERE d.work_item_id=? AND w.tenant_id=? AND w.owner_principal_id=?
+                    ORDER BY d.attempt_no
                     """)) {
                 statement.setString(1, workItemId);
+                statement.setString(2, principal.tenantId());
+                statement.setString(3, principal.principalId());
                 try (ResultSet rs = statement.executeQuery()) {
                     List<RoutingDecisionRecord> result = new ArrayList<>();
                     while (rs.next()) result.add(mapRouting(rs));
@@ -792,14 +800,16 @@ public class JdbcRoutingStore implements RoutingStore {
                                                AuthenticatedPrincipal principal,
                                                String inputId,
                                                boolean lock) throws SQLException {
-        String sql = "SELECT * FROM agent_work_input WHERE input_id=?" + (lock ? " FOR UPDATE" : "");
+        String sql = "SELECT * FROM agent_work_input"
+                + " WHERE input_id=? AND tenant_id=? AND owner_principal_id=?"
+                + (lock ? " FOR UPDATE" : "");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, inputId);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
             try (ResultSet rs = statement.executeQuery()) {
                 if (!rs.next()) throw new WorkbenchNotFoundException("input not found: " + inputId);
-                AgentConversationTurn input = mapInput(rs);
-                verifyDecisionOwner(input.tenantId(), input.ownerPrincipalId(), principal);
-                return input;
+                return mapInput(rs);
             }
         }
     }
@@ -808,22 +818,31 @@ public class JdbcRoutingStore implements RoutingStore {
                                       AuthenticatedPrincipal principal,
                                       String workItemId,
                                       boolean lock) throws SQLException {
-        String sql = "SELECT * FROM agent_work_item WHERE work_item_id=?" + (lock ? " FOR UPDATE" : "");
+        String sql = "SELECT * FROM agent_work_item"
+                + " WHERE work_item_id=? AND tenant_id=? AND owner_principal_id=?"
+                + (lock ? " FOR UPDATE" : "");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, workItemId);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
             try (ResultSet rs = statement.executeQuery()) {
                 if (!rs.next()) throw new WorkbenchNotFoundException("work item not found: " + workItemId);
-                AgentWorkItem work = mapWork(rs);
-                verifyDecisionOwner(work.tenantId(), work.ownerPrincipalId(), principal);
-                return work;
+                return mapWork(rs);
             }
         }
     }
 
-    private WorkCommandDecision requireCommand(Connection connection, String id, boolean lock) throws SQLException {
-        String sql = "SELECT * FROM agent_work_command_decision WHERE command_decision_id=?" + (lock ? " FOR UPDATE" : "");
+    private WorkCommandDecision requireCommand(Connection connection,
+                                               AuthenticatedPrincipal principal,
+                                               String id,
+                                               boolean lock) throws SQLException {
+        String sql = "SELECT * FROM agent_work_command_decision"
+                + " WHERE command_decision_id=? AND tenant_id=? AND owner_principal_id=?"
+                + (lock ? " FOR UPDATE" : "");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, id);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
             try (ResultSet rs = statement.executeQuery()) {
                 if (!rs.next()) throw new WorkbenchNotFoundException("command decision not found: " + id);
                 return mapCommand(rs);
@@ -831,10 +850,18 @@ public class JdbcRoutingStore implements RoutingStore {
         }
     }
 
-    private RoutingDecisionRecord requireRouting(Connection connection, String id, boolean lock) throws SQLException {
-        String sql = "SELECT * FROM agent_routing_decision WHERE decision_id=?" + (lock ? " FOR UPDATE" : "");
+    private RoutingDecisionRecord requireRouting(Connection connection,
+                                                 AuthenticatedPrincipal principal,
+                                                 String id,
+                                                 boolean lock) throws SQLException {
+        String sql = "SELECT d.* FROM agent_routing_decision d"
+                + " JOIN agent_work_item w ON w.work_item_id=d.work_item_id"
+                + " WHERE d.decision_id=? AND w.tenant_id=? AND w.owner_principal_id=?"
+                + (lock ? " FOR UPDATE OF d" : "");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, id);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
             try (ResultSet rs = statement.executeQuery()) {
                 if (!rs.next()) throw new WorkbenchNotFoundException("routing decision not found: " + id);
                 return mapRouting(rs);
@@ -851,12 +878,47 @@ public class JdbcRoutingStore implements RoutingStore {
         }
     }
 
+    private Optional<WorkCommandDecision> findEffectiveCommand(Connection connection,
+                                                                AuthenticatedPrincipal principal,
+                                                                String inputId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT * FROM agent_work_command_decision
+                WHERE input_id=? AND tenant_id=? AND owner_principal_id=?
+                  AND decision_status='EFFECTIVE'
+                """)) {
+            statement.setString(1, inputId);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next() ? Optional.of(mapCommand(rs)) : Optional.empty();
+            }
+        }
+    }
+
     private Optional<RoutingDecisionRecord> findEffectiveRouting(Connection connection, String workItemId) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT * FROM agent_routing_decision WHERE work_item_id=? AND decision_status='EFFECTIVE'
                 """)) {
             statement.setString(1, workItemId);
             try (ResultSet rs = statement.executeQuery()) { return rs.next() ? Optional.of(mapRouting(rs)) : Optional.empty(); }
+        }
+    }
+
+    private Optional<RoutingDecisionRecord> findEffectiveRouting(Connection connection,
+                                                                  AuthenticatedPrincipal principal,
+                                                                  String workItemId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT d.* FROM agent_routing_decision d
+                JOIN agent_work_item w ON w.work_item_id=d.work_item_id
+                WHERE d.work_item_id=? AND w.tenant_id=? AND w.owner_principal_id=?
+                  AND d.decision_status='EFFECTIVE'
+                """)) {
+            statement.setString(1, workItemId);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next() ? Optional.of(mapRouting(rs)) : Optional.empty();
+            }
         }
     }
 
@@ -870,13 +932,17 @@ public class JdbcRoutingStore implements RoutingStore {
         }
     }
 
-    private Optional<WorkCommandDecision> findCommandById(String id) {
-        try (Connection connection = openConnection()) { return Optional.of(requireCommand(connection, id, false)); }
+    private Optional<WorkCommandDecision> findCommandById(AuthenticatedPrincipal principal, String id) {
+        try (Connection connection = openConnection()) {
+            return Optional.of(requireCommand(connection, principal, id, false));
+        }
         catch (SQLException exception) { throw storage("Failed to read command decision", exception); }
     }
 
-    private Optional<RoutingDecisionRecord> findRoutingById(String id) {
-        try (Connection connection = openConnection()) { return Optional.of(requireRouting(connection, id, false)); }
+    private Optional<RoutingDecisionRecord> findRoutingById(AuthenticatedPrincipal principal, String id) {
+        try (Connection connection = openConnection()) {
+            return Optional.of(requireRouting(connection, principal, id, false));
+        }
         catch (SQLException exception) { throw storage("Failed to read routing decision", exception); }
     }
 
@@ -888,10 +954,15 @@ public class JdbcRoutingStore implements RoutingStore {
         }
     }
 
-    private String focusedWorkItem(Connection connection, String conversationId) throws SQLException {
+    private String focusedWorkItem(Connection connection,
+                                   AuthenticatedPrincipal principal,
+                                   String conversationId) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT focused_work_item_id FROM agent_conversation_work_state WHERE conversation_id=?")) {
+                "SELECT focused_work_item_id FROM agent_conversation_work_state"
+                        + " WHERE conversation_id=? AND tenant_id=? AND owner_principal_id=?")) {
             statement.setString(1, conversationId);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
             try (ResultSet rs = statement.executeQuery()) { return rs.next() ? blank(rs.getString(1)) : ""; }
         }
     }
@@ -912,12 +983,13 @@ public class JdbcRoutingStore implements RoutingStore {
         }
         try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT tenant_id, owner_principal_id FROM agent_conversation_work_state
-                WHERE conversation_id=? FOR UPDATE
+                WHERE conversation_id=? AND tenant_id=? AND owner_principal_id=? FOR UPDATE
                 """)) {
             statement.setString(1, conversationId);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
             try (ResultSet rs = statement.executeQuery()) {
                 if (!rs.next()) throw new WorkbenchNotFoundException("conversation state missing");
-                verifyDecisionOwner(rs.getString(1), rs.getString(2), principal);
             }
         }
     }
@@ -1095,11 +1167,6 @@ public class JdbcRoutingStore implements RoutingStore {
     }
     private void requirePrincipal(AuthenticatedPrincipal principal) {
         if (principal == null) throw new IllegalArgumentException("authenticated principal is required");
-    }
-    private void verifyDecisionOwner(String tenant, String owner, AuthenticatedPrincipal principal) {
-        if (!tenant.equals(principal.tenantId()) || !owner.equals(principal.principalId())) {
-            throw new WorkbenchAccessDeniedException("record belongs to another tenant or principal");
-        }
     }
     private String requireText(String value, String field) {
         if (!hasText(value)) throw new IllegalArgumentException(field + " must not be blank");

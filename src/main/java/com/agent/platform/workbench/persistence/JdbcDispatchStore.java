@@ -67,7 +67,7 @@ public class JdbcDispatchStore implements DispatchStore {
             connection.setAutoCommit(false);
             try {
                 AgentWorkItem locked = requireWork(connection, principal, workItem.workItemId(), true);
-                Optional<RoutePreview> existing = findPreview(connection, locked.workItemId());
+                Optional<RoutePreview> existing = findPreview(connection, principal, locked.workItemId());
                 if (existing.isPresent()) {
                     connection.commit();
                     return existing.get();
@@ -120,7 +120,7 @@ public class JdbcDispatchStore implements DispatchStore {
         ensureSchema();
         try (Connection connection = openConnection()) {
             requireWork(connection, principal, workItemId, false);
-            return findPreview(connection, workItemId);
+            return findPreview(connection, principal, workItemId);
         }
         catch (SQLException exception) { throw storage("Failed to read route preview", exception); }
     }
@@ -154,7 +154,7 @@ public class JdbcDispatchStore implements DispatchStore {
             connection.setAutoCommit(false);
             try {
                 AgentWorkItem work = requireWork(connection, principal, workItemId, true);
-                RoutePreview preview = requirePreview(connection, workItemId, true);
+                RoutePreview preview = requirePreview(connection, principal, workItemId, true);
                 if (!preview.previewId().equals(previewId)) throw new WorkbenchIdempotencyConflictException("previewId mismatch");
                 if (preview.status() != RoutePreviewStatus.ACTIVE) {
                     if (confirm && preview.status() == RoutePreviewStatus.CONFIRMED) {
@@ -299,7 +299,8 @@ public class JdbcDispatchStore implements DispatchStore {
             connection.setAutoCommit(false);
             try {
                 AgentWorkItem work = requireWork(connection, principal, claim.attempt().workItemId(), true);
-                DispatchAttempt attempt = requireAttempt(connection, claim.attempt().attemptId(), true);
+                DispatchAttempt attempt = requireAttempt(
+                        connection, principal, work.workItemId(), claim.attempt().attemptId(), true);
                 if (!work.dispatchRequestId().equals(result.dispatchRequestId())
                         || !attempt.dispatchRequestId().equals(result.dispatchRequestId())) {
                     throw new WorkbenchIdempotencyConflictException("adapter returned another dispatchRequestId");
@@ -307,7 +308,8 @@ public class JdbcDispatchStore implements DispatchStore {
                 Optional<DispatchAttempt> effective = effectiveAttempt(connection, work.workItemId());
                 if (effective.isPresent() && !effective.get().attemptId().equals(attempt.attemptId())) {
                     markSuperseded(connection, attempt.attemptId());
-                    WorkLink existing = requireLinkByDispatch(connection, work.dispatchRequestId());
+                    WorkLink existing = requireLinkByDispatch(
+                            connection, principal, work.workItemId(), work.dispatchRequestId());
                     connection.commit();
                     return existing;
                 }
@@ -334,7 +336,8 @@ public class JdbcDispatchStore implements DispatchStore {
                     statement.setTimestamp(6, Timestamp.from(now));
                     statement.executeUpdate();
                 }
-                WorkLink link = requireLinkByDispatch(connection, work.dispatchRequestId());
+                WorkLink link = requireLinkByDispatch(
+                        connection, principal, work.workItemId(), work.dispatchRequestId());
                 if (!link.linkedId().equals(result.linkedId()) || link.linkType() != result.linkType()) {
                     throw new WorkbenchIdempotencyConflictException("dispatchRequestId is linked to another target");
                 }
@@ -372,7 +375,8 @@ public class JdbcDispatchStore implements DispatchStore {
             connection.setAutoCommit(false);
             try {
                 AgentWorkItem work = requireWork(connection, principal, claim.attempt().workItemId(), true);
-                DispatchAttempt attempt = requireAttempt(connection, claim.attempt().attemptId(), true);
+                DispatchAttempt attempt = requireAttempt(
+                        connection, principal, work.workItemId(), claim.attempt().attemptId(), true);
                 Instant now = Instant.now();
                 try (PreparedStatement statement = connection.prepareStatement("""
                         UPDATE agent_dispatch_attempt SET status='FAILED_ATTEMPT', failure_code=?,
@@ -402,7 +406,7 @@ public class JdbcDispatchStore implements DispatchStore {
                         Map.of("attemptId", attempt.attemptId(), "failureCode", failureCode,
                                 "exhausted", exhausted), attempt.attemptId());
                 connection.commit();
-                return requireAttempt(attempt.attemptId());
+                return requireAttempt(principal, work.workItemId(), attempt.attemptId());
             }
             catch (RuntimeException | SQLException exception) {
                 rollback(connection);
@@ -450,8 +454,13 @@ public class JdbcDispatchStore implements DispatchStore {
         try (Connection connection = openConnection()) {
             requireWork(connection, principal, workItemId, false);
             try (PreparedStatement statement = connection.prepareStatement(
-                    "SELECT * FROM agent_dispatch_attempt WHERE work_item_id=? ORDER BY attempt_no")) {
+                    "SELECT a.* FROM agent_dispatch_attempt a"
+                            + " JOIN agent_work_item w ON w.work_item_id=a.work_item_id"
+                            + " WHERE a.work_item_id=? AND w.tenant_id=? AND w.owner_principal_id=?"
+                            + " ORDER BY a.attempt_no")) {
                 statement.setString(1, workItemId);
+                statement.setString(2, principal.tenantId());
+                statement.setString(3, principal.principalId());
                 try (ResultSet rs = statement.executeQuery()) {
                     List<DispatchAttempt> result = new ArrayList<>();
                     while (rs.next()) result.add(mapAttempt(rs));
@@ -553,32 +562,58 @@ public class JdbcDispatchStore implements DispatchStore {
     }
 
     private AgentWorkItem requireWork(Connection connection, AuthenticatedPrincipal principal, String id, boolean lock) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM agent_work_item WHERE work_item_id=?" + (lock ? " FOR UPDATE" : ""))) {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT * FROM agent_work_item"
+                        + " WHERE work_item_id=? AND tenant_id=? AND owner_principal_id=?"
+                        + (lock ? " FOR UPDATE" : ""))) {
             statement.setString(1, id);
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
             try (ResultSet rs=statement.executeQuery()) {
                 if (!rs.next()) throw new WorkbenchNotFoundException("work item not found: " + id);
-                AgentWorkItem work=mapWork(rs);
-                if (!work.tenantId().equals(principal.tenantId()) || !work.ownerPrincipalId().equals(principal.principalId())) throw new WorkbenchAccessDeniedException("work item owner mismatch");
-                return work;
+                return mapWork(rs);
             }
         }
     }
-    private DispatchAttempt requireAttempt(Connection connection, String id, boolean lock) throws SQLException {
-        try (PreparedStatement statement=connection.prepareStatement("SELECT * FROM agent_dispatch_attempt WHERE attempt_id=?"+(lock?" FOR UPDATE":""))) {
-            statement.setString(1,id); try(ResultSet rs=statement.executeQuery()){if(!rs.next())throw new WorkbenchNotFoundException("dispatch attempt missing");return mapAttempt(rs);}
+    private DispatchAttempt requireAttempt(Connection connection,
+                                           AuthenticatedPrincipal principal,
+                                           String workItemId,
+                                           String id,
+                                           boolean lock) throws SQLException {
+        String sql = "SELECT a.* FROM agent_dispatch_attempt a"
+                + " JOIN agent_work_item w ON w.work_item_id=a.work_item_id"
+                + " WHERE a.attempt_id=? AND a.work_item_id=?"
+                + " AND w.tenant_id=? AND w.owner_principal_id=?"
+                + (lock ? " FOR UPDATE OF a" : "");
+        try (PreparedStatement statement=connection.prepareStatement(sql)) {
+            statement.setString(1,id);
+            statement.setString(2,workItemId);
+            statement.setString(3,principal.tenantId());
+            statement.setString(4,principal.principalId());
+            try(ResultSet rs=statement.executeQuery()){
+                if(!rs.next())throw new WorkbenchNotFoundException("dispatch attempt missing");
+                return mapAttempt(rs);
+            }
         }
     }
-    private DispatchAttempt requireAttempt(String id) {
-        try(Connection connection=openConnection()){return requireAttempt(connection,id,false);}catch(SQLException e){throw storage("Failed to read dispatch attempt",e);}
+    private DispatchAttempt requireAttempt(AuthenticatedPrincipal principal,String workItemId,String id) {
+        try(Connection connection=openConnection()){
+            return requireAttempt(connection,principal,workItemId,id,false);
+        }catch(SQLException e){throw storage("Failed to read dispatch attempt",e);}
     }
-    private RoutePreview requirePreview(Connection connection,String workItemId,boolean lock)throws SQLException{
-        try(PreparedStatement statement=connection.prepareStatement("SELECT * FROM agent_route_preview WHERE work_item_id=?"+(lock?" FOR UPDATE":""))){statement.setString(1,workItemId);try(ResultSet rs=statement.executeQuery()){if(!rs.next())throw new WorkbenchNotFoundException("route preview missing");return mapPreview(rs);}}
+    private RoutePreview requirePreview(Connection connection,AuthenticatedPrincipal principal,String workItemId,boolean lock)throws SQLException{
+        return findPreview(connection,principal,workItemId,lock).orElseThrow(() -> new WorkbenchNotFoundException("route preview missing"));
     }
-    private Optional<RoutePreview> findPreview(Connection connection,String workItemId)throws SQLException{
-        try(PreparedStatement statement=connection.prepareStatement("SELECT * FROM agent_route_preview WHERE work_item_id=?")){statement.setString(1,workItemId);try(ResultSet rs=statement.executeQuery()){return rs.next()?Optional.of(mapPreview(rs)):Optional.empty();}}
+    private Optional<RoutePreview> findPreview(Connection connection,AuthenticatedPrincipal principal,String workItemId)throws SQLException{
+        return findPreview(connection,principal,workItemId,false);
     }
-    private WorkLink requireLinkByDispatch(Connection connection,String dispatchId)throws SQLException{
-        try(PreparedStatement statement=connection.prepareStatement("SELECT * FROM agent_work_link WHERE dispatch_request_id=?")){statement.setString(1,dispatchId);try(ResultSet rs=statement.executeQuery()){if(!rs.next())throw new WorkbenchNotFoundException("work link missing");return new WorkLink(rs.getString("work_item_id"),rs.getString("dispatch_request_id"),WorkLinkType.valueOf(rs.getString("link_type")),rs.getString("linked_id"),WorkLinkRelation.valueOf(rs.getString("relation")),rs.getTimestamp("created_at").toInstant());}}
+    private Optional<RoutePreview> findPreview(Connection connection,AuthenticatedPrincipal principal,String workItemId,boolean lock)throws SQLException{
+        String sql="SELECT p.* FROM agent_route_preview p JOIN agent_work_item w ON w.work_item_id=p.work_item_id WHERE p.work_item_id=? AND w.tenant_id=? AND w.owner_principal_id=?"+(lock?" FOR UPDATE OF p":"");
+        try(PreparedStatement statement=connection.prepareStatement(sql)){statement.setString(1,workItemId);statement.setString(2,principal.tenantId());statement.setString(3,principal.principalId());try(ResultSet rs=statement.executeQuery()){return rs.next()?Optional.of(mapPreview(rs)):Optional.empty();}}
+    }
+    private WorkLink requireLinkByDispatch(Connection connection,AuthenticatedPrincipal principal,String workItemId,String dispatchId)throws SQLException{
+        String sql="SELECT l.* FROM agent_work_link l JOIN agent_work_item w ON w.work_item_id=l.work_item_id WHERE l.dispatch_request_id=? AND l.work_item_id=? AND w.tenant_id=? AND w.owner_principal_id=?";
+        try(PreparedStatement statement=connection.prepareStatement(sql)){statement.setString(1,dispatchId);statement.setString(2,workItemId);statement.setString(3,principal.tenantId());statement.setString(4,principal.principalId());try(ResultSet rs=statement.executeQuery()){if(!rs.next())throw new WorkbenchNotFoundException("work link missing");return new WorkLink(rs.getString("work_item_id"),rs.getString("dispatch_request_id"),WorkLinkType.valueOf(rs.getString("link_type")),rs.getString("linked_id"),WorkLinkRelation.valueOf(rs.getString("relation")),rs.getTimestamp("created_at").toInstant());}}
     }
     private void expirePreview(Connection connection,String id)throws SQLException{try(PreparedStatement s=connection.prepareStatement("UPDATE agent_route_preview SET status='EXPIRED' WHERE preview_id=? AND status='ACTIVE'")){s.setString(1,id);s.executeUpdate();}}
 

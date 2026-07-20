@@ -64,9 +64,14 @@ CREATE TABLE IF NOT EXISTS agent_conversation_work_state (
     focused_work_item_id TEXT REFERENCES agent_work_item(work_item_id),
     version BIGINT NOT NULL DEFAULT 0,
     updated_at TIMESTAMPTZ NOT NULL,
-    PRIMARY KEY(tenant_id, owner_principal_id, conversation_id),
-    UNIQUE(conversation_id)
+    PRIMARY KEY(tenant_id, owner_principal_id, conversation_id)
 );
+
+-- S0 tenant isolation migration for databases created before the composite
+-- ownership key became authoritative. A conversation id is only unique inside
+-- (tenant_id, owner_principal_id), never globally.
+ALTER TABLE agent_conversation_work_state
+    DROP CONSTRAINT IF EXISTS agent_conversation_work_state_conversation_id_key;
 
 CREATE TABLE IF NOT EXISTS agent_work_relation (
     source_work_item_id TEXT NOT NULL REFERENCES agent_work_item(work_item_id),
