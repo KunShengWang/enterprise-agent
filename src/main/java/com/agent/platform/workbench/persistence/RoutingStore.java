@@ -50,6 +50,21 @@ public interface RoutingStore {
                                           long unknownResultTokenReserve,
                                           String catalogVersion);
 
+    default Optional<RoutingAttempt> claimRouting(AuthenticatedPrincipal principal,
+                                                  String workItemId,
+                                                  String routingRequestId,
+                                                  Instant staleBefore,
+                                                  int maxAttempts,
+                                                  long unknownResultTokenReserve,
+                                                  String catalogVersion,
+                                                  String leaseOwner,
+                                                  Instant leaseUntil) {
+        return claimRouting(principal, workItemId, routingRequestId, staleBefore, maxAttempts,
+                unknownResultTokenReserve, catalogVersion);
+    }
+
+    default boolean renewRoutingLease(RoutingAttempt attempt, Instant leaseUntil) { return true; }
+
     RoutingDecisionRecord completeRouting(AuthenticatedPrincipal principal,
                                           RoutingAttempt attempt,
                                           RouterModelResult modelResult,

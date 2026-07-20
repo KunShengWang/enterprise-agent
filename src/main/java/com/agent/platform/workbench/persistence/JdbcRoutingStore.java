@@ -338,7 +338,26 @@ public class JdbcRoutingStore implements RoutingStore {
                                                  int maxAttempts,
                                                  long unknownResultTokenReserve,
                                                  String catalogVersion) {
+        return claimRouting(principal, workItemId, routingRequestId, staleBefore, maxAttempts,
+                unknownResultTokenReserve, catalogVersion, "routing-" + UUID.randomUUID(),
+                Instant.now().plusSeconds(15));
+    }
+
+    @Override
+    public Optional<RoutingAttempt> claimRouting(AuthenticatedPrincipal principal,
+                                                 String workItemId,
+                                                 String routingRequestId,
+                                                 Instant staleBefore,
+                                                 int maxAttempts,
+                                                 long unknownResultTokenReserve,
+                                                 String catalogVersion,
+                                                 String leaseOwner,
+                                                 Instant leaseUntil) {
         requirePrincipal(principal);
+        requireText(leaseOwner, "leaseOwner");
+        if (leaseUntil == null || !leaseUntil.isAfter(Instant.now())) {
+            throw new IllegalArgumentException("routing leaseUntil must be in the future");
+        }
         ensureSchema();
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
@@ -353,7 +372,8 @@ public class JdbcRoutingStore implements RoutingStore {
                 }
                 Optional<RoutingDecisionRecord> started = findStartedRouting(connection, workItemId);
                 if (started.isPresent()) {
-                    if (started.get().createdAt().isAfter(staleBefore)) {
+                    if (started.get().createdAt().isAfter(staleBefore)
+                            || routingLeaseActive(connection, started.get().decisionId(), Instant.now())) {
                         connection.commit();
                         return Optional.empty();
                     }
@@ -368,15 +388,16 @@ public class JdbcRoutingStore implements RoutingStore {
                 String decisionId = "rdec-" + UUID.randomUUID();
                 String traceId = "router-" + UUID.randomUUID();
                 Instant now = Instant.now();
+                long fencingToken = nextRoutingFencingToken(connection, workItemId);
                 try (PreparedStatement statement = connection.prepareStatement("""
                         INSERT INTO agent_routing_decision(
                             decision_id, work_item_id, routing_request_id, attempt_no,
                             decision_status, model_name, target_catalog_version, prompt_digest,
                             raw_output_digest, decision_json, validation_json, prompt_tokens,
                             completion_tokens, latency_ms, failure_code, failure_reason,
-                            trace_id, created_at, completed_at
+                            trace_id, lease_owner, lease_until, fencing_token, created_at, completed_at
                         ) VALUES (?, ?, ?, ?, 'STARTED', NULL, ?, NULL, NULL, NULL, NULL,
-                                  0, 0, 0, NULL, NULL, ?, ?, NULL)
+                                  0, 0, 0, NULL, NULL, ?, ?, ?, ?, ?, NULL)
                         """)) {
                     statement.setString(1, decisionId);
                     statement.setString(2, workItemId);
@@ -384,7 +405,10 @@ public class JdbcRoutingStore implements RoutingStore {
                     statement.setInt(4, attemptNo);
                     statement.setString(5, catalogVersion);
                     statement.setString(6, traceId);
-                    statement.setTimestamp(7, Timestamp.from(now));
+                    statement.setString(7, leaseOwner);
+                    statement.setTimestamp(8, Timestamp.from(leaseUntil));
+                    statement.setLong(9, fencingToken);
+                    statement.setTimestamp(10, Timestamp.from(now));
                     statement.executeUpdate();
                 }
                 try (PreparedStatement statement = connection.prepareStatement("""
@@ -402,7 +426,8 @@ public class JdbcRoutingStore implements RoutingStore {
                         WorkEventType.ROUTING_STARTED, "ROUTING", "Router model attempt started",
                         Map.of("decisionId", decisionId, "attemptNo", attemptNo, "traceId", traceId), decisionId);
                 connection.commit();
-                return Optional.of(new RoutingAttempt(decisionId, workItemId, routingRequestId, attemptNo, traceId));
+                return Optional.of(new RoutingAttempt(decisionId, workItemId, routingRequestId, attemptNo,
+                        traceId, leaseOwner, fencingToken, leaseUntil));
             }
             catch (RuntimeException | SQLException exception) {
                 rollback(connection);
@@ -410,6 +435,28 @@ public class JdbcRoutingStore implements RoutingStore {
             }
         }
         catch (SQLException exception) { throw storage("Failed to claim routing", exception); }
+    }
+
+    @Override
+    public boolean renewRoutingLease(RoutingAttempt attempt, Instant leaseUntil) {
+        if (attempt == null || attempt.fencingToken() <= 0 || !hasText(attempt.leaseOwner()) || leaseUntil == null) {
+            return false;
+        }
+        ensureSchema();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE agent_routing_decision SET lease_until=?
+                     WHERE decision_id=? AND decision_status='STARTED'
+                       AND lease_owner=? AND fencing_token=?
+                     """)) {
+            statement.setTimestamp(1, Timestamp.from(leaseUntil));
+            statement.setString(2, attempt.decisionId());
+            statement.setString(3, attempt.leaseOwner());
+            statement.setLong(4, attempt.fencingToken());
+            return statement.executeUpdate() == 1;
+        } catch (SQLException exception) {
+            throw storage("Failed to renew routing lease", exception);
+        }
     }
 
     @Override
@@ -430,6 +477,7 @@ public class JdbcRoutingStore implements RoutingStore {
                 if (!current.workItemId().equals(work.workItemId())) {
                     throw new WorkbenchNotFoundException("routing decision not found for work item");
                 }
+                requireCurrentRoutingClaim(connection, attempt, current.decisionStatus(), Instant.now());
                 Optional<RoutingDecisionRecord> effective = findEffectiveRouting(connection, work.workItemId());
                 if (effective.isPresent() && !effective.get().decisionId().equals(current.decisionId())) {
                     markRoutingSuperseded(connection, current.decisionId());
@@ -445,6 +493,7 @@ public class JdbcRoutingStore implements RoutingStore {
                             validation_json=?::jsonb, prompt_tokens=?, completion_tokens=?,
                             latency_ms=?, failure_code=?, failure_reason=?, completed_at=?
                         WHERE decision_id=? AND decision_status='STARTED'
+                          AND (? = 0 OR (lease_owner=? AND fencing_token=? AND lease_until>?))
                         """)) {
                     statement.setString(1, nullIfBlank(modelResult.modelName()));
                     statement.setString(2, modelResult.promptDigest());
@@ -458,6 +507,10 @@ public class JdbcRoutingStore implements RoutingStore {
                     statement.setString(10, validation.reasons().isEmpty() ? null : String.join("; ", validation.reasons()));
                     statement.setTimestamp(11, Timestamp.from(now));
                     statement.setString(12, current.decisionId());
+                    statement.setLong(13, attempt.fencingToken());
+                    statement.setString(14, nullIfBlank(attempt.leaseOwner()));
+                    statement.setLong(15, attempt.fencingToken());
+                    statement.setTimestamp(16, Timestamp.from(now));
                     if (statement.executeUpdate() != 1) throw new WorkbenchCasConflictException("routing attempt changed");
                 }
                 WorkControlState nextState = controlState(validation.disposition());
@@ -529,6 +582,7 @@ public class JdbcRoutingStore implements RoutingStore {
                             model_name=?, prompt_digest=?, raw_output_digest=?, prompt_tokens=?,
                             completion_tokens=?, latency_ms=?, failure_code=?, failure_reason=?, completed_at=?
                         WHERE decision_id=? AND decision_status IN ('STARTED','RESULT_UNKNOWN')
+                          AND (? = 0 OR (lease_owner=? AND fencing_token=? AND lease_until>?))
                         """)) {
                     statement.setString(1, nullIfBlank(observed.modelName()));
                     statement.setString(2, nullIfBlank(observed.promptDigest()));
@@ -540,7 +594,13 @@ public class JdbcRoutingStore implements RoutingStore {
                     statement.setString(8, failureReason);
                     statement.setTimestamp(9, Timestamp.from(now));
                     statement.setString(10, current.decisionId());
-                    statement.executeUpdate();
+                    statement.setLong(11, attempt.fencingToken());
+                    statement.setString(12, nullIfBlank(attempt.leaseOwner()));
+                    statement.setLong(13, attempt.fencingToken());
+                    statement.setTimestamp(14, Timestamp.from(now));
+                    if (statement.executeUpdate() != 1) {
+                        throw new WorkbenchCasConflictException("stale routing fencing token");
+                    }
                 }
                 boolean exhausted = work.routingAttemptCount() >= maxAttempts;
                 WorkControlState next = exhausted ? WorkControlState.MANUAL_REVIEW : WorkControlState.ROUTING;
@@ -586,11 +646,15 @@ public class JdbcRoutingStore implements RoutingStore {
                        AND (w.routing_last_attempt_at IS NULL OR w.routing_last_attempt_at <= ?)
                        AND NOT EXISTS (SELECT 1 FROM agent_routing_decision d
                                        WHERE d.work_item_id=w.work_item_id AND d.decision_status='EFFECTIVE')
+                       AND NOT EXISTS (SELECT 1 FROM agent_routing_decision d
+                                       WHERE d.work_item_id=w.work_item_id AND d.decision_status='STARTED'
+                                         AND d.lease_until>?)
                      ORDER BY w.created_at LIMIT ?
                      """)) {
             statement.setTimestamp(1, Timestamp.from(Instant.now()));
             statement.setTimestamp(2, Timestamp.from(staleBefore));
-            statement.setInt(3, Math.max(1, Math.min(100, limit)));
+            statement.setTimestamp(3, Timestamp.from(Instant.now()));
+            statement.setInt(4, Math.max(1, Math.min(100, limit)));
             try (ResultSet rs = statement.executeQuery()) {
                 List<RoutingRecoveryCandidate> result = new ArrayList<>();
                 while (rs.next()) {
@@ -956,6 +1020,52 @@ public class JdbcRoutingStore implements RoutingStore {
         }
     }
 
+    private long nextRoutingFencingToken(Connection connection, String workItemId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT COALESCE(MAX(fencing_token),0)+1 FROM agent_routing_decision WHERE work_item_id=?")) {
+            statement.setString(1, workItemId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getLong(1);
+            }
+        }
+    }
+
+    private boolean routingLeaseActive(Connection connection, String decisionId, Instant now) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT 1 FROM agent_routing_decision
+                WHERE decision_id=? AND decision_status='STARTED' AND lease_until>?
+                """)) {
+            statement.setString(1, decisionId);
+            statement.setTimestamp(2, Timestamp.from(now));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
+    }
+
+    private void requireCurrentRoutingClaim(Connection connection,
+                                            RoutingAttempt attempt,
+                                            DecisionStatus status,
+                                            Instant now) throws SQLException {
+        if (attempt.fencingToken() <= 0) return;
+        if (status != DecisionStatus.STARTED) {
+            throw new WorkbenchCasConflictException("stale routing owner cannot complete a replaced attempt");
+        }
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT 1 FROM agent_routing_decision
+                WHERE decision_id=? AND lease_owner=? AND fencing_token=? AND lease_until>?
+                """)) {
+            statement.setString(1, attempt.decisionId());
+            statement.setString(2, attempt.leaseOwner());
+            statement.setLong(3, attempt.fencingToken());
+            statement.setTimestamp(4, Timestamp.from(now));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) throw new WorkbenchCasConflictException("stale routing fencing token");
+            }
+        }
+    }
+
     private String focusedWorkItem(Connection connection,
                                    AuthenticatedPrincipal principal,
                                    String conversationId) throws SQLException {
@@ -1153,12 +1263,18 @@ public class JdbcRoutingStore implements RoutingStore {
                     raw_output_digest CHAR(64), decision_json JSONB, validation_json JSONB,
                     prompt_tokens BIGINT NOT NULL DEFAULT 0, completion_tokens BIGINT NOT NULL DEFAULT 0,
                     latency_ms BIGINT NOT NULL DEFAULT 0, failure_code TEXT, failure_reason TEXT,
-                    trace_id TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL, completed_at TIMESTAMPTZ,
+                    trace_id TEXT NOT NULL, lease_owner TEXT, lease_until TIMESTAMPTZ,
+                    fencing_token BIGINT NOT NULL DEFAULT 0,
+                    created_at TIMESTAMPTZ NOT NULL, completed_at TIMESTAMPTZ,
                     UNIQUE(work_item_id, attempt_no), UNIQUE(routing_request_id, attempt_no)
                 )
                 """,
+                "ALTER TABLE agent_routing_decision ADD COLUMN IF NOT EXISTS lease_owner TEXT",
+                "ALTER TABLE agent_routing_decision ADD COLUMN IF NOT EXISTS lease_until TIMESTAMPTZ",
+                "ALTER TABLE agent_routing_decision ADD COLUMN IF NOT EXISTS fencing_token BIGINT NOT NULL DEFAULT 0",
                 "CREATE UNIQUE INDEX IF NOT EXISTS uk_routing_effective_per_work ON agent_routing_decision(work_item_id) WHERE decision_status='EFFECTIVE'",
                 "CREATE INDEX IF NOT EXISTS idx_routing_decision_request ON agent_routing_decision(routing_request_id, attempt_no)",
+                "CREATE INDEX IF NOT EXISTS idx_routing_lease ON agent_routing_decision(decision_status, lease_until)",
                 "CREATE INDEX IF NOT EXISTS idx_work_item_stale_routing ON agent_work_item(control_state, routing_next_retry_at, routing_last_attempt_at) WHERE control_state='ROUTING'"
         );
     }

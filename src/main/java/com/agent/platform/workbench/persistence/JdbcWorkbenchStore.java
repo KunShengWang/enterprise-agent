@@ -23,6 +23,7 @@ import com.agent.platform.workbench.model.WorkLinkRelation;
 import com.agent.platform.workbench.model.WorkLinkType;
 import com.agent.platform.workbench.model.WorkOutcome;
 import com.agent.platform.workbench.model.WorkProjectionSource;
+import com.agent.platform.workbench.model.WorkProjectionClaim;
 import com.agent.platform.workbench.model.WorkCommandType;
 import com.agent.platform.workbench.model.WorkRelation;
 import com.agent.platform.workbench.model.WorkRelationType;
@@ -594,6 +595,79 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
     }
 
     @Override
+    public List<WorkProjectionClaim> claimProjectionSources(String leaseOwner, Instant leaseUntil, int limit) {
+        if (!hasText(leaseOwner) || leaseUntil == null || !leaseUntil.isAfter(Instant.now())) {
+            throw new IllegalArgumentException("projection lease owner and future leaseUntil are required");
+        }
+        ensureSchema();
+        int safeLimit = Math.max(1, Math.min(limit, 1000));
+        try (Connection connection = openConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                Instant now = Instant.now();
+                try (Statement statement = connection.createStatement()) {
+                    statement.executeUpdate("""
+                            INSERT INTO agent_work_projection_cursor(
+                                work_item_id, source_type, source_id, last_source_sequence, updated_at)
+                            SELECT l.work_item_id,
+                                   CASE l.link_type WHEN 'RUN' THEN 'AGENT_RUN'
+                                        WHEN 'INCIDENT' THEN 'INCIDENT'
+                                        WHEN 'RECOVERY_PLAN' THEN 'RECOVERY_PLAN' END,
+                                   l.linked_id, -1, l.created_at
+                            FROM agent_work_link l
+                            WHERE l.link_type IN ('RUN', 'INCIDENT', 'RECOVERY_PLAN')
+                            ON CONFLICT(work_item_id, source_type, source_id) DO NOTHING
+                            """);
+                }
+                List<WorkProjectionClaim> claims = new ArrayList<>();
+                try (PreparedStatement statement = connection.prepareStatement("""
+                        SELECT work_item_id, source_type, source_id, fencing_token
+                        FROM agent_work_projection_cursor
+                        WHERE lease_until IS NULL OR lease_until <= ? OR lease_owner = ?
+                        ORDER BY updated_at, work_item_id, source_type, source_id
+                        FOR UPDATE SKIP LOCKED LIMIT ?
+                        """)) {
+                    statement.setTimestamp(1, Timestamp.from(now));
+                    statement.setString(2, leaseOwner);
+                    statement.setInt(3, safeLimit);
+                    try (ResultSet resultSet = statement.executeQuery()) {
+                        while (resultSet.next()) {
+                            WorkProjectionSource source = new WorkProjectionSource(
+                                    resultSet.getString("work_item_id"), resultSet.getString("source_type"),
+                                    resultSet.getString("source_id"));
+                            claims.add(new WorkProjectionClaim(source, leaseOwner,
+                                    resultSet.getLong("fencing_token") + 1, leaseUntil));
+                        }
+                    }
+                }
+                for (WorkProjectionClaim claim : claims) {
+                    WorkProjectionSource source = claim.source();
+                    try (PreparedStatement statement = connection.prepareStatement("""
+                            UPDATE agent_work_projection_cursor
+                            SET lease_owner=?, lease_until=?, fencing_token=?
+                            WHERE work_item_id=? AND source_type=? AND source_id=?
+                            """)) {
+                        statement.setString(1, claim.leaseOwner());
+                        statement.setTimestamp(2, Timestamp.from(claim.leaseUntil()));
+                        statement.setLong(3, claim.fencingToken());
+                        statement.setString(4, source.workItemId());
+                        statement.setString(5, source.sourceType());
+                        statement.setString(6, source.sourceId());
+                        statement.executeUpdate();
+                    }
+                }
+                connection.commit();
+                return List.copyOf(claims);
+            } catch (RuntimeException | SQLException exception) {
+                rollbackQuietly(connection);
+                throw exception;
+            }
+        } catch (SQLException exception) {
+            throw storageFailure("Failed to claim work event projection sources", exception);
+        }
+    }
+
+    @Override
     public long projectionCursor(String workItemId, String sourceType, String sourceId) {
         ensureSchema();
         try (Connection connection = openConnection();
@@ -614,6 +688,17 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
 
     @Override
     public WorkEvent appendProjectedEvent(String workItemId, ProjectedWorkEventDraft draft) {
+        return appendProjectedEvent(null, workItemId, draft);
+    }
+
+    @Override
+    public WorkEvent appendProjectedEvent(WorkProjectionClaim claim, ProjectedWorkEventDraft draft) {
+        return appendProjectedEvent(claim, claim.source().workItemId(), draft);
+    }
+
+    private WorkEvent appendProjectedEvent(WorkProjectionClaim claim,
+                                           String workItemId,
+                                           ProjectedWorkEventDraft draft) {
         if (!hasText(workItemId) || draft == null) {
             throw new IllegalArgumentException("workItemId and projected event are required");
         }
@@ -621,6 +706,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
+                if (claim != null) requireProjectionClaim(connection, claim);
                 long sequence = lockNextEventSequence(connection, workItemId);
                 requireProjectionSourceLink(connection, workItemId, draft.sourceType(), draft.sourceId());
                 Optional<WorkEvent> duplicate = readProjectedEventBySource(connection, workItemId, draft);
@@ -657,6 +743,20 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
                                         String sourceType,
                                         String sourceId,
                                         long sourceSequence) {
+        advanceProjectionCursor(null, workItemId, sourceType, sourceId, sourceSequence);
+    }
+
+    @Override
+    public void advanceProjectionCursor(WorkProjectionClaim claim, long sourceSequence) {
+        WorkProjectionSource source = claim.source();
+        advanceProjectionCursor(claim, source.workItemId(), source.sourceType(), source.sourceId(), sourceSequence);
+    }
+
+    private void advanceProjectionCursor(WorkProjectionClaim claim,
+                                         String workItemId,
+                                         String sourceType,
+                                         String sourceId,
+                                         long sourceSequence) {
         if (!hasText(workItemId) || !hasText(sourceType) || !hasText(sourceId) || sourceSequence < -1) {
             throw new IllegalArgumentException("projection cursor identity and sequence are required");
         }
@@ -664,6 +764,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
+                if (claim != null) requireProjectionClaim(connection, claim);
                 lockNextEventSequence(connection, workItemId);
                 requireProjectionSourceLink(connection, workItemId, sourceType, sourceId);
                 upsertProjectionCursor(connection, workItemId, sourceType, sourceId, sourceSequence);
@@ -674,6 +775,28 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
             }
         } catch (SQLException exception) {
             throw storageFailure("Failed to advance work event projection cursor", exception);
+        }
+    }
+
+    @Override
+    public void releaseProjectionClaim(WorkProjectionClaim claim) {
+        if (claim == null) return;
+        ensureSchema();
+        WorkProjectionSource source = claim.source();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE agent_work_projection_cursor SET lease_owner=NULL, lease_until=NULL
+                     WHERE work_item_id=? AND source_type=? AND source_id=?
+                       AND lease_owner=? AND fencing_token=?
+                     """)) {
+            statement.setString(1, source.workItemId());
+            statement.setString(2, source.sourceType());
+            statement.setString(3, source.sourceId());
+            statement.setString(4, claim.leaseOwner());
+            statement.setLong(5, claim.fencingToken());
+            statement.executeUpdate();
+        } catch (SQLException exception) {
+            throw storageFailure("Failed to release work event projection claim", exception);
         }
     }
 
@@ -1231,6 +1354,28 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
         }
     }
 
+    private void requireProjectionClaim(Connection connection, WorkProjectionClaim claim) throws SQLException {
+        WorkProjectionSource source = claim.source();
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT lease_owner, lease_until, fencing_token
+                FROM agent_work_projection_cursor
+                WHERE work_item_id=? AND source_type=? AND source_id=? FOR UPDATE
+                """)) {
+            statement.setString(1, source.workItemId());
+            statement.setString(2, source.sourceType());
+            statement.setString(3, source.sourceId());
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()
+                        || !claim.leaseOwner().equals(resultSet.getString("lease_owner"))
+                        || claim.fencingToken() != resultSet.getLong("fencing_token")
+                        || resultSet.getTimestamp("lease_until") == null
+                        || !resultSet.getTimestamp("lease_until").toInstant().isAfter(Instant.now())) {
+                    throw new WorkbenchCasConflictException("stale work projection fencing token");
+                }
+            }
+        }
+    }
+
     private String sourceType(String linkType) {
         return switch (WorkLinkType.valueOf(linkType)) {
             case RUN -> "AGENT_RUN";
@@ -1645,10 +1790,17 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
                     source_type TEXT NOT NULL,
                     source_id TEXT NOT NULL,
                     last_source_sequence BIGINT NOT NULL DEFAULT -1,
+                    lease_owner TEXT,
+                    lease_until TIMESTAMPTZ,
+                    fencing_token BIGINT NOT NULL DEFAULT 0,
                     updated_at TIMESTAMPTZ NOT NULL,
                     PRIMARY KEY(work_item_id, source_type, source_id)
                 )
-                """
+                """,
+                "ALTER TABLE agent_work_projection_cursor ADD COLUMN IF NOT EXISTS lease_owner TEXT",
+                "ALTER TABLE agent_work_projection_cursor ADD COLUMN IF NOT EXISTS lease_until TIMESTAMPTZ",
+                "ALTER TABLE agent_work_projection_cursor ADD COLUMN IF NOT EXISTS fencing_token BIGINT NOT NULL DEFAULT 0",
+                "CREATE INDEX IF NOT EXISTS idx_work_projection_lease ON agent_work_projection_cursor(lease_until, updated_at)"
         );
     }
 

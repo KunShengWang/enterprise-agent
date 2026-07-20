@@ -55,7 +55,8 @@ class BudgetAdmissionCoordinatorTests {
         when(work.routingRequestId()).thenReturn("routing-1");
         when(workbench.findWorkItem(principal, "work-1")).thenReturn(Optional.of(work));
         RoutingAttempt attempt = new RoutingAttempt("decision-1", "work-1", "routing-1", 1, "trace-1");
-        when(routing.claimRouting(any(), anyString(), anyString(), any(), anyInt(), anyLong(), anyString()))
+        when(routing.claimRouting(any(), anyString(), anyString(), any(), anyInt(), anyLong(), anyString(),
+                anyString(), any()))
                 .thenReturn(Optional.of(attempt));
         when(budgets.reserveRouter(principal, work, "router:decision-1"))
                 .thenThrow(new BudgetExceededException("BUDGET_EXHAUSTED", "no remaining budget"));
@@ -84,7 +85,7 @@ class BudgetAdmissionCoordinatorTests {
         DispatchRequest request = new DispatchRequest("dispatch-1", "work-1", "conversation-1", "goal",
                 "INCIDENT_INVESTIGATION", principal,
                 new ValidatedExecutionInput("INCIDENT_INVESTIGATION", Map.of(), Map.of(), "digest"), Instant.now());
-        when(store.claimDispatch(any(), anyString(), any(), anyInt()))
+        when(store.claimDispatch(any(), anyString(), any(), anyInt(), anyString(), any()))
                 .thenReturn(Optional.of(new DispatchClaim(attempt, request)));
         when(adapters.require("INCIDENT_INVESTIGATION")).thenReturn(adapter);
         when(budgets.reserveTarget(principal, "work-1",

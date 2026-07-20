@@ -31,6 +31,15 @@ public interface DispatchStore {
                                           String workItemId,
                                           Instant staleBefore,
                                           int maxAttempts);
+    default Optional<DispatchClaim> claimDispatch(AuthenticatedPrincipal principal,
+                                                  String workItemId,
+                                                  Instant staleBefore,
+                                                  int maxAttempts,
+                                                  String leaseOwner,
+                                                  Instant leaseUntil) {
+        return claimDispatch(principal, workItemId, staleBefore, maxAttempts);
+    }
+    default boolean renewDispatchLease(DispatchClaim claim, Instant leaseUntil) { return true; }
     WorkLink completeDispatch(AuthenticatedPrincipal principal, DispatchClaim claim, DispatchResult result);
     DispatchAttempt failDispatch(AuthenticatedPrincipal principal,
                                  DispatchClaim claim,

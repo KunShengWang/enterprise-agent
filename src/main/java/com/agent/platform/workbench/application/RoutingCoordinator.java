@@ -20,9 +20,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class RoutingCoordinator {
+
+    private static final ScheduledExecutorService LEASE_HEARTBEAT = Executors.newSingleThreadScheduledExecutor(task -> {
+        Thread thread = new Thread(task, "workbench-routing-lease-heartbeat");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private final RoutingStore routingStore;
     private final WorkbenchStore workbenchStore;
@@ -89,6 +100,7 @@ public class RoutingCoordinator {
         if (!properties.isEnabled()) return Optional.empty();
         AgentWorkItem workItem = workbenchStore.findWorkItem(principal, workItemId)
                 .orElseThrow(() -> new IllegalArgumentException("work item not found"));
+        String leaseOwner = "routing-" + UUID.randomUUID();
         Optional<RoutingAttempt> claimed = routingStore.claimRouting(
                 principal,
                 workItem.workItemId(),
@@ -96,10 +108,12 @@ public class RoutingCoordinator {
                 Instant.now().minusMillis(properties.getStaleAfterMillis()),
                 properties.getMaxAttempts(),
                 properties.getUnknownResultTokenReserve(),
-                properties.getCatalogVersion());
+                properties.getCatalogVersion(), leaseOwner,
+                Instant.now().plusMillis(properties.getLeaseMillis()));
         if (claimed.isEmpty()) return routingStore.findEffectiveRouting(principal, workItemId);
 
         RoutingAttempt attempt = claimed.get();
+        ScheduledFuture<?> heartbeat = startHeartbeat(attempt);
         RoutingDecisionRecord completed;
         BudgetReservationHandle budget;
         try {
@@ -108,6 +122,7 @@ public class RoutingCoordinator {
         catch (BudgetExceededException exhausted) {
             routingStore.failRouting(principal, attempt, exhausted.code(), safeMessage(exhausted),
                     RouterFailureObservation.empty(), properties.getRetryBackoffMillis(), attempt.attemptNo());
+            if (heartbeat != null) heartbeat.cancel(false);
             return Optional.empty();
         }
         try {
@@ -143,11 +158,26 @@ public class RoutingCoordinator {
                     properties.getRetryBackoffMillis(), properties.getMaxAttempts());
             return Optional.empty();
         }
+        finally {
+            if (heartbeat != null) heartbeat.cancel(false);
+        }
         // Routing is already authoritative. A downstream preview/dispatch-preparation
         // failure must never rewrite its EFFECTIVE attempt as a routing failure.
         AgentWorkItem routed = workbenchStore.findWorkItem(principal, workItemId).orElseThrow();
         postProcessor.afterEffectiveDecision(principal, routed, completed);
         return Optional.of(completed);
+    }
+
+    private ScheduledFuture<?> startHeartbeat(RoutingAttempt attempt) {
+        if (attempt.fencingToken() <= 0 || attempt.leaseOwner().isBlank()) return null;
+        long period = Math.max(250, properties.getLeaseMillis() / 3);
+        return LEASE_HEARTBEAT.scheduleAtFixedRate(() -> {
+            try {
+                routingStore.renewRoutingLease(attempt, Instant.now().plusMillis(properties.getLeaseMillis()));
+            } catch (RuntimeException ignored) {
+                // A takeover changes the fencing token; terminal persistence remains the authority.
+            }
+        }, period, period, TimeUnit.MILLISECONDS);
     }
 
     private String failureCode(RuntimeException exception) {

@@ -226,7 +226,21 @@ public class JdbcDispatchStore implements DispatchStore {
                                                  String workItemId,
                                                  Instant staleBefore,
                                                  int maxAttempts) {
+        return claimDispatch(principal, workItemId, staleBefore, maxAttempts,
+                "dispatch-" + UUID.randomUUID(), Instant.now().plusSeconds(15));
+    }
+
+    @Override
+    public Optional<DispatchClaim> claimDispatch(AuthenticatedPrincipal principal,
+                                                 String workItemId,
+                                                 Instant staleBefore,
+                                                 int maxAttempts,
+                                                 String leaseOwner,
+                                                 Instant leaseUntil) {
         requirePrincipal(principal);
+        if (leaseOwner == null || leaseOwner.isBlank() || leaseUntil == null || !leaseUntil.isAfter(Instant.now())) {
+            throw new IllegalArgumentException("dispatch lease owner and future leaseUntil are required");
+        }
         ensureSchema();
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
@@ -241,7 +255,8 @@ public class JdbcDispatchStore implements DispatchStore {
                 boolean reconciliation = work.controlState() == WorkControlState.DISPATCHING;
                 Optional<DispatchAttempt> started = startedAttempt(connection, workItemId);
                 if (started.isPresent()) {
-                    if (started.get().createdAt().isAfter(staleBefore)) {
+                    if (started.get().createdAt().isAfter(staleBefore)
+                            || dispatchLeaseActive(connection, started.get().attemptId(), Instant.now())) {
                         connection.commit();
                         return Optional.empty();
                     }
@@ -266,7 +281,8 @@ public class JdbcDispatchStore implements DispatchStore {
                         "dattempt-" + UUID.randomUUID(), workItemId, work.dispatchRequestId(), attemptNo,
                         reconciliation, work.activeExecutionTarget(), DispatchAttemptStatus.STARTED,
                         "", "", Instant.now(), null);
-                insertAttempt(connection, attempt);
+                long fencingToken = nextDispatchFencingToken(connection, workItemId);
+                insertAttempt(connection, attempt, leaseOwner, leaseUntil, fencingToken);
                 try (PreparedStatement statement = connection.prepareStatement("""
                         UPDATE agent_work_item SET control_state='DISPATCHING', execution_state='STARTING',
                             version=version+1, updated_at=? WHERE work_item_id=?
@@ -281,7 +297,7 @@ public class JdbcDispatchStore implements DispatchStore {
                                 "reconciliation", reconciliation, "targetId", attempt.targetId()), attempt.attemptId());
                 DispatchRequest request = request(connection, principal, work);
                 connection.commit();
-                return Optional.of(new DispatchClaim(attempt, request));
+                return Optional.of(new DispatchClaim(attempt, request, leaseOwner, fencingToken, leaseUntil));
             }
             catch (RuntimeException | SQLException exception) {
                 rollback(connection);
@@ -289,6 +305,27 @@ public class JdbcDispatchStore implements DispatchStore {
             }
         }
         catch (SQLException exception) { throw storage("Failed to claim dispatch", exception); }
+    }
+
+    @Override
+    public boolean renewDispatchLease(DispatchClaim claim, Instant leaseUntil) {
+        if (claim == null || claim.fencingToken() <= 0 || claim.leaseOwner().isBlank() || leaseUntil == null) {
+            return false;
+        }
+        ensureSchema();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     UPDATE agent_dispatch_attempt SET lease_until=?
+                     WHERE attempt_id=? AND status='STARTED' AND lease_owner=? AND fencing_token=?
+                     """)) {
+            statement.setTimestamp(1, Timestamp.from(leaseUntil));
+            statement.setString(2, claim.attempt().attemptId());
+            statement.setString(3, claim.leaseOwner());
+            statement.setLong(4, claim.fencingToken());
+            return statement.executeUpdate() == 1;
+        } catch (SQLException exception) {
+            throw storage("Failed to renew dispatch lease", exception);
+        }
     }
 
     @Override
@@ -301,6 +338,7 @@ public class JdbcDispatchStore implements DispatchStore {
                 AgentWorkItem work = requireWork(connection, principal, claim.attempt().workItemId(), true);
                 DispatchAttempt attempt = requireAttempt(
                         connection, principal, work.workItemId(), claim.attempt().attemptId(), true);
+                requireCurrentDispatchClaim(connection, claim, attempt.status(), Instant.now());
                 if (!work.dispatchRequestId().equals(result.dispatchRequestId())
                         || !attempt.dispatchRequestId().equals(result.dispatchRequestId())) {
                     throw new WorkbenchIdempotencyConflictException("adapter returned another dispatchRequestId");
@@ -317,9 +355,14 @@ public class JdbcDispatchStore implements DispatchStore {
                 try (PreparedStatement statement = connection.prepareStatement("""
                         UPDATE agent_dispatch_attempt SET status='EFFECTIVE', completed_at=?
                         WHERE attempt_id=? AND status='STARTED'
+                          AND (? = 0 OR (lease_owner=? AND fencing_token=? AND lease_until>?))
                         """)) {
                     statement.setTimestamp(1, Timestamp.from(now));
                     statement.setString(2, attempt.attemptId());
+                    statement.setLong(3, claim.fencingToken());
+                    statement.setString(4, blankToNull(claim.leaseOwner()));
+                    statement.setLong(5, claim.fencingToken());
+                    statement.setTimestamp(6, Timestamp.from(now));
                     if (statement.executeUpdate() != 1) throw new WorkbenchCasConflictException("dispatch attempt changed");
                 }
                 WorkLinkRelation relation = result.linkType() == WorkLinkType.RECOVERY_PLAN
@@ -381,12 +424,19 @@ public class JdbcDispatchStore implements DispatchStore {
                 try (PreparedStatement statement = connection.prepareStatement("""
                         UPDATE agent_dispatch_attempt SET status='FAILED_ATTEMPT', failure_code=?,
                             failure_reason=?, completed_at=? WHERE attempt_id=? AND status='STARTED'
+                              AND (? = 0 OR (lease_owner=? AND fencing_token=? AND lease_until>?))
                         """)) {
                     statement.setString(1, failureCode);
                     statement.setString(2, failureReason);
                     statement.setTimestamp(3, Timestamp.from(now));
                     statement.setString(4, attempt.attemptId());
-                    statement.executeUpdate();
+                    statement.setLong(5, claim.fencingToken());
+                    statement.setString(6, blankToNull(claim.leaseOwner()));
+                    statement.setLong(7, claim.fencingToken());
+                    statement.setTimestamp(8, Timestamp.from(now));
+                    if (statement.executeUpdate() != 1) {
+                        throw new WorkbenchCasConflictException("stale dispatch fencing token");
+                    }
                 }
                 boolean exhausted = attempt.attemptNo() >= maxAttempts;
                 if (exhausted) moveManualReview(connection, work,
@@ -429,11 +479,14 @@ public class JdbcDispatchStore implements DispatchStore {
                        AND EXISTS (SELECT 1 FROM agent_dispatch_attempt a WHERE a.work_item_id=w.work_item_id
                                    AND ((a.status='STARTED' AND a.created_at<=?)
                                      OR (a.status='FAILED_ATTEMPT' AND a.completed_at<=?)))
+                       AND NOT EXISTS (SELECT 1 FROM agent_dispatch_attempt a WHERE a.work_item_id=w.work_item_id
+                                       AND a.status='STARTED' AND a.lease_until>?)
                      ORDER BY w.updated_at LIMIT ?
                      """)) {
             statement.setTimestamp(1, Timestamp.from(staleBefore));
             statement.setTimestamp(2, Timestamp.from(staleBefore));
-            statement.setInt(3, Math.max(1, Math.min(100, limit)));
+            statement.setTimestamp(3, Timestamp.from(Instant.now()));
+            statement.setInt(4, Math.max(1, Math.min(100, limit)));
             try (ResultSet rs = statement.executeQuery()) {
                 List<DispatchRecoveryCandidate> result = new ArrayList<>();
                 while (rs.next()) {
@@ -517,16 +570,20 @@ public class JdbcDispatchStore implements DispatchStore {
         }
     }
 
-    private void insertAttempt(Connection connection, DispatchAttempt attempt) throws SQLException {
+    private void insertAttempt(Connection connection, DispatchAttempt attempt,
+                               String leaseOwner, Instant leaseUntil, long fencingToken) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 INSERT INTO agent_dispatch_attempt(attempt_id, work_item_id, dispatch_request_id, attempt_no,
-                    reconciliation, target_id, status, failure_code, failure_reason, created_at, completed_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, NULL)
+                    reconciliation, target_id, status, failure_code, failure_reason,
+                    lease_owner, lease_until, fencing_token, created_at, completed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, NULL)
                 """)) {
             statement.setString(1, attempt.attemptId()); statement.setString(2, attempt.workItemId());
             statement.setString(3, attempt.dispatchRequestId()); statement.setInt(4, attempt.attemptNo());
             statement.setBoolean(5, attempt.reconciliation()); statement.setString(6, attempt.targetId());
-            statement.setString(7, attempt.status().name()); statement.setTimestamp(8, Timestamp.from(attempt.createdAt()));
+            statement.setString(7, attempt.status().name());
+            statement.setString(8, leaseOwner); statement.setTimestamp(9, Timestamp.from(leaseUntil));
+            statement.setLong(10, fencingToken); statement.setTimestamp(11, Timestamp.from(attempt.createdAt()));
             statement.executeUpdate();
         }
     }
@@ -549,6 +606,42 @@ public class JdbcDispatchStore implements DispatchStore {
     private int nextAttemptNo(Connection connection, String workItemId) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("SELECT COALESCE(MAX(attempt_no),0)+1 FROM agent_dispatch_attempt WHERE work_item_id=?")) {
             statement.setString(1, workItemId); try (ResultSet rs=statement.executeQuery()) { rs.next(); return rs.getInt(1); }
+        }
+    }
+    private long nextDispatchFencingToken(Connection connection, String workItemId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT COALESCE(MAX(fencing_token),0)+1 FROM agent_dispatch_attempt WHERE work_item_id=?")) {
+            statement.setString(1, workItemId);
+            try (ResultSet rs = statement.executeQuery()) { rs.next(); return rs.getLong(1); }
+        }
+    }
+    private boolean dispatchLeaseActive(Connection connection, String attemptId, Instant now) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT 1 FROM agent_dispatch_attempt
+                WHERE attempt_id=? AND status='STARTED' AND lease_until>?
+                """)) {
+            statement.setString(1, attemptId);
+            statement.setTimestamp(2, Timestamp.from(now));
+            try (ResultSet rs = statement.executeQuery()) { return rs.next(); }
+        }
+    }
+    private void requireCurrentDispatchClaim(Connection connection, DispatchClaim claim,
+                                             DispatchAttemptStatus status, Instant now) throws SQLException {
+        if (claim.fencingToken() <= 0) return;
+        if (status != DispatchAttemptStatus.STARTED) {
+            throw new WorkbenchCasConflictException("stale dispatch owner cannot complete a replaced attempt");
+        }
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT 1 FROM agent_dispatch_attempt
+                WHERE attempt_id=? AND lease_owner=? AND fencing_token=? AND lease_until>?
+                """)) {
+            statement.setString(1, claim.attempt().attemptId());
+            statement.setString(2, claim.leaseOwner());
+            statement.setLong(3, claim.fencingToken());
+            statement.setTimestamp(4, Timestamp.from(now));
+            try (ResultSet rs = statement.executeQuery()) {
+                if (!rs.next()) throw new WorkbenchCasConflictException("stale dispatch fencing token");
+            }
         }
     }
     private void markUnknown(Connection connection, String attemptId) throws SQLException {
@@ -649,8 +742,12 @@ public class JdbcDispatchStore implements DispatchStore {
     private void ensureSchema(){if(schemaReady.get())return;synchronized(schemaReady){if(schemaReady.get())return;try(Connection c=openConnection();Statement s=c.createStatement()){for(String ddl:schema())s.execute(ddl);schemaReady.set(true);}catch(SQLException e){throw storage("Failed to initialize M1-C schema",e);}}}
     private List<String> schema(){return List.of(
             "CREATE TABLE IF NOT EXISTS agent_route_preview(preview_id TEXT PRIMARY KEY,work_item_id TEXT NOT NULL UNIQUE REFERENCES agent_work_item(work_item_id),route_decision_id TEXT NOT NULL REFERENCES agent_routing_decision(decision_id),target_id TEXT NOT NULL,preview_version INT NOT NULL,validated_input_digest CHAR(64) NOT NULL,scope_digest CHAR(64) NOT NULL,payload_json JSONB NOT NULL,status TEXT NOT NULL,expires_at TIMESTAMPTZ NOT NULL,confirmed_by TEXT,confirmed_at TIMESTAMPTZ,created_at TIMESTAMPTZ NOT NULL)",
-            "CREATE TABLE IF NOT EXISTS agent_dispatch_attempt(attempt_id TEXT PRIMARY KEY,work_item_id TEXT NOT NULL REFERENCES agent_work_item(work_item_id),dispatch_request_id TEXT NOT NULL,attempt_no INT NOT NULL,reconciliation BOOLEAN NOT NULL,target_id TEXT NOT NULL,status TEXT NOT NULL,failure_code TEXT,failure_reason TEXT,created_at TIMESTAMPTZ NOT NULL,completed_at TIMESTAMPTZ,UNIQUE(work_item_id,attempt_no),UNIQUE(dispatch_request_id,attempt_no))",
+            "CREATE TABLE IF NOT EXISTS agent_dispatch_attempt(attempt_id TEXT PRIMARY KEY,work_item_id TEXT NOT NULL REFERENCES agent_work_item(work_item_id),dispatch_request_id TEXT NOT NULL,attempt_no INT NOT NULL,reconciliation BOOLEAN NOT NULL,target_id TEXT NOT NULL,status TEXT NOT NULL,failure_code TEXT,failure_reason TEXT,lease_owner TEXT,lease_until TIMESTAMPTZ,fencing_token BIGINT NOT NULL DEFAULT 0,created_at TIMESTAMPTZ NOT NULL,completed_at TIMESTAMPTZ,UNIQUE(work_item_id,attempt_no),UNIQUE(dispatch_request_id,attempt_no))",
+            "ALTER TABLE agent_dispatch_attempt ADD COLUMN IF NOT EXISTS lease_owner TEXT",
+            "ALTER TABLE agent_dispatch_attempt ADD COLUMN IF NOT EXISTS lease_until TIMESTAMPTZ",
+            "ALTER TABLE agent_dispatch_attempt ADD COLUMN IF NOT EXISTS fencing_token BIGINT NOT NULL DEFAULT 0",
             "CREATE UNIQUE INDEX IF NOT EXISTS uk_dispatch_effective_per_work ON agent_dispatch_attempt(work_item_id) WHERE status='EFFECTIVE'",
-            "CREATE INDEX IF NOT EXISTS idx_dispatch_started ON agent_dispatch_attempt(status,created_at)"
+            "CREATE INDEX IF NOT EXISTS idx_dispatch_started ON agent_dispatch_attempt(status,created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_dispatch_lease ON agent_dispatch_attempt(status,lease_until)"
     );}
 }

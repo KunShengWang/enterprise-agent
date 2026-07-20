@@ -7,6 +7,7 @@ public class WorkbenchDispatchProperties {
     private boolean enabled;
     private int maxAttempts = 2;
     private long staleAfterMillis = 15_000;
+    private long leaseMillis = 15_000;
     private long retryBackoffMillis = 1_000;
     private long scanDelayMillis = 5_000;
     private int scanBatchSize = 20;
@@ -17,7 +18,12 @@ public class WorkbenchDispatchProperties {
     public int getMaxAttempts() { return maxAttempts; }
     public void setMaxAttempts(int value) { maxAttempts = Math.max(1, Math.min(2, value)); }
     public long getStaleAfterMillis() { return staleAfterMillis; }
-    public void setStaleAfterMillis(long value) { staleAfterMillis = Math.max(1_000, value); }
+    public void setStaleAfterMillis(long value) {
+        staleAfterMillis = Math.max(1_000, value);
+        leaseMillis = staleAfterMillis;
+    }
+    public long getLeaseMillis() { return leaseMillis; }
+    public void setLeaseMillis(long value) { leaseMillis = Math.max(1_000, value); }
     public long getRetryBackoffMillis() { return retryBackoffMillis; }
     public void setRetryBackoffMillis(long value) { retryBackoffMillis = Math.max(0, value); }
     public long getScanDelayMillis() { return scanDelayMillis; }

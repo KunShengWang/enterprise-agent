@@ -13,9 +13,19 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class DispatchCoordinator {
+    private static final ScheduledExecutorService LEASE_HEARTBEAT = Executors.newSingleThreadScheduledExecutor(task -> {
+        Thread thread = new Thread(task, "workbench-dispatch-lease-heartbeat");
+        thread.setDaemon(true);
+        return thread;
+    });
     private final DispatchStore store;
     private final ExecutionAdapterRegistry adapters;
     private final WorkbenchDispatchProperties properties;
@@ -44,11 +54,14 @@ public class DispatchCoordinator {
 
     public Optional<WorkLink> dispatch(AuthenticatedPrincipal principal, String workItemId) {
         if (!properties.isEnabled()) return Optional.empty();
+        String leaseOwner = "dispatch-" + UUID.randomUUID();
         Optional<DispatchClaim> claimed = store.claimDispatch(
                 principal, workItemId, Instant.now().minusMillis(properties.getStaleAfterMillis()),
-                properties.getMaxAttempts());
+                properties.getMaxAttempts(), leaseOwner,
+                Instant.now().plusMillis(properties.getLeaseMillis()));
         if (claimed.isEmpty()) return Optional.empty();
         DispatchClaim claim = claimed.get();
+        ScheduledFuture<?> heartbeat = startHeartbeat(claim);
         ExecutionAdapter adapter = adapters.require(claim.request().targetId());
         BudgetReservationHandle budget;
         try {
@@ -59,6 +72,7 @@ public class DispatchCoordinator {
         catch (BudgetExceededException exhausted) {
             store.failDispatch(principal, claim, exhausted.code(), safeMessage(exhausted),
                     properties.getRetryBackoffMillis(), claim.attempt().attemptNo());
+            if (heartbeat != null) heartbeat.cancel(false);
             return Optional.empty();
         }
         try {
@@ -81,6 +95,21 @@ public class DispatchCoordinator {
                     properties.getRetryBackoffMillis(), properties.getMaxAttempts());
             return Optional.empty();
         }
+        finally {
+            if (heartbeat != null) heartbeat.cancel(false);
+        }
+    }
+
+    private ScheduledFuture<?> startHeartbeat(DispatchClaim claim) {
+        if (claim.fencingToken() <= 0 || claim.leaseOwner().isBlank()) return null;
+        long period = Math.max(250, properties.getLeaseMillis() / 3);
+        return LEASE_HEARTBEAT.scheduleAtFixedRate(() -> {
+            try {
+                store.renewDispatchLease(claim, Instant.now().plusMillis(properties.getLeaseMillis()));
+            } catch (RuntimeException ignored) {
+                // A newer owner is authoritative and fenced terminal writes reject this worker.
+            }
+        }, period, period, TimeUnit.MILLISECONDS);
     }
 
     private String safeMessage(RuntimeException exception) {

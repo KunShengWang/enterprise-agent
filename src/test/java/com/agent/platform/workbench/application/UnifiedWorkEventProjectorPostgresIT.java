@@ -23,6 +23,8 @@ import com.agent.platform.workbench.model.WorkEvent;
 import com.agent.platform.workbench.model.WorkEventType;
 import com.agent.platform.workbench.model.WorkLinkType;
 import com.agent.platform.workbench.model.WorkProjectionSource;
+import com.agent.platform.workbench.model.WorkProjectionClaim;
+import com.agent.platform.workbench.persistence.WorkbenchCasConflictException;
 import com.agent.platform.workbench.persistence.JdbcWorkbenchStore;
 import com.agent.platform.workbench.persistence.WorkEventProjectionStore;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
@@ -42,6 +44,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @EnabledIfEnvironmentVariable(named = "WORKBENCH_POSTGRES_IT", matches = "true")
 class UnifiedWorkEventProjectorPostgresIT {
@@ -117,6 +120,26 @@ class UnifiedWorkEventProjectorPostgresIT {
                 new WorkProjectionSource(runWork.workItem().workItemId(), "AGENT_RUN", runId),
                 new WorkProjectionSource(incidentWork.workItem().workItemId(), "INCIDENT", incidentId),
                 new WorkProjectionSource(planWork.workItem().workItemId(), "RECOVERY_PLAN", planId));
+        List<WorkProjectionClaim> ownerA = workbench.claimProjectionSources(
+                "projector-a", Instant.now().plusSeconds(30), 1000);
+        assertEquals(3, ownerA.stream().filter(claim -> sources.contains(claim.source())).count());
+        assertTrue(workbench.claimProjectionSources(
+                "projector-b", Instant.now().plusSeconds(30), 1000).stream()
+                .noneMatch(claim -> sources.contains(claim.source())));
+        try (Connection connection = openConnection()) {
+            execute(connection, "UPDATE agent_work_projection_cursor SET lease_until=? WHERE lease_owner=?",
+                    Instant.now().minusSeconds(1), "projector-a");
+        } catch (Exception exception) {
+            throw new AgentStorageException("failed to expire projection lease", exception);
+        }
+        List<WorkProjectionClaim> ownerB = workbench.claimProjectionSources(
+                "projector-b", Instant.now().plusSeconds(30), 1000).stream()
+                .filter(claim -> sources.contains(claim.source())).toList();
+        assertEquals(3, ownerB.size());
+        assertTrue(ownerB.stream().allMatch(claim -> claim.fencingToken() == 2));
+        assertThrows(WorkbenchCasConflictException.class,
+                () -> workbench.advanceProjectionCursor(ownerA.get(0), 0));
+        ownerB.forEach(workbench::releaseProjectionClaim);
         WorkbenchProjectionProperties projectionProperties = new WorkbenchProjectionProperties();
         projectionProperties.setEnabled(true);
         var projector = new UnifiedWorkEventProjector(
@@ -181,9 +204,16 @@ class UnifiedWorkEventProjectorPostgresIT {
                 properties.getDatasource().getUsername(), properties.getDatasource().getPassword());
     }
 
-    private void execute(Connection connection, String sql, String value) throws Exception {
+    private void execute(Connection connection, String sql, Object... values) throws Exception {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, value);
+            for (int index = 0; index < values.length; index++) {
+                Object value = values[index];
+                if (value instanceof Instant instant) {
+                    statement.setTimestamp(index + 1, java.sql.Timestamp.from(instant));
+                } else {
+                    statement.setObject(index + 1, value);
+                }
+            }
             statement.executeUpdate();
         }
     }

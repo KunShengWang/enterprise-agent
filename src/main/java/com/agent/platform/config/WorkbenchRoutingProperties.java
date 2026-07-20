@@ -8,6 +8,7 @@ public class WorkbenchRoutingProperties {
     private boolean enabled;
     private int maxAttempts = 2;
     private long staleAfterMillis = 15_000;
+    private long leaseMillis = 15_000;
     private long retryBackoffMillis = 1_000;
     private int scanBatchSize = 20;
     private int maxIncidentRequestIds = 100;
@@ -19,7 +20,12 @@ public class WorkbenchRoutingProperties {
     public int getMaxAttempts() { return maxAttempts; }
     public void setMaxAttempts(int value) { this.maxAttempts = Math.max(1, Math.min(2, value)); }
     public long getStaleAfterMillis() { return staleAfterMillis; }
-    public void setStaleAfterMillis(long value) { this.staleAfterMillis = Math.max(1_000, value); }
+    public void setStaleAfterMillis(long value) {
+        this.staleAfterMillis = Math.max(1_000, value);
+        this.leaseMillis = this.staleAfterMillis;
+    }
+    public long getLeaseMillis() { return leaseMillis; }
+    public void setLeaseMillis(long value) { this.leaseMillis = Math.max(1_000, value); }
     public long getRetryBackoffMillis() { return retryBackoffMillis; }
     public void setRetryBackoffMillis(long value) { this.retryBackoffMillis = Math.max(0, value); }
     public int getScanBatchSize() { return scanBatchSize; }

@@ -133,6 +133,29 @@ class JdbcRoutingStorePostgresIT {
     }
 
     @Test
+    void expiredRoutingLeaseIsTakenOverOnceAndOldOwnerIsFenced() throws Exception {
+        Fixture fixture = fixture(successRouter("GENERAL_AGENT", Map.of(), 10, 5),
+                new NoopRoutingFailureInjector());
+        AgentWorkItem work = createWork(fixture, "verify routing fencing");
+        var ownerA = fixture.routing.claimRouting(principal, work.workItemId(), work.routingRequestId(),
+                Instant.now().minusSeconds(1), 2, 8_192, "workbench-v1",
+                "routing-owner-a", Instant.now().plusSeconds(30)).orElseThrow();
+        assertTrue(fixture.routing.claimRouting(principal, work.workItemId(), work.routingRequestId(),
+                Instant.now().minusSeconds(1), 2, 8_192, "workbench-v1",
+                "routing-owner-b", Instant.now().plusSeconds(30)).isEmpty());
+
+        makeRoutingStale(work.workItemId());
+        var ownerB = fixture.routing.claimRouting(principal, work.workItemId(), work.routingRequestId(),
+                Instant.now().minusSeconds(1), 2, 8_192, "workbench-v1",
+                "routing-owner-b", Instant.now().plusSeconds(30)).orElseThrow();
+
+        assertEquals(ownerA.fencingToken() + 1, ownerB.fencingToken());
+        assertThrows(WorkbenchCasConflictException.class, () -> fixture.routing.failRouting(
+                principal, ownerA, "LATE_OWNER", "late routing result",
+                RouterFailureObservation.empty(), 0, 2));
+    }
+
+    @Test
     void failedAttemptsPreserveTokensAndLeaveRoutingAfterConfiguredMaximum() throws Exception {
         UnifiedTaskRouter failing = request -> {
             throw new RouterInvocationException(
@@ -216,6 +239,8 @@ class JdbcRoutingStorePostgresIT {
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             execute(connection, "UPDATE agent_routing_decision SET created_at=? WHERE work_item_id=? AND decision_status='STARTED'",
+                    Instant.now().minusSeconds(30), workItemId);
+            execute(connection, "UPDATE agent_routing_decision SET lease_until=? WHERE work_item_id=? AND decision_status='STARTED'",
                     Instant.now().minusSeconds(30), workItemId);
             execute(connection, "UPDATE agent_work_item SET routing_last_attempt_at=?, routing_next_retry_at=? WHERE work_item_id=?",
                     Instant.now().minusSeconds(30), Instant.now().minusSeconds(30), workItemId);

@@ -14,6 +14,7 @@ import com.agent.platform.runtime.AgentTimelineStore;
 import com.agent.platform.workbench.model.ProjectedWorkEventDraft;
 import com.agent.platform.workbench.model.WorkEventType;
 import com.agent.platform.workbench.model.WorkProjectionSource;
+import com.agent.platform.workbench.model.WorkProjectionClaim;
 import com.agent.platform.workbench.persistence.WorkEventProjectionStore;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -46,7 +47,11 @@ class UnifiedWorkEventProjectorTests {
                 new WorkProjectionSource("work-1", "AGENT_RUN", "run-1"),
                 new WorkProjectionSource("work-2", "INCIDENT", "inc-1"),
                 new WorkProjectionSource("work-3", "RECOVERY_PLAN", "plan-1"));
-        when(projection.listProjectionSources(anyInt())).thenReturn(sources);
+        when(projection.claimProjectionSources(anyString(), any(), anyInt())).thenAnswer(invocation -> {
+            String owner = invocation.getArgument(0);
+            Instant until = invocation.getArgument(1);
+            return sources.stream().map(source -> new WorkProjectionClaim(source, owner, 1, until)).toList();
+        });
         when(projection.projectionCursor(anyString(), anyString(), anyString())).thenReturn(-1L);
         Instant now = Instant.now();
         when(timeline.loadEventsAfter("run-1", -1, properties.getEventBatchSize())).thenReturn(List.of(
@@ -69,9 +74,9 @@ class UnifiedWorkEventProjectorTests {
         assertEquals(3, result.sourceCount());
         assertEquals(3, result.projectedEventCount());
         assertEquals(0, result.failedSourceCount());
-        verify(projection).advanceProjectionCursor("work-1", "AGENT_RUN", "run-1", 0);
+        verify(projection).advanceProjectionCursor(any(WorkProjectionClaim.class), org.mockito.ArgumentMatchers.eq(0L));
         ArgumentCaptor<ProjectedWorkEventDraft> drafts = ArgumentCaptor.forClass(ProjectedWorkEventDraft.class);
-        verify(projection, times(3)).appendProjectedEvent(anyString(), drafts.capture());
+        verify(projection, times(3)).appendProjectedEvent(any(WorkProjectionClaim.class), drafts.capture());
         assertEquals(List.of(
                         WorkEventType.RUN_EVENT_PROJECTED,
                         WorkEventType.INCIDENT_EVENT_PROJECTED,
@@ -87,9 +92,14 @@ class UnifiedWorkEventProjectorTests {
         TaskEventStore incidents = mock(TaskEventStore.class);
         IncidentRecoveryPlanStore recovery = mock(IncidentRecoveryPlanStore.class);
         WorkbenchProjectionProperties properties = enabledProperties();
-        when(projection.listProjectionSources(anyInt())).thenReturn(List.of(
+        List<WorkProjectionSource> sources = List.of(
                 new WorkProjectionSource("work-1", "AGENT_RUN", "run-1"),
-                new WorkProjectionSource("work-2", "INCIDENT", "inc-1")));
+                new WorkProjectionSource("work-2", "INCIDENT", "inc-1"));
+        when(projection.claimProjectionSources(anyString(), any(), anyInt())).thenAnswer(invocation -> {
+            String owner = invocation.getArgument(0);
+            Instant until = invocation.getArgument(1);
+            return sources.stream().map(source -> new WorkProjectionClaim(source, owner, 1, until)).toList();
+        });
         when(projection.projectionCursor(anyString(), anyString(), anyString())).thenReturn(-1L);
         when(timeline.loadEventsAfter(anyString(), anyLong(), anyInt()))
                 .thenThrow(new IllegalStateException("runtime store unavailable"));
@@ -104,7 +114,7 @@ class UnifiedWorkEventProjectorTests {
 
         assertEquals(1, result.projectedEventCount());
         assertEquals(1, result.failedSourceCount());
-        verify(projection).appendProjectedEvent(anyString(), any(ProjectedWorkEventDraft.class));
+        verify(projection).appendProjectedEvent(any(WorkProjectionClaim.class), any(ProjectedWorkEventDraft.class));
     }
 
     private WorkbenchProjectionProperties enabledProperties() {

@@ -130,6 +130,27 @@ class JdbcDispatchStorePostgresIT {
     }
 
     @Test
+    void expiredDispatchLeaseIsTakenOverOnceAndOldOwnerIsFenced() throws Exception {
+        Fixture fixture = fixture("GENERAL_AGENT", Map.of(), new NoopDispatchFailureInjector());
+        AgentWorkItem work = routedWork(fixture, "verify dispatch fencing");
+        var ownerA = fixture.dispatchStore.claimDispatch(principal, work.workItemId(),
+                Instant.now().minusSeconds(1), 2, "dispatch-owner-a",
+                Instant.now().plusSeconds(30)).orElseThrow();
+        assertTrue(fixture.dispatchStore.claimDispatch(principal, work.workItemId(),
+                Instant.now().minusSeconds(1), 2, "dispatch-owner-b",
+                Instant.now().plusSeconds(30)).isEmpty());
+
+        makeDispatchStale(work.workItemId());
+        var ownerB = fixture.dispatchStore.claimDispatch(principal, work.workItemId(),
+                Instant.now().minusSeconds(1), 2, "dispatch-owner-b",
+                Instant.now().plusSeconds(30)).orElseThrow();
+
+        assertEquals(ownerA.fencingToken() + 1, ownerB.fencingToken());
+        assertThrows(WorkbenchCasConflictException.class, () -> fixture.dispatchStore.failDispatch(
+                principal, ownerA, "LATE_OWNER", "late dispatch result", 0, 2));
+    }
+
+    @Test
     void incidentPreviewIsImmutableAndNoAdapterRunsBeforeExplicitConfirmation() {
         Map<String, Object> inputs = Map.of(
                 "batchId", "BATCH-M1C-1", "queueName", "floworder.incident.e2e.dlq");
@@ -230,6 +251,8 @@ class JdbcDispatchStorePostgresIT {
     private void makeDispatchStale(String workItemId) throws Exception {
         try (Connection connection = openConnection()) {
             execute(connection, "UPDATE agent_dispatch_attempt SET created_at=? WHERE work_item_id=? AND status='STARTED'",
+                    Instant.now().minusSeconds(30), workItemId);
+            execute(connection, "UPDATE agent_dispatch_attempt SET lease_until=? WHERE work_item_id=? AND status='STARTED'",
                     Instant.now().minusSeconds(30), workItemId);
         }
     }
