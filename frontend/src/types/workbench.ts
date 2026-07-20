@@ -92,7 +92,7 @@ export interface PublicPresentation {
   sourceId: string
   sourceEventId: string
   occurredAt: string
-  visibility: 'PUBLIC' | 'INSPECTOR_ONLY'
+  visibility: 'PUBLIC' | 'INSPECTOR_ONLY' | 'INTERNAL'
 }
 export interface ExecutionNodeMetrics {
   modelCalls: number

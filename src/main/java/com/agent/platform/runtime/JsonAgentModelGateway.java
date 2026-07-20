@@ -115,9 +115,21 @@ public class JsonAgentModelGateway implements AgentModelGateway {
 
     private boolean looksLikeStructuredToolCall(String raw) {
         String candidate = raw == null ? "" : raw.stripLeading();
-        return candidate.startsWith("{")
-                || candidate.regionMatches(true, 0, "```json", 0, 7)
-                || candidate.contains("\"toolCalls\"");
+        if (candidate.startsWith("{")) {
+            try {
+                Map<?, ?> root = objectMapper.readValue(extractJsonObject(candidate), Map.class);
+                return root.get("toolCalls") instanceof List<?>
+                        || (root.containsKey("assistantText") && root.containsKey("toolCalls"));
+            }
+            catch (RuntimeException incompleteOrMalformedJson) {
+                return explicitEnvelopeFields(candidate);
+            }
+        }
+        return explicitEnvelopeFields(candidate);
+    }
+
+    private boolean explicitEnvelopeFields(String value) {
+        return value.contains("\"assistantText\"") && value.contains("\"toolCalls\"");
     }
 
     private AgentModelTurn parseTurn(String raw, LlmUsage usage) {
@@ -226,12 +238,14 @@ public class JsonAgentModelGateway implements AgentModelGateway {
             if (candidate.isEmpty()) {
                 return;
             }
-            // if (开头是 '{')  → 是工具调用 → 抑制
+            // JSON may be a legitimate final answer. Buffer it until the complete response
+            // proves that the explicit toolCalls envelope is present.
             if (candidate.charAt(0) == '{') {
-                kind = ResponseKind.STRUCTURED_TOOL_CALL;
+                if (suspectedEnvelope(candidate)) kind = ResponseKind.STRUCTURED_TOOL_CALL;
                 return;
             }
-            // if (开头是 "```json") → 是工具调用 → 抑制
+            // A fenced business JSON response is final content unless it contains the
+            // explicit ToolCall envelope field.
             if (candidate.startsWith("```")) {
                 int lineBreak = candidate.indexOf('\n');
                 if (lineBreak < 0 && candidate.length() < 32) {
@@ -239,7 +253,7 @@ public class JsonAgentModelGateway implements AgentModelGateway {
                 }
                 String firstLine = lineBreak < 0 ? candidate : candidate.substring(0, lineBreak);
                 if (firstLine.trim().equalsIgnoreCase("```json")) {
-                    kind = ResponseKind.STRUCTURED_TOOL_CALL;
+                    if (suspectedEnvelope(candidate)) kind = ResponseKind.STRUCTURED_TOOL_CALL;
                     return;
                 }
             }
@@ -266,7 +280,7 @@ public class JsonAgentModelGateway implements AgentModelGateway {
         }
 
         private boolean suspectedEnvelope(String value) {
-            return value.contains("\"toolCalls\"") || value.toLowerCase(Locale.ROOT).contains("```json");
+            return value.contains("\"assistantText\"") && value.contains("\"toolCalls\"");
         }
     }
 

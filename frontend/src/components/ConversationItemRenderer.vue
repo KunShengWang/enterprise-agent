@@ -35,6 +35,11 @@ function shortValue(value: unknown) {
 function statusLabel(status: string) {
   return ({ pending: '未开始', active: '执行中', completed: '已完成', failed: '失败', waiting: '等待操作' } as Record<string, string>)[status] ?? status
 }
+
+const answerStatus = computed(() => ({
+  WAITING: '等待模型输出', STREAMING: '正在生成', FINALIZING: '正在确认最终结果',
+  COMPLETED: '已完成', FAILED: '执行失败', CANCELLED: '已取消', IDLE: '',
+} as Record<string, string>)[props.item.answerState ?? 'IDLE'])
 </script>
 
 <template>
@@ -42,7 +47,7 @@ function statusLabel(status: string) {
     <div class="conversation-item-icon">{{ itemIcon }}</div>
     <div class="conversation-item-body">
       <header v-if="item.type !== 'USER_MESSAGE'">
-        <div><strong>{{ item.title }}</strong><span v-if="item.live" class="live-label">正在生成</span></div>
+        <div><strong>{{ item.title }}</strong><span v-if="item.live" class="live-label">{{ answerStatus || '正在生成' }}</span></div>
         <small v-if="!['FINAL_ANSWER', 'ROUTE_SUMMARY'].includes(item.type)" class="item-state"><i />{{ statusLabel(item.status) }}</small>
       </header>
 
@@ -71,12 +76,6 @@ function statusLabel(status: string) {
 
       <template v-else-if="item.type === 'AGENT_DELEGATION'">
         <p class="item-description">{{ item.content }}</p>
-        <div class="agent-inline-metrics">
-          <span>Attempt {{ item.agent?.attempt }}/{{ item.agent?.maxAttempts }}</span>
-          <span>模型 {{ item.agent?.metrics.modelCalls ?? 0 }}</span>
-          <span>工具 {{ item.agent?.metrics.toolCalls ?? 0 }}</span>
-          <span>Token {{ (item.agent?.metrics.promptTokens ?? 0) + (item.agent?.metrics.completionTokens ?? 0) }}</span>
-        </div>
       </template>
 
       <template v-else-if="item.type === 'INCIDENT_PREVIEW'">

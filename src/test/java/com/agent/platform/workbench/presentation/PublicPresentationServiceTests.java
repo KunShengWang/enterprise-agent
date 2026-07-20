@@ -37,6 +37,21 @@ class PublicPresentationServiceTests {
     private final AuthenticatedPrincipal principal = new AuthenticatedPrincipal("tenant", "alice", Set.of("USER"));
 
     @Test
+    void presentationSequenceReservesExactlyTenCollisionFreeSlotsPerWorkEvent() {
+        for (int ordinal = 0; ordinal < PublicPresentationService.PRESENTATION_SLOTS_PER_EVENT; ordinal++) {
+            assertEquals(70 + ordinal, PublicPresentationService.presentationSequence(7, ordinal));
+            assertTrue(PublicPresentationService.presentationSequence(7, ordinal)
+                    < PublicPresentationService.presentationSequence(8, ordinal));
+        }
+        assertThrows(IllegalArgumentException.class,
+                () -> PublicPresentationService.presentationSequence(7, -1));
+        assertThrows(IllegalArgumentException.class,
+                () -> PublicPresentationService.presentationSequence(7, 10));
+        assertThrows(IllegalArgumentException.class,
+                () -> PublicPresentationService.presentationSequence(-1, 0));
+    }
+
+    @Test
     void routingPublishesOnlyUserSummaryAndDistinguishesStandardProcessFromExplicitPlan() {
         Fixture fixture = fixture(List.of(event(2, WorkEventType.ROUTING_DECIDED, "ROUTED", Map.of(
                 "targetId", "GENERAL_AGENT",

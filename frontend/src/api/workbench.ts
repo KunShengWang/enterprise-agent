@@ -24,6 +24,9 @@ export const workbenchApi = {
   presentations: (workItemId: string, afterSequence = -1, limit = 500) => apiRequest<PublicPresentation[]>(
     `/api/agent/work-items/${encodeURIComponent(workItemId)}/presentations?afterSequence=${afterSequence}&limit=${limit}`,
   ),
+  inspectorPresentations: (workItemId: string, afterSequence = -1, limit = 500) => apiRequest<PublicPresentation[]>(
+    `/api/agent/work-items/${encodeURIComponent(workItemId)}/presentations/inspector?afterSequence=${afterSequence}&limit=${limit}`,
+  ),
   presentationStreamUrl: (workItemId: string, afterSequence: number) =>
     `${API_BASE_URL}/api/agent/work-items/${encodeURIComponent(workItemId)}/presentations/stream?afterSequence=${afterSequence}`,
   streamUrl: (workItemId: string, afterSequence: number, afterRunSequence: number) =>

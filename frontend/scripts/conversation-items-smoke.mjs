@@ -27,8 +27,8 @@ const presentations = [
 const items = projectConversationItems({
   detail: { workItem: work, routingDecision: { decisionId: 'decision-1', decision: { userFacingSummary: '这是一个知识解释任务。' }, validation: {}, failureCode: '', failureReason: '' }, links: [], events: [] },
   inputs: [{ inputId: 'input-1', clientInputId: 'client-1', conversationId: 'conversation-1', content: work.originalGoal, inputKind: 'NORMAL_GOAL', classificationStatus: 'CLASSIFIED', createdAt: work.createdAt }],
-  messages: [{ messageId: 'message-1', runId: 'run-1', sequence: 1, role: 'ASSISTANT', content: '## Spring 三级缓存', createdAt: work.updatedAt }],
-  presentations, tree: null, approval: null, liveAnswer: '',
+  presentations, approval: null,
+  answer: { state: 'COMPLETED', content: '## Spring 三级缓存', persistedMessageId: 'message-1', createdAt: work.updatedAt },
 })
 
 assert.equal(items[0].type, 'USER_MESSAGE')
@@ -49,10 +49,26 @@ const approvalPresentation = {
 }
 const approvalItems = projectConversationItems({
   detail: { workItem: work, routingDecision: null, links: [], events: [] },
-  inputs: [], messages: [], presentations: [...presentations, approvalPresentation],
-  tree: null, approval, liveAnswer: '',
+  inputs: [], presentations: [...presentations, approvalPresentation], approval,
+  answer: { state: 'IDLE', content: '', persistedMessageId: '', createdAt: '' },
 })
 assert.equal(approvalItems.filter(item => item.type === 'APPROVAL_REQUEST').length, 1)
 assert.equal(approvalItems.find(item => item.type === 'APPROVAL_REQUEST')?.approval?.approvalId, 'approval-1')
+
+const requestTool = { ...presentations[2], presentationId: 'p-tool-request', sequence: 19, status: 'ACTIVE' }
+const duplicatePlan = { ...presentations[1], presentationId: 'p-plan', sequence: 12, kind: 'EXECUTION_PLAN', title: '执行计划' }
+const internal = { ...presentations[0], presentationId: 'p-internal', sequence: 13, visibility: 'INTERNAL', summary: 'hidden reasoning' }
+const inspector = { ...presentations[0], presentationId: 'p-inspector', sequence: 14, visibility: 'INSPECTOR_ONLY', summary: 'technical only' }
+const finalResult = { ...presentations[0], presentationId: 'p-final', sequence: 30, kind: 'FINAL_RESULT', title: '结果已生成', summary: '最终正文以 Primary Run 为准。' }
+const deduplicated = projectConversationItems({
+  detail: { workItem: work, routingDecision: null, links: [], events: [] }, inputs: [],
+  presentations: [...presentations, requestTool, duplicatePlan, internal, inspector, finalResult], approval: null,
+  answer: { state: 'STREAMING', content: 'live answer', persistedMessageId: '', createdAt: work.updatedAt },
+})
+assert.equal(deduplicated.filter(item => item.type === 'TOOL_CALL').length, 1)
+assert.equal(deduplicated.filter(item => item.type === 'TASK_PLAN').length, 1)
+assert.equal(deduplicated.filter(item => item.type === 'FINAL_ANSWER').length, 1)
+assert.ok(!deduplicated.some(item => item.content.includes('hidden reasoning') || item.content.includes('technical only')))
+assert.ok(deduplicated.some(item => item.content.includes('Primary Run')))
 
 console.log(`conversation projection smoke passed (${items.length} visible items)`)

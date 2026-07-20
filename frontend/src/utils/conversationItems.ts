@@ -1,6 +1,6 @@
-import type { AgentConversationMessage, ApprovalRecord } from '../types/agent'
-import type { ConversationItem, ConversationItemStatus } from '../types/conversation'
-import type { PublicPresentation, WorkExecutionTree, WorkInput, WorkItemDetail } from '../types/workbench'
+import type { ApprovalRecord } from '../types/agent'
+import type { ConversationEntry, ConversationItem, ConversationItemStatus, PrimaryAnswerView } from '../types/conversation'
+import type { PublicPresentation, WorkInput, WorkItemDetail } from '../types/workbench'
 
 function presentationStatus(status: PublicPresentation['status']): ConversationItemStatus {
   if (status === 'FAILED') return 'failed'
@@ -13,7 +13,7 @@ function presentationStatus(status: PublicPresentation['status']): ConversationI
 function presentationType(item: PublicPresentation): ConversationItem['type'] | null {
   if (item.kind === 'TASK_UNDERSTANDING' || item.kind === 'ACTION_STARTED'
     || item.kind === 'ACTION_COMPLETED' || item.kind === 'WAITING_FOR_USER'
-    || item.kind === 'RETRY' || item.kind === 'RECOVERY') return 'AGENT_STATUS'
+    || item.kind === 'RETRY' || item.kind === 'RECOVERY' || item.kind === 'FINAL_RESULT') return 'AGENT_STATUS'
   if (item.kind === 'ROUTE_SUMMARY') return 'ROUTE_SUMMARY'
   if (item.kind === 'STANDARD_PROCESS' || item.kind === 'EXECUTION_PLAN') return 'TASK_PLAN'
   if (item.kind === 'TOOL_ACTIVITY') return 'TOOL_CALL'
@@ -23,10 +23,38 @@ function presentationType(item: PublicPresentation): ConversationItem['type'] | 
   return null
 }
 
+function sameSteps(left: string[], right: string[]) {
+  const normalize = (values: string[]) => values.map(value => value.trim().replace(/\s+/g, ' ')).join('\n')
+  return normalize(left) === normalize(right)
+}
+
+function visiblePresentations(presentations: PublicPresentation[]) {
+  const unique = new Map<string, PublicPresentation>()
+  presentations.filter(item => item.visibility === 'PUBLIC')
+    .forEach(item => unique.set(item.presentationId, item))
+  const sorted = [...unique.values()].sort((left, right) => left.sequence - right.sequence)
+  const standardProcesses = sorted.filter(item => item.kind === 'STANDARD_PROCESS').map(item => item.steps)
+  const withoutDuplicatePlans = sorted.filter(item => item.kind !== 'EXECUTION_PLAN'
+    || !standardProcesses.some(steps => sameSteps(steps, item.steps)))
+  const latestTool = new Map<string, PublicPresentation>()
+  withoutDuplicatePlans.filter(item => item.kind === 'TOOL_ACTIVITY').forEach(item => {
+    const key = item.detail.referenceId || item.presentationId
+    const current = latestTool.get(key)
+    if (!current || item.sequence > current.sequence) {
+      const previousArguments = current?.detail.tool?.publicArguments ?? {}
+      const currentArguments = item.detail.tool?.publicArguments ?? {}
+      const merged = item.detail.tool && !Object.keys(currentArguments).length && Object.keys(previousArguments).length
+        ? { ...item, detail: { ...item.detail, tool: { ...item.detail.tool, publicArguments: previousArguments } } }
+        : item
+      latestTool.set(key, merged)
+    }
+  })
+  const nonTools = withoutDuplicatePlans.filter(item => item.kind !== 'TOOL_ACTIVITY')
+  return [...nonTools, ...latestTool.values()].sort((left, right) => left.sequence - right.sequence)
+}
+
 function publicItems(presentations: PublicPresentation[], approval: ApprovalRecord | null): ConversationItem[] {
-  return [...presentations]
-    .filter(item => item.visibility === 'PUBLIC')
-    .sort((left, right) => left.sequence - right.sequence)
+  return visiblePresentations(presentations)
     .flatMap((item): ConversationItem[] => {
       const type = presentationType(item)
       if (!type) return []
@@ -54,15 +82,13 @@ function publicItems(presentations: PublicPresentation[], approval: ApprovalReco
 export interface ConversationProjectionInput {
   detail: WorkItemDetail
   inputs: WorkInput[]
-  messages: AgentConversationMessage[]
   presentations: PublicPresentation[]
-  tree: WorkExecutionTree | null
   approval: ApprovalRecord | null
-  liveAnswer: string
+  answer: PrimaryAnswerView
 }
 
-export function projectConversationItems(source: ConversationProjectionInput): ConversationItem[] {
-  const { detail, inputs, messages, presentations, approval, liveAnswer } = source
+export function projectConversationItems(source: ConversationProjectionInput): ConversationEntry[] {
+  const { detail, inputs, presentations, approval, answer } = source
   const work = detail.workItem
   const items: ConversationItem[] = []
   const userInput = inputs.find(input => input.inputId === work.sourceInputId)
@@ -99,16 +125,16 @@ export function projectConversationItems(source: ConversationProjectionInput): C
     approval,
   })
 
-  const persisted = messages.find(message => message.role === 'ASSISTANT' && message.runId === work.activeRunId)
-  const finalContent = persisted?.content || liveAnswer
-  if (finalContent) items.push({
-    id: persisted ? `answer-${persisted.messageId}` : `answer-live-${work.workItemId}`,
+  if (answer.content || answer.state === 'WAITING' || answer.state === 'FINALIZING') items.push({
+    id: `answer-${work.workItemId}`,
     type: 'FINAL_ANSWER',
-    createdAt: persisted?.createdAt || new Date().toISOString(),
+    createdAt: answer.createdAt || work.updatedAt,
     title: '最终回答',
-    content: finalContent,
-    status: persisted ? 'completed' : 'active',
-    live: !persisted,
+    content: answer.content,
+    status: answer.state === 'FAILED' || answer.state === 'CANCELLED' ? 'failed'
+      : answer.state === 'COMPLETED' ? 'completed' : 'active',
+    live: answer.state === 'STREAMING' || answer.state === 'FINALIZING',
+    answerState: answer.state,
   })
 
   return items

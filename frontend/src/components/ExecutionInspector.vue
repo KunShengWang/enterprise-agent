@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import StatusBadge from './StatusBadge.vue'
 import type { ApprovalRecord } from '../types/agent'
-import type { WorkEvent, WorkExecutionTree, WorkItemBudget, WorkItemDetail } from '../types/workbench'
+import type { PublicPresentation, WorkEvent, WorkExecutionTree, WorkItemBudget, WorkItemDetail } from '../types/workbench'
 
 const props = defineProps<{
   detail: WorkItemDetail
@@ -10,7 +10,15 @@ const props = defineProps<{
   events: WorkEvent[]
   budget: WorkItemBudget | null
   approval: ApprovalRecord | null
-  streamState: string
+  inspectorPresentations: PublicPresentation[]
+  deltaStreamState: string
+  presentationStreamState: string
+  workCursor: number
+  runCursor: number
+  presentationCursor: number
+  lastEventAt: string
+  gap: boolean
+  syncError: string
   finalAnswerAt?: string
   busy?: boolean
 }>()
@@ -96,7 +104,7 @@ function number(value?: number) {
       <button type="button" title="暂停任务" :disabled="busy" @click="emit('command', 'pause')">Ⅱ</button>
       <button type="button" title="从检查点继续" :disabled="busy" @click="emit('command', 'resume')">▶</button>
       <button type="button" title="取消任务" :disabled="busy" @click="emit('command', 'cancel')">■</button>
-      <span :data-state="streamState">{{ streamState }}</span>
+      <span :data-state="deltaStreamState">{{ deltaStreamState }}</span>
     </div>
 
     <nav class="inspector-tabs" aria-label="执行详情">
@@ -122,6 +130,18 @@ function number(value?: number) {
           </dl>
         </section>
         <section class="inspector-section">
+          <h3>传输状态</h3>
+          <dl>
+            <dt>Presentation SSE</dt><dd>{{ presentationStreamState }}</dd>
+            <dt>Delta SSE</dt><dd>{{ deltaStreamState }}</dd>
+            <dt>Presentation cursor</dt><dd>{{ presentationCursor }}</dd>
+            <dt>Work / Run cursor</dt><dd>{{ workCursor }} / {{ runCursor }}</dd>
+            <dt>最近事件</dt><dd>{{ lastEventAt ? new Date(lastEventAt).toLocaleTimeString('zh-CN') : '—' }}</dd>
+            <dt>Gap</dt><dd>{{ gap ? '是' : '否' }}</dd>
+          </dl>
+          <p v-if="syncError" class="agent-error">{{ syncError }}</p>
+        </section>
+        <section class="inspector-section">
           <h3>预算</h3>
           <template v-if="budget">
             <div class="budget-progress"><i :style="{ width: `${Math.min(100, budget.maximum.tokens ? budget.consumed.tokens / budget.maximum.tokens * 100 : 0)}%` }" /></div>
@@ -132,6 +152,10 @@ function number(value?: number) {
       </section>
 
       <section v-else-if="activeTab === 'activity'" class="activity-groups">
+        <details v-if="inspectorPresentations.length">
+          <summary><span>Presentation 投影</span><small>{{ inspectorPresentations.length }}</small></summary>
+          <ol><li v-for="item in inspectorPresentations" :key="item.presentationId"><i /><div><strong>{{ item.title }}</strong><small>#{{ item.sequence }} · {{ item.visibility }} · {{ item.sourceType }}</small><details><summary>完整 Presentation</summary><pre>{{ JSON.stringify(item, null, 2) }}</pre></details></div></li></ol>
+        </details>
         <details v-for="group in activityGroups" :key="group.id">
           <summary><span>{{ group.label }}</span><small>{{ group.events.length }}</small></summary>
           <ol><li v-for="event in group.events" :key="event.eventId"><i /><div><strong>{{ event.summary }}</strong><small>#{{ event.sequence }} · {{ event.phase || event.eventType }}</small><details><summary>完整 WorkEvent</summary><pre>{{ JSON.stringify(event, null, 2) }}</pre></details></div></li></ol>

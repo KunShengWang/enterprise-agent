@@ -28,6 +28,7 @@ import java.util.UUID;
 public class PublicPresentationService {
 
     private static final int MAX_SOURCE_EVENTS = 10_000;
+    static final int PRESENTATION_SLOTS_PER_EVENT = 10;
     private static final Set<String> SENSITIVE_KEYS = Set.of(
             "password", "passwd", "secret", "token", "authorization", "cookie", "apikey", "api_key",
             "sql", "url", "headers", "prompt", "systemprompt", "reasoning", "chainofthought", "stacktrace");
@@ -375,12 +376,22 @@ public class PublicPresentationService {
                                     PublicPresentationKind kind, PublicPresentationStatus status,
                                     String title, String summary, List<String> steps,
                                     PublicPresentationDetail detail, PublicVisibility visibility) {
-        long sequence = Math.addExact(Math.multiplyExact(event.sequence(), 10), ordinal);
+        long sequence = presentationSequence(event.sequence(), ordinal);
         String coordinate = work.workItemId() + "|" + event.sourceEventId() + "|" + kind + "|" + ordinal;
         String id = "pp-" + UUID.nameUUIDFromBytes(coordinate.getBytes(StandardCharsets.UTF_8));
         return new PublicPresentation(id, work.workItemId(), sequence,
                 PublicPresentation.CURRENT_SCHEMA_VERSION, kind, status, title, summary, steps, detail,
                 event.sourceType(), event.sourceId(), event.sourceEventId(), occurredAt(event), visibility);
+    }
+
+    static long presentationSequence(long workEventSequence, int ordinal) {
+        if (workEventSequence < 0) {
+            throw new IllegalArgumentException("work event sequence must be non-negative");
+        }
+        if (ordinal < 0 || ordinal >= PRESENTATION_SLOTS_PER_EVENT) {
+            throw new IllegalArgumentException("presentation ordinal must be between 0 and 9");
+        }
+        return Math.addExact(Math.multiplyExact(workEventSequence, PRESENTATION_SLOTS_PER_EVENT), ordinal);
     }
 
     private String publicRoutingSummary(RoutingDecisionRecord routing, String targetLabel) {

@@ -60,6 +60,37 @@ class ToolResultBoundaryTests {
     }
 
     @Test
+    void legitimateJsonAnswerIsNotMisclassifiedWhenToolsAreAvailable() {
+        LlmService llmService = mock(LlmService.class);
+        when(llmService.stream(any())).thenReturn(Flux.just(
+                "{\"status\":\"ok\",", "\"items\":[1,2]}"));
+        JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
+        List<String> deltas = new ArrayList<>();
+
+        AgentModelTurn turn = gateway.nextTurn(modelRequestWithTool(), deltas::add);
+
+        assertEquals("{\"status\":\"ok\",\"items\":[1,2]}", turn.assistantText());
+        assertTrue(turn.toolCalls().isEmpty());
+        assertEquals("final_answer", turn.finishReason());
+        assertEquals(turn.assistantText(), String.join("", deltas));
+    }
+
+    @Test
+    void businessJsonContainingToolCallsNameWithoutEnvelopeRemainsFinalAnswer() {
+        LlmService llmService = mock(LlmService.class);
+        String businessJson = "{\"status\":\"ok\",\"toolCalls\":\"documentation label\"}";
+        when(llmService.stream(any())).thenReturn(Flux.just(businessJson));
+        JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
+        List<String> deltas = new ArrayList<>();
+
+        AgentModelTurn turn = gateway.nextTurn(modelRequestWithTool(), deltas::add);
+
+        assertEquals(businessJson, turn.assistantText());
+        assertTrue(turn.toolCalls().isEmpty());
+        assertEquals(businessJson, String.join("", deltas));
+    }
+
+    @Test
     void malformedToolCallAfterProviderReasoningPrefixFailsClosed() {
         LlmService llmService = mock(LlmService.class);
         when(llmService.complete(any())).thenReturn("""

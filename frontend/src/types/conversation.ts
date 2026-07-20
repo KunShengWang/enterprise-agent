@@ -1,5 +1,8 @@
 import type { ApprovalRecord } from './agent'
-import type { ExecutionAgentNode, RoutePreview } from './workbench'
+import type { RoutePreview } from './workbench'
+
+export type PrimaryAnswerState =
+  | 'IDLE' | 'WAITING' | 'STREAMING' | 'FINALIZING' | 'COMPLETED' | 'FAILED' | 'CANCELLED'
 
 export type ConversationItemType =
   | 'USER_MESSAGE'
@@ -35,8 +38,17 @@ export interface ConversationItem {
   status: ConversationItemStatus
   steps?: string[]
   tool?: ConversationToolData
-  agent?: ExecutionAgentNode
   preview?: RoutePreview
   approval?: ApprovalRecord
   live?: boolean
+  answerState?: PrimaryAnswerState
 }
+
+export interface PrimaryAnswerView {
+  state: PrimaryAnswerState
+  content: string
+  persistedMessageId: string
+  createdAt: string
+}
+
+export type ConversationEntry = ConversationItem
