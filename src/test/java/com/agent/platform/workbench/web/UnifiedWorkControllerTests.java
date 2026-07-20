@@ -7,12 +7,15 @@ import com.agent.platform.workbench.application.UnifiedWorkExecutionTreeService;
 import com.agent.platform.workbench.application.UnifiedWorkIntakeResult;
 import com.agent.platform.workbench.application.UnifiedWorkIntakeService;
 import com.agent.platform.workbench.application.UnifiedWorkLauncher;
+import com.agent.platform.workbench.application.WorkCommandHandler;
+import com.agent.platform.workbench.application.WorkCommandResult;
 import com.agent.platform.workbench.application.UnifiedWorkQueryService;
 import com.agent.platform.workbench.model.AgentConversationTurn;
 import com.agent.platform.workbench.model.AgentWorkItem;
 import com.agent.platform.workbench.model.WorkControlState;
 import com.agent.platform.workbench.model.WorkCommandDecision;
 import com.agent.platform.workbench.model.WorkCommandType;
+import com.agent.platform.workbench.model.WorkCommandExecutionStatus;
 import com.agent.platform.workbench.model.WorkExecutionState;
 import com.agent.platform.workbench.model.WorkOutcome;
 import com.agent.platform.workbench.persistence.RoutingStore;
@@ -49,35 +52,39 @@ class UnifiedWorkControllerTests {
     private final RoutingStore routing = mock(RoutingStore.class);
     private final UnifiedWorkEventStreamService eventStream = mock(UnifiedWorkEventStreamService.class);
     private final UnifiedWorkExecutionTreeService executionTrees = mock(UnifiedWorkExecutionTreeService.class);
+    private final WorkCommandHandler commandHandler = mock(WorkCommandHandler.class);
     private final UnifiedWorkController controller = new UnifiedWorkController(
             principals, intake, launcher, queries, confirmations, focus, workbench, routing,
-            eventStream, executionTrees);
+            eventStream, executionTrees, commandHandler);
 
     @Test
     void requestMetadataCannotOverrideTrustedIdentityOrExecutionProfile() {
         assertThrows(IllegalArgumentException.class, () -> controller.submit(
                 "conversation-1", "client-1",
-                new UnifiedWorkController.UnifiedInputBody("hello", Map.of("tenantId", "attacker"))));
+                new UnifiedWorkController.UnifiedInputBody("hello", Map.of("tenantId", "attacker"))).block());
         assertThrows(IllegalArgumentException.class, () -> controller.submit(
                 "conversation-1", "client-2",
-                new UnifiedWorkController.UnifiedInputBody("hello", Map.of("executionProfile", "admin"))));
+                new UnifiedWorkController.UnifiedInputBody("hello", Map.of("executionProfile", "admin"))).block());
     }
 
     @Test
     void unsupportedCommandIsAuditedAndCannotChangeUnderlyingExecution() {
         AgentWorkItem work = work();
         when(workbench.findWorkItem(principal, work.workItemId())).thenReturn(Optional.of(work));
-        when(routing.persistUnclassifiedInput(eq(principal), anyString(), eq("button-1"),
-                eq(work.conversationId()), anyString())).thenReturn(mock(AgentConversationTurn.class));
+        AgentConversationTurn input = mock(AgentConversationTurn.class);
+        WorkCommandDecision decision = mock(WorkCommandDecision.class);
+        when(intake.accept(eq(principal), any(UnifiedWorkInputRequest.class)))
+                .thenReturn(new UnifiedWorkIntakeResult(input, decision, null, true));
+        when(commandHandler.handle(eq(principal), any())).thenReturn(commandResult(work,
+                WorkCommandType.PAUSE_ACTIVE_WORK, "UNSUPPORTED_FOR_TARGET", false));
 
-        var response = controller.unsupportedCommand(work.workItemId(), "pause",
-                new UnifiedWorkController.WorkCommandBody(work.version(), "button-1"));
+        var response = controller.command(work.workItemId(), "pause",
+                new UnifiedWorkController.WorkCommandBody(work.version(), "button-1")).block();
 
         assertEquals(409, response.getStatusCode().value());
         assertEquals("UNSUPPORTED_FOR_TARGET", response.getBody().code());
         assertEquals(false, response.getBody().data().underlyingExecutionChanged());
-        verify(routing).persistUnclassifiedInput(eq(principal), anyString(), eq("button-1"),
-                eq(work.conversationId()), anyString());
+        verify(intake).accept(eq(principal), any(UnifiedWorkInputRequest.class));
     }
 
     @Test
@@ -88,12 +95,14 @@ class UnifiedWorkControllerTests {
         when(decision.focusedWorkItemId()).thenReturn("");
         when(intake.accept(eq(principal), any(UnifiedWorkInputRequest.class)))
                 .thenReturn(new UnifiedWorkIntakeResult(input, decision, null, true));
+        when(commandHandler.handle(eq(principal), any())).thenReturn(commandResult(null,
+                WorkCommandType.RESUME_ACTIVE_WORK, "FOCUS_NOT_FOUND", false));
 
         var response = controller.submit("conversation-1", "client-command-1",
-                new UnifiedWorkController.UnifiedInputBody("继续刚才的任务", Map.of()));
+                new UnifiedWorkController.UnifiedInputBody("继续刚才的任务", Map.of())).block();
 
         assertEquals(409, response.getStatusCode().value());
-        assertEquals("UNSUPPORTED_FOR_TARGET", response.getBody().code());
+        assertEquals("FOCUS_NOT_FOUND", response.getBody().code());
     }
 
     @Test
@@ -123,5 +132,15 @@ class UnifiedWorkControllerTests {
                 "goal", "goal", WorkControlState.DISPATCHED, WorkExecutionState.RUNNING,
                 WorkOutcome.UNDETERMINED, "INCIDENT_INVESTIGATION", "", "incident-1", "", "decision-1",
                 "input-1", "", "routing-1", 1, now, null, "", "dispatch-1", 2, 3, now, now, null);
+    }
+
+    private WorkCommandResult commandResult(AgentWorkItem work,
+                                            WorkCommandType command,
+                                            String code,
+                                            boolean success) {
+        return new WorkCommandResult(success, code, code, "wcmd-1", "input-1", command,
+                work == null ? "" : work.activeExecutionTarget(), work == null ? "" : work.workItemId(),
+                false, work == null ? "" : work.activeRunId(),
+                success ? WorkCommandExecutionStatus.SUCCEEDED : WorkCommandExecutionStatus.REJECTED, work);
     }
 }

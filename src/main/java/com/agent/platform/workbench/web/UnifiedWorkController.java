@@ -9,6 +9,9 @@ import com.agent.platform.workbench.application.UnifiedWorkIntakeResult;
 import com.agent.platform.workbench.application.UnifiedWorkIntakeService;
 import com.agent.platform.workbench.application.UnifiedWorkLauncher;
 import com.agent.platform.workbench.application.UnifiedWorkQueryService;
+import com.agent.platform.workbench.application.WorkCommandHandler;
+import com.agent.platform.workbench.application.WorkCommandRequest;
+import com.agent.platform.workbench.application.WorkCommandResult;
 import com.agent.platform.workbench.model.AgentConversationTurn;
 import com.agent.platform.workbench.model.AgentWorkItem;
 import com.agent.platform.workbench.model.ClassifierType;
@@ -41,6 +44,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @RestController
 @RequestMapping("/api/agent")
@@ -61,6 +66,7 @@ public class UnifiedWorkController {
     private final RoutingStore routing;
     private final UnifiedWorkEventStreamService eventStream;
     private final UnifiedWorkExecutionTreeService executionTrees;
+    private final WorkCommandHandler commandHandler;
 
     public UnifiedWorkController(WorkbenchPrincipalProvider principals,
                                  UnifiedWorkIntakeService intake,
@@ -71,47 +77,23 @@ public class UnifiedWorkController {
                                  WorkbenchStore workbench,
                                  RoutingStore routing,
                                  UnifiedWorkEventStreamService eventStream,
-                                 UnifiedWorkExecutionTreeService executionTrees) {
+                                 UnifiedWorkExecutionTreeService executionTrees,
+                                 WorkCommandHandler commandHandler) {
         this.principals = principals; this.intake = intake; this.launcher = launcher;
         this.queries = queries; this.confirmations = confirmations; this.focusService = focusService;
         this.workbench = workbench; this.routing = routing; this.eventStream = eventStream;
         this.executionTrees = executionTrees;
+        this.commandHandler = commandHandler;
     }
 
     @PostMapping("/conversations/{conversationId}/inputs")
-    public ResponseEntity<ApiResponse<?>> submit(
+    public Mono<ResponseEntity<ApiResponse<?>>> submit(
             @PathVariable String conversationId,
             @RequestHeader("Idempotency-Key") String clientInputId,
             @RequestBody UnifiedInputBody body) {
-        validateMetadata(body.metadata());
         AuthenticatedPrincipal principal = principals.current();
-        UnifiedWorkIntakeResult result = intake.accept(principal, new UnifiedWorkInputRequest(
-                "input-" + UUID.randomUUID(), clientInputId, conversationId, body.content(),
-                ClassifierType.MODEL, null, ""));
-        if (result.commandOnly()) {
-            WorkCommandType commandType = result.commandDecision().commandType();
-            String focusedWorkItemId = result.commandDecision().focusedWorkItemId();
-            String executionTarget = focusedWorkItemId == null || focusedWorkItemId.isBlank()
-                    ? ""
-                    : workbench.findWorkItem(principal, focusedWorkItemId)
-                            .map(AgentWorkItem::activeExecutionTarget)
-                            .orElse("");
-            CommandError error = new CommandError("UNSUPPORTED_FOR_TARGET",
-                    commandType == null ? "UNKNOWN" : commandType.name(), executionTarget,
-                    focusedWorkItemId == null ? "" : focusedWorkItemId, false,
-                    "M1-D records natural-language work commands but does not execute them; use the existing target page");
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(new ApiResponse<>(false, error.code(), error.message(), error));
-        }
-        if (result.workItem() != null) {
-            launcher.routeAndDispatch(principal, result.workItem().workItemId(), result.workItem().routingRequestId());
-        }
-        UnifiedInputResponse response = new UnifiedInputResponse(
-                result.input().inputId(), result.workItem() == null ? "" : result.workItem().workItemId(),
-                result.workItem() == null ? "COMMAND_RECORDED" : result.workItem().controlState().name(),
-                result.commandDecision().commandType() == null ? "" : result.commandDecision().commandType().name(),
-                result.commandOnly());
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.success(response));
+        return Mono.fromCallable(() -> submitBlocking(principal, conversationId, clientInputId, body))
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     @GetMapping("/conversations/{conversationId}/work-items")
@@ -192,32 +174,105 @@ public class UnifiedWorkController {
     }
 
     @PostMapping("/work-items/{workItemId}/abandon")
-    public ApiResponse<AgentWorkItem> abandon(@PathVariable String workItemId,
-                                              @RequestBody WorkCommandBody body) {
-        AuthenticatedPrincipal principal = principals.current();
-        AgentWorkItem work = owned(principal, workItemId);
-        recordControlInput(principal, work.conversationId(), body.clientInputId(), "ABANDON", workItemId);
-        return ApiResponse.success(workbench.abandon(principal, workItemId, body.expectedVersion(), "input-button"));
+    public Mono<ResponseEntity<ApiResponse<WorkCommandResult>>> abandon(@PathVariable String workItemId,
+                                                                         @RequestBody WorkCommandBody body) {
+        return executeExplicitCommand(workItemId, WorkCommandType.ABANDON_ACTIVE_WORK, body);
     }
 
     @PostMapping("/work-items/{workItemId}/commands/{command}")
-    public ResponseEntity<ApiResponse<CommandError>> unsupportedCommand(@PathVariable String workItemId,
+    public Mono<ResponseEntity<ApiResponse<WorkCommandResult>>> command(@PathVariable String workItemId,
                                                                          @PathVariable String command,
                                                                          @RequestBody WorkCommandBody body) {
-        AuthenticatedPrincipal principal = principals.current();
-        AgentWorkItem work = owned(principal, workItemId);
-        String normalized = command.trim().toUpperCase(Locale.ROOT);
-        recordControlInput(principal, work.conversationId(), body.clientInputId(), normalized, workItemId);
-        CommandError error = new CommandError("UNSUPPORTED_FOR_TARGET", normalized,
-                work.activeExecutionTarget(), workItemId, false,
-                "M1-D does not expose a cross-executor command handler; use the existing target page");
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ApiResponse<>(false, error.code(), error.message(), error));
+        return executeExplicitCommand(workItemId, parseCommand(command), body);
     }
 
-    private AgentWorkItem owned(AuthenticatedPrincipal principal, String workItemId) {
-        return workbench.findWorkItem(principal, workItemId)
-                .orElseThrow(() -> new com.agent.platform.workbench.persistence.WorkbenchNotFoundException("work item not found"));
+    @PostMapping("/work-items/{workItemId}/pause")
+    public Mono<ResponseEntity<ApiResponse<WorkCommandResult>>> pause(@PathVariable String workItemId,
+                                                                       @RequestBody WorkCommandBody body) {
+        return executeExplicitCommand(workItemId, WorkCommandType.PAUSE_ACTIVE_WORK, body);
+    }
+
+    @PostMapping("/work-items/{workItemId}/resume")
+    public Mono<ResponseEntity<ApiResponse<WorkCommandResult>>> resume(@PathVariable String workItemId,
+                                                                        @RequestBody WorkCommandBody body) {
+        return executeExplicitCommand(workItemId, WorkCommandType.RESUME_ACTIVE_WORK, body);
+    }
+
+    @PostMapping("/work-items/{workItemId}/cancel")
+    public Mono<ResponseEntity<ApiResponse<WorkCommandResult>>> cancel(@PathVariable String workItemId,
+                                                                        @RequestBody WorkCommandBody body) {
+        return executeExplicitCommand(workItemId, WorkCommandType.CANCEL_ACTIVE_WORK, body);
+    }
+
+    private ResponseEntity<ApiResponse<?>> submitBlocking(AuthenticatedPrincipal principal,
+                                                           String conversationId,
+                                                           String clientInputId,
+                                                           UnifiedInputBody body) {
+        validateMetadata(body.metadata());
+        UnifiedWorkIntakeResult result = intake.accept(principal, new UnifiedWorkInputRequest(
+                "input-" + UUID.randomUUID(), clientInputId, conversationId, body.content(),
+                ClassifierType.MODEL, null, ""));
+        if (result.commandOnly()) {
+            return commandResponse(commandHandler.handle(principal,
+                    new WorkCommandRequest(result.input(), result.commandDecision(), "", null)));
+        }
+        if (result.workItem() != null) {
+            launcher.routeAndDispatch(principal, result.workItem().workItemId(), result.workItem().routingRequestId());
+        }
+        UnifiedInputResponse response = new UnifiedInputResponse(
+                result.input().inputId(), result.workItem() == null ? "" : result.workItem().workItemId(),
+                result.workItem() == null ? "COMMAND_RECORDED" : result.workItem().controlState().name(),
+                result.commandDecision().commandType() == null ? "" : result.commandDecision().commandType().name(),
+                result.commandOnly());
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.success(response));
+    }
+
+    private Mono<ResponseEntity<ApiResponse<WorkCommandResult>>> executeExplicitCommand(
+            String workItemId,
+            WorkCommandType commandType,
+            WorkCommandBody body) {
+        AuthenticatedPrincipal principal = principals.current();
+        return Mono.fromCallable(() -> {
+                    AgentWorkItem work = owned(principal, workItemId);
+                    UnifiedWorkIntakeResult intakeResult = intake.accept(principal, new UnifiedWorkInputRequest(
+                            "input-" + UUID.randomUUID(), body.clientInputId(), work.conversationId(),
+                            "[CONTROL] " + commandType.name() + " workItemId=" + workItemId,
+                            ClassifierType.DETERMINISTIC_BUTTON, commandType, ""));
+                    WorkCommandResult result = commandHandler.handle(principal, new WorkCommandRequest(
+                            intakeResult.input(), intakeResult.commandDecision(), workItemId, body.expectedVersion()));
+                    return typedCommandResponse(result);
+                })
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private ResponseEntity<ApiResponse<?>> commandResponse(WorkCommandResult result) {
+        HttpStatus status = commandStatus(result);
+        return ResponseEntity.status(status).body(new ApiResponse<>(result.success(), result.code(),
+                result.message(), result));
+    }
+
+    private ResponseEntity<ApiResponse<WorkCommandResult>> typedCommandResponse(WorkCommandResult result) {
+        HttpStatus status = commandStatus(result);
+        return ResponseEntity.status(status).body(new ApiResponse<>(result.success(), result.code(),
+                result.message(), result));
+    }
+
+    private HttpStatus commandStatus(WorkCommandResult result) {
+        if (result.success()) return HttpStatus.OK;
+        if ("FORBIDDEN".equals(result.code())) return HttpStatus.FORBIDDEN;
+        return HttpStatus.CONFLICT;
+    }
+
+    private WorkCommandType parseCommand(String command) {
+        String normalized = command == null ? "" : command.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "PAUSE", "PAUSE_ACTIVE_WORK" -> WorkCommandType.PAUSE_ACTIVE_WORK;
+            case "RESUME", "RESUME_ACTIVE_WORK" -> WorkCommandType.RESUME_ACTIVE_WORK;
+            case "CANCEL", "CANCEL_ACTIVE_WORK" -> WorkCommandType.CANCEL_ACTIVE_WORK;
+            case "ABANDON", "ABANDON_ACTIVE_WORK" -> WorkCommandType.ABANDON_ACTIVE_WORK;
+            case "ADD_INPUT", "ADD_INPUT_TO_ACTIVE_WORK" -> WorkCommandType.ADD_INPUT_TO_ACTIVE_WORK;
+            default -> throw new IllegalArgumentException("unsupported work command: " + command);
+        };
     }
 
     private void recordControlInput(AuthenticatedPrincipal principal,
@@ -227,6 +282,11 @@ public class UnifiedWorkController {
                                     String workItemId) {
         routing.persistUnclassifiedInput(principal, "input-" + UUID.randomUUID(), clientInputId,
                 conversationId, "[CONTROL] " + action + " workItemId=" + workItemId);
+    }
+
+    private AgentWorkItem owned(AuthenticatedPrincipal principal, String workItemId) {
+        return workbench.findWorkItem(principal, workItemId)
+                .orElseThrow(() -> new com.agent.platform.workbench.persistence.WorkbenchNotFoundException("work item not found"));
     }
 
     private void validateMetadata(Map<String, Object> metadata) {
@@ -247,6 +307,4 @@ public class UnifiedWorkController {
                                    String scopeDigest, String clientInputId) { }
     public record RejectRouteBody(String previewId, String clientInputId) { }
     public record WorkCommandBody(long expectedVersion, String clientInputId) { }
-    public record CommandError(String code, String command, String executionTarget, String workItemId,
-                               boolean underlyingExecutionChanged, String message) { }
 }

@@ -1,10 +1,10 @@
 import { API_BASE_URL, apiRequest, jsonBody } from './http'
-import type { RoutePreview, UnifiedInputResponse, WorkEvent, WorkExecutionTree, WorkFocus, WorkInput, WorkItem, WorkItemDetail } from '../types/workbench'
+import type { RoutePreview, UnifiedSubmitResult, WorkEvent, WorkExecutionTree, WorkFocus, WorkInput, WorkItem, WorkItemDetail } from '../types/workbench'
 
 const id = () => crypto.randomUUID()
 
 export const workbenchApi = {
-  submit: (conversationId: string, content: string) => apiRequest<UnifiedInputResponse>(
+  submit: (conversationId: string, content: string) => apiRequest<UnifiedSubmitResult>(
     `/api/agent/conversations/${encodeURIComponent(conversationId)}/inputs`,
     { method: 'POST', headers: { 'Idempotency-Key': `ui-${id()}` }, ...jsonBody({ content, metadata: { uiSource: 'unified-workbench' } }) },
   ),

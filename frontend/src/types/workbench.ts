@@ -120,4 +120,19 @@ export interface RoutePreview {
 export interface RoutingDecision { decisionId: string; decision: Record<string, unknown>; validation: Record<string, unknown>; failureCode: string; failureReason: string }
 export interface WorkItemDetail { workItem: WorkItem; focus?: WorkFocus; routingDecision?: RoutingDecision; preview?: RoutePreview; links: WorkLink[]; events: WorkEvent[] }
 export interface UnifiedInputResponse { inputId: string; workItemId: string; controlState: string; commandType: string; commandOnly: boolean }
+export interface WorkCommandResult {
+  success: boolean
+  code: string
+  message: string
+  commandRequestId: string
+  inputId: string
+  command: string
+  executionTarget: string
+  workItemId: string
+  underlyingExecutionChanged: boolean
+  underlyingRunId: string
+  executionStatus: string
+  workItem?: WorkItem
+}
+export type UnifiedSubmitResult = UnifiedInputResponse | WorkCommandResult
 import type { IncidentEvidence, IncidentRecoveryPlan, RuntimeRunTrace, RuntimeTraceSpan } from './incident'
