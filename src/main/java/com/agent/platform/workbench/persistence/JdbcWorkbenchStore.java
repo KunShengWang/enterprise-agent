@@ -11,6 +11,7 @@ import com.agent.platform.workbench.model.ConversationWorkState;
 import com.agent.platform.workbench.model.GoalOrigin;
 import com.agent.platform.workbench.model.InputClassificationStatus;
 import com.agent.platform.workbench.model.NormalGoalEnvelope;
+import com.agent.platform.workbench.model.ProjectedWorkEventDraft;
 import com.agent.platform.workbench.model.WorkControlState;
 import com.agent.platform.workbench.model.WorkEvent;
 import com.agent.platform.workbench.model.WorkEventDraft;
@@ -21,6 +22,7 @@ import com.agent.platform.workbench.model.WorkLink;
 import com.agent.platform.workbench.model.WorkLinkRelation;
 import com.agent.platform.workbench.model.WorkLinkType;
 import com.agent.platform.workbench.model.WorkOutcome;
+import com.agent.platform.workbench.model.WorkProjectionSource;
 import com.agent.platform.workbench.model.WorkCommandType;
 import com.agent.platform.workbench.model.WorkRelation;
 import com.agent.platform.workbench.model.WorkRelationType;
@@ -53,7 +55,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * M1-A aggregate store. Operations that must be atomic deliberately share one JDBC connection.
  */
 @Repository
-public class JdbcWorkbenchStore implements WorkbenchStore {
+public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionStore {
 
     private static final String SOURCE_TYPE_WORK_ITEM = "WORK_ITEM";
     private static final int MAX_QUERY_LIMIT = 10_000;
@@ -556,6 +558,126 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
     }
 
     @Override
+    public List<WorkProjectionSource> listProjectionSources(int limit) {
+        ensureSchema();
+        int safeLimit = Math.max(1, Math.min(limit, 1000));
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT l.work_item_id, l.link_type, l.linked_id
+                     FROM agent_work_link l
+                     LEFT JOIN agent_work_projection_cursor c
+                       ON c.work_item_id = l.work_item_id
+                      AND c.source_type = CASE l.link_type
+                            WHEN 'RUN' THEN 'AGENT_RUN'
+                            WHEN 'INCIDENT' THEN 'INCIDENT'
+                            WHEN 'RECOVERY_PLAN' THEN 'RECOVERY_PLAN'
+                          END
+                      AND c.source_id = l.linked_id
+                     WHERE l.link_type IN ('RUN', 'INCIDENT', 'RECOVERY_PLAN')
+                     ORDER BY c.updated_at NULLS FIRST, l.created_at, l.work_item_id, l.link_type, l.linked_id
+                     LIMIT ?
+                     """)) {
+            statement.setInt(1, safeLimit);
+            List<WorkProjectionSource> sources = new ArrayList<>();
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    sources.add(new WorkProjectionSource(
+                            resultSet.getString("work_item_id"),
+                            sourceType(resultSet.getString("link_type")),
+                            resultSet.getString("linked_id")));
+                }
+            }
+            return List.copyOf(sources);
+        } catch (SQLException exception) {
+            throw storageFailure("Failed to list work event projection sources", exception);
+        }
+    }
+
+    @Override
+    public long projectionCursor(String workItemId, String sourceType, String sourceId) {
+        ensureSchema();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT last_source_sequence FROM agent_work_projection_cursor
+                     WHERE work_item_id = ? AND source_type = ? AND source_id = ?
+                     """)) {
+            statement.setString(1, workItemId);
+            statement.setString(2, sourceType);
+            statement.setString(3, sourceId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getLong(1) : -1;
+            }
+        } catch (SQLException exception) {
+            throw storageFailure("Failed to read work event projection cursor", exception);
+        }
+    }
+
+    @Override
+    public WorkEvent appendProjectedEvent(String workItemId, ProjectedWorkEventDraft draft) {
+        if (!hasText(workItemId) || draft == null) {
+            throw new IllegalArgumentException("workItemId and projected event are required");
+        }
+        ensureSchema();
+        try (Connection connection = openConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                long sequence = lockNextEventSequence(connection, workItemId);
+                requireProjectionSourceLink(connection, workItemId, draft.sourceType(), draft.sourceId());
+                Optional<WorkEvent> duplicate = readProjectedEventBySource(connection, workItemId, draft);
+                if (duplicate.isPresent()) {
+                    upsertProjectionCursor(connection, workItemId, draft.sourceType(), draft.sourceId(),
+                            draft.sourceSequence());
+                    connection.commit();
+                    return duplicate.get();
+                }
+                Instant projectedAt = Instant.now();
+                WorkEvent event = new WorkEvent(
+                        "wevt-" + UUID.randomUUID(), workItemId, sequence,
+                        draft.sourceType(), draft.sourceId(), draft.sourceEventId(), draft.sourceSequence(),
+                        draft.eventType(), draft.phase(), draft.summary(), draft.payload(),
+                        normalize(draft.correlationId(), workItemId), draft.causationId(),
+                        draft.sourceCreatedAt(), projectedAt);
+                insertEvent(connection, event);
+                updateNextEventSequence(connection, workItemId, sequence + 1, projectedAt);
+                upsertProjectionCursor(connection, workItemId, draft.sourceType(), draft.sourceId(),
+                        draft.sourceSequence());
+                connection.commit();
+                return event;
+            } catch (RuntimeException | SQLException exception) {
+                rollbackQuietly(connection);
+                throw exception;
+            }
+        } catch (SQLException exception) {
+            throw storageFailure("Failed to append projected work event", exception);
+        }
+    }
+
+    @Override
+    public void advanceProjectionCursor(String workItemId,
+                                        String sourceType,
+                                        String sourceId,
+                                        long sourceSequence) {
+        if (!hasText(workItemId) || !hasText(sourceType) || !hasText(sourceId) || sourceSequence < -1) {
+            throw new IllegalArgumentException("projection cursor identity and sequence are required");
+        }
+        ensureSchema();
+        try (Connection connection = openConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                lockNextEventSequence(connection, workItemId);
+                requireProjectionSourceLink(connection, workItemId, sourceType, sourceId);
+                upsertProjectionCursor(connection, workItemId, sourceType, sourceId, sourceSequence);
+                connection.commit();
+            } catch (RuntimeException | SQLException exception) {
+                rollbackQuietly(connection);
+                throw exception;
+            }
+        } catch (SQLException exception) {
+            throw storageFailure("Failed to advance work event projection cursor", exception);
+        }
+    }
+
+    @Override
     public List<WorkRelation> listRelations(AuthenticatedPrincipal principal, String workItemId) {
         AgentWorkItem workItem = requireOwnedWorkItem(principal, workItemId);
         try (Connection connection = openConnection();
@@ -1015,6 +1137,109 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
         }
     }
 
+    private Optional<WorkEvent> readProjectedEventBySource(Connection connection,
+                                                            String workItemId,
+                                                            ProjectedWorkEventDraft draft) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT * FROM agent_work_event
+                WHERE work_item_id = ? AND source_type = ? AND source_id = ? AND source_event_id = ?
+                """)) {
+            statement.setString(1, workItemId);
+            statement.setString(2, draft.sourceType());
+            statement.setString(3, draft.sourceId());
+            statement.setString(4, draft.sourceEventId());
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next() ? Optional.of(mapEvent(resultSet)) : Optional.empty();
+            }
+        }
+    }
+
+    private long lockNextEventSequence(Connection connection, String workItemId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT next_event_sequence FROM agent_work_item WHERE work_item_id = ? FOR UPDATE
+                """)) {
+            statement.setString(1, workItemId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) throw new WorkbenchNotFoundException("work item not found: " + workItemId);
+                return resultSet.getLong(1);
+            }
+        }
+    }
+
+    private void updateNextEventSequence(Connection connection,
+                                         String workItemId,
+                                         long nextSequence,
+                                         Instant now) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                UPDATE agent_work_item SET next_event_sequence = ?, updated_at = ? WHERE work_item_id = ?
+                """)) {
+            statement.setLong(1, nextSequence);
+            statement.setTimestamp(2, Timestamp.from(now));
+            statement.setString(3, workItemId);
+            if (statement.executeUpdate() != 1) {
+                throw new WorkbenchNotFoundException("work item disappeared: " + workItemId);
+            }
+        }
+    }
+
+    private void upsertProjectionCursor(Connection connection,
+                                        String workItemId,
+                                        String sourceType,
+                                        String sourceId,
+                                        long sourceSequence) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                INSERT INTO agent_work_projection_cursor(
+                    work_item_id, source_type, source_id, last_source_sequence, updated_at
+                ) VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(work_item_id, source_type, source_id) DO UPDATE
+                SET last_source_sequence = GREATEST(
+                        agent_work_projection_cursor.last_source_sequence,
+                        EXCLUDED.last_source_sequence),
+                    updated_at = EXCLUDED.updated_at
+                """)) {
+            statement.setString(1, workItemId);
+            statement.setString(2, sourceType);
+            statement.setString(3, sourceId);
+            statement.setLong(4, sourceSequence);
+            statement.setTimestamp(5, Timestamp.from(Instant.now()));
+            statement.executeUpdate();
+        }
+    }
+
+    private void requireProjectionSourceLink(Connection connection,
+                                             String workItemId,
+                                             String sourceType,
+                                             String sourceId) throws SQLException {
+        String linkType = switch (sourceType) {
+            case "AGENT_RUN" -> WorkLinkType.RUN.name();
+            case "INCIDENT" -> WorkLinkType.INCIDENT.name();
+            case "RECOVERY_PLAN" -> WorkLinkType.RECOVERY_PLAN.name();
+            default -> throw new IllegalArgumentException("unsupported projection source type: " + sourceType);
+        };
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT 1 FROM agent_work_link
+                WHERE work_item_id = ? AND link_type = ? AND linked_id = ?
+                """)) {
+            statement.setString(1, workItemId);
+            statement.setString(2, linkType);
+            statement.setString(3, sourceId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    throw new WorkbenchAccessDeniedException("projection source is not linked to work item");
+                }
+            }
+        }
+    }
+
+    private String sourceType(String linkType) {
+        return switch (WorkLinkType.valueOf(linkType)) {
+            case RUN -> "AGENT_RUN";
+            case INCIDENT -> "INCIDENT";
+            case RECOVERY_PLAN -> "RECOVERY_PLAN";
+            default -> throw new IllegalArgumentException("unsupported projection link type: " + linkType);
+        };
+    }
+
     private Optional<WorkEvent> readEventByType(Connection connection,
                                                  String workItemId,
                                                  WorkEventType eventType) throws SQLException {
@@ -1413,6 +1638,16 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
                 """
                 CREATE INDEX IF NOT EXISTS idx_agent_work_event_sequence
                 ON agent_work_event(work_item_id, sequence)
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS agent_work_projection_cursor (
+                    work_item_id TEXT NOT NULL REFERENCES agent_work_item(work_item_id),
+                    source_type TEXT NOT NULL,
+                    source_id TEXT NOT NULL,
+                    last_source_sequence BIGINT NOT NULL DEFAULT -1,
+                    updated_at TIMESTAMPTZ NOT NULL,
+                    PRIMARY KEY(work_item_id, source_type, source_id)
+                )
                 """
         );
     }

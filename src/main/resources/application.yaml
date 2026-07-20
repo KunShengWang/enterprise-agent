@@ -226,6 +226,11 @@ enterprise-agent:
       scan-delay-millis: ${WORKBENCH_DISPATCH_SCAN_DELAY_MILLIS:5000}
       scan-batch-size: ${WORKBENCH_DISPATCH_SCAN_BATCH_SIZE:20}
       preview-ttl-seconds: ${WORKBENCH_PREVIEW_TTL_SECONDS:300}
+    projection:
+      enabled: ${WORKBENCH_PROJECTION_ENABLED:false}
+      scan-delay-millis: ${WORKBENCH_PROJECTION_SCAN_DELAY_MILLIS:2000}
+      source-batch-size: ${WORKBENCH_PROJECTION_SOURCE_BATCH_SIZE:200}
+      event-batch-size: ${WORKBENCH_PROJECTION_EVENT_BATCH_SIZE:500}
 llm:
   http-log:
     enabled: ${LLM_HTTP_LOG_ENABLED:false}

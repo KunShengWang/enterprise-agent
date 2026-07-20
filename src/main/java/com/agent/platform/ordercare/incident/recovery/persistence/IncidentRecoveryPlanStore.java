@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.time.Instant;
 import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlanItem;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryItemLeaseClaim;
+import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanEventRecord;
 
 public interface IncidentRecoveryPlanStore {
 
@@ -17,6 +18,10 @@ public interface IncidentRecoveryPlanStore {
     Optional<IncidentRecoveryPlanRecord> findByRequestKey(String incidentId, String requestKey);
 
     List<IncidentRecoveryPlanRecord> listByIncident(String incidentId);
+
+    default List<RecoveryPlanEventRecord> loadEventsAfter(String planId, long afterSequence, int limit) {
+        return List.of();
+    }
 
     IncidentRecoveryPlanRecord update(IncidentRecoveryPlanRecord next, long expectedVersion);
 

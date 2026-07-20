@@ -7,6 +7,7 @@ import com.agent.platform.workbench.application.WorkInputService;
 import com.agent.platform.workbench.application.WorkItemCreationResult;
 import com.agent.platform.workbench.application.WorkItemService;
 import com.agent.platform.workbench.model.GoalOrigin;
+import com.agent.platform.workbench.model.ProjectedWorkEventDraft;
 import com.agent.platform.workbench.model.WorkControlState;
 import com.agent.platform.workbench.model.WorkEventDraft;
 import com.agent.platform.workbench.model.WorkEventType;
@@ -25,6 +26,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -56,6 +58,10 @@ class JdbcWorkbenchStorePostgresIT {
             connection.setAutoCommit(false);
             execute(connection, """
                     DELETE FROM agent_work_event WHERE work_item_id IN (
+                        SELECT work_item_id FROM agent_work_item WHERE tenant_id LIKE ?)
+                    """, "tenant-m1a-%");
+            execute(connection, """
+                    DELETE FROM agent_work_projection_cursor WHERE work_item_id IN (
                         SELECT work_item_id FROM agent_work_item WHERE tenant_id LIKE ?)
                     """, "tenant-m1a-%");
             execute(connection, """
@@ -91,6 +97,91 @@ class JdbcWorkbenchStorePostgresIT {
         assertEquals("WORK_ITEM", result.createdEvent().sourceType());
         assertEquals(1, store.findWorkItem(principal, result.workItem().workItemId()).orElseThrow()
                 .nextEventSequence());
+    }
+
+    @Test
+    void projectedSourceReplayTenTimesIsIdempotentAndPreservesSourceCoordinates() {
+        JdbcWorkbenchStore store = store();
+        WorkItemCreationResult created = submit(
+                store, principal, "client-projection-replay", conversation("projection-replay"), 0);
+        String runId = "run-" + testPrefix;
+        insertProjectionLink(created.workItem().workItemId(), "dispatch-projection-replay",
+                WorkLinkType.RUN, runId);
+        Instant sourceCreatedAt = Instant.now().minusSeconds(3);
+        ProjectedWorkEventDraft draft = new ProjectedWorkEventDraft(
+                "AGENT_RUN", runId, "runtime-event-7", 7,
+                WorkEventType.RUN_EVENT_PROJECTED, "TOOL_COMPLETED", "tool completed",
+                Map.of("tool", "case-inspect"), created.workItem().workItemId(), "cause-7", sourceCreatedAt);
+
+        IntStream.range(0, 10).forEach(ignored ->
+                store.appendProjectedEvent(created.workItem().workItemId(), draft));
+
+        var events = store.loadEvents(principal, created.workItem().workItemId(), -1, 100);
+        assertEquals(2, events.size());
+        assertEquals(1, events.get(1).sequence());
+        assertEquals(7, events.get(1).sourceSequence());
+        assertTrue(Math.abs(Duration.between(sourceCreatedAt, events.get(1).sourceCreatedAt()).toNanos()) <= 1_000);
+        assertTrue(!events.get(1).projectedAt().isBefore(sourceCreatedAt));
+        assertEquals(7, store.projectionCursor(created.workItem().workItemId(), "AGENT_RUN", runId));
+    }
+
+    @Test
+    void projectedSourceMustAlreadyBeBoundByAuthoritativeWorkLink() {
+        JdbcWorkbenchStore store = store();
+        WorkItemCreationResult created = submit(
+                store, principal, "client-projection-unlinked", conversation("projection-unlinked"), 0);
+
+        assertThrows(WorkbenchAccessDeniedException.class, () -> store.appendProjectedEvent(
+                created.workItem().workItemId(), new ProjectedWorkEventDraft(
+                        "AGENT_RUN", "unlinked-run", "unlinked-event", 0,
+                        WorkEventType.RUN_EVENT_PROJECTED, "RUN_STARTED", "invalid source",
+                        Map.of(), created.workItem().workItemId(), "", Instant.now())));
+        assertEquals(1, store.loadEvents(principal, created.workItem().workItemId(), -1, 100).size());
+    }
+
+    @Test
+    void concurrentCrossSourceProjectionAllocatesOneContiguousProductSequence() throws Exception {
+        JdbcWorkbenchStore store = store();
+        WorkItemCreationResult created = submit(
+                store, principal, "client-projection-concurrent", conversation("projection-concurrent"), 0);
+        Map<String, WorkLinkType> sources = Map.of(
+                "run-" + testPrefix, WorkLinkType.RUN,
+                "incident-" + testPrefix, WorkLinkType.INCIDENT,
+                "plan-" + testPrefix, WorkLinkType.RECOVERY_PLAN);
+        int link = 0;
+        for (var source : sources.entrySet()) {
+            insertProjectionLink(created.workItem().workItemId(), "dispatch-projection-" + link++,
+                    source.getValue(), source.getKey());
+        }
+
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        for (var source : sources.entrySet()) {
+            String sourceType = switch (source.getValue()) {
+                case RUN -> "AGENT_RUN";
+                case INCIDENT -> "INCIDENT";
+                case RECOVERY_PLAN -> "RECOVERY_PLAN";
+                default -> throw new IllegalStateException();
+            };
+            for (int sequence = 0; sequence < 10; sequence++) {
+                int sourceSequence = sequence;
+                futures.add(CompletableFuture.runAsync(() -> store.appendProjectedEvent(
+                        created.workItem().workItemId(), new ProjectedWorkEventDraft(
+                                sourceType, source.getKey(), sourceType + "-event-" + sourceSequence,
+                                sourceSequence, projectedType(source.getValue()), sourceType, "projected",
+                                Map.of("sourceSequence", sourceSequence), created.workItem().workItemId(), "",
+                                Instant.now()))));
+            }
+        }
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).get(20, TimeUnit.SECONDS);
+
+        var events = store.loadEvents(principal, created.workItem().workItemId(), -1, 100);
+        assertEquals(31, events.size());
+        assertEquals(31, events.stream().map(event -> event.sequence()).distinct().count());
+        assertEquals(IntStream.range(0, 31).mapToObj(value -> (long) value).toList(),
+                events.stream().map(event -> event.sequence()).toList());
+        assertEquals(30, events.stream().skip(1)
+                .map(event -> event.sourceType() + ":" + event.sourceId() + ":" + event.sourceEventId())
+                .distinct().count());
     }
 
     @Test
@@ -419,6 +510,15 @@ class JdbcWorkbenchStorePostgresIT {
                 .findConversationState(principal, firstConversation).orElseThrow().focusedWorkItemId());
     }
 
+    private WorkEventType projectedType(WorkLinkType linkType) {
+        return switch (linkType) {
+            case RUN -> WorkEventType.RUN_EVENT_PROJECTED;
+            case INCIDENT -> WorkEventType.INCIDENT_EVENT_PROJECTED;
+            case RECOVERY_PLAN -> WorkEventType.RECOVERY_PLAN_EVENT_PROJECTED;
+            default -> throw new IllegalArgumentException("unsupported projection link: " + linkType);
+        };
+    }
+
     private JdbcWorkbenchStore store() {
         return new JdbcWorkbenchStore(properties, objectMapper);
     }
@@ -502,6 +602,27 @@ class JdbcWorkbenchStorePostgresIT {
             statement.setTimestamp(8, java.sql.Timestamp.from(Instant.now()));
             statement.setTimestamp(9, java.sql.Timestamp.from(Instant.now()));
             statement.executeUpdate();
+        }
+    }
+
+    private void insertProjectionLink(String workItemId,
+                                      String dispatchRequestId,
+                                      WorkLinkType linkType,
+                                      String linkedId) {
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     INSERT INTO agent_work_link(
+                         work_item_id, dispatch_request_id, link_type, linked_id, relation, created_at
+                     ) VALUES (?, ?, ?, ?, 'PRIMARY', ?)
+                     """)) {
+            statement.setString(1, workItemId);
+            statement.setString(2, dispatchRequestId + "-" + testPrefix);
+            statement.setString(3, linkType.name());
+            statement.setString(4, linkedId);
+            statement.setTimestamp(5, java.sql.Timestamp.from(Instant.now()));
+            statement.executeUpdate();
+        } catch (SQLException exception) {
+            throw new AgentStorageException("Failed to create projection test link", exception);
         }
     }
 

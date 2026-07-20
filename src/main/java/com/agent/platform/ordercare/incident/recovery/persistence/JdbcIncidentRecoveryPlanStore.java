@@ -6,6 +6,7 @@ import com.agent.platform.ordercare.incident.persistence.IncidentIdempotencyConf
 import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlanRecord;
 import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlanItem;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryItemLeaseClaim;
+import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanEventRecord;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanItemStatus;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanOutcome;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStatus;
@@ -24,6 +25,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Repository
@@ -43,25 +47,35 @@ public class JdbcIncidentRecoveryPlanStore implements IncidentRecoveryPlanStore 
         validate(plan);
         ensureSchema();
         try (Connection connection = openConnection()) {
-            Optional<IncidentRecoveryPlanRecord> existing = findByRequestKey(connection, plan.incidentId(), plan.requestKey());
-            if (existing.isPresent()) {
-                IncidentRecoveryPlanRecord current = existing.get();
-                if (!current.planId().equals(plan.planId())
-                        || !current.assessmentDigest().equals(plan.assessmentDigest())) {
-                    throw new IncidentIdempotencyConflictException(
-                            "recovery plan requestKey already bound to another request");
+            connection.setAutoCommit(false);
+            try {
+                Optional<IncidentRecoveryPlanRecord> existing = findByRequestKey(
+                        connection, plan.incidentId(), plan.requestKey());
+                if (existing.isPresent()) {
+                    IncidentRecoveryPlanRecord current = existing.get();
+                    if (!current.planId().equals(plan.planId())
+                            || !current.assessmentDigest().equals(plan.assessmentDigest())) {
+                        throw new IncidentIdempotencyConflictException(
+                                "recovery plan requestKey already bound to another request");
+                    }
+                    connection.commit();
+                    return current;
                 }
-                return current;
-            }
-            try (PreparedStatement statement = connection.prepareStatement("""
-                    INSERT INTO agent_incident_recovery_plan(
-                        plan_id, incident_id, request_key, planner_run_id, assessment_digest,
-                        status, outcome, record_json, version, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?)
-                    """)) {
-                bind(statement, plan);
-                statement.executeUpdate();
+                try (PreparedStatement statement = connection.prepareStatement("""
+                        INSERT INTO agent_incident_recovery_plan(
+                            plan_id, incident_id, request_key, planner_run_id, assessment_digest,
+                            status, outcome, record_json, version, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?)
+                        """)) {
+                    bind(statement, plan);
+                    statement.executeUpdate();
+                }
+                appendSnapshotEvent(connection, plan, "RECOVERY_PLAN_CREATED");
+                connection.commit();
                 return plan;
+            } catch (RuntimeException | SQLException exception) {
+                rollbackQuietly(connection);
+                throw exception;
             }
         } catch (SQLException exception) {
             if ("23505".equals(exception.getSQLState())) {
@@ -138,35 +152,70 @@ public class JdbcIncidentRecoveryPlanStore implements IncidentRecoveryPlanStore 
     }
 
     @Override
+    public List<RecoveryPlanEventRecord> loadEventsAfter(String planId, long afterSequence, int limit) {
+        if (!hasText(planId) || limit < 1) return List.of();
+        ensureSchema();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT event_id, plan_id, incident_id, event_sequence, event_type, payload, created_at
+                     FROM agent_incident_recovery_plan_event
+                     WHERE plan_id = ? AND event_sequence > ?
+                     ORDER BY event_sequence ASC
+                     LIMIT ?
+                     """)) {
+            statement.setString(1, planId.trim());
+            statement.setLong(2, afterSequence);
+            statement.setInt(3, Math.max(1, Math.min(limit, 10_000)));
+            List<RecoveryPlanEventRecord> events = new ArrayList<>();
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    events.add(new RecoveryPlanEventRecord(
+                            resultSet.getString("event_id"), resultSet.getString("plan_id"),
+                            resultSet.getString("incident_id"), resultSet.getLong("event_sequence"),
+                            resultSet.getString("event_type"), readMap(resultSet.getString("payload")),
+                            resultSet.getTimestamp("created_at").toInstant()));
+                }
+            }
+            return List.copyOf(events);
+        } catch (SQLException exception) {
+            throw storageFailure("Failed to load recovery plan events: " + planId, exception);
+        }
+    }
+
+    @Override
     public IncidentRecoveryPlanRecord update(IncidentRecoveryPlanRecord next, long expectedVersion) {
         validate(next);
         if (next.version() != expectedVersion + 1) {
             throw new IllegalArgumentException("next recovery plan version must equal expectedVersion + 1");
         }
         ensureSchema();
-        try (Connection connection = openConnection();
-             PreparedStatement statement = connection.prepareStatement("""
+        try (Connection connection = openConnection()) {
+            connection.setAutoCommit(false);
+            try (PreparedStatement statement = connection.prepareStatement("""
                      UPDATE agent_incident_recovery_plan
                      SET planner_run_id = NULLIF(?, ''), status = ?, outcome = ?, record_json = ?::jsonb,
                          version = ?, updated_at = ?
                      WHERE plan_id = ? AND version = ? AND assessment_digest = ?
                        AND incident_id = ? AND request_key = ?
                      """)) {
-            statement.setString(1, next.plannerRunId());
-            statement.setString(2, next.status().name());
-            statement.setString(3, next.outcome().name());
-            statement.setString(4, toJson(next));
-            statement.setLong(5, next.version());
-            statement.setTimestamp(6, Timestamp.from(next.updatedAt()));
-            statement.setString(7, next.planId());
-            statement.setLong(8, expectedVersion);
-            statement.setString(9, next.assessmentDigest());
-            statement.setString(10, next.incidentId());
-            statement.setString(11, next.requestKey());
-            if (statement.executeUpdate() != 1) {
-                throw new IncidentCasConflictException(
-                        "recovery plan CAS update failed: " + next.planId());
+                statement.setString(1, next.plannerRunId());
+                statement.setString(2, next.status().name());
+                statement.setString(3, next.outcome().name());
+                statement.setString(4, toJson(next));
+                statement.setLong(5, next.version());
+                statement.setTimestamp(6, Timestamp.from(next.updatedAt()));
+                statement.setString(7, next.planId());
+                statement.setLong(8, expectedVersion);
+                statement.setString(9, next.assessmentDigest());
+                statement.setString(10, next.incidentId());
+                statement.setString(11, next.requestKey());
+                if (statement.executeUpdate() != 1) {
+                    throw new IncidentCasConflictException(
+                            "recovery plan CAS update failed: " + next.planId());
+                }
             }
+            appendSnapshotEvent(connection, next, "RECOVERY_PLAN_UPDATED");
+            connection.commit();
             return next;
         } catch (SQLException exception) {
             throw storageFailure("Failed to update incident recovery plan: " + next.planId(), exception);
@@ -333,6 +382,34 @@ public class JdbcIncidentRecoveryPlanStore implements IncidentRecoveryPlanStore 
                 throw new IncidentCasConflictException("recovery plan fenced update failed: " + next.planId());
             }
         }
+        appendSnapshotEvent(connection, next, "RECOVERY_PLAN_UPDATED");
+    }
+
+    private void appendSnapshotEvent(Connection connection,
+                                     IncidentRecoveryPlanRecord plan,
+                                     String eventType) throws SQLException {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("planId", plan.planId());
+        payload.put("incidentId", plan.incidentId());
+        payload.put("status", plan.status().name());
+        payload.put("outcome", plan.outcome().name());
+        payload.put("plannerRunId", plan.plannerRunId());
+        payload.put("version", plan.version());
+        payload.put("record", plan);
+        try (PreparedStatement statement = connection.prepareStatement("""
+                INSERT INTO agent_incident_recovery_plan_event(
+                    event_id, plan_id, incident_id, event_sequence, event_type, payload, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?::jsonb, ?)
+                """)) {
+            statement.setString(1, "rpevt-" + UUID.randomUUID());
+            statement.setString(2, plan.planId());
+            statement.setString(3, plan.incidentId());
+            statement.setLong(4, plan.version());
+            statement.setString(5, eventType);
+            statement.setString(6, objectMapper.writeValueAsString(payload));
+            statement.setTimestamp(7, Timestamp.from(plan.updatedAt()));
+            statement.executeUpdate();
+        }
     }
 
     private IncidentRecoveryPlanRecord replace(IncidentRecoveryPlanRecord current,
@@ -478,6 +555,32 @@ public class JdbcIncidentRecoveryPlanStore implements IncidentRecoveryPlanStore 
                         CREATE INDEX IF NOT EXISTS idx_incident_recovery_plan_status
                         ON agent_incident_recovery_plan(status, updated_at DESC)
                         """);
+                statement.execute("""
+                        CREATE TABLE IF NOT EXISTS agent_incident_recovery_plan_event (
+                            event_id TEXT PRIMARY KEY,
+                            plan_id TEXT NOT NULL REFERENCES agent_incident_recovery_plan(plan_id),
+                            incident_id TEXT NOT NULL,
+                            event_sequence BIGINT NOT NULL,
+                            event_type TEXT NOT NULL,
+                            payload JSONB NOT NULL,
+                            created_at TIMESTAMPTZ NOT NULL,
+                            UNIQUE(plan_id, event_sequence)
+                        )
+                        """);
+                statement.execute("""
+                        CREATE INDEX IF NOT EXISTS idx_recovery_plan_event_sequence
+                        ON agent_incident_recovery_plan_event(plan_id, event_sequence)
+                        """);
+                statement.execute("""
+                        INSERT INTO agent_incident_recovery_plan_event(
+                            event_id, plan_id, incident_id, event_sequence, event_type, payload, created_at
+                        )
+                        SELECT 'rpevt-backfill-' || plan_id || '-' || version,
+                               plan_id, incident_id, version, 'RECOVERY_PLAN_SNAPSHOT',
+                               record_json, updated_at
+                        FROM agent_incident_recovery_plan
+                        ON CONFLICT(plan_id, event_sequence) DO NOTHING
+                        """);
                 schemaReady.set(true);
             } catch (SQLException exception) {
                 throw storageFailure("Failed to initialize incident recovery plan schema", exception);
@@ -506,6 +609,12 @@ public class JdbcIncidentRecoveryPlanStore implements IncidentRecoveryPlanStore 
         } catch (RuntimeException exception) {
             throw new AgentStorageException("Failed to deserialize incident recovery plan", exception);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> readMap(String value) {
+        if (value == null || value.isBlank()) return Map.of();
+        return objectMapper.readValue(value, Map.class);
     }
 
     private AgentStorageException storageFailure(String message, SQLException exception) {

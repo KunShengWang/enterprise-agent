@@ -12,6 +12,7 @@ import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlan
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanItemStatus;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanOutcome;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStatus;
+import com.agent.platform.storage.AgentStorageException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -43,6 +44,7 @@ class JdbcIncidentRecoveryPlanStorePostgresIT {
                 properties.getDatasource().getUrl(),
                 properties.getDatasource().getUsername(),
                 properties.getDatasource().getPassword())) {
+            delete(connection, "DELETE FROM agent_incident_recovery_plan_event WHERE incident_id = ?", incidentId);
             delete(connection, "DELETE FROM agent_incident_recovery_plan WHERE incident_id = ?", incidentId);
             delete(connection, "DELETE FROM agent_task_event WHERE incident_id = ?", incidentId);
             delete(connection, "DELETE FROM agent_evidence WHERE incident_id = ?", incidentId);
@@ -68,6 +70,11 @@ class JdbcIncidentRecoveryPlanStorePostgresIT {
         store.update(updated, 0);
 
         assertEquals(1, store.find(created.planId()).orElseThrow().version());
+        var events = store.loadEventsAfter(created.planId(), -1, 10);
+        assertEquals(2, events.size());
+        assertEquals(List.of(0L, 1L), events.stream().map(event -> event.sequence()).toList());
+        assertEquals("CREATED", events.get(0).payload().get("status"));
+        assertEquals("PLANNING", events.get(1).payload().get("status"));
         assertThrows(IncidentCasConflictException.class, () -> store.update(updated, 0));
         assertThrows(IncidentIdempotencyConflictException.class,
                 () -> store.create(plan("plan-other", "request-1", "digest-other")));
@@ -106,6 +113,35 @@ class JdbcIncidentRecoveryPlanStorePostgresIT {
         IncidentRecoveryPlanRecord completed = second.updateItemFenced(
                 created.planId(), winner, "worker-b", 2);
         assertEquals(RecoveryPlanOutcome.RESOLVED, completed.outcome());
+    }
+
+    @Test
+    void planUpdateRollsBackWhenAuthoritativeEventCannotBeAppended() throws Exception {
+        createIncident();
+        JdbcIncidentRecoveryPlanStore store = new JdbcIncidentRecoveryPlanStore(properties, objectMapper);
+        IncidentRecoveryPlanRecord created = store.create(plan("plan-atomic", "request-atomic", "digest-atomic"));
+        try (Connection connection = DriverManager.getConnection(
+                properties.getDatasource().getUrl(), properties.getDatasource().getUsername(),
+                properties.getDatasource().getPassword());
+             PreparedStatement statement = connection.prepareStatement("""
+                     INSERT INTO agent_incident_recovery_plan_event(
+                         event_id, plan_id, incident_id, event_sequence, event_type, payload, created_at
+                     ) VALUES (?, ?, ?, 1, 'INJECTED_CONFLICT', '{}'::jsonb, ?)
+                     """)) {
+            statement.setString(1, "conflict-event-" + incidentId);
+            statement.setString(2, created.planId());
+            statement.setString(3, incidentId);
+            statement.setTimestamp(4, java.sql.Timestamp.from(Instant.now()));
+            statement.executeUpdate();
+        }
+        IncidentRecoveryPlanRecord next = new IncidentRecoveryPlanRecord(
+                created.planId(), created.incidentId(), created.requestKey(), "planner-run",
+                created.assessmentDigest(), RecoveryPlanStatus.PLANNING, RecoveryPlanOutcome.NOT_STARTED,
+                null, List.of(), List.of(), 1, created.createdAt(), Instant.now());
+
+        assertThrows(AgentStorageException.class, () -> store.update(next, 0));
+        assertEquals(0, store.find(created.planId()).orElseThrow().version());
+        assertEquals(2, store.loadEventsAfter(created.planId(), -1, 10).size());
     }
 
     private void createIncident() {
