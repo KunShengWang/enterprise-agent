@@ -57,7 +57,7 @@ public class ExecutionTargetRegistry {
                 ExecutionTargetId.INCIDENT_INVESTIGATION,
                 "Read-only multi-agent investigation over an explicit batch or bounded incident scope",
                 Set.of("INCIDENT_INVESTIGATION"),
-                Set.of("batchId|requestIds", "queueNames"), TargetRiskLevel.HIGH, TargetCostClass.HIGH,
+                Set.of("oneOf:batchId,requestIds", "queueNames"), TargetRiskLevel.HIGH, TargetCostClass.HIGH,
                 "ordercare-incident-command-v1", incidentProperties.isEnabled() && incidentRole));
         definitions.put(ExecutionTargetId.INCIDENT_RECOVERY_PLAN, new ExecutionTargetDefinition(
                 ExecutionTargetId.INCIDENT_RECOVERY_PLAN,
@@ -69,4 +69,3 @@ public class ExecutionTargetRegistry {
         return Map.copyOf(definitions);
     }
 }
-

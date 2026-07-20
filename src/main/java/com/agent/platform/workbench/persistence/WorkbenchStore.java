@@ -26,7 +26,11 @@ public interface WorkbenchStore {
 
     Optional<AgentConversationTurn> findInputByClientId(AuthenticatedPrincipal principal, String clientInputId);
 
+    List<AgentConversationTurn> listInputs(AuthenticatedPrincipal principal, String conversationId, int limit);
+
     Optional<AgentWorkItem> findWorkItem(AuthenticatedPrincipal principal, String workItemId);
+
+    List<AgentWorkItem> listWorkItems(AuthenticatedPrincipal principal, String conversationId, int limit);
 
     Optional<ConversationWorkState> findConversationState(AuthenticatedPrincipal principal, String conversationId);
 

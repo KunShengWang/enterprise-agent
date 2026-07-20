@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { incidentApi } from '../api/incident'
 import StatusBadge from '../components/StatusBadge.vue'
 import type {
@@ -53,6 +54,8 @@ let refreshTimer: number | null = null
 let recoveryPollTimer: number | null = null
 let livePollTimer: number | null = null
 let liveRefreshBusy = false
+const route = useRoute()
+const router = useRouter()
 
 const terminal = computed(() => ['ASSESSED', 'PARTIAL', 'MANUAL_REVIEW', 'FAILED', 'CANCELLED']
   .includes(aggregate.value?.incident.status ?? ''))
@@ -63,7 +66,10 @@ const progress = computed(() => {
   const terminalIndex = terminal.value ? steps.length : Math.max(0, steps.indexOf(status))
   return Math.round((terminalIndex / steps.length) * 100)
 })
-const activeRecoveryPlan = computed(() => recoveryPlans.value[0] ?? null)
+const activeRecoveryPlan = computed(() => {
+  const requestedPlanId = typeof route.query.planId === 'string' ? route.query.planId : ''
+  return recoveryPlans.value.find(plan => plan.planId === requestedPlanId) ?? recoveryPlans.value[0] ?? null
+})
 const canPlanRecovery = computed(() => aggregate.value?.incident.status === 'ASSESSED')
 const recoveryPlanActive = computed(() => activeRecoveryPlan.value
   && !['COMPLETED', 'FAILED', 'CANCELLED'].includes(activeRecoveryPlan.value.status))
@@ -299,6 +305,7 @@ async function start() {
       queueNames: lines(queuesText.value),
     })
     incidentId.value = started.incidentId
+    await router.replace({ name: 'incident-command', query: { incidentId: started.incidentId } })
     await refresh()
     openStream()
   } catch (reason) {
@@ -430,6 +437,24 @@ function closeStream() {
   if (refreshTimer !== null) window.clearTimeout(refreshTimer)
   refreshTimer = null
 }
+
+watch(
+  () => route.query.incidentId,
+  async value => {
+    const targetIncidentId = typeof value === 'string' ? value.trim() : ''
+    if (!targetIncidentId || targetIncidentId === incidentId.value) return
+    closeStream()
+    stopRecoveryPolling()
+    incidentId.value = targetIncidentId
+    aggregate.value = null
+    trace.value = null
+    recoveryPlans.value = []
+    error.value = ''
+    await refresh()
+    if (!terminal.value) openStream()
+  },
+  { immediate: true },
+)
 
 onBeforeUnmount(() => {
   closeStream()

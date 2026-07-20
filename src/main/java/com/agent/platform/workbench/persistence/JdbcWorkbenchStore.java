@@ -315,6 +315,34 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
     }
 
     @Override
+    public List<AgentConversationTurn> listInputs(AuthenticatedPrincipal principal,
+                                                   String conversationId,
+                                                   int limit) {
+        requirePrincipal(principal);
+        if (!hasText(conversationId)) return List.of();
+        ensureSchema();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT * FROM agent_work_input
+                     WHERE conversation_id=? AND tenant_id=? AND owner_principal_id=?
+                     ORDER BY created_at ASC LIMIT ?
+                     """)) {
+            statement.setString(1, conversationId.trim());
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
+            statement.setInt(4, Math.max(1, Math.min(limit, MAX_QUERY_LIMIT)));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                List<AgentConversationTurn> result = new ArrayList<>();
+                while (resultSet.next()) result.add(mapInput(resultSet));
+                return List.copyOf(result);
+            }
+        }
+        catch (SQLException exception) {
+            throw storageFailure("Failed to list conversation inputs", exception);
+        }
+    }
+
+    @Override
     public Optional<AgentWorkItem> findWorkItem(AuthenticatedPrincipal principal, String workItemId) {
         requirePrincipal(principal);
         if (!hasText(workItemId)) {
@@ -322,6 +350,34 @@ public class JdbcWorkbenchStore implements WorkbenchStore {
         }
         ensureSchema();
         return readWorkItemById(workItemId.trim(), principal);
+    }
+
+    @Override
+    public List<AgentWorkItem> listWorkItems(AuthenticatedPrincipal principal,
+                                             String conversationId,
+                                             int limit) {
+        requirePrincipal(principal);
+        if (!hasText(conversationId)) return List.of();
+        ensureSchema();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT * FROM agent_work_item
+                     WHERE conversation_id=? AND tenant_id=? AND owner_principal_id=?
+                     ORDER BY created_at DESC LIMIT ?
+                     """)) {
+            statement.setString(1, conversationId.trim());
+            statement.setString(2, principal.tenantId());
+            statement.setString(3, principal.principalId());
+            statement.setInt(4, Math.max(1, Math.min(limit, MAX_QUERY_LIMIT)));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                List<AgentWorkItem> result = new ArrayList<>();
+                while (resultSet.next()) result.add(mapWorkItem(resultSet));
+                return List.copyOf(result);
+            }
+        }
+        catch (SQLException exception) {
+            throw storageFailure("Failed to list conversation work items", exception);
+        }
     }
 
     @Override

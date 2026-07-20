@@ -7,10 +7,12 @@ import KnowledgeMemoryView from './views/KnowledgeMemoryView.vue'
 import ObservabilityView from './views/ObservabilityView.vue'
 import ApiLabView from './views/ApiLabView.vue'
 import IncidentCommandView from './views/IncidentCommandView.vue'
+import UnifiedWorkbench from './views/UnifiedWorkbench.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
+    { path: '/workbench', name: 'workbench', component: UnifiedWorkbench, meta: { title: '统一 Agent 工作台' } },
     { path: '/', name: 'runtime', component: RuntimeWorkbench, meta: { title: 'Agent 运行台' } },
     { path: '/runs', name: 'runs', component: RunHistoryView, meta: { title: 'Run 历史与回放' } },
     { path: '/approvals', name: 'approvals', component: ApprovalCenterView, meta: { title: '人工审批中心' } },

@@ -83,6 +83,10 @@ class M1BRoutingUnitTests {
         var general = registry.findEnabled(principal(), ExecutionTargetId.GENERAL_AGENT.name()).orElseThrow();
         assertEquals("general-safe-v1", general.executionProfileId());
         assertFalse(general.supportedIntents().stream().anyMatch(value -> value.contains("INCIDENT")));
+        var investigation = registry.findEnabled(
+                principal(), ExecutionTargetId.INCIDENT_INVESTIGATION.name()).orElseThrow();
+        assertTrue(investigation.requiredInputs().contains("oneOf:batchId,requestIds"));
+        assertFalse(investigation.requiredInputs().contains("batchId|requestIds"));
     }
 
     @Test

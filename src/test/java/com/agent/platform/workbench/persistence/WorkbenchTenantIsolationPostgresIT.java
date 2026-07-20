@@ -102,6 +102,8 @@ class WorkbenchTenantIsolationPostgresIT {
         for (AuthenticatedPrincipal attacker : Set.of(foreignTenant, foreignPrincipal)) {
             assertTrue(store.findWorkItem(attacker, created.workItem().workItemId()).isEmpty());
             assertTrue(store.findInput(attacker, created.input().inputId()).isEmpty());
+            assertTrue(store.listWorkItems(attacker, conversationId, 100).isEmpty());
+            assertTrue(store.listInputs(attacker, conversationId, 100).isEmpty());
             assertThrows(WorkbenchNotFoundException.class,
                     () -> store.loadEvents(attacker, created.workItem().workItemId(), -1, 100));
             assertThrows(WorkbenchNotFoundException.class,
@@ -118,6 +120,8 @@ class WorkbenchTenantIsolationPostgresIT {
 
         assertEquals(RoutePreviewStatus.ACTIVE,
                 dispatch.findPreview(owner, created.workItem().workItemId()).orElseThrow().status());
+        assertEquals(1, store.listWorkItems(owner, conversationId, 100).size());
+        assertEquals(1, store.listInputs(owner, conversationId, 100).size());
         assertTrue(Arrays.stream(WorkbenchStore.class.getMethods())
                 .noneMatch(method -> method.getName().equals("listWorkItemsByConversation")
                         || method.getName().equals("listInputsByConversation")));

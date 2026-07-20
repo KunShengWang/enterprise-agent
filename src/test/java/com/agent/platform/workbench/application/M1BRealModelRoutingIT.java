@@ -6,6 +6,7 @@ import com.agent.platform.workbench.model.ClassifierType;
 import com.agent.platform.workbench.model.GoalOrigin;
 import com.agent.platform.workbench.model.InputClassificationStatus;
 import com.agent.platform.workbench.model.RouteDisposition;
+import com.agent.platform.workbench.model.RouteValidationResult;
 import com.agent.platform.workbench.model.WorkCommandType;
 import com.agent.platform.workbench.model.WorkControlState;
 import com.agent.platform.workbench.model.WorkExecutionState;
@@ -76,16 +77,17 @@ class M1BRealModelRoutingIT {
 
     @Test
     void realModelIncidentRouteStillStopsAtJavaConfirmationGate() {
-        String goal = "调查批次 BATCH-20260720-01 在队列 floworder.incident.e2e.dlq 的异常订单事故";
+        String goal = "调查批次 BATCH-20260720-01 在队列 floworder.incident.e2e.dlq 的异常订单事故，"
+                + "候选 requestId 为 IC-HAPPY-REQ-001";
         AgentWorkItem work = work(goal);
         RouterModelResult result = router.route(new RoutingModelRequest(
                 work, goal, registry.enabledTargets(principal), ""));
+        RouteValidationResult validation = validator.validate(result.decision(),
+                new RouteValidationContext(principal, work, goal, Map.of(), Map.of()));
 
         assertEquals("INCIDENT_INVESTIGATION", result.decision().targetId());
         assertEquals(RouteDisposition.REQUIRE_CONFIRMATION,
-                validator.validate(result.decision(),
-                        new RouteValidationContext(principal, work, goal, Map.of(), Map.of()))
-                        .disposition());
+                validation.disposition(), () -> "decision=" + result.decision() + ", validation=" + validation);
     }
 
     private AgentConversationTurn input(String content) {

@@ -203,6 +203,11 @@ enterprise-agent:
       model: ${EMBEDDING_MODEL:embedding-3}
       dimension: ${EMBEDDING_DIMENSION:1024}
   workbench:
+    web:
+      enabled: ${WORKBENCH_WEB_ENABLED:false}
+      local-tenant-id: ${WORKBENCH_LOCAL_TENANT_ID:local-tenant}
+      local-principal-id: ${WORKBENCH_LOCAL_PRINCIPAL_ID:local-user}
+      local-roles: ${WORKBENCH_LOCAL_ROLES:USER,INCIDENT_OPERATOR}
     routing:
       enabled: ${WORKBENCH_ROUTING_ENABLED:false}
       max-attempts: ${WORKBENCH_ROUTING_MAX_ATTEMPTS:2}

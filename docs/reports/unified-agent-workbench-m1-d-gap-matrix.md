@@ -21,3 +21,7 @@
 允许：统一 Controller、服务端本地 Principal 适配、只读聚合查询、确认命令审计、最小 Vue 页面、轮询、测试和证据。
 
 禁止：修改 `DefaultAgentRuntime.run()`、跨源 WorkEvent Projector、统一 SSE Replay、聊天内 Multi-Agent 历史树、M3 命令控制、多实例 lease、复制 Runtime/Incident 大型页面逻辑。
+
+## 实施结论
+
+M1-D 已按本矩阵完成，证据见 `unified-agent-workbench-m1-d-evidence.md`。统一 Controller 采用服务端 Principal、三开关 fail-closed 注册、有界异步 route/dispatch；前端只展示 M1 本地事件和既有专项页面链接，没有提前实现 M2/M3。最终状态：`PASSED`。

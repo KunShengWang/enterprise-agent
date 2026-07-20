@@ -5,6 +5,7 @@ defineProps<{ open: boolean }>()
 defineEmits<{ close: []; newTask: [] }>()
 
 const navigation = [
+  { to: '/workbench', icon: 'U', label: '统一 Agent 工作台', hint: '自然语言路由与任务切换' },
   { to: '/', icon: '✦', label: 'Agent 运行台', hint: '对话与实时执行' },
   { to: '/runs', icon: '◷', label: 'Run 历史', hint: '状态与事件回放' },
   { to: '/approvals', icon: '✓', label: '审批中心', hint: 'HITL 决策与恢复' },
