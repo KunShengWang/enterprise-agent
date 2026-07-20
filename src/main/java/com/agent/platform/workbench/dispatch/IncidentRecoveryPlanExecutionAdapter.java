@@ -30,7 +30,8 @@ public class IncidentRecoveryPlanExecutionAdapter implements ExecutionAdapter {
         String incidentId = String.valueOf(request.validatedInput().typedPayload().getOrDefault("incidentId", "")).trim();
         if (incidentId.isBlank()) throw new IllegalArgumentException("validated incidentId is required");
         var started = launcher.start(
-                incidentId, new RecoveryPlanStartRequest(request.dispatchRequestId(), request.goalText()));
+                incidentId, new RecoveryPlanStartRequest(
+                        request.dispatchRequestId(), request.goalText(), request.workItemId()));
         return new DispatchResult(
                 request.dispatchRequestId(), WorkLinkType.RECOVERY_PLAN, started.planId(), started.newlyCreated());
     }

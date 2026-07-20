@@ -21,7 +21,12 @@ import com.agent.platform.runtime.AgentRunState;
 import com.agent.platform.runtime.AgentRuntimeResult;
 import com.agent.platform.runtime.AgentStopReason;
 import com.agent.platform.runtime.ToolExecutionStore;
+import com.agent.platform.runtime.AgentExecutionProfile;
+import com.agent.platform.workbench.budget.BudgetExceededException;
+import com.agent.platform.workbench.budget.IncidentBudgetGate;
+import com.agent.platform.workbench.budget.IncidentBudgetReservation;
 import jakarta.annotation.PreDestroy;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -56,8 +61,38 @@ public class IncidentTaskScheduler {
     private final IncidentExecutionProfileFactory profileFactory;
     private final IncidentCommandProperties properties;
     private final IncidentWorkerIdentity workerIdentity;
+    private final IncidentBudgetGate budgets;
     private final ExecutorService executor;
     private final ScheduledExecutorService leaseHeartbeatExecutor;
+
+    @Autowired
+    public IncidentTaskScheduler(AgentTaskStore taskStore,
+                                 EvidenceStore evidenceStore,
+                                 IncidentTaskResultCommitter resultCommitter,
+                                 AgentContinuationRuntime continuationRuntime,
+                                 ToolExecutionStore toolExecutionStore,
+                                 IncidentEvidenceProjector evidenceProjector,
+                                 IncidentExecutionProfileFactory profileFactory,
+                                 IncidentCommandProperties properties,
+                                 IncidentWorkerIdentity workerIdentity,
+                                 IncidentBudgetGate budgets) {
+        this.taskStore = taskStore;
+        this.evidenceStore = evidenceStore;
+        this.resultCommitter = resultCommitter;
+        this.continuationRuntime = continuationRuntime;
+        this.toolExecutionStore = toolExecutionStore;
+        this.evidenceProjector = evidenceProjector;
+        this.profileFactory = profileFactory;
+        this.properties = properties;
+        this.workerIdentity = workerIdentity;
+        this.budgets = budgets;
+        int workers = properties.getMaxParallelSpecialists();
+        this.executor = new ThreadPoolExecutor(
+                workers, workers, 0, TimeUnit.MILLISECONDS,
+                new ArrayBlockingQueue<>(workers * 2),
+                new ThreadPoolExecutor.AbortPolicy());
+        this.leaseHeartbeatExecutor = Executors.newScheduledThreadPool(Math.min(workers, 2));
+    }
 
     public IncidentTaskScheduler(AgentTaskStore taskStore,
                                  EvidenceStore evidenceStore,
@@ -68,21 +103,8 @@ public class IncidentTaskScheduler {
                                  IncidentExecutionProfileFactory profileFactory,
                                  IncidentCommandProperties properties,
                                  IncidentWorkerIdentity workerIdentity) {
-        this.taskStore = taskStore;
-        this.evidenceStore = evidenceStore;
-        this.resultCommitter = resultCommitter;
-        this.continuationRuntime = continuationRuntime;
-        this.toolExecutionStore = toolExecutionStore;
-        this.evidenceProjector = evidenceProjector;
-        this.profileFactory = profileFactory;
-        this.properties = properties;
-        this.workerIdentity = workerIdentity;
-        int workers = properties.getMaxParallelSpecialists();
-        this.executor = new ThreadPoolExecutor(
-                workers, workers, 0, TimeUnit.MILLISECONDS,
-                new ArrayBlockingQueue<>(workers * 2),
-                new ThreadPoolExecutor.AbortPolicy());
-        this.leaseHeartbeatExecutor = Executors.newScheduledThreadPool(Math.min(workers, 2));
+        this(taskStore, evidenceStore, resultCommitter, continuationRuntime, toolExecutionStore,
+                evidenceProjector, profileFactory, properties, workerIdentity, IncidentBudgetGate.NOOP);
     }
 
     public List<IncidentTaskExecution> execute(List<AgentTaskRecord> tasks, IncidentSnapshot snapshot) {
@@ -142,8 +164,13 @@ public class IncidentTaskScheduler {
                 task.taskId(), task.version(), AgentTaskStatus.RUNNING, task.childRunId(), "",
                 TaskEventActorType.ORCHESTRATOR, "incident-orchestrator",
                 "clarification-running:" + task.taskId() + ":" + task.version());
+        IncidentAgentRole role = IncidentAgentRole.valueOf(running.role());
+        IncidentBudgetReservation budget = budgets.reserveIncidentRun(
+                running.incidentId(), specialistOperation(running), running.role(),
+                profileFactory.specialist(role));
         AgentRuntimeResult result = continuationRuntime.continueWithInput(
                 running.childRunId(), input, event -> { });
+        budgets.settle(budget, result);
         if (result.state() != AgentRunState.COMPLETED) {
             return failed(running, "clarification run did not complete: " + result.state());
         }
@@ -171,7 +198,11 @@ public class IncidentTaskScheduler {
     }
 
     public AgentTaskRecord completeWithoutClarification(AgentTaskRecord task) {
+        IncidentAgentRole role = IncidentAgentRole.valueOf(task.role());
+        IncidentBudgetReservation budget = budgets.reserveIncidentRun(
+                task.incidentId(), specialistOperation(task), task.role(), profileFactory.specialist(role));
         continuationRuntime.completeWaitingInput(task.childRunId());
+        budgets.settleStored(budget, task.childRunId());
         return taskStore.transitionTask(
                 task.taskId(), task.version(), AgentTaskStatus.SUCCEEDED, task.childRunId(), "",
                 TaskEventActorType.ORCHESTRATOR, "incident-orchestrator",
@@ -218,6 +249,15 @@ public class IncidentTaskScheduler {
         AtomicReference<AgentTaskRecord> boundTask = new AtomicReference<>(running);
         IncidentAgentRole role = IncidentAgentRole.valueOf(running.role());
         String prompt = specialistPrompt(running, snapshot, role);
+        AgentExecutionProfile profile = profileFactory.specialist(role);
+        IncidentBudgetReservation budget;
+        try {
+            budget = budgets.reserveIncidentRun(
+                    running.incidentId(), specialistOperation(running), running.role(), profile);
+        }
+        catch (BudgetExceededException exhausted) {
+            return failed(running, exhausted.code() + ": " + exhausted.getMessage());
+        }
         AgentRuntimeResult result;
         ScheduledFuture<?> heartbeat = startHeartbeat(running);
         try {
@@ -233,7 +273,7 @@ public class IncidentTaskScheduler {
                                     "taskId", running.taskId(),
                                     "snapshotId", snapshot.snapshotId()),
                             "ordercare-incident-command-v1"),
-                    profileFactory.specialist(role),
+                    profile,
                     event -> {
                         if (event.type() == AgentEventType.RUN_STARTED) {
                             AgentTaskRecord current = boundTask.get();
@@ -250,6 +290,7 @@ public class IncidentTaskScheduler {
         } finally {
             if (heartbeat != null) heartbeat.cancel(false);
         }
+        if (result.state() != AgentRunState.WAITING_INPUT) budgets.settle(budget, result);
         AgentTaskRecord owned = boundTask.get();
         if (result.state() != AgentRunState.WAITING_INPUT) {
             IncidentTaskExecution recovered = recoverPersistedFactsAfterDuplicateToolRequest(
@@ -325,6 +366,10 @@ public class IncidentTaskScheduler {
                 || stopReason == AgentStopReason.TOOL_ERROR
                 || stopReason == AgentStopReason.TIMEOUT
                 || stopReason == AgentStopReason.INTERNAL_ERROR;
+    }
+
+    private String specialistOperation(AgentTaskRecord task) {
+        return "specialist:" + task.taskId() + ":attempt:" + task.attempt();
     }
 
     private IncidentTaskExecution retryOrFail(AgentTaskRecord task,

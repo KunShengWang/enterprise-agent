@@ -9,7 +9,8 @@ public record IncidentInvestigationRequest(
         Instant detectedAt,
         String symptom,
         List<String> candidateRequestIds,
-        List<String> queueNames
+        List<String> queueNames,
+        String budgetOwnerWorkItemId
 ) {
     public IncidentInvestigationRequest {
         alertBatchId = alertBatchId == null ? "" : alertBatchId.trim();
@@ -18,5 +19,15 @@ public record IncidentInvestigationRequest(
         symptom = symptom == null ? "" : symptom.trim();
         candidateRequestIds = candidateRequestIds == null ? List.of() : List.copyOf(candidateRequestIds);
         queueNames = queueNames == null ? List.of() : List.copyOf(queueNames);
+        budgetOwnerWorkItemId = budgetOwnerWorkItemId == null ? "" : budgetOwnerWorkItemId.trim();
+    }
+
+    public IncidentInvestigationRequest(String alertBatchId,
+                                        String alertType,
+                                        Instant detectedAt,
+                                        String symptom,
+                                        List<String> candidateRequestIds,
+                                        List<String> queueNames) {
+        this(alertBatchId, alertType, detectedAt, symptom, candidateRequestIds, queueNames, "");
     }
 }

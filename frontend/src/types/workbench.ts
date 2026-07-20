@@ -135,4 +135,23 @@ export interface WorkCommandResult {
   workItem?: WorkItem
 }
 export type UnifiedSubmitResult = UnifiedInputResponse | WorkCommandResult
+export interface BudgetAmount {
+  modelCalls: number
+  tokens: number
+  toolCalls: number
+  durationMillis: number
+  estimatedCost: number
+}
+export interface WorkItemBudget {
+  accountId: string
+  ownerType: string
+  ownerId: string
+  parentAccountId: string
+  status: string
+  maximum: BudgetAmount
+  reserved: BudgetAmount
+  consumed: BudgetAmount
+  version: number
+  updatedAt: string
+}
 import type { IncidentEvidence, IncidentRecoveryPlan, RuntimeRunTrace, RuntimeTraceSpan } from './incident'

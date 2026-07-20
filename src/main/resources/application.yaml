@@ -231,10 +231,61 @@ enterprise-agent:
       scan-delay-millis: ${WORKBENCH_PROJECTION_SCAN_DELAY_MILLIS:2000}
       source-batch-size: ${WORKBENCH_PROJECTION_SOURCE_BATCH_SIZE:200}
       event-batch-size: ${WORKBENCH_PROJECTION_EVENT_BATCH_SIZE:500}
-    stream:
-      poll-interval-millis: ${WORKBENCH_STREAM_POLL_INTERVAL_MILLIS:500}
-      batch-size: ${WORKBENCH_STREAM_BATCH_SIZE:500}
-      heartbeat-every-polls: ${WORKBENCH_STREAM_HEARTBEAT_EVERY_POLLS:20}
+      stream:
+        poll-interval-millis: ${WORKBENCH_STREAM_POLL_INTERVAL_MILLIS:500}
+        batch-size: ${WORKBENCH_STREAM_BATCH_SIZE:500}
+        heartbeat-every-polls: ${WORKBENCH_STREAM_HEARTBEAT_EVERY_POLLS:20}
+      budget:
+        enabled: ${WORKBENCH_BUDGET_ENABLED:true}
+        allow-low-risk-degraded-mode: ${WORKBENCH_BUDGET_ALLOW_LOW_RISK_DEGRADED:true}
+        work-item:
+          max-model-calls: ${WORKBENCH_BUDGET_WORK_MAX_MODEL_CALLS:48}
+          max-tokens: ${WORKBENCH_BUDGET_WORK_MAX_TOKENS:220000}
+          max-tool-calls: ${WORKBENCH_BUDGET_WORK_MAX_TOOL_CALLS:24}
+          max-duration-millis: ${WORKBENCH_BUDGET_WORK_MAX_DURATION_MILLIS:900000}
+          max-estimated-cost: ${WORKBENCH_BUDGET_WORK_MAX_COST:48}
+        router-attempt:
+          max-model-calls: ${WORKBENCH_BUDGET_ROUTER_MAX_MODEL_CALLS:1}
+          max-tokens: ${WORKBENCH_BUDGET_ROUTER_MAX_TOKENS:12000}
+          max-tool-calls: 0
+          max-duration-millis: ${WORKBENCH_BUDGET_ROUTER_MAX_DURATION_MILLIS:45000}
+          max-estimated-cost: ${WORKBENCH_BUDGET_ROUTER_MAX_COST:2}
+        general:
+          max-model-calls: 12
+          max-tokens: 48000
+          max-tool-calls: 10
+          max-duration-millis: 240000
+          max-estimated-cost: 12
+        order-care:
+          max-model-calls: 16
+          max-tokens: 72000
+          max-tool-calls: 14
+          max-duration-millis: 360000
+          max-estimated-cost: 18
+        incident:
+          max-model-calls: 32
+          max-tokens: 170000
+          max-tool-calls: 8
+          max-duration-millis: 720000
+          max-estimated-cost: 36
+        recovery-plan:
+          max-model-calls: 6
+          max-tokens: 36000
+          max-tool-calls: 20
+          max-duration-millis: 300000
+          max-estimated-cost: 10
+        incident-aggregate:
+          max-model-calls: 32
+          max-tokens: 170000
+          max-tool-calls: 8
+          max-duration-millis: 720000
+          max-estimated-cost: 36
+        recovery-plan-aggregate:
+          max-model-calls: 6
+          max-tokens: 36000
+          max-tool-calls: 20
+          max-duration-millis: 300000
+          max-estimated-cost: 10
 llm:
   http-log:
     enabled: ${LLM_HTTP_LOG_ENABLED:false}

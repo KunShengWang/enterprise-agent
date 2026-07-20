@@ -33,6 +33,9 @@ import com.agent.platform.runtime.AgentFollowUpInput;
 import com.agent.platform.runtime.AgentRunState;
 import com.agent.platform.runtime.AgentRuntime;
 import com.agent.platform.runtime.AgentRuntimeResult;
+import com.agent.platform.runtime.AgentExecutionProfile;
+import com.agent.platform.workbench.budget.IncidentBudgetGate;
+import com.agent.platform.workbench.budget.IncidentBudgetReservation;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
@@ -67,6 +70,7 @@ public class IncidentInvestigationOrchestrator {
     private final AgentRuntime agentRuntime;
     private final AgentContinuationRuntime continuationRuntime;
     private final ObjectMapper objectMapper;
+    private final IncidentBudgetGate budgets;
 
     public IncidentInvestigationOrchestrator(IncidentStore incidentStore,
                                              AgentTaskStore taskStore,
@@ -83,7 +87,8 @@ public class IncidentInvestigationOrchestrator {
                                              ReviewerAssessmentDraftParser reviewerDraftParser,
                                              AgentRuntime agentRuntime,
                                              AgentContinuationRuntime continuationRuntime,
-                                             ObjectMapper objectMapper) {
+                                             ObjectMapper objectMapper,
+                                             IncidentBudgetGate budgets) {
         this.incidentStore = incidentStore;
         this.taskStore = taskStore;
         this.evidenceStore = evidenceStore;
@@ -100,6 +105,7 @@ public class IncidentInvestigationOrchestrator {
         this.agentRuntime = agentRuntime;
         this.continuationRuntime = continuationRuntime;
         this.objectMapper = objectMapper;
+        this.budgets = budgets;
     }
 
     public IncidentInvestigationResult investigate(IncidentInvestigationRequest request) {
@@ -111,10 +117,18 @@ public class IncidentInvestigationOrchestrator {
         String incidentId = "inc-" + UUID.randomUUID();
         IncidentSnapshot snapshot = snapshotFactory.create(incidentId, request);
         Instant now = Instant.now();
-        return incidentStore.create(new IncidentRecord(
+        IncidentRecord created = incidentStore.create(new IncidentRecord(
                 incidentId, null, null, "incident:" + incidentId, SCENARIO_ID,
                 IncidentStatus.CREATED, snapshot, Map.of(), Map.of(),
                 0, 1, 1, 0, now, now));
+        try {
+            budgets.initializeIncident(created.incidentId(), request.budgetOwnerWorkItemId());
+            return created;
+        }
+        catch (RuntimeException exception) {
+            rejectBeforeExecution(created.incidentId(), exception.getMessage());
+            throw exception;
+        }
     }
 
     public IncidentDispatchInitialization initializeForDispatch(String dispatchRequestId,
@@ -127,6 +141,13 @@ public class IncidentInvestigationOrchestrator {
                 IncidentStatus.CREATED, snapshot, Map.of(), Map.of(),
                 0, 1, 1, 0, now, now);
         IncidentRecord persisted = incidentStore.createForDispatch(dispatchRequestId, candidate);
+        try {
+            budgets.initializeIncident(persisted.incidentId(), request.budgetOwnerWorkItemId());
+        }
+        catch (RuntimeException exception) {
+            rejectBeforeExecution(persisted.incidentId(), exception.getMessage());
+            throw exception;
+        }
         return new IncidentDispatchInitialization(persisted, persisted.incidentId().equals(incidentId));
     }
 
@@ -191,6 +212,7 @@ public class IncidentInvestigationOrchestrator {
             }
             else {
                 continuationRuntime.completeWaitingInput(review.reviewerRunId());
+                budgets.settleStored(review.budget(), review.reviewerRunId());
                 completeWaitingTasks(incidentId);
             }
 
@@ -209,6 +231,7 @@ public class IncidentInvestigationOrchestrator {
             };
             incident = transition(incident, terminal, "incident-terminal-" + terminal.name().toLowerCase());
             IncidentAggregate aggregate = incidentStore.findAggregate(incidentId, 10_000).orElseThrow();
+            budgets.completeIncident(incidentId);
             return new IncidentInvestigationResult(incident, assessment, aggregate);
         }
         catch (RuntimeException exception) {
@@ -259,6 +282,7 @@ public class IncidentInvestigationOrchestrator {
                 review = clarified.review();
             } else {
                 continuationRuntime.completeWaitingInput(review.reviewerRunId());
+                budgets.settleStored(review.budget(), review.reviewerRunId());
                 completeWaitingTasks(incidentId);
             }
             ReviewerAssessmentDraft authoritativeDraft = validOrFallbackDraft(
@@ -276,6 +300,7 @@ public class IncidentInvestigationOrchestrator {
             };
             incident = transition(incident, terminal, "phase3-incident-terminal-" + terminal.name().toLowerCase());
             IncidentAggregate aggregate = incidentStore.findAggregate(incidentId, 10_000).orElseThrow();
+            budgets.completeIncident(incidentId);
             return Optional.of(new IncidentInvestigationResult(incident, assessment, aggregate));
         } catch (com.agent.platform.ordercare.incident.persistence.IncidentCasConflictException contention) {
             return Optional.empty();
@@ -298,13 +323,17 @@ public class IncidentInvestigationOrchestrator {
                 incident.incidentId(), request.alertType(), request.symptom(),
                 incident.snapshot().orderScope().requestIds().size(),
                 incident.snapshot().businessScope().queueNames().size()).trim();
+        AgentExecutionProfile profile = profileFactory.commander();
+        IncidentBudgetReservation budget = budgets.reserveIncidentRun(
+                incident.incidentId(), "commander", "COMMANDER", profile);
         AgentRuntimeResult result = agentRuntime.run(
                 new AgentRequest(
                         "incident:" + incident.incidentId() + ":commander",
                         "incident-commander", prompt,
                         Map.of("incidentId", incident.incidentId(), "parentIncidentId", incident.incidentId(),
                                 "runRole", "COMMANDER"), SCENARIO_ID),
-                profileFactory.commander(), event -> { });
+                profile, event -> { });
+        budgets.settle(budget, result);
         DelegationPlan plan = null;
         if (result.state() == AgentRunState.COMPLETED) {
             try {
@@ -341,15 +370,19 @@ public class IncidentInvestigationOrchestrator {
                                 List<EvidenceConflict> conflicts,
                                 List<EvidenceGap> gaps) {
         String prompt = reviewerPrompt(incident.snapshot(), evidence, conflicts, gaps);
+        AgentExecutionProfile profile = profileFactory.reviewer();
+        IncidentBudgetReservation budget = budgets.reserveIncidentRun(
+                incident.incidentId(), "reviewer", "REVIEWER", profile);
         AgentRuntimeResult result = continuationRuntime.runUntilInputCheckpoint(
                 new AgentRequest(
                         "incident:" + incident.incidentId() + ":reviewer",
                         "incident-reviewer", prompt,
                         Map.of("incidentId", incident.incidentId(), "parentIncidentId", incident.incidentId(),
                                 "runRole", "REVIEWER"), SCENARIO_ID),
-                profileFactory.reviewer(), event -> { });
+                profile, event -> { });
+        if (result.state() != AgentRunState.WAITING_INPUT) budgets.settle(budget, result);
         ReviewerAssessmentDraft draft = reviewerDraftParser.parse(result.answer());
-        return new ReviewResult(result.runId(), draft);
+        return new ReviewResult(result.runId(), draft, budget);
     }
 
     private ClarificationResult clarify(IncidentRecord incident,
@@ -365,11 +398,12 @@ public class IncidentInvestigationOrchestrator {
         if (task == null || conflict == null || task.status() != AgentTaskStatus.WAITING_CLARIFICATION
                 || request.question().isBlank()) {
             continuationRuntime.completeWaitingInput(initialReview.reviewerRunId());
+            budgets.settleStored(initialReview.budget(), initialReview.reviewerRunId());
             completeWaitingTasks(incident.incidentId());
             return new ClarificationResult(
                     incident, evidenceStore.listEvidence(incident.incidentId()), conflicts, gaps,
                     new ReviewResult(initialReview.reviewerRunId(), fallbackDraft(
-                            evidenceStore.listEvidence(incident.incidentId()), conflicts)));
+                            evidenceStore.listEvidence(incident.incidentId()), conflicts), initialReview.budget()));
         }
         incident = transition(incident, IncidentStatus.CLARIFYING, "incident-clarifying");
         incident = incidentStore.updateDetails(
@@ -409,12 +443,13 @@ public class IncidentInvestigationOrchestrator {
                         "follow-up-task-v1", "REVIEW_UPDATED_EVIDENCE", task.taskId(), conflict.conflictId(),
                         request.relatedEvidenceIds(), reviewerFollowUp, 0, 1_500, Map.of()),
                 event -> { });
+        budgets.settle(initialReview.budget(), finalReview);
         ReviewerAssessmentDraft finalDraft = reviewerDraftParser.parse(finalReview.answer());
         incident = current(incident.incidentId());
         incident = transition(incident, IncidentStatus.REVIEWING, "incident-reviewing-after-clarification");
         return new ClarificationResult(
                 incident, updatedEvidence, updatedConflicts, List.copyOf(updatedGaps),
-                new ReviewResult(initialReview.reviewerRunId(), finalDraft));
+                new ReviewResult(initialReview.reviewerRunId(), finalDraft, initialReview.budget()));
     }
 
     private List<EvidenceConflict> persistConflicts(String incidentId, List<EvidenceConflict> conflicts) {
@@ -571,7 +606,9 @@ public class IncidentInvestigationOrchestrator {
     }
 
     private record PlanningResult(String commanderRunId, DelegationPlan plan) {}
-    private record ReviewResult(String reviewerRunId, ReviewerAssessmentDraft draft) {}
+    private record ReviewResult(String reviewerRunId,
+                                ReviewerAssessmentDraft draft,
+                                IncidentBudgetReservation budget) {}
     private record ClarificationResult(
             IncidentRecord incident,
             List<EvidenceRecord> evidence,

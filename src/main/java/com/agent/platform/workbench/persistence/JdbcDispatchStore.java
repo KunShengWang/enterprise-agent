@@ -389,7 +389,8 @@ public class JdbcDispatchStore implements DispatchStore {
                     statement.executeUpdate();
                 }
                 boolean exhausted = attempt.attemptNo() >= maxAttempts;
-                if (exhausted) moveManualReview(connection, work, "DISPATCH_RETRY_EXHAUSTED");
+                if (exhausted) moveManualReview(connection, work,
+                        failureCode.startsWith("BUDGET_") ? failureCode : "DISPATCH_RETRY_EXHAUSTED");
                 else {
                     try (PreparedStatement statement = connection.prepareStatement("""
                             UPDATE agent_work_item SET execution_state='UNKNOWN', version=version+1,

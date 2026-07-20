@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiRequest, jsonBody } from './http'
-import type { RoutePreview, UnifiedSubmitResult, WorkEvent, WorkExecutionTree, WorkFocus, WorkInput, WorkItem, WorkItemDetail } from '../types/workbench'
+import type { RoutePreview, UnifiedSubmitResult, WorkEvent, WorkExecutionTree, WorkFocus, WorkInput, WorkItem, WorkItemBudget, WorkItemDetail } from '../types/workbench'
 
 const id = () => crypto.randomUUID()
 
@@ -14,6 +14,9 @@ export const workbenchApi = {
   detail: (workItemId: string) => apiRequest<WorkItemDetail>(`/api/agent/work-items/${encodeURIComponent(workItemId)}`),
   executionTree: (workItemId: string) => apiRequest<WorkExecutionTree>(
     `/api/agent/work-items/${encodeURIComponent(workItemId)}/execution-tree`,
+  ),
+  budget: (workItemId: string) => apiRequest<WorkItemBudget>(
+    `/api/agent/work-items/${encodeURIComponent(workItemId)}/budget`,
   ),
   events: (workItemId: string, afterSequence = -1, limit = 500) => apiRequest<WorkEvent[]>(
     `/api/agent/work-items/${encodeURIComponent(workItemId)}/events?afterSequence=${afterSequence}&limit=${limit}`,

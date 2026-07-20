@@ -544,12 +544,14 @@ public class JdbcRoutingStore implements RoutingStore {
                 }
                 boolean exhausted = work.routingAttemptCount() >= maxAttempts;
                 WorkControlState next = exhausted ? WorkControlState.MANUAL_REVIEW : WorkControlState.ROUTING;
+                String terminalFailureCode = exhausted && !failureCode.startsWith("BUDGET_")
+                        ? "RETRY_EXHAUSTED" : failureCode;
                 try (PreparedStatement statement = connection.prepareStatement("""
                         UPDATE agent_work_item SET control_state=?, routing_failure_code=?,
                             routing_next_retry_at=?, version=version+1, updated_at=? WHERE work_item_id=?
                         """)) {
                     statement.setString(1, next.name());
-                    statement.setString(2, exhausted ? "RETRY_EXHAUSTED" : failureCode);
+                    statement.setString(2, terminalFailureCode);
                     if (exhausted) statement.setTimestamp(3, null);
                     else statement.setTimestamp(3, Timestamp.from(now.plusMillis(Math.max(0, retryBackoffMillis))));
                     statement.setTimestamp(4, Timestamp.from(now));

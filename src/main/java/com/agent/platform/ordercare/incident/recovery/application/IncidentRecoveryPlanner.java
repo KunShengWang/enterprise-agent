@@ -34,7 +34,11 @@ import com.agent.platform.ordercare.tool.OrderCareToolCatalog;
 import com.agent.platform.runtime.AgentRunState;
 import com.agent.platform.runtime.AgentRuntime;
 import com.agent.platform.runtime.AgentRuntimeResult;
+import com.agent.platform.runtime.AgentExecutionProfile;
+import com.agent.platform.workbench.budget.IncidentBudgetGate;
+import com.agent.platform.workbench.budget.IncidentBudgetReservation;
 import com.agent.platform.tool.ToolCallRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +72,36 @@ public class IncidentRecoveryPlanner {
     private final OrderCareProposalBindingStore bindingStore;
     private final ApprovalService approvalService;
     private final ObjectMapper objectMapper;
+    private final IncidentBudgetGate budgets;
+
+    @Autowired
+    public IncidentRecoveryPlanner(IncidentCommandProperties properties,
+                                   IncidentStore incidentStore,
+                                   IncidentRecoveryPlanStore planStore,
+                                   TaskEventStore eventStore,
+                                   IncidentExecutionProfileFactory profileFactory,
+                                   IncidentRecoveryPlanValidator validator,
+                                   RecoveryPlanDigest digest,
+                                   AgentRuntime agentRuntime,
+                                   FlowOrderClient flowOrderClient,
+                                   OrderCareProposalBindingStore bindingStore,
+                                   ApprovalService approvalService,
+                                   ObjectMapper objectMapper,
+                                   IncidentBudgetGate budgets) {
+        this.properties = properties;
+        this.incidentStore = incidentStore;
+        this.planStore = planStore;
+        this.eventStore = eventStore;
+        this.profileFactory = profileFactory;
+        this.validator = validator;
+        this.digest = digest;
+        this.agentRuntime = agentRuntime;
+        this.flowOrderClient = flowOrderClient;
+        this.bindingStore = bindingStore;
+        this.approvalService = approvalService;
+        this.objectMapper = objectMapper;
+        this.budgets = budgets;
+    }
 
     public IncidentRecoveryPlanner(IncidentCommandProperties properties,
                                    IncidentStore incidentStore,
@@ -81,18 +115,9 @@ public class IncidentRecoveryPlanner {
                                    OrderCareProposalBindingStore bindingStore,
                                    ApprovalService approvalService,
                                    ObjectMapper objectMapper) {
-        this.properties = properties;
-        this.incidentStore = incidentStore;
-        this.planStore = planStore;
-        this.eventStore = eventStore;
-        this.profileFactory = profileFactory;
-        this.validator = validator;
-        this.digest = digest;
-        this.agentRuntime = agentRuntime;
-        this.flowOrderClient = flowOrderClient;
-        this.bindingStore = bindingStore;
-        this.approvalService = approvalService;
-        this.objectMapper = objectMapper;
+        this(properties, incidentStore, planStore, eventStore, profileFactory, validator, digest,
+                agentRuntime, flowOrderClient, bindingStore, approvalService, objectMapper,
+                IncidentBudgetGate.NOOP);
     }
 
     public RecoveryPlanStartResponse initialize(String incidentId, RecoveryPlanStartRequest request) {
@@ -112,6 +137,7 @@ public class IncidentRecoveryPlanner {
             if (!assessmentDigest.equals(current.assessmentDigest())) {
                 throw new IllegalArgumentException("requestKey is bound to another assessment version");
             }
+            budgets.initializeRecoveryPlan(current.planId(), request.budgetOwnerWorkItemId());
             return response(current, false);
         }
         Instant now = Instant.now();
@@ -120,6 +146,13 @@ public class IncidentRecoveryPlanner {
                 RecoveryPlanStatus.CREATED, RecoveryPlanOutcome.NOT_STARTED, null,
                 List.of(), List.of(), 0, now, now));
         emit(created, "RECOVERY_PLAN_CREATED", Map.of("requestKey", requestKey));
+        try {
+            budgets.initializeRecoveryPlan(created.planId(), request.budgetOwnerWorkItemId());
+        }
+        catch (RuntimeException exception) {
+            fail(created, List.of("budget admission failed: " + safe(exception.getMessage())));
+            throw exception;
+        }
         return response(created, true);
     }
 
@@ -135,6 +168,9 @@ public class IncidentRecoveryPlanner {
         }
         plan = transition(plan, RecoveryPlanStatus.PLANNING, RecoveryPlanOutcome.NOT_STARTED,
                 plan.plannerRunId(), plan.draft(), plan.items(), plan.validationErrors());
+        AgentExecutionProfile profile = profileFactory.recoveryPlanner();
+        IncidentBudgetReservation budget = budgets.reserveRecoveryPlanRun(
+                plan.planId(), "recovery-planner", "RECOVERY_PLANNER", profile);
         AgentRuntimeResult result = agentRuntime.run(
                 new AgentRequest(
                         "incident:" + plan.incidentId() + ":recovery-planner",
@@ -143,8 +179,9 @@ public class IncidentRecoveryPlanner {
                         Map.of("incidentId", plan.incidentId(), "recoveryPlanId", plan.planId(),
                                 "runRole", "RECOVERY_PLANNER"),
                         SCENARIO_ID),
-                profileFactory.recoveryPlanner(),
+                profile,
                 event -> { });
+        budgets.settle(budget, result);
         RecoveryPlanDraft draft = parseDraft(result);
         RecoveryPlanValidationResult validation = validator.validate(aggregate, assessment, draft);
         if (!validation.valid()) {
@@ -155,6 +192,7 @@ public class IncidentRecoveryPlanner {
                     plan.createdAt(), Instant.now());
             failed = planStore.update(failed, plan.version());
             emit(failed, "RECOVERY_PLAN_REJECTED", Map.of("errors", validation.errors()));
+            budgets.completeRecoveryPlan(failed.planId());
             return failed;
         }
         plan = transition(plan, RecoveryPlanStatus.PREVIEWING, RecoveryPlanOutcome.NOT_STARTED,
@@ -168,6 +206,7 @@ public class IncidentRecoveryPlanner {
         emit(plan, "RECOVERY_PLAN_PREVIEWED", Map.of(
                 "itemCount", items.size(),
                 "approvableCount", items.stream().filter(item -> item.status() == RecoveryPlanItemStatus.WAITING_APPROVAL).count()));
+        budgets.completeRecoveryPlan(plan.planId());
         return plan;
     }
 
@@ -186,11 +225,21 @@ public class IncidentRecoveryPlanner {
             String proposalId = stableId("prop", plan.planId() + ":" + request.clientItemKey());
             Instant now = Instant.now();
             try {
-                OrderCareRecoveryProposal proposal = flowOrderClient.createProposal(
-                        new OrderCareProposalCreateCommand(
-                                proposalId, request.identifierType(), request.identifierValue(),
-                                request.actionType(), request.suggestedReason()),
-                        traceId(plan, itemId, "preview"));
+                IncidentBudgetReservation toolBudget = budgets.reserveRecoveryPlanTool(
+                        plan.planId(), "proposal:" + itemId, "FLOWORDER_PROPOSAL_PREVIEW");
+                long startedNanos = System.nanoTime();
+                OrderCareRecoveryProposal proposal;
+                try {
+                    proposal = flowOrderClient.createProposal(
+                            new OrderCareProposalCreateCommand(
+                                    proposalId, request.identifierType(), request.identifierValue(),
+                                    request.actionType(), request.suggestedReason()),
+                            traceId(plan, itemId, "preview"));
+                }
+                finally {
+                    budgets.settleDeterministicTool(
+                            toolBudget, (System.nanoTime() - startedNanos) / 1_000_000);
+                }
                 if (!"ACTIVE".equals(proposal.proposalStatus()) || !Boolean.TRUE.equals(proposal.canExecute())) {
                     items.add(item(request, itemId, RecoveryPlanItemStatus.INELIGIBLE, proposal,
                             "", "NOT_REQUESTED", proposal.actionStatus(), proposal.caseOutcome(),
@@ -352,6 +401,7 @@ public class IncidentRecoveryPlanner {
                 plan, RecoveryPlanStatus.FAILED, RecoveryPlanOutcome.MANUAL_REVIEW,
                 plan.plannerRunId(), plan.draft(), plan.items(), errors);
         emit(failed, "RECOVERY_PLAN_FAILED", Map.of("errors", errors));
+        budgets.completeRecoveryPlan(failed.planId());
         return failed;
     }
 

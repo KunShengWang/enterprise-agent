@@ -35,7 +35,8 @@ public class IncidentInvestigationExecutionAdapter implements ExecutionAdapter {
                         request.requestedAt(),
                         request.goalText(),
                         values(payload.get("requestIds")),
-                        queues(payload)));
+                        queues(payload),
+                        request.workItemId()));
         return new DispatchResult(
                 request.dispatchRequestId(), WorkLinkType.INCIDENT, started.incidentId(), true);
     }

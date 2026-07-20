@@ -11,6 +11,9 @@ import com.agent.platform.workbench.persistence.WorkbenchStore;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
 import com.agent.platform.workbench.target.ExecutionTargetDefinition;
 import com.agent.platform.workbench.target.ExecutionTargetRegistry;
+import com.agent.platform.workbench.budget.BudgetExceededException;
+import com.agent.platform.workbench.budget.BudgetReservationHandle;
+import com.agent.platform.workbench.budget.WorkItemBudgetGate;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -30,6 +33,7 @@ public class RoutingCoordinator {
     private final WorkbenchRoutingProperties properties;
     private final RoutingFailureInjector failureInjector;
     private final RouteDecisionPostProcessor postProcessor;
+    private final WorkItemBudgetGate budgets;
 
     @Autowired
     public RoutingCoordinator(RoutingStore routingStore,
@@ -40,7 +44,8 @@ public class RoutingCoordinator {
                               ExecutionTargetRegistry targetRegistry,
                               WorkbenchRoutingProperties properties,
                               RoutingFailureInjector failureInjector,
-                              RouteDecisionPostProcessor postProcessor) {
+                              RouteDecisionPostProcessor postProcessor,
+                              WorkItemBudgetGate budgets) {
         this.routingStore = routingStore;
         this.workbenchStore = workbenchStore;
         this.router = router;
@@ -50,6 +55,7 @@ public class RoutingCoordinator {
         this.properties = properties;
         this.failureInjector = failureInjector;
         this.postProcessor = postProcessor;
+        this.budgets = budgets;
     }
 
     public RoutingCoordinator(RoutingStore routingStore,
@@ -61,7 +67,20 @@ public class RoutingCoordinator {
                               WorkbenchRoutingProperties properties,
                               RoutingFailureInjector failureInjector) {
         this(routingStore, workbenchStore, router, validator, contextResolver, targetRegistry,
-                properties, failureInjector, (principal, workItem, decision) -> { });
+                properties, failureInjector, (principal, workItem, decision) -> { }, WorkItemBudgetGate.NOOP);
+    }
+
+    public RoutingCoordinator(RoutingStore routingStore,
+                              WorkbenchStore workbenchStore,
+                              UnifiedTaskRouter router,
+                              RoutePolicyValidator validator,
+                              RouteContextResolver contextResolver,
+                              ExecutionTargetRegistry targetRegistry,
+                              WorkbenchRoutingProperties properties,
+                              RoutingFailureInjector failureInjector,
+                              RouteDecisionPostProcessor postProcessor) {
+        this(routingStore, workbenchStore, router, validator, contextResolver, targetRegistry,
+                properties, failureInjector, postProcessor, WorkItemBudgetGate.NOOP);
     }
 
     public Optional<RoutingDecisionRecord> route(AuthenticatedPrincipal principal,
@@ -82,12 +101,22 @@ public class RoutingCoordinator {
 
         RoutingAttempt attempt = claimed.get();
         RoutingDecisionRecord completed;
+        BudgetReservationHandle budget;
+        try {
+            budget = budgets.reserveRouter(principal, workItem, "router:" + attempt.decisionId());
+        }
+        catch (BudgetExceededException exhausted) {
+            routingStore.failRouting(principal, attempt, exhausted.code(), safeMessage(exhausted),
+                    RouterFailureObservation.empty(), properties.getRetryBackoffMillis(), attempt.attemptNo());
+            return Optional.empty();
+        }
         try {
             AgentWorkItem claimedWork = workbenchStore.findWorkItem(principal, workItemId).orElseThrow();
             ResolvedRouteContext context = contextResolver.resolve(principal, claimedWork);
             List<ExecutionTargetDefinition> targets = targetRegistry.enabledTargets(principal);
             RouterModelResult modelResult = router.route(new RoutingModelRequest(
                     claimedWork, claimedWork.normalizedGoal(), targets, context.conversationSummary()));
+            budgets.settleRouter(budget, modelResult);
             failureInjector.afterModelResult(attempt, modelResult);
             RouteValidationResult validation = validator.validate(
                     modelResult.decision(),
@@ -100,12 +129,14 @@ public class RoutingCoordinator {
             throw exception;
         }
         catch (RouterInvocationException exception) {
+            budgets.settleRouterFailure(budget, exception.observation());
             routingStore.failRouting(
                     principal, attempt, exception.failureCode(), safeMessage(exception), exception.observation(),
                     properties.getRetryBackoffMillis(), properties.getMaxAttempts());
             return Optional.empty();
         }
         catch (RuntimeException exception) {
+            budgets.release(budget);
             routingStore.failRouting(
                     principal, attempt, failureCode(exception), safeMessage(exception),
                     RouterFailureObservation.empty(),

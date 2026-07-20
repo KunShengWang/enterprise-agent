@@ -12,6 +12,8 @@ import com.agent.platform.workbench.application.UnifiedWorkQueryService;
 import com.agent.platform.workbench.application.WorkCommandHandler;
 import com.agent.platform.workbench.application.WorkCommandRequest;
 import com.agent.platform.workbench.application.WorkCommandResult;
+import com.agent.platform.workbench.application.WorkItemBudgetQueryService;
+import com.agent.platform.workbench.budget.BudgetAccount;
 import com.agent.platform.workbench.model.AgentConversationTurn;
 import com.agent.platform.workbench.model.AgentWorkItem;
 import com.agent.platform.workbench.model.ClassifierType;
@@ -67,6 +69,7 @@ public class UnifiedWorkController {
     private final UnifiedWorkEventStreamService eventStream;
     private final UnifiedWorkExecutionTreeService executionTrees;
     private final WorkCommandHandler commandHandler;
+    private final WorkItemBudgetQueryService budgetQueries;
 
     public UnifiedWorkController(WorkbenchPrincipalProvider principals,
                                  UnifiedWorkIntakeService intake,
@@ -78,12 +81,14 @@ public class UnifiedWorkController {
                                  RoutingStore routing,
                                  UnifiedWorkEventStreamService eventStream,
                                  UnifiedWorkExecutionTreeService executionTrees,
-                                 WorkCommandHandler commandHandler) {
+                                 WorkCommandHandler commandHandler,
+                                 WorkItemBudgetQueryService budgetQueries) {
         this.principals = principals; this.intake = intake; this.launcher = launcher;
         this.queries = queries; this.confirmations = confirmations; this.focusService = focusService;
         this.workbench = workbench; this.routing = routing; this.eventStream = eventStream;
         this.executionTrees = executionTrees;
         this.commandHandler = commandHandler;
+        this.budgetQueries = budgetQueries;
     }
 
     @PostMapping("/conversations/{conversationId}/inputs")
@@ -152,6 +157,11 @@ public class UnifiedWorkController {
         return ApiResponse.success(executionTrees.project(principals.current(), workItemId));
     }
 
+    @GetMapping("/work-items/{workItemId}/budget")
+    public ApiResponse<BudgetAccount> budget(@PathVariable String workItemId) {
+        return ApiResponse.success(budgetQueries.require(principals.current(), workItemId));
+    }
+
     @PostMapping("/work-items/{workItemId}/confirm-route")
     public ApiResponse<AgentWorkItem> confirm(@PathVariable String workItemId,
                                               @RequestBody ConfirmRouteBody body) {
@@ -208,6 +218,7 @@ public class UnifiedWorkController {
                                                            String conversationId,
                                                            String clientInputId,
                                                            UnifiedInputBody body) {
+        // 验证元数据是否包含禁止的身份或执行字段
         validateMetadata(body.metadata());
         UnifiedWorkIntakeResult result = intake.accept(principal, new UnifiedWorkInputRequest(
                 "input-" + UUID.randomUUID(), clientInputId, conversationId, body.content(),
@@ -298,8 +309,12 @@ public class UnifiedWorkController {
     }
 
     public record UnifiedInputBody(String content, Map<String, Object> metadata) {
-        public UnifiedInputBody { if (content == null || content.isBlank()) throw new IllegalArgumentException("content is required"); }
+        public UnifiedInputBody {
+            if (content == null || content.isBlank())
+                throw new IllegalArgumentException("content is required");
+        }
     }
+
     public record UnifiedInputResponse(String inputId, String workItemId, String controlState,
                                        String commandType, boolean commandOnly) { }
     public record FocusBody(String workItemId, long expectedVersion, String clientInputId) { }

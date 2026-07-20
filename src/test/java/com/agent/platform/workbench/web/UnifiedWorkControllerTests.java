@@ -9,6 +9,7 @@ import com.agent.platform.workbench.application.UnifiedWorkIntakeService;
 import com.agent.platform.workbench.application.UnifiedWorkLauncher;
 import com.agent.platform.workbench.application.WorkCommandHandler;
 import com.agent.platform.workbench.application.WorkCommandResult;
+import com.agent.platform.workbench.application.WorkItemBudgetQueryService;
 import com.agent.platform.workbench.application.UnifiedWorkQueryService;
 import com.agent.platform.workbench.model.AgentConversationTurn;
 import com.agent.platform.workbench.model.AgentWorkItem;
@@ -18,6 +19,7 @@ import com.agent.platform.workbench.model.WorkCommandType;
 import com.agent.platform.workbench.model.WorkCommandExecutionStatus;
 import com.agent.platform.workbench.model.WorkExecutionState;
 import com.agent.platform.workbench.model.WorkOutcome;
+import com.agent.platform.workbench.budget.BudgetAccount;
 import com.agent.platform.workbench.persistence.RoutingStore;
 import com.agent.platform.workbench.persistence.WorkbenchStore;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
@@ -53,9 +55,10 @@ class UnifiedWorkControllerTests {
     private final UnifiedWorkEventStreamService eventStream = mock(UnifiedWorkEventStreamService.class);
     private final UnifiedWorkExecutionTreeService executionTrees = mock(UnifiedWorkExecutionTreeService.class);
     private final WorkCommandHandler commandHandler = mock(WorkCommandHandler.class);
+    private final WorkItemBudgetQueryService budgetQueries = mock(WorkItemBudgetQueryService.class);
     private final UnifiedWorkController controller = new UnifiedWorkController(
             principals, intake, launcher, queries, confirmations, focus, workbench, routing,
-            eventStream, executionTrees, commandHandler);
+            eventStream, executionTrees, commandHandler, budgetQueries);
 
     @Test
     void requestMetadataCannotOverrideTrustedIdentityOrExecutionProfile() {
@@ -124,6 +127,17 @@ class UnifiedWorkControllerTests {
 
         assertEquals(tree, response.data());
         verify(executionTrees).project(principal, "work-1");
+    }
+
+    @Test
+    void budgetEndpointUsesAuthenticatedWorkItemBudgetQuery() {
+        BudgetAccount account = mock(BudgetAccount.class);
+        when(budgetQueries.require(principal, "work-1")).thenReturn(account);
+
+        var response = controller.budget("work-1");
+
+        assertEquals(account, response.data());
+        verify(budgetQueries).require(principal, "work-1");
     }
 
     private AgentWorkItem work() {

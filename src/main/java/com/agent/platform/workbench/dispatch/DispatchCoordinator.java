@@ -4,6 +4,11 @@ import com.agent.platform.config.WorkbenchDispatchProperties;
 import com.agent.platform.workbench.model.WorkLink;
 import com.agent.platform.workbench.persistence.DispatchStore;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
+import com.agent.platform.workbench.budget.BudgetExceededException;
+import com.agent.platform.workbench.budget.BudgetReservationHandle;
+import com.agent.platform.workbench.budget.WorkItemBudgetGate;
+import com.agent.platform.workbench.target.ExecutionTargetId;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -15,15 +20,26 @@ public class DispatchCoordinator {
     private final ExecutionAdapterRegistry adapters;
     private final WorkbenchDispatchProperties properties;
     private final DispatchFailureInjector failureInjector;
+    private final WorkItemBudgetGate budgets;
+
+    @Autowired
+    public DispatchCoordinator(DispatchStore store,
+                               ExecutionAdapterRegistry adapters,
+                               WorkbenchDispatchProperties properties,
+                               DispatchFailureInjector failureInjector,
+                               WorkItemBudgetGate budgets) {
+        this.store = store;
+        this.adapters = adapters;
+        this.properties = properties;
+        this.failureInjector = failureInjector;
+        this.budgets = budgets;
+    }
 
     public DispatchCoordinator(DispatchStore store,
                                ExecutionAdapterRegistry adapters,
                                WorkbenchDispatchProperties properties,
                                DispatchFailureInjector failureInjector) {
-        this.store = store;
-        this.adapters = adapters;
-        this.properties = properties;
-        this.failureInjector = failureInjector;
+        this(store, adapters, properties, failureInjector, WorkItemBudgetGate.NOOP);
     }
 
     public Optional<WorkLink> dispatch(AuthenticatedPrincipal principal, String workItemId) {
@@ -34,6 +50,17 @@ public class DispatchCoordinator {
         if (claimed.isEmpty()) return Optional.empty();
         DispatchClaim claim = claimed.get();
         ExecutionAdapter adapter = adapters.require(claim.request().targetId());
+        BudgetReservationHandle budget;
+        try {
+            budget = budgets.reserveTarget(principal,
+                    claim.request().workItemId(), ExecutionTargetId.valueOf(claim.request().targetId()),
+                    "dispatch:" + claim.request().dispatchRequestId());
+        }
+        catch (BudgetExceededException exhausted) {
+            store.failDispatch(principal, claim, exhausted.code(), safeMessage(exhausted),
+                    properties.getRetryBackoffMillis(), claim.attempt().attemptNo());
+            return Optional.empty();
+        }
         try {
             DispatchResult result;
             if (claim.attempt().reconciliation()) {
@@ -42,6 +69,7 @@ public class DispatchCoordinator {
             else {
                 result = adapter.dispatch(claim.request());
             }
+            budgets.settleTarget(budget, result);
             failureInjector.afterAdapterResult(claim, result);
             return Optional.of(store.completeDispatch(principal, claim, result));
         }
