@@ -14,6 +14,7 @@ public record AuthenticatedPrincipal(
     public AuthenticatedPrincipal {
         tenantId = requireText(tenantId, "tenantId");
         principalId = requireText(principalId, "principalId");
+        // 拷贝一份不可变副本，防止外部修改 Set 集合内容
         roles = roles == null ? Set.of() : Set.copyOf(roles);
     }
 

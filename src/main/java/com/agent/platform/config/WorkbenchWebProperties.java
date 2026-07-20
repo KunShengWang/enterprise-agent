@@ -7,6 +7,7 @@ import java.util.Set;
 
 @ConfigurationProperties(prefix = "enterprise-agent.workbench.web")
 public class WorkbenchWebProperties {
+
     private boolean enabled;
     private String localTenantId = "local-tenant";
     private String localPrincipalId = "local-user";

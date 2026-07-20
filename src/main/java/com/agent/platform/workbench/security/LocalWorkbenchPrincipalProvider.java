@@ -5,11 +5,19 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class LocalWorkbenchPrincipalProvider implements WorkbenchPrincipalProvider {
+
     private final WorkbenchWebProperties properties;
-    public LocalWorkbenchPrincipalProvider(WorkbenchWebProperties properties) { this.properties = properties; }
+
+    public LocalWorkbenchPrincipalProvider(WorkbenchWebProperties properties) {
+        this.properties = properties;
+    }
+
     @Override
     public AuthenticatedPrincipal current() {
-        return new AuthenticatedPrincipal(properties.getLocalTenantId(),
-                properties.getLocalPrincipalId(), properties.getLocalRoles());
+        return new AuthenticatedPrincipal(
+                properties.getLocalTenantId(),
+                properties.getLocalPrincipalId(),
+                properties.getLocalRoles()
+        );
     }
 }

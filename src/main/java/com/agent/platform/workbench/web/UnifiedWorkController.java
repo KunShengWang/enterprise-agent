@@ -220,6 +220,7 @@ public class UnifiedWorkController {
                                                            UnifiedInputBody body) {
         // 验证元数据是否包含禁止的身份或执行字段
         validateMetadata(body.metadata());
+        // 收下用户输入，判定意图，决定是直接执行命令还是创建任务交给 Agent 跑。
         UnifiedWorkIntakeResult result = intake.accept(principal, new UnifiedWorkInputRequest(
                 "input-" + UUID.randomUUID(), clientInputId, conversationId, body.content(),
                 ClassifierType.MODEL, null, ""));

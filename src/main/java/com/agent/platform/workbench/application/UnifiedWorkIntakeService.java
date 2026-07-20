@@ -32,8 +32,10 @@ public class UnifiedWorkIntakeService {
     }
 
     public UnifiedWorkIntakeResult accept(AuthenticatedPrincipal principal, UnifiedWorkInputRequest request) {
+        // 持久化用户输入（幂等：同一个 clientInputId 只存一次）
         AgentConversationTurn input = routingStore.persistUnclassifiedInput(
                 principal, request.inputId(), request.clientInputId(), request.conversationId(), request.content());
+        // 检查是否已有分类结果（幂等：重复请求直接拿缓存）
         Optional<WorkCommandDecision> existing = routingStore.findEffectiveCommand(principal, input.inputId());
         WorkCommandDecision commandDecision = existing.orElseGet(() -> classify(principal, input, request));
         WorkCommandClassification classification = classification(commandDecision);
