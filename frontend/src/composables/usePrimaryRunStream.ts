@@ -83,12 +83,14 @@ export function usePrimaryRunStream(options: PrimaryRunStreamOptions) {
       if (!event.eventId || seenWorkEventIds.has(event.eventId)) return
       seenWorkEventIds.add(event.eventId)
       rawEvents.value.push({
-        eventId: event.eventId, sequence: event.workSequence, eventType: event.eventType,
+        eventId: event.eventId, workItemId, sequence: event.workSequence, eventType: event.eventType,
         phase: String(event.payload.runtimeEventType ?? event.payload.incidentEventType
           ?? event.payload.recoveryPlanEventType ?? event.payload.phase ?? event.eventType),
         summary: event.content, projectedAt: event.createdAt, sourceType: event.sourceType,
         sourceId: event.sourceId, sourceSequence: event.sourceSequence,
         sourceCreatedAt: event.createdAt, payload: event.payload,
+        correlationId: String(event.payload.correlationId ?? ''),
+        causationId: String(event.payload.causationId ?? ''),
       })
       lastEventAt.value = event.createdAt
       const expected = options.expectedRunId()

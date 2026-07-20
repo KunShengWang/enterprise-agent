@@ -32,6 +32,7 @@ export interface WorkItem {
 export interface WorkFocus { focusedWorkItemId: string; version: number }
 export interface WorkEvent {
   eventId: string
+  workItemId?: string
   sequence: number
   eventType: string
   phase?: string
@@ -41,6 +42,8 @@ export interface WorkEvent {
   sourceId?: string
   sourceSequence?: number
   sourceCreatedAt?: string
+  correlationId?: string
+  causationId?: string
   payload?: Record<string, unknown>
 }
 export interface WorkStreamItem {

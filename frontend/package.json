@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "test": "node scripts/conversation-items-smoke.mjs && node scripts/workbench-p3-smoke.mjs && node scripts/workbench-p4-smoke.mjs",
+    "test": "node scripts/conversation-items-smoke.mjs && node scripts/workbench-p3-smoke.mjs && node scripts/workbench-p4-smoke.mjs && node scripts/workbench-p5-smoke.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
