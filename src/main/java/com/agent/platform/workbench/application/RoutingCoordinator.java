@@ -12,6 +12,7 @@ import com.agent.platform.workbench.security.AuthenticatedPrincipal;
 import com.agent.platform.workbench.target.ExecutionTargetDefinition;
 import com.agent.platform.workbench.target.ExecutionTargetRegistry;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Instant;
 import java.util.List;
@@ -28,6 +29,28 @@ public class RoutingCoordinator {
     private final ExecutionTargetRegistry targetRegistry;
     private final WorkbenchRoutingProperties properties;
     private final RoutingFailureInjector failureInjector;
+    private final RouteDecisionPostProcessor postProcessor;
+
+    @Autowired
+    public RoutingCoordinator(RoutingStore routingStore,
+                              WorkbenchStore workbenchStore,
+                              UnifiedTaskRouter router,
+                              RoutePolicyValidator validator,
+                              RouteContextResolver contextResolver,
+                              ExecutionTargetRegistry targetRegistry,
+                              WorkbenchRoutingProperties properties,
+                              RoutingFailureInjector failureInjector,
+                              RouteDecisionPostProcessor postProcessor) {
+        this.routingStore = routingStore;
+        this.workbenchStore = workbenchStore;
+        this.router = router;
+        this.validator = validator;
+        this.contextResolver = contextResolver;
+        this.targetRegistry = targetRegistry;
+        this.properties = properties;
+        this.failureInjector = failureInjector;
+        this.postProcessor = postProcessor;
+    }
 
     public RoutingCoordinator(RoutingStore routingStore,
                               WorkbenchStore workbenchStore,
@@ -37,14 +60,8 @@ public class RoutingCoordinator {
                               ExecutionTargetRegistry targetRegistry,
                               WorkbenchRoutingProperties properties,
                               RoutingFailureInjector failureInjector) {
-        this.routingStore = routingStore;
-        this.workbenchStore = workbenchStore;
-        this.router = router;
-        this.validator = validator;
-        this.contextResolver = contextResolver;
-        this.targetRegistry = targetRegistry;
-        this.properties = properties;
-        this.failureInjector = failureInjector;
+        this(routingStore, workbenchStore, router, validator, contextResolver, targetRegistry,
+                properties, failureInjector, (principal, workItem, decision) -> { });
     }
 
     public Optional<RoutingDecisionRecord> route(AuthenticatedPrincipal principal,
@@ -64,6 +81,7 @@ public class RoutingCoordinator {
         if (claimed.isEmpty()) return routingStore.findEffectiveRouting(principal, workItemId);
 
         RoutingAttempt attempt = claimed.get();
+        RoutingDecisionRecord completed;
         try {
             AgentWorkItem claimedWork = workbenchStore.findWorkItem(principal, workItemId).orElseThrow();
             ResolvedRouteContext context = contextResolver.resolve(principal, claimedWork);
@@ -76,7 +94,7 @@ public class RoutingCoordinator {
                     new RouteValidationContext(
                             principal, claimedWork, claimedWork.originalGoal(),
                             context.trustedIdentifiers(), context.serverResolvedIdentifiers()));
-            return Optional.of(routingStore.completeRouting(principal, attempt, modelResult, validation));
+            completed = routingStore.completeRouting(principal, attempt, modelResult, validation);
         }
         catch (RoutingResultPersistenceUnknownException exception) {
             throw exception;
@@ -94,6 +112,11 @@ public class RoutingCoordinator {
                     properties.getRetryBackoffMillis(), properties.getMaxAttempts());
             return Optional.empty();
         }
+        // Routing is already authoritative. A downstream preview/dispatch-preparation
+        // failure must never rewrite its EFFECTIVE attempt as a routing failure.
+        AgentWorkItem routed = workbenchStore.findWorkItem(principal, workItemId).orElseThrow();
+        postProcessor.afterEffectiveDecision(principal, routed, completed);
+        return Optional.of(completed);
     }
 
     private String failureCode(RuntimeException exception) {

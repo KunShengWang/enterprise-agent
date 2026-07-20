@@ -13,6 +13,10 @@ public interface IncidentStore {
 
     IncidentRecord create(IncidentRecord incident);
 
+    IncidentRecord createForDispatch(String dispatchRequestId, IncidentRecord incident);
+
+    Optional<IncidentRecord> findByDispatchRequestId(String dispatchRequestId);
+
     Optional<IncidentRecord> find(String incidentId);
 
     Optional<IncidentSnapshot> findSnapshot(String snapshotId);

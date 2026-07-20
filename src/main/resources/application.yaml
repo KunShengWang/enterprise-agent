@@ -213,6 +213,14 @@ enterprise-agent:
       max-incident-request-ids: ${WORKBENCH_MAX_INCIDENT_REQUEST_IDS:100}
       unknown-result-token-reserve: ${WORKBENCH_ROUTING_UNKNOWN_TOKEN_RESERVE:8192}
       catalog-version: ${WORKBENCH_ROUTING_CATALOG_VERSION:workbench-v1}
+    dispatch:
+      enabled: ${WORKBENCH_DISPATCH_ENABLED:false}
+      max-attempts: ${WORKBENCH_DISPATCH_MAX_ATTEMPTS:2}
+      stale-after-millis: ${WORKBENCH_DISPATCH_STALE_AFTER_MILLIS:15000}
+      retry-backoff-millis: ${WORKBENCH_DISPATCH_RETRY_BACKOFF_MILLIS:1000}
+      scan-delay-millis: ${WORKBENCH_DISPATCH_SCAN_DELAY_MILLIS:5000}
+      scan-batch-size: ${WORKBENCH_DISPATCH_SCAN_BATCH_SIZE:20}
+      preview-ttl-seconds: ${WORKBENCH_PREVIEW_TTL_SECONDS:300}
 llm:
   http-log:
     enabled: ${LLM_HTTP_LOG_ENABLED:false}

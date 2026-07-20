@@ -117,6 +117,19 @@ public class IncidentInvestigationOrchestrator {
                 0, 1, 1, 0, now, now));
     }
 
+    public IncidentDispatchInitialization initializeForDispatch(String dispatchRequestId,
+                                                                IncidentInvestigationRequest request) {
+        String incidentId = "inc-" + UUID.randomUUID();
+        IncidentSnapshot snapshot = snapshotFactory.create(incidentId, request);
+        Instant now = Instant.now();
+        IncidentRecord candidate = new IncidentRecord(
+                incidentId, null, null, "incident:" + incidentId, SCENARIO_ID,
+                IncidentStatus.CREATED, snapshot, Map.of(), Map.of(),
+                0, 1, 1, 0, now, now);
+        IncidentRecord persisted = incidentStore.createForDispatch(dispatchRequestId, candidate);
+        return new IncidentDispatchInitialization(persisted, persisted.incidentId().equals(incidentId));
+    }
+
     public void rejectBeforeExecution(String incidentId, String reason) {
         IncidentRecord incident = current(incidentId);
         if (incident.status() == IncidentStatus.CREATED) {
@@ -125,6 +138,10 @@ public class IncidentInvestigationOrchestrator {
                     TaskEventActorType.SYSTEM, "incident-launcher",
                     "incident-launch-rejected:" + incidentId);
         }
+    }
+
+    public Optional<IncidentRecord> findByDispatchRequestId(String dispatchRequestId) {
+        return incidentStore.findByDispatchRequestId(dispatchRequestId);
     }
 
     public IncidentInvestigationResult investigate(String incidentId,

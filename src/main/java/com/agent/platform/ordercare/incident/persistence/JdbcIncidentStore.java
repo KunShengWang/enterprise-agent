@@ -97,6 +97,58 @@ public class JdbcIncidentStore implements IncidentStore,
     }
 
     @Override
+    public IncidentRecord createForDispatch(String dispatchRequestId, IncidentRecord incident) {
+        validateIncident(incident);
+        requireText(dispatchRequestId, "dispatchRequestId");
+        ensureSchema();
+        Optional<IncidentRecord> existing = findByDispatchRequestId(dispatchRequestId);
+        if (existing.isPresent()) return sameDispatchScope(existing.get(), incident);
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     INSERT INTO agent_incident(
+                         incident_id, commander_run_id, reviewer_run_id, conversation_id,
+                         scenario_id, status, snapshot_json, delegation_plan_json,
+                         assessment_json, clarification_count, max_clarifications,
+                         next_event_sequence, version, created_at, updated_at, dispatch_request_id
+                     ) VALUES (?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?, ?)
+                     """)) {
+            bindIncident(statement, incident);
+            statement.setString(16, dispatchRequestId.trim());
+            statement.executeUpdate();
+            return incident;
+        }
+        catch (SQLException exception) {
+            return findByDispatchRequestId(dispatchRequestId)
+                    .map(value -> sameDispatchScope(value, incident))
+                    .orElseThrow(() -> storageFailure("Failed to create incident dispatch binding", exception));
+        }
+    }
+
+    @Override
+    public Optional<IncidentRecord> findByDispatchRequestId(String dispatchRequestId) {
+        if (!hasText(dispatchRequestId)) return Optional.empty();
+        ensureSchema();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT incident_id FROM agent_incident WHERE dispatch_request_id = ?")) {
+            statement.setString(1, dispatchRequestId.trim());
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next() ? loadIncident(connection, resultSet.getString(1), false) : Optional.empty();
+            }
+        }
+        catch (SQLException exception) {
+            throw storageFailure("Failed to read incident dispatch binding", exception);
+        }
+    }
+
+    private IncidentRecord sameDispatchScope(IncidentRecord existing, IncidentRecord requested) {
+        if (!existing.snapshot().scopeHash().equals(requested.snapshot().scopeHash())) {
+            throw new IllegalArgumentException("dispatchRequestId is bound to another incident scope");
+        }
+        return existing;
+    }
+
+    @Override
     public Optional<IncidentRecord> find(String incidentId) {
         if (!hasText(incidentId)) {
             return Optional.empty();
@@ -1612,6 +1664,11 @@ public class JdbcIncidentStore implements IncidentStore,
                 statement.executeUpdate("""
                         CREATE UNIQUE INDEX IF NOT EXISTS uk_agent_incident_snapshot
                         ON agent_incident ((snapshot_json ->> 'snapshotId'))
+                        """);
+                statement.executeUpdate("ALTER TABLE agent_incident ADD COLUMN IF NOT EXISTS dispatch_request_id TEXT");
+                statement.executeUpdate("""
+                        CREATE UNIQUE INDEX IF NOT EXISTS uk_agent_incident_dispatch_request
+                        ON agent_incident(dispatch_request_id) WHERE dispatch_request_id IS NOT NULL
                         """);
                 statement.executeUpdate("""
                         CREATE INDEX IF NOT EXISTS idx_agent_incident_status_updated

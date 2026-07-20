@@ -48,8 +48,8 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore,
              PreparedStatement statement = connection.prepareStatement("""
                      INSERT INTO agent_run_state(
                          run_id, trace_id, conversation_id, status, current_node,
-                         record_json, version, created_at, updated_at
-                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         record_json, version, created_at, updated_at, dispatch_request_id
+                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                      """)) {
             // 给 sql 插入数据
             bindRun(statement, record);
@@ -79,6 +79,25 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore,
         }
         catch (SQLException exception) {
             throw new AgentStorageException("Failed to read agent run: " + runId, exception);
+        }
+    }
+
+    @Override
+    public Optional<AgentRunRecord> findByDispatchRequestId(String dispatchRequestId) {
+        if (dispatchRequestId == null || dispatchRequestId.isBlank()) return Optional.empty();
+        ensureSchema();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT record_json FROM agent_run_state WHERE dispatch_request_id = ?")) {
+            statement.setString(1, dispatchRequestId.trim());
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next()
+                        ? Optional.of(fromJson(resultSet.getString("record_json"), AgentRunRecord.class))
+                        : Optional.empty();
+            }
+        }
+        catch (SQLException exception) {
+            throw new AgentStorageException("Failed to read run dispatch binding", exception);
         }
     }
 
@@ -497,6 +516,13 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore,
         statement.setLong(7, record.version());
         statement.setTimestamp(8, Timestamp.from(record.createdAt()));
         statement.setTimestamp(9, Timestamp.from(record.updatedAt()));
+        statement.setString(10, dispatchRequestId(record));
+    }
+
+    private String dispatchRequestId(AgentRunRecord record) {
+        if (record == null || record.request() == null || record.request().metadata() == null) return null;
+        Object value = record.request().metadata().get(AgentRunStore.DISPATCH_REQUEST_METADATA_KEY);
+        return value == null || String.valueOf(value).isBlank() ? null : String.valueOf(value).trim();
     }
 
     /**
@@ -703,6 +729,11 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore,
                 statement.executeUpdate("""
                         CREATE INDEX IF NOT EXISTS idx_agent_run_status_updated
                         ON agent_run_state(status, updated_at DESC)
+                        """);
+                statement.executeUpdate("ALTER TABLE agent_run_state ADD COLUMN IF NOT EXISTS dispatch_request_id TEXT");
+                statement.executeUpdate("""
+                        CREATE UNIQUE INDEX IF NOT EXISTS uk_agent_run_dispatch_request
+                        ON agent_run_state(dispatch_request_id) WHERE dispatch_request_id IS NOT NULL
                         """);
                 statement.executeUpdate("""
                         CREATE TABLE IF NOT EXISTS agent_tool_execution (
