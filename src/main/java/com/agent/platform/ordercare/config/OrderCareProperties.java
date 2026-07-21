@@ -6,6 +6,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class OrderCareProperties {
 
     private String floworderBaseUrl = "http://localhost:8081";
+    private String floworderOrderBaseUrl = "http://localhost:8082";
+    private String incidentScopeInternalToken = "";
+    private String incidentScopeDefaultTimezone = "Asia/Shanghai";
+    private int incidentScopeMaxCandidates = 100;
+    private int incidentScopeLeaseSeconds = 30;
+    private int incidentScopeSnapshotTtlMinutes = 15;
     private long connectTimeoutMillis = 1_000;
     private long readTimeoutMillis = 3_000;
     private int inspectMaxAttempts = 2;
@@ -21,6 +27,31 @@ public class OrderCareProperties {
 
     public void setFloworderBaseUrl(String floworderBaseUrl) {
         this.floworderBaseUrl = floworderBaseUrl;
+    }
+
+    public String getFloworderOrderBaseUrl() { return floworderOrderBaseUrl; }
+    public void setFloworderOrderBaseUrl(String value) {
+        this.floworderOrderBaseUrl = value == null ? "" : value.trim();
+    }
+    public String getIncidentScopeInternalToken() { return incidentScopeInternalToken; }
+    public void setIncidentScopeInternalToken(String value) {
+        this.incidentScopeInternalToken = value == null ? "" : value.trim();
+    }
+    public String getIncidentScopeDefaultTimezone() { return incidentScopeDefaultTimezone; }
+    public void setIncidentScopeDefaultTimezone(String value) {
+        this.incidentScopeDefaultTimezone = value == null || value.isBlank() ? "Asia/Shanghai" : value.trim();
+    }
+    public int getIncidentScopeMaxCandidates() { return incidentScopeMaxCandidates; }
+    public void setIncidentScopeMaxCandidates(int value) {
+        this.incidentScopeMaxCandidates = Math.max(1, Math.min(100, value));
+    }
+    public int getIncidentScopeLeaseSeconds() { return incidentScopeLeaseSeconds; }
+    public void setIncidentScopeLeaseSeconds(int value) {
+        this.incidentScopeLeaseSeconds = Math.max(5, Math.min(300, value));
+    }
+    public int getIncidentScopeSnapshotTtlMinutes() { return incidentScopeSnapshotTtlMinutes; }
+    public void setIncidentScopeSnapshotTtlMinutes(int value) {
+        this.incidentScopeSnapshotTtlMinutes = Math.max(1, Math.min(60, value));
     }
 
     public long getConnectTimeoutMillis() {

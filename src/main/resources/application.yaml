@@ -91,6 +91,12 @@ enterprise-agent:
         - floworder.order.state.dlq
         - floworder.incident.e2e.dlq
     floworder-base-url: ${FLOWORDER_BASE_URL:http://localhost:8081}
+    floworder-order-base-url: ${FLOWORDER_ORDER_BASE_URL:http://localhost:8082}
+    incident-scope-internal-token: ${FLOWORDER_INCIDENT_SCOPE_INTERNAL_TOKEN:}
+    incident-scope-default-timezone: ${INCIDENT_SCOPE_DEFAULT_TIMEZONE:Asia/Shanghai}
+    incident-scope-max-candidates: ${INCIDENT_SCOPE_MAX_CANDIDATES:100}
+    incident-scope-lease-seconds: ${INCIDENT_SCOPE_LEASE_SECONDS:30}
+    incident-scope-snapshot-ttl-minutes: ${INCIDENT_SCOPE_SNAPSHOT_TTL_MINUTES:15}
     connect-timeout-millis: ${FLOWORDER_CONNECT_TIMEOUT_MILLIS:1000}
     read-timeout-millis: ${FLOWORDER_READ_TIMEOUT_MILLIS:3000}
     inspect-max-attempts: ${FLOWORDER_INSPECT_MAX_ATTEMPTS:2}
