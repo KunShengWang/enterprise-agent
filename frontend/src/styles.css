@@ -1043,6 +1043,28 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   overflow-wrap: anywhere;
 }
 
+.scope-preview-warning {
+  margin: 10px 0 0;
+  padding: 9px 10px;
+  border-left: 3px solid var(--warning, #b7791f);
+  background: #fff8e8;
+  color: #745514;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.scope-candidate-details { margin-top: 12px; }
+.scope-candidate-details > summary { cursor: pointer; color: var(--text); font-size: 13px; font-weight: 600; }
+.scope-candidate-list { display: grid; gap: 8px; margin-top: 10px; }
+.scope-candidate-list article { padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: 6px; background: #fff; }
+.scope-candidate-list header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.scope-candidate-list header strong { font-size: 13px; }
+.scope-candidate-list header span { color: var(--muted); font-size: 12px; }
+.scope-candidate-list dl { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 5px 10px; margin: 9px 0 0; font-size: 12px; line-height: 1.5; }
+.scope-candidate-list dt { color: var(--faint); }
+.scope-candidate-list dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.scope-candidate-list code { font-family: var(--font-mono); font-size: 12px; }
+
 @media (max-width: 620px) {
   .preview-facts { grid-template-columns: 1fr; }
   .preview-facts span:last-child { grid-column: auto; }

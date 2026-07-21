@@ -8,9 +8,11 @@ Updated: 2026-07-21 (Asia/Shanghai)
 - M4-A FlowOrder contracts: PASSED
 - M4-B discovery and snapshot: PASSED
 - M4-C routing, confirmation and Incident integration: PASSED
-- M4-D frontend and E2E: NOT STARTED at this checkpoint
+- M4-D frontend and automated E2E: PASSED
 - Manual browser acceptance: PENDING
 - Push: not performed
+
+Overall milestone status is `PARTIALLY PASSED` only because manual browser acceptance and a screenshot remain pending. All implemented automated gates and the real cross-service/model execution described below passed.
 
 This report distinguishes unit/integration tests, isolated real databases, real HTTP, mocks, and manual acceptance. A mock or stub result is never described as cross-service E2E evidence.
 
@@ -66,6 +68,8 @@ Real MySQL `EXPLAIN` changed from a full scan with filesort to a range access us
 M4-C exposed and closed one backward-compatible contract gap: a standalone `deadLetterId` was a valid product anchor but was not present in the enrichment request. FlowOrder follow-up checkpoint `38bdc3efcd63f1335bb6e6d6b85bcf74f6d945b3` adds bounded positive `deadLetterIds`, resolves their persisted `biz_key` to a real deduction when possible, and never promotes a missing/weak relation to strong. The resource-service regression produced 21 Surefire reports with zero failures or errors.
 
 ## M4-B enterprise-agent discovery and snapshot
+
+Checkpoint: `c133f03ef0763b395fea4831acd097b73846d593`
 
 ### Components
 
@@ -167,6 +171,8 @@ The isolated database was dropped after the suite completed.
 
 ## M4-C routing, confirmation and Incident integration
 
+Checkpoint: `657df9872284c4200be31d7b898fa0af2d345d53`
+
 ### Resolution actions
 
 The four frozen execution targets remain unchanged. `INCIDENT_INVESTIGATION` now has a deterministic Java preflight with three internal actions:
@@ -236,16 +242,87 @@ The full Maven regression passed. Seventeen isolated real-PostgreSQL suites pass
 
 During the fresh-database gate, `UnifiedWorkIntakeService` exposed a pre-existing initialization-order defect: RoutingStore extended Workbench tables before the base owner initialized them. The unified intake now initializes the Workbench base schema before persisting the first input. `WorkCommandHandlerPostgresIT` then passed on a fresh isolated database and in the 17-suite gate.
 
+## M4-D frontend and E2E
+
+### Scope Preview experience
+
+The existing Unified Workbench Preview card now renders the discovered scope without introducing a new page:
+
+- exact absolute time range and timezone, including explicit default-timezone indication;
+- anomaly types, candidate count, request scope, authoritative queues, and source health;
+- dynamic Specialist summary: Order + Inventory when no queue exists, with MQ added only when an authoritative queue exists;
+- read-only/no-Recovery boundary, route preview version, and expiry;
+- warning for truncated scopes;
+- a default-collapsed candidate list capped at 50 visible records;
+- requestId, orderNo, deductNo, dead-letter IDs, queue names, inclusion reasons, relation quality, and completeness;
+- `调整条件`, `确认并启动调查`, and `取消` actions.
+
+The middle timeline consumes only PublicPresentation and the safe route-preview DTO. Raw WorkEvent payload remains available only through the Inspector. Existing Assessment rendering was not replaced.
+
+### Frontend gates
+
+- `npm test`: passed, including conversation projection, P3-P6, turn-history, and M4 Scope Preview contracts.
+- `vue-tsc -b`: passed.
+- Vite production build: passed, 108 modules transformed.
+- Production assets: CSS 122.72 kB and JS 416.84 kB before gzip.
+- Route smoke: 10/10 declared entries returned HTTP 200 with the application shell.
+- Production preview: `http://127.0.0.1:4174/`.
+
+### Real cross-service discovery gate
+
+`IncidentScopeDiscoveryRealHttpIT` is opt-in (`M4_REAL_HTTP_ENABLED=true`) so normal Maven runs do not depend on external services. The real gate used:
+
+- actual FlowOrder order-service on `18082`;
+- actual FlowOrder resource-service on `18081`;
+- actual MySQL `floworder` data;
+- actual PostgreSQL isolated database `enterprise_agent_m4d_e2e`;
+- actual HTTP with internal-token authentication;
+- the existing `HappyConsistent` SQL/RabbitMQ fixture.
+
+Result: 1 test, 0 failures, 0 errors, 0 skipped. It discovered exactly `IC-HAPPY-REQ-001..003`, confirmed all three were `UNRELEASED`, resolved `floworder.incident.e2e.dlq`, persisted the Snapshot, verified a 64-character fingerprint, confirmed the Snapshot, and removed the isolated PostgreSQL database afterward.
+
+### Real product-path E2E
+
+A separate current-code enterprise-agent instance ran on `18083` against a fresh PostgreSQL database and the isolated FlowOrder services. The real-model request was:
+
+```text
+调查昨晚订单超时但库存未释放的问题。只调查并生成事故 Assessment，不执行恢复。
+```
+
+Observed sequence:
+
+1. Real command classification created a normal WorkItem.
+2. Real router selected `INCIDENT_INVESTIGATION`.
+3. Java normalized `昨晚` and emitted all Scope Discovery public events.
+4. Real HTTP discovered 3 orders, 3 unreleased resource items, 3 persisted dead letters, and 1 authoritative DLQ.
+5. WorkItem entered `WAITING_CONFIRMATION` with a Snapshot-bound Preview.
+6. Explicit confirmation moved it to dispatch and reused `IncidentInvestigationExecutionAdapter`.
+7. Real Commander, Specialists, and Reviewer ran against the existing Incident workflow.
+8. WorkItem converged to `CLOSED / COMPLETED / ASSESSED`.
+9. Execution Tree reported 5 Agent nodes, 5 Evidence records, 0 Conflicts, and an Assessment.
+10. Repeating confirmation preserved the same incidentId and exactly one Incident WorkLink.
+11. PublicPresentation returned 25 items, 8 scope-related items, and exactly one final result.
+
+This product-path E2E used the configured real model, real PostgreSQL, real MySQL, real FlowOrder HTTP, and real RabbitMQ middleware. It did not execute Recovery.
+
+### Fresh-database startup recovery
+
+The real application gate found that scheduled routing/dispatch scanners could race schema owners on a completely empty PostgreSQL database before the first HTTP request. `WorkbenchSchemaInitializer` now initializes Workbench, Routing, and Dispatch stores in ownership order before scheduled scanners run. A fresh restart then completed without schema errors.
+
+### Browser acceptance
+
+The in-app browser runtime failed during initialization with `failed to write kernel assets: path not found`. No standalone screenshot was fabricated. Production build and route HTTP smoke passed, but visual click-through and screenshot evidence remain pending manual acceptance at 100% browser zoom.
+
 ## E2E truth table
 
 | Boundary | Current evidence |
 |---|---|
 | Real MySQL | M4-A passed |
-| Real PostgreSQL | M4-B passed |
-| Real cross-service HTTP | M4-A endpoints passed independently; complete M4-D chain pending |
-| RabbitMQ | Not exercised; persisted `dead_queue` only |
-| Real model | Not exercised for M4-B |
-| Frontend smoke | Not started for M4-D |
+| Real PostgreSQL | M4-B and M4-D isolated gates passed |
+| Real cross-service HTTP | M4-A endpoint validation and M4-D full discovery passed |
+| RabbitMQ | Real HappyConsistent fixture and product-path E2E exercised |
+| Real model | Real classifier, router, Commander, Specialists, and Reviewer exercised |
+| Frontend smoke | npm, typecheck, production build, and 10 routes passed |
 | Manual browser | Pending |
 | Stub/mock | Unit tests use controlled collaborators where appropriate |
 
@@ -258,5 +335,4 @@ During the fresh-database gate, `UnifiedWorkIntakeService` exposed a pre-existin
 
 ## Remaining work
 
-- M4-D: Scope Preview UI, candidate details, frontend gates, cross-service E2E, refresh/replay evidence.
 - Manual browser acceptance remains pending and will not be fabricated.

@@ -94,6 +94,28 @@ assert.equal(confirmationItems.filter(item => item.type === 'APPROVAL_REQUEST').
 assert.equal(confirmationItems.filter(item => item.type === 'INCIDENT_PREVIEW').length, 1)
 assert.equal(confirmationItems.find(item => item.type === 'INCIDENT_PREVIEW')?.title, '启动只读 Multi-Agent 事故调查')
 
+const discoveredScopeItems = projectConversationItems({
+  detail: { workItem: incidentWork, routingDecision: null, links: [], events: [], preview: {
+    previewId: 'preview-scope', previewVersion: 1, targetId: 'INCIDENT_INVESTIGATION',
+    validatedInputDigest: 'input-digest', scopeDigest: 'scope-digest', status: 'ACTIVE',
+    expiresAt: '2026-07-21T18:00:00Z', payload: { validatedInput: {
+      scopeSnapshotId: 'scope-1', scopeSnapshotVersion: 3, candidateFingerprint: 'fingerprint-1',
+      candidateCount: 1, timeStart: '2026-07-20T10:00:00Z', timeEnd: '2026-07-20T22:00:00Z',
+      timezone: 'Asia/Shanghai', anomalyTypes: ['ORDER_TIMEOUT_INVENTORY_UNRELEASED'],
+      requestIds: ['REQ-1'], queueNames: [], sourceHealth: { order: 'AVAILABLE', resource: 'AVAILABLE' },
+      scopeCandidates: [{ requestId: 'REQ-1', orderNo: 'ORDER-1', deductNo: 'DEDUCT-1',
+        deadLetterIds: [], queueNames: [], inclusionReasons: ['inventory unreleased'],
+        relationQuality: 'MISSING', completeness: 'COMPLETE' }],
+    } },
+  } },
+  inputs: [], presentations: [...presentations, routeConfirmation], approval: null,
+  answer: { state: 'IDLE', content: '', persistedMessageId: '', createdAt: '' },
+})
+const discoveredPreview = discoveredScopeItems.find(item => item.type === 'INCIDENT_PREVIEW')
+assert.equal(discoveredPreview?.title, '确认候选事故范围')
+assert.ok(discoveredPreview?.content.includes('FlowOrder 权威只读事实'))
+assert.ok(discoveredPreview?.content.includes('订单和库存 Specialist'))
+
 const phantomApprovalItems = projectConversationItems({
   detail: { workItem: incidentWork, routingDecision: null, links: [], events: [] }, inputs: [],
   presentations: [...presentations, approvalPresentation], approval: null,

@@ -95,7 +95,7 @@ defineExpose({ focus: () => input.value?.focus() })
         :value="modelValue"
         rows="2"
         aria-label="任务目标或补充要求"
-        :placeholder="waitingForInput ? '补充队列名称，以及 batchId 或 requestId…' : '描述目标，或为当前任务补充要求…'"
+        :placeholder="waitingForInput ? '补充大致时间、订单号或明确的业务异常现象…' : '描述目标，或为当前任务补充要求…'"
         @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
         @keydown.ctrl.enter.prevent="emit('submit')"
       />

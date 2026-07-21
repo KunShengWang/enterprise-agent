@@ -50,6 +50,47 @@ function previewInput(key: string) {
   return shortValue((value as Record<string, unknown>)[key])
 }
 
+const previewValidatedInput = computed<Record<string, unknown>>(() => {
+  const value = props.item.preview?.payload.validatedInput
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown> : {}
+})
+
+const isScopeDiscoveryPreview = computed(() => Boolean(previewValidatedInput.value.scopeSnapshotId))
+const scopeCandidates = computed<Record<string, unknown>[]>(() => {
+  const value = previewValidatedInput.value.scopeCandidates
+  return Array.isArray(value)
+    ? value.filter(candidate => candidate && typeof candidate === 'object' && !Array.isArray(candidate)) as Record<string, unknown>[]
+    : []
+})
+const scopeQueues = computed(() => listValue(previewValidatedInput.value.queueNames))
+const specialistSummary = computed(() => scopeQueues.value.length
+  ? 'Order、Inventory、MQ Specialist + Reviewer'
+  : 'Order、Inventory Specialist + Reviewer')
+
+function listValue(value: unknown) {
+  if (Array.isArray(value)) return value.map(item => String(item)).filter(Boolean)
+  return value === undefined || value === null || value === '' ? [] : [String(value)]
+}
+
+function previewTimeRange() {
+  const start = String(previewValidatedInput.value.timeStart ?? '')
+  const end = String(previewValidatedInput.value.timeEnd ?? '')
+  if (!start || !end) return ''
+  return `${new Date(start).toLocaleString('zh-CN')} 至 ${new Date(end).toLocaleString('zh-CN')}`
+}
+
+function sourceHealthSummary() {
+  const health = previewValidatedInput.value.sourceHealth
+  if (!health || typeof health !== 'object' || Array.isArray(health)) return ''
+  return Object.entries(health as Record<string, unknown>)
+    .map(([source, status]) => `${source}: ${String(status)}`).join('；')
+}
+
+function candidateText(candidate: Record<string, unknown>, key: string) {
+  return shortValue(candidate[key]) || '—'
+}
+
 const answerStatus = computed(() => ({
   WAITING: '等待模型输出', STREAMING: '正在生成', FINALIZING: '正在确认最终结果',
   COMPLETED: '已完成', FAILED: '执行失败', CANCELLED: '已取消', IDLE: '',
@@ -179,16 +220,40 @@ watch(() => props.item.narrative?.items.map(entry => entry.status).join(','), ()
         <p class="item-description">{{ item.content }}</p>
         <div class="preview-facts">
           <span>执行方式 <strong>{{ item.preview?.targetId === 'INCIDENT_INVESTIGATION' ? '只读 Multi-Agent 调查' : item.preview?.targetId }}</strong></span>
+          <span v-if="previewTimeRange()">时间范围 <strong>{{ previewTimeRange() }}</strong></span>
+          <span v-if="previewInput('timezone')">时区 <strong>{{ previewInput('timezone') }}{{ previewInput('defaultTimezoneUsed') === 'true' ? '（使用系统默认）' : '' }}</strong></span>
+          <span v-if="previewInput('anomalyTypes')">异常类型 <strong>{{ previewInput('anomalyTypes') }}</strong></span>
+          <span v-if="previewInput('candidateCount')">候选数量 <strong>{{ previewInput('candidateCount') }}</strong></span>
           <span v-if="previewInput('requestIds')">调查范围 <strong>{{ previewInput('requestIds') }}</strong></span>
           <span v-if="previewInput('queueNames') || previewInput('queueName')">观察队列 <strong>{{ previewInput('queueNames') || previewInput('queueName') }}</strong></span>
-          <span v-if="item.preview?.targetId === 'INCIDENT_INVESTIGATION'">参与角色 <strong>3 个领域 Specialist + Reviewer</strong></span>
+          <span v-if="item.preview?.targetId === 'INCIDENT_INVESTIGATION'">参与角色 <strong>{{ specialistSummary }}</strong></span>
+          <span v-if="sourceHealthSummary()">数据源健康度 <strong>{{ sourceHealthSummary() }}</strong></span>
           <span v-if="item.preview?.targetId === 'INCIDENT_INVESTIGATION'">风险边界 <strong>范围与资源消耗较高；只读，不恢复</strong></span>
           <span>版本 <strong>v{{ item.preview?.previewVersion }}</strong></span>
           <span>有效期 <strong>{{ item.preview?.expiresAt ? new Date(item.preview.expiresAt).toLocaleString('zh-CN') : '—' }}</strong></span>
         </div>
+        <p v-if="previewInput('truncated') === 'true'" class="scope-preview-warning">候选数量超过展示上限，请缩小时间或业务范围后重新发现。</p>
+        <details v-if="isScopeDiscoveryPreview && scopeCandidates.length" class="scope-candidate-details">
+          <summary>查看候选明细（{{ scopeCandidates.length }}）</summary>
+          <div class="scope-candidate-list">
+            <article v-for="(candidate, index) in scopeCandidates.slice(0, 50)" :key="`${candidateText(candidate, 'requestId')}-${index}`">
+              <header><strong>{{ candidateText(candidate, 'orderNo') }}</strong><span>{{ candidateText(candidate, 'completeness') }}</span></header>
+              <dl>
+                <dt>requestId</dt><dd><code>{{ candidateText(candidate, 'requestId') }}</code></dd>
+                <dt>deductNo</dt><dd><code>{{ candidateText(candidate, 'deductNo') }}</code></dd>
+                <dt>deadLetterIds</dt><dd><code>{{ candidateText(candidate, 'deadLetterIds') }}</code></dd>
+                <dt>queueNames</dt><dd><code>{{ candidateText(candidate, 'queueNames') }}</code></dd>
+                <dt>纳入原因</dt><dd>{{ candidateText(candidate, 'inclusionReasons') }}</dd>
+                <dt>关联质量</dt><dd>{{ candidateText(candidate, 'relationQuality') }}</dd>
+              </dl>
+            </article>
+          </div>
+          <p v-if="scopeCandidates.length > 50" class="scope-preview-warning">当前只展示前 50 条候选，请缩小范围查看其余记录。</p>
+        </details>
         <div v-if="item.preview?.status === 'ACTIVE'" class="inline-actions">
           <button class="primary-button" type="button" :disabled="busy" @click="emit('confirmPreview', true)">确认并启动调查</button>
-          <button class="secondary-button" type="button" :disabled="busy" @click="emit('confirmPreview', false)">拒绝</button>
+          <button v-if="isScopeDiscoveryPreview" class="secondary-button" type="button" :disabled="busy" @click="emit('supplyInput')">调整条件</button>
+          <button class="secondary-button" type="button" :disabled="busy" @click="emit('confirmPreview', false)">取消</button>
         </div>
       </template>
 

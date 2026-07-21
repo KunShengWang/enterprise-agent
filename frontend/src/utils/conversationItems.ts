@@ -166,9 +166,10 @@ export function projectConversationItems(source: ConversationProjectionInput): C
     type: 'INCIDENT_PREVIEW',
     createdAt: work.updatedAt,
     title: detail.preview.targetId === 'INCIDENT_INVESTIGATION'
-      ? '启动只读 Multi-Agent 事故调查' : '需要确认执行范围',
+      ? scopeDiscoveryPreview(detail.preview) ? '确认候选事故范围' : '启动只读 Multi-Agent 事故调查'
+      : '需要确认执行范围',
     content: detail.preview.targetId === 'INCIDENT_INVESTIGATION'
-      ? '确认后将调度订单、库存和消息链路三个只读 Specialist 收集证据；消息链路 Specialist 同时核对持久化死信与队列运行态，再由 Reviewer 检查冲突并生成 Assessment。不会执行恢复。'
+      ? incidentPreviewSummary(detail.preview)
       : '开始执行前，请核对目标、范围和风险边界。',
     status: detail.preview.status === 'ACTIVE' ? 'waiting' : 'completed',
     preview: detail.preview,
@@ -242,9 +243,10 @@ export function projectTurnConversationItems(source: TurnConversationProjectionI
     type: 'INCIDENT_PREVIEW',
     createdAt: work.updatedAt,
     title: detail.preview.targetId === 'INCIDENT_INVESTIGATION'
-      ? '启动只读 Multi-Agent 事故调查' : '需要确认执行范围',
+      ? scopeDiscoveryPreview(detail.preview) ? '确认候选事故范围' : '启动只读 Multi-Agent 事故调查'
+      : '需要确认执行范围',
     content: detail.preview.targetId === 'INCIDENT_INVESTIGATION'
-      ? '确认后将调度订单、库存和消息链路三个只读 Specialist 收集证据；消息链路 Specialist 同时核对持久化死信与队列运行态，再由 Reviewer 检查冲突并生成 Assessment。不会执行恢复。'
+      ? incidentPreviewSummary(detail.preview)
       : '开始执行前，请核对目标、范围和风险边界。',
     status: detail.preview.status === 'ACTIVE' ? 'waiting' : 'completed',
     preview: detail.preview,
@@ -271,4 +273,22 @@ export function projectTurnConversationItems(source: TurnConversationProjectionI
     answerState: answer.state,
   })
   return items
+}
+
+function previewInput(preview: import('../types/workbench').RoutePreview) {
+  const value = preview.payload.validatedInput
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown> : {}
+}
+
+function scopeDiscoveryPreview(preview: import('../types/workbench').RoutePreview) {
+  return Boolean(previewInput(preview).scopeSnapshotId)
+}
+
+function incidentPreviewSummary(preview: import('../types/workbench').RoutePreview) {
+  const input = previewInput(preview)
+  const queues = Array.isArray(input.queueNames) ? input.queueNames : []
+  const specialists = queues.length ? '订单、库存和消息链路 Specialist' : '订单和库存 Specialist'
+  const prefix = scopeDiscoveryPreview(preview) ? '系统已从 FlowOrder 权威只读事实生成候选范围。' : ''
+  return `${prefix}确认后将调度${specialists}收集证据，再由 Reviewer 检查冲突并生成 Assessment。不会执行恢复。`
 }
