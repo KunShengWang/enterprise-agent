@@ -244,6 +244,10 @@ During the fresh-database gate, `UnifiedWorkIntakeService` exposed a pre-existin
 
 ## M4-D frontend and E2E
 
+Checkpoint: `ac8f6df` (`feat(frontend): add incident scope discovery experience`)
+
+This checkpoint contains the Scope Preview frontend, frontend contract tests, the opt-in real HTTP/PostgreSQL gate, the fresh-database startup schema initializer and its regression test, and the Evidence state available immediately before the checkpoint. This docs-only follow-up records the checkpoint hash without changing the implementation.
+
 ### Scope Preview experience
 
 The existing Unified Workbench Preview card now renders the discovered scope without introducing a new page:
@@ -267,6 +271,15 @@ The middle timeline consumes only PublicPresentation and the safe route-preview 
 - Production assets: CSS 122.72 kB and JS 416.84 kB before gzip.
 - Route smoke: 10/10 declared entries returned HTTP 200 with the application shell.
 - Production preview: `http://127.0.0.1:4174/`.
+
+### Final automated gate
+
+- enterprise-agent `mvn test`: 317 tests run, 0 failures, 0 errors, 11 skipped. The skipped tests are opt-in external-environment suites and are not represented as executed by this command.
+- Previously executed isolated PostgreSQL Workbench gate: 17 suites passed, including the Scope Snapshot store.
+- FlowOrder resource-service reactor regression: 91 tests run, 0 failures, 0 errors, 2 skipped.
+- Opt-in real FlowOrder HTTP/PostgreSQL test: 1 test run, 0 failures, 0 errors, 0 skipped when the real M4 environment was enabled.
+- Frontend `npm test`, `vue-tsc -b`, Vite production build, and 10/10 route smoke: passed.
+- `git diff --check`: passed before checkpoint creation.
 
 ### Real cross-service discovery gate
 
@@ -328,9 +341,10 @@ The in-app browser runtime failed during initialization with `failed to write ke
 
 ## Protected constraints
 
-- `DefaultAgentRuntime.run()` was not modified by M4-B.
+- `DefaultAgentRuntime.run()` was not modified by M4.
 - `src/main/java/com/agent/platform/stream/DefaultStreamingAgentExecutor.java` remains an excluded pre-existing workspace modification.
 - Expected protected-file SHA-256: `136BD28ACBFE1C6CF861AE0A6AB7555236847F5169F12E0ABEA3DCE461227B35`.
+- The protected file was neither staged nor committed by any M4 checkpoint.
 - No fifth `ExecutionTarget`, arbitrary SQL/URL tool, Recovery execution, or external alert integration was added.
 
 ## Remaining work
