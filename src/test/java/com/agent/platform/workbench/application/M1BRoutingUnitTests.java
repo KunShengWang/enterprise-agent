@@ -85,8 +85,8 @@ class M1BRoutingUnitTests {
         assertFalse(general.supportedIntents().stream().anyMatch(value -> value.contains("INCIDENT")));
         var investigation = registry.findEnabled(
                 principal(), ExecutionTargetId.INCIDENT_INVESTIGATION.name()).orElseThrow();
-        assertTrue(investigation.requiredInputs().contains("oneOf:batchId,requestIds"));
-        assertFalse(investigation.requiredInputs().contains("batchId|requestIds"));
+        assertTrue(investigation.requiredInputs().contains("requestIds"));
+        assertFalse(investigation.requiredInputs().contains("oneOf:batchId,requestIds"));
     }
 
     @Test
@@ -97,10 +97,10 @@ class M1BRoutingUnitTests {
         WorkbenchRoutingProperties properties = new WorkbenchRoutingProperties();
         RoutePolicyValidator validator = new RoutePolicyValidator(
                 new ExecutionTargetRegistry(incident), properties, objectMapper);
-        AgentWorkItem work = work("调查 BATCH-1，队列 q.incident");
+        AgentWorkItem work = work("调查 REQ-1，队列 q.incident");
         ExecutionDecision valid = new ExecutionDecision(
                 "INCIDENT_INVESTIGATION", .99, "incident",
-                Map.of("batchId", "BATCH-1", "queueName", "q.incident"), List.of(), "preview");
+                Map.of("requestIds", List.of("REQ-1"), "queueName", "q.incident"), List.of(), "preview");
 
         var accepted = validator.validate(valid,
                 new RouteValidationContext(principal(), work, work.originalGoal(), Map.of(), Map.of()));
@@ -108,10 +108,19 @@ class M1BRoutingUnitTests {
 
         ExecutionDecision invented = new ExecutionDecision(
                 "INCIDENT_INVESTIGATION", .99, "incident",
-                Map.of("batchId", "BATCH-INVENTED", "queueName", "q.incident"), List.of(), "preview");
+                Map.of("requestIds", List.of("REQ-INVENTED"), "queueName", "q.incident"), List.of(), "preview");
         var clarified = validator.validate(invented,
                 new RouteValidationContext(principal(), work, work.originalGoal(), Map.of(), Map.of()));
         assertEquals(RouteDisposition.REQUIRE_CLARIFICATION, clarified.disposition());
+
+        ExecutionDecision unresolvedBatch = new ExecutionDecision(
+                "INCIDENT_INVESTIGATION", .99, "incident",
+                Map.of("batchId", "BATCH-1", "queueName", "q.incident"), List.of(), "preview");
+        var batchClarification = validator.validate(unresolvedBatch,
+                new RouteValidationContext(principal(), work,
+                        "调查 BATCH-1，队列 q.incident", Map.of(), Map.of()));
+        assertEquals(RouteDisposition.REQUIRE_CLARIFICATION, batchClarification.disposition());
+        assertTrue(batchClarification.reasons().get(0).contains("explicit requestIds"));
     }
 
     @Test

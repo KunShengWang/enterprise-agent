@@ -312,7 +312,8 @@ public class IncidentInvestigationOrchestrator {
 
     private PlanningResult plan(IncidentRecord incident, IncidentInvestigationRequest request) {
         String prompt = """
-                生成 delegation-plan-v1 JSON。只能选择 ORDER_ANALYST、INVENTORY_ANALYST、MQ_ANALYST、SOP_ANALYST 中 1 到 3 个不同角色。
+                生成 delegation-plan-v1 JSON。必须且只能包含 ORDER_ANALYST、INVENTORY_ANALYST、MQ_ANALYST 三个角色。
+                MQ_ANALYST 同时核对持久化死信事实和消息队列运行态。
                 incidentId=%s
                 alertType=%s
                 symptom=%s

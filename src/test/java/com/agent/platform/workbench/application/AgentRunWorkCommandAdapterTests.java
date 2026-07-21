@@ -56,6 +56,25 @@ class AgentRunWorkCommandAdapterTests {
         assertEquals("INVALID_TARGET_STATE", result.code());
     }
 
+    @Test
+    void cancelDiscoversRunByDispatchRequestBeforePrimaryLinkIsWritten() {
+        AgentRuntime runtime = mock(AgentRuntime.class);
+        AgentRunStore runs = mock(AgentRunStore.class);
+        AgentRunRecord running = run("run-early", AgentRunState.RUNNING, 1, 0);
+        when(runs.findByDispatchRequestId("dispatch-1")).thenReturn(Optional.of(running));
+        when(runs.find("run-early")).thenReturn(Optional.of(running));
+        when(runtime.cancel("run-early")).thenReturn(true);
+        AgentWorkItem work = work("GENERAL_AGENT", "");
+        when(work.dispatchRequestId()).thenReturn("dispatch-1");
+
+        AgentRunCommandResult result = new AgentRunWorkCommandAdapter(runtime, runs).execute(
+                principal(), work, WorkCommandType.CANCEL_ACTIVE_WORK);
+
+        assertTrue(result.accepted());
+        assertEquals("run-early", result.after().runId());
+        verify(runtime).cancel("run-early");
+    }
+
     private AgentRunRecord run(String runId, AgentRunState state, long version, int resumeCount) {
         AgentRunRecord run = mock(AgentRunRecord.class);
         when(run.runId()).thenReturn(runId);

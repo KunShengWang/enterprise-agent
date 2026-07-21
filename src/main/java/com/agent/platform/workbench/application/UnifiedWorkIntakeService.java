@@ -8,6 +8,8 @@ import com.agent.platform.workbench.model.GoalOrigin;
 import com.agent.platform.workbench.model.WorkCommandClassification;
 import com.agent.platform.workbench.model.WorkCommandDecision;
 import com.agent.platform.workbench.model.WorkCommandType;
+import com.agent.platform.workbench.model.WorkControlState;
+import com.agent.platform.workbench.model.WorkExecutionState;
 import com.agent.platform.workbench.persistence.RoutingStore;
 import com.agent.platform.workbench.persistence.WorkbenchStore;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
@@ -76,10 +78,11 @@ public class UnifiedWorkIntakeService {
             CommandClassifierResult result = classifier.classify(new CommandClassificationRequest(
                     input,
                     focused == null ? "" : focused.workItemId(),
-                    focused == null ? "" : focused.normalizedGoal(),
+                    focusedSummary(focused),
                     classifierType,
                     request.explicitCommand(),
                     request.explicitGoalText()));
+            result = normalizeForFocusedState(result, focused);
             return routingStore.completeCommandAttempt(principal, started.commandDecisionId(), result);
         }
         catch (RuntimeException exception) {
@@ -87,6 +90,42 @@ public class UnifiedWorkIntakeService {
                     "COMMAND_CLASSIFICATION_FAILED", safeMessage(exception));
             throw exception;
         }
+    }
+
+    private CommandClassifierResult normalizeForFocusedState(CommandClassifierResult result,
+                                                              AgentWorkItem focused) {
+        WorkCommandClassification classification = result.classification();
+        if (result.classifierType() != ClassifierType.MODEL
+                || classification.commandType() != WorkCommandType.ADD_INPUT_TO_ACTIVE_WORK
+                || !terminal(focused)) {
+            return result;
+        }
+        WorkCommandClassification normalized = new WorkCommandClassification(
+                WorkCommandType.NORMAL_GOAL,
+                classification.modelConfidence(),
+                "follow-up after terminal work starts a new WorkItem in the same conversation",
+                "",
+                "");
+        return new CommandClassifierResult(normalized, result.classifierType(), result.modelName(),
+                result.promptDigest(), result.rawOutputDigest(), result.rawOutput(), result.promptTokens(),
+                result.completionTokens(), result.latencyMs(), result.traceId());
+    }
+
+    private boolean terminal(AgentWorkItem focused) {
+        if (focused == null) return false;
+        if (focused.controlState() == WorkControlState.CLOSED
+                || focused.controlState() == WorkControlState.ABANDONED) return true;
+        return focused.executionState() == WorkExecutionState.COMPLETED
+                || focused.executionState() == WorkExecutionState.FAILED
+                || focused.executionState() == WorkExecutionState.CANCELLED;
+    }
+
+    private String focusedSummary(AgentWorkItem focused) {
+        if (focused == null) return "";
+        return "goal=" + focused.normalizedGoal()
+                + "; controlState=" + focused.controlState()
+                + "; executionState=" + focused.executionState()
+                + "; outcome=" + focused.outcome();
     }
 
     private WorkCommandClassification classification(WorkCommandDecision decision) {

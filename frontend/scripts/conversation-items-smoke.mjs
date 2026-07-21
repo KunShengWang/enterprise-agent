@@ -44,6 +44,20 @@ assert.ok(items.some(item => item.type === 'TASK_PLAN'))
 assert.ok(!items.some(item => item.content.includes('internal reason') || item.content.includes('modelConfidence')))
 assert.equal(items.find(item => item.type === 'TASK_PLAN')?.title, '标准流程')
 
+const attachmentItems = projectConversationItems({
+  detail: { workItem: work, routingDecision: null, links: [], events: [] },
+  inputs: [{
+    inputId: 'input-1', clientInputId: 'client-attachment', conversationId: 'conversation-1',
+    content: '解释这段代码\n\n<workbench_attachments>\n<attachment name="Demo.java" media-type="text/plain" size="18">\nclass Demo {}\n</attachment>\n</workbench_attachments>',
+    inputKind: 'NORMAL_GOAL', classificationStatus: 'CLASSIFIED', createdAt: work.createdAt,
+  }],
+  presentations: [], approval: null,
+  answer: { state: 'IDLE', content: '', persistedMessageId: '', createdAt: '' },
+})
+assert.equal(attachmentItems[0].content, '解释这段代码')
+assert.deepEqual(attachmentItems[0].attachments, [{ name: 'Demo.java', mediaType: 'text/plain', size: 18 }])
+assert.ok(!attachmentItems[0].content.includes('class Demo'))
+
 const approval = {
   approvalId: 'approval-1', runId: 'run-1', status: 'REQUESTED', createdAt: work.updatedAt,
 }
@@ -58,6 +72,34 @@ const approvalItems = projectConversationItems({
 })
 assert.equal(approvalItems.filter(item => item.type === 'APPROVAL_REQUEST').length, 1)
 assert.equal(approvalItems.find(item => item.type === 'APPROVAL_REQUEST')?.approval?.approvalId, 'approval-1')
+
+const routeConfirmation = {
+  ...presentations[0], presentationId: 'p-confirmation', sequence: 31,
+  kind: 'CONFIRMATION_REQUIRED', status: 'WAITING', title: '需要确认调查范围',
+  summary: '请确认预览中的目标和只读边界后再启动调查。',
+}
+const incidentWork = { ...work, activeExecutionTarget: 'INCIDENT_INVESTIGATION', activeRunId: '', executionState: 'NOT_STARTED' }
+const confirmationItems = projectConversationItems({
+  detail: { workItem: incidentWork, routingDecision: null, links: [], events: [], preview: {
+    previewId: 'preview-1', previewVersion: 1, targetId: 'INCIDENT_INVESTIGATION',
+    validatedInputDigest: 'input-digest', scopeDigest: 'scope-digest', status: 'ACTIVE',
+    expiresAt: '2026-07-21T18:00:00Z', payload: { validatedInput: {
+      requestIds: ['IC-HAPPY-REQ-001', 'IC-HAPPY-REQ-002'], queueNames: ['floworder.order.state.dlq'],
+    } },
+  } },
+  inputs: [], presentations: [...presentations, routeConfirmation], approval: null,
+  answer: { state: 'IDLE', content: '', persistedMessageId: '', createdAt: '' },
+})
+assert.equal(confirmationItems.filter(item => item.type === 'APPROVAL_REQUEST').length, 0)
+assert.equal(confirmationItems.filter(item => item.type === 'INCIDENT_PREVIEW').length, 1)
+assert.equal(confirmationItems.find(item => item.type === 'INCIDENT_PREVIEW')?.title, '启动只读 Multi-Agent 事故调查')
+
+const phantomApprovalItems = projectConversationItems({
+  detail: { workItem: incidentWork, routingDecision: null, links: [], events: [] }, inputs: [],
+  presentations: [...presentations, approvalPresentation], approval: null,
+  answer: { state: 'IDLE', content: '', persistedMessageId: '', createdAt: '' },
+})
+assert.equal(phantomApprovalItems.filter(item => item.type === 'APPROVAL_REQUEST').length, 0)
 
 const requestTool = { ...presentations[2], presentationId: 'p-tool-request', sequence: 19, status: 'ACTIVE' }
 const duplicatePlan = { ...presentations[1], presentationId: 'p-plan', sequence: 12, kind: 'EXECUTION_PLAN', title: '执行计划' }
@@ -77,10 +119,47 @@ assert.ok(deduplicated.some(item => item.content.includes('Primary Run')))
 
 const failed = projectConversationItems({
   detail: { workItem: { ...work, executionState: 'FAILED' }, routingDecision: null, links: [], events: [] },
-  inputs: [], presentations: [], approval: null,
+  inputs: [], presentations: [{ ...presentations[0], presentationId: 'p-error', sequence: 40,
+    kind: 'ERROR', status: 'FAILED', title: '模型调用失败',
+    summary: '系统未能获得模型响应，本次任务没有形成最终答案。',
+    detail: { targetLabel: '', referenceType: 'PRIMARY_RUN', referenceId: 'run-1',
+      attributes: { safeErrorCode: 'MODEL_PROTOCOL_ERROR', retryable: 'true', correlationId: 'corr-1' } } }], approval: null,
   answer: { state: 'FAILED', content: '', persistedMessageId: '', createdAt: work.updatedAt },
 })
-assert.equal(failed.at(-1)?.type, 'FINAL_ANSWER')
-assert.equal(failed.at(-1)?.answerState, 'FAILED')
+assert.equal(failed.filter(item => item.type === 'FINAL_ANSWER').length, 0)
+assert.equal(failed.at(-1)?.type, 'ERROR')
+assert.equal(failed.at(-1)?.error?.code, 'MODEL_PROTOCOL_ERROR')
+assert.equal(failed.at(-1)?.error?.retryable, true)
+
+const waitingForInput = projectConversationItems({
+  detail: { workItem: { ...work, activeRunId: '', controlState: 'WAITING_INPUT', executionState: 'NOT_STARTED', outcome: 'UNDETERMINED' }, routingDecision: null, links: [], events: [] },
+  inputs: [], presentations: [{ ...presentations[0], presentationId: 'p-clarification', sequence: 40,
+    kind: 'WAITING_FOR_USER', status: 'WAITING', title: '需要补充信息',
+    summary: '请在下方输入框补充以下信息，提交后系统会继续当前任务。',
+    steps: ['消息队列名称（queueNames）', '事故范围：提供 batchId，或一个或多个 requestId'] }],
+  approval: null, answer: { state: 'IDLE', content: '', persistedMessageId: '', createdAt: '' },
+})
+assert.equal(waitingForInput.filter(item => item.type === 'FINAL_ANSWER').length, 0)
+assert.equal(waitingForInput.at(-1)?.presentationKind, 'WAITING_FOR_USER')
+assert.deepEqual(waitingForInput.at(-1)?.steps, ['消息队列名称（queueNames）', '事故范围：提供 batchId，或一个或多个 requestId'])
+
+const previousWork = {
+  ...work, workItemId: 'work-previous', sourceInputId: 'input-previous', activeRunId: 'run-previous',
+  originalGoal: '只用 JSON 解释三级缓存', createdAt: '2026-07-19T23:58:00Z', updatedAt: '2026-07-19T23:59:00Z',
+}
+const conversationHistory = projectConversationItems({
+  detail: { workItem: work, routingDecision: null, links: [], events: [] },
+  inputs: [
+    { inputId: 'input-previous', clientInputId: 'client-previous', conversationId: 'conversation-1', content: previousWork.originalGoal, inputKind: 'NORMAL_GOAL', classificationStatus: 'CLASSIFIED', createdAt: previousWork.createdAt },
+    { inputId: 'input-1', clientInputId: 'client-1', conversationId: 'conversation-1', content: work.originalGoal, inputKind: 'NORMAL_GOAL', classificationStatus: 'CLASSIFIED', createdAt: work.createdAt },
+  ],
+  workItems: [previousWork, work],
+  messages: [{ messageId: 'message-previous', runId: 'run-previous', sequence: 2, role: 'ASSISTANT', content: '{"assistantText":"上一轮正文"}', createdAt: previousWork.updatedAt }],
+  presentations: [], approval: null,
+  answer: { state: 'COMPLETED', content: '当前轮正文', persistedMessageId: 'message-current', createdAt: work.updatedAt },
+})
+assert.deepEqual(conversationHistory.map(item => item.type), ['USER_MESSAGE', 'FINAL_ANSWER', 'USER_MESSAGE', 'FINAL_ANSWER'])
+assert.equal(conversationHistory[1].content, '上一轮正文')
+assert.ok(!conversationHistory[1].content.includes('assistantText'))
 
 console.log(`conversation projection smoke passed (${items.length} visible items)`)

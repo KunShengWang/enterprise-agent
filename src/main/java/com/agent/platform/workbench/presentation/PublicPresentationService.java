@@ -118,13 +118,17 @@ public class PublicPresentationService {
             return result;
         }
         if (event.eventType() == WorkEventType.CLARIFICATION_REQUIRED) {
+            List<String> prompts = clarificationPrompts(routing);
             return List.of(item(work, event, 0, PublicPresentationKind.WAITING_FOR_USER,
-                    PublicPresentationStatus.WAITING, "需要补充信息", "继续执行前需要你补充必要信息。",
-                    List.of(), PublicPresentationDetail.empty(), PublicVisibility.PUBLIC));
+                    PublicPresentationStatus.WAITING, "需要补充信息",
+                    "请在下方输入框补充以下信息，提交后系统会继续当前任务。",
+                    prompts, new PublicPresentationDetail("", "ROUTING_DECISION",
+                            routing == null ? "" : routing.decisionId(), null,
+                            Map.of("inputMode", "ADD_INPUT")), PublicVisibility.PUBLIC));
         }
         if (event.eventType() == WorkEventType.ROUTE_CONFIRMATION_REQUIRED) {
-            return List.of(item(work, event, 0, PublicPresentationKind.APPROVAL_REQUIRED,
-                    PublicPresentationStatus.WAITING, "需要确认执行范围", "请确认预览中的目标和范围后再开始执行。",
+            return List.of(item(work, event, 0, PublicPresentationKind.CONFIRMATION_REQUIRED,
+                    PublicPresentationStatus.WAITING, "需要确认调查范围", "请确认预览中的目标和只读边界后再启动调查。",
                     List.of(), reference("ROUTE_PREVIEW", text(event.payload().get("previewId"))), PublicVisibility.PUBLIC));
         }
         if (event.eventType() == WorkEventType.DISPATCH_STARTED) {
@@ -145,12 +149,23 @@ public class PublicPresentationService {
                     PublicPresentationStatus.COMPLETED, "执行已启动", "目标执行已建立并开始处理任务。",
                     List.of(), PublicPresentationDetail.empty(), PublicVisibility.PUBLIC));
         }
-        if (event.eventType() == WorkEventType.ROUTING_FAILED
-                || event.eventType() == WorkEventType.WORK_COMMAND_FAILED
-                || event.eventType() == WorkEventType.WORK_COMMAND_REJECTED) {
+        if (event.eventType() == WorkEventType.ROUTING_FAILED) {
             return List.of(item(work, event, 0, PublicPresentationKind.ERROR,
                     PublicPresentationStatus.FAILED, "执行遇到问题", "请求未能继续处理，请检查任务状态或稍后重试。",
                     List.of(), PublicPresentationDetail.empty(), PublicVisibility.PUBLIC));
+        }
+        if (event.eventType() == WorkEventType.WORK_COMMAND_FAILED
+                || event.eventType() == WorkEventType.WORK_COMMAND_REJECTED) {
+            String code = text(event.payload().get("code"));
+            String summary = "UNSUPPORTED_FOR_TARGET".equals(code)
+                    ? "该输入未应用到已结束的任务。请将它作为同一对话中的新追问提交。"
+                    : "该指令没有改变当前任务状态，请检查任务状态后重新提交。";
+            return List.of(item(work, event, 0, PublicPresentationKind.ERROR,
+                    PublicPresentationStatus.FAILED, "指令未执行", summary, List.of(),
+                    new PublicPresentationDetail("", "WORK_COMMAND", event.sourceId(), null,
+                            Map.of("safeErrorCode", code.isBlank() ? "WORK_COMMAND_REJECTED" : code,
+                                    "retryable", "false", "correlationId", event.correlationId())),
+                    PublicVisibility.PUBLIC));
         }
         if (event.eventType() == WorkEventType.WORK_ITEM_PAUSED) {
             return List.of(item(work, event, 0, PublicPresentationKind.WAITING_FOR_USER,
@@ -206,9 +221,7 @@ public class PublicPresentationService {
             case "RUN_COMPLETED" -> List.of(item(work, event, 0, PublicPresentationKind.FINAL_RESULT,
                     PublicPresentationStatus.COMPLETED, "最终结果已生成", "最终正文以 Primary Run 的持久化消息为准。",
                     List.of(), reference("PRIMARY_RUN", event.sourceId()), PublicVisibility.PUBLIC));
-            case "RUN_FAILED" -> List.of(item(work, event, 0, PublicPresentationKind.ERROR,
-                    PublicPresentationStatus.FAILED, "执行失败", "Agent 执行已安全终止。",
-                    List.of(), reference("PRIMARY_RUN", event.sourceId()), PublicVisibility.PUBLIC));
+            case "RUN_FAILED" -> List.of(runFailureItem(work, events, event));
             case "RUN_CANCELLED" -> List.of(item(work, event, 0, PublicPresentationKind.ERROR,
                     PublicPresentationStatus.FAILED, "执行已取消", "Agent 执行已停止。",
                     List.of(), reference("PRIMARY_RUN", event.sourceId()), PublicVisibility.PUBLIC));
@@ -218,6 +231,31 @@ public class PublicPresentationService {
                     List.of(), PublicPresentationDetail.empty(), PublicVisibility.PUBLIC));
             default -> List.of(classifiedTechnicalEvent(work, event, phase));
         };
+    }
+
+    private PublicPresentation runFailureItem(AgentWorkItem work, List<WorkEvent> events, WorkEvent event) {
+        WorkEvent modelFailure = events.stream()
+                .filter(candidate -> candidate.sequence() <= event.sequence())
+                .filter(candidate -> candidate.eventType() == WorkEventType.RUN_EVENT_PROJECTED)
+                .filter(candidate -> candidate.sourceId().equals(event.sourceId()))
+                .filter(candidate -> "MODEL_FAILED".equals(normalize(candidate.phase())))
+                .max(java.util.Comparator.comparingLong(WorkEvent::sequence))
+                .orElse(null);
+        String errorCode = modelFailure == null ? text(event.payload().get("stopReason"))
+                : text(modelFailure.payload().get("errorType"));
+        boolean modelError = errorCode.startsWith("MODEL_") || "MODEL_ERROR".equals(errorCode);
+        String title = modelError ? "模型调用失败" : "执行失败";
+        String summary = modelError
+                ? "系统未能获得模型响应，本次任务没有形成最终答案。"
+                : "Agent 执行已安全终止，本次任务没有形成最终答案。";
+        Map<String, String> attributes = new LinkedHashMap<>();
+        attributes.put("safeErrorCode", errorCode.isBlank() ? "RUN_FAILED" : errorCode);
+        attributes.put("retryable", Boolean.toString(modelError));
+        attributes.put("correlationId", modelFailure == null ? event.correlationId() : modelFailure.correlationId());
+        attributes.put("traceId", text(event.payload().get("traceId")));
+        return item(work, event, 0, PublicPresentationKind.ERROR, PublicPresentationStatus.FAILED,
+                title, summary, List.of(), new PublicPresentationDetail("", "PRIMARY_RUN",
+                        event.sourceId(), null, Map.copyOf(attributes)), PublicVisibility.PUBLIC);
     }
 
     private List<PublicPresentation> projectIncidentEvent(AgentWorkItem work, WorkEvent event, String phase) {
@@ -237,10 +275,64 @@ public class PublicPresentationService {
                     "预算已耗尽，系统不会继续创建新的模型或工具调用。",
                     List.of(), PublicPresentationDetail.empty(), PublicVisibility.PUBLIC));
         }
-        if (phase.contains("TASK_CREATED") || phase.contains("TASK_ASSIGNED")) {
+        if ("TASK_ASSIGNMENT".equals(phase)) {
+            String role = specialistRole(text(event.payload().get("recipientRole")));
+            Map<String, String> attributes = incidentAttributes(event, Map.of(
+                    "role", role,
+                    "requiredEvidenceSubtypes", publicList(event.payload().get("requiredEvidenceSubtypes"))));
             return List.of(item(work, event, 0, PublicPresentationKind.AGENT_DELEGATION,
-                    PublicPresentationStatus.ACTIVE, "已调度领域 Agent", "领域 Agent 正在收集受控范围内的证据。",
-                    List.of(), PublicPresentationDetail.empty(), PublicVisibility.PUBLIC));
+                    PublicPresentationStatus.ACTIVE, "已派发 " + role + " Specialist",
+                    role + " Specialist 正在收集冻结范围内的只读证据。",
+                    List.of(), new PublicPresentationDetail(role, "INCIDENT_TASK",
+                            text(event.payload().get("taskId")), null, attributes),
+                    PublicVisibility.PUBLIC));
+        }
+        if ("EVIDENCE_SUBMITTED".equals(phase)) {
+            int evidenceCount = event.payload().get("evidenceIds") instanceof List<?> values ? values.size() : 0;
+            String role = specialistRole(text(event.payload().get("senderRole")));
+            Map<String, String> attributes = incidentAttributes(event, Map.of(
+                    "role", role,
+                    "evidenceCount", Integer.toString(evidenceCount),
+                    "evidenceIds", publicList(event.payload().get("evidenceIds"))));
+            return List.of(item(work, event, 0, PublicPresentationKind.ACTION_COMPLETED,
+                    PublicPresentationStatus.COMPLETED, role + " Specialist 已完成取证",
+                    evidenceCount > 0 ? "已提交 " + evidenceCount + " 条可追溯证据。" : "已提交受控调查结果。",
+                    List.of(), new PublicPresentationDetail(role, "INCIDENT_TASK",
+                            text(event.payload().get("taskId")), null, attributes),
+                    PublicVisibility.PUBLIC));
+        }
+        if ("INCIDENT_STATE_CHANGED".equals(phase)) {
+            String target = text(event.payload().get("targetStatus"));
+            if ("PLANNING".equals(target)) {
+                return List.of(item(work, event, 0, PublicPresentationKind.ACTION_STARTED,
+                        PublicPresentationStatus.ACTIVE, "已启动只读 Multi-Agent 调查",
+                        "调查仅收集证据并生成 Assessment，不执行恢复操作。",
+                        List.of(), new PublicPresentationDetail("Incident", "INCIDENT", event.sourceId(), null,
+                                incidentAttributes(event, Map.of("targetStatus", target))), PublicVisibility.PUBLIC));
+            }
+            if ("CHECKING_CONSISTENCY".equals(target)) {
+                return List.of(item(work, event, 0, PublicPresentationKind.ACTION_COMPLETED,
+                        PublicPresentationStatus.COMPLETED, "Specialist 已完成取证",
+                        "系统正在执行确定性的跨领域证据一致性检查。",
+                        List.of(), new PublicPresentationDetail("Consistency Checker", "INCIDENT",
+                                event.sourceId(), null, incidentAttributes(event, Map.of("targetStatus", target))),
+                        PublicVisibility.PUBLIC));
+            }
+            if ("REVIEWING".equals(target)) {
+                return List.of(item(work, event, 0, PublicPresentationKind.ACTION_STARTED,
+                        PublicPresentationStatus.ACTIVE, "Reviewer 正在汇总证据",
+                        "Reviewer 只能引用已持久化的 Evidence 和 Conflict。",
+                        List.of(), new PublicPresentationDetail("Reviewer", "INCIDENT", event.sourceId(), null,
+                                incidentAttributes(event, Map.of("targetStatus", target))), PublicVisibility.PUBLIC));
+            }
+            if ("ASSESSED".equals(target) || "PARTIAL".equals(target) || "MANUAL_REVIEW".equals(target)) {
+                return List.of(item(work, event, 0, PublicPresentationKind.FINAL_RESULT,
+                        PublicPresentationStatus.COMPLETED, "已生成事故 Assessment",
+                        "调查已结束，未执行任何恢复操作。",
+                        List.of(), new PublicPresentationDetail("Reviewer", "INCIDENT", event.sourceId(), null,
+                                incidentAttributes(event, Map.of("targetStatus", target,
+                                        "sideEffectExecuted", "false"))), PublicVisibility.PUBLIC));
+            }
         }
         if (phase.contains("CLARIFICATION")) {
             return List.of(item(work, event, 0, PublicPresentationKind.WAITING_FOR_USER,
@@ -248,6 +340,35 @@ public class PublicPresentationService {
                     List.of(), PublicPresentationDetail.empty(), PublicVisibility.PUBLIC));
         }
         return List.of(classifiedTechnicalEvent(work, event, phase));
+    }
+
+    private String specialistRole(String value) {
+        return switch (value) {
+            case "ORDER_ANALYST" -> "Order";
+            case "INVENTORY_ANALYST" -> "Inventory";
+            case "MQ_ANALYST" -> "MQ";
+            case "SOP_ANALYST" -> "SOP";
+            default -> "Domain";
+        };
+    }
+
+    private Map<String, String> incidentAttributes(WorkEvent event, Map<String, String> extra) {
+        Map<String, String> attributes = new LinkedHashMap<>();
+        attributes.put("actorType", text(event.payload().get("actorType")));
+        attributes.put("eventCategory", text(event.payload().get("eventCategory")));
+        attributes.put("incidentId", event.sourceId());
+        extra.forEach((key, value) -> {
+            if (value != null && !value.isBlank()) attributes.put(key, value);
+        });
+        attributes.values().removeIf(String::isBlank);
+        return Map.copyOf(attributes);
+    }
+
+    private String publicList(Object value) {
+        if (!(value instanceof List<?> values)) return "";
+        return values.stream().map(this::text).map(String::trim).filter(item -> !item.isBlank())
+                .limit(20).map(item -> item.length() <= 120 ? item : item.substring(0, 120))
+                .collect(java.util.stream.Collectors.joining(", "));
     }
 
     private List<PublicPresentation> projectRecoveryEvent(AgentWorkItem work, WorkEvent event, String phase) {
@@ -406,6 +527,38 @@ public class PublicPresentationService {
                 .filter(step -> !step.isBlank() && step.length() <= 200 && safePublicText(step))
                 .limit(20).toList();
         return steps.size() == raw.size() ? steps : List.of();
+    }
+
+    private List<String> clarificationPrompts(RoutingDecisionRecord routing) {
+        Object value = routing == null ? null : routing.decision().get("missingInputs");
+        if (!(value instanceof List<?> missingInputs)) {
+            return List.of("请说明需要调查的业务范围和相关业务标识。");
+        }
+        List<String> prompts = missingInputs.stream()
+                .map(this::text)
+                .map(String::trim)
+                .filter(input -> !input.isBlank())
+                .map(this::clarificationPrompt)
+                .distinct()
+                .limit(10)
+                .toList();
+        return prompts.isEmpty()
+                ? List.of("请说明需要调查的业务范围和相关业务标识。")
+                : prompts;
+    }
+
+    private String clarificationPrompt(String input) {
+        return switch (input) {
+            case "queueNames" -> "消息队列名称（queueNames），可填写一个或多个实际队列名";
+            case "oneOf:batchId,requestIds" -> "事故范围：提供一个或多个 requestId；当前尚无 batchId 权威解析接口";
+            case "batchId" -> "事故批次 ID（batchId）";
+            case "requestIds" -> "一个或多个请求 ID（requestIds）";
+            case "requestId" -> "请求 ID（requestId）";
+            case "orderNo" -> "订单号（orderNo）";
+            case "deductNo" -> "库存扣减号（deductNo）";
+            case "incidentId" -> "事故 ID（incidentId）";
+            default -> "必填信息：" + input;
+        };
     }
 
     private boolean safePublicText(String value) {

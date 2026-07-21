@@ -210,9 +210,10 @@ public class WorkCommandHandler {
             return rejected(result.code(), result.message(), work, commandType);
         }
         AgentRunRecord after = result.after();
+        String resolvedRunId = after == null ? work.activeRunId() : after.runId();
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("command", commandType.name());
-        payload.put("runId", work.activeRunId());
+        payload.put("runId", resolvedRunId);
         payload.put("underlyingExecutionChanged", result.underlyingExecutionChanged());
         payload.put("runtimeState", after.state().name());
         payload.put("resumeCount", after.resumeCount());
@@ -266,7 +267,7 @@ public class WorkCommandHandler {
                                             String phase,
                                             Map<String, Object> payload) {
         return new WorkCommandCompletion(WorkCommandExecutionStatus.SUCCEEDED, "OK",
-                result.underlyingExecutionChanged(), work.activeRunId(), result.message(), control,
+                result.underlyingExecutionChanged(), result.after() == null ? work.activeRunId() : result.after().runId(), result.message(), control,
                 execution, outcome, eventType, phase, payload);
     }
 

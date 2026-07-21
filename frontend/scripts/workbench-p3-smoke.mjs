@@ -150,6 +150,28 @@ conversation.prepareWork('cancelled-work', 'cancelled-run', true)
 conversation.markTerminal('CANCELLED')
 assert.equal(conversation.answerState.value, 'CANCELLED')
 
+const { incidentAssessmentMarkdown } = await loadModule('../src/utils/incidentAssessment.ts')
+const incidentTree = {
+  workItemId: 'incident-work', executionTarget: 'INCIDENT_INVESTIGATION', treeType: 'INCIDENT',
+  executionId: 'incident-1', agents: [], evidence: [{ evidenceId: 'evidence-1' }], conflicts: [],
+  assessment: { outcome: 'ASSESSED', riskLevel: 'LOW', incidentId: 'incident-1',
+    confirmedFacts: [{ statement: '三笔订单均已进入超时终态。' }], rootCauseCandidates: [],
+    recommendations: [], evidenceGaps: [], conflicts: [] }, recoveryPlans: [], metrics: {},
+}
+const assessmentAnswer = incidentAssessmentMarkdown(incidentTree)
+assert.ok(assessmentAnswer.includes('# 事故调查 Assessment'))
+assert.ok(assessmentAnswer.includes('三笔订单均已进入超时终态。'))
+assert.ok(assessmentAnswer.includes('未执行恢复'))
+detail.value = { ...detail.value, workItem: { ...work, workItemId: 'incident-work', activeRunId: '',
+  activeExecutionTarget: 'INCIDENT_INVESTIGATION', controlState: 'CLOSED', executionState: 'COMPLETED', outcome: 'ASSESSED' } }
+conversation.prepareWork('incident-work', '', false)
+assert.equal(conversation.applyProjectedResult(assessmentAnswer, now), true)
+conversation.markTerminal('COMPLETED')
+assert.equal(conversation.answerState.value, 'COMPLETED')
+assert.equal(conversation.entries.value.filter(item => item.type === 'FINAL_ANSWER').length, 1)
+assert.equal(conversation.applyDelta({ ...delta, sourceId: 'late-run', content: 'late' }), false)
+assert.ok(!conversation.liveAnswerBuffer.value.includes('late'))
+
 primaryStream.start({ ...detail.value, workItem: { ...work, workItemId: 'work-2', activeRunId: 'run-2' } })
 assert.equal(replayPrimarySource.closed, true)
 const beforeLateDelta = conversation.liveAnswerBuffer.value

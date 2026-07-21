@@ -27,6 +27,11 @@ public class IncidentInvestigationExecutionAdapter implements ExecutionAdapter {
         var payload = request.validatedInput().typedPayload();
         String batchId = text(payload.get("batchId"));
         if (batchId.isBlank()) batchId = "WB-" + request.validatedInput().inputDigest().substring(0, 16);
+        List<String> requestIds = values(payload.get("requestIds"));
+        if (requestIds.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "validated incident investigation requires explicit requestIds; batchId resolution is unavailable");
+        }
         var started = launcher.startForDispatch(
                 request.dispatchRequestId(),
                 new IncidentInvestigationRequest(
@@ -34,7 +39,7 @@ public class IncidentInvestigationExecutionAdapter implements ExecutionAdapter {
                         "ORDER_STATE_INCONSISTENCY",
                         request.requestedAt(),
                         request.goalText(),
-                        values(payload.get("requestIds")),
+                        requestIds,
                         queues(payload),
                         request.workItemId()));
         return new DispatchResult(

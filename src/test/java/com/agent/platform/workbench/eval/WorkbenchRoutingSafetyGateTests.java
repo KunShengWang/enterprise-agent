@@ -87,10 +87,10 @@ class WorkbenchRoutingSafetyGateTests {
 
     @Test
     void incidentNeverUsesConfidenceToBypassConfirmation() {
-        String goal = "调查 BATCH-1 在队列 floworder.incident.e2e.dlq 的事故";
+        String goal = "调查 requestId=REQ-1 在队列 floworder.incident.e2e.dlq 的事故";
         var validation = validator().validate(new ExecutionDecision(
                         "INCIDENT_INVESTIGATION", 1, "high confidence",
-                        Map.of("batchId", "BATCH-1", "queueName", "floworder.incident.e2e.dlq"),
+                        Map.of("requestIds", List.of("REQ-1"), "queueName", "floworder.incident.e2e.dlq"),
                         List.of(), ""), context(goal));
 
         assertEquals(RouteDisposition.REQUIRE_CONFIRMATION, validation.disposition());

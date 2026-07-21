@@ -16,6 +16,7 @@ export type ConversationItemType =
   | 'APPROVAL_REQUEST'
   | 'FINAL_ANSWER'
   | 'ERROR'
+  | 'EXECUTION_NARRATIVE'
 
 export type ConversationItemStatus = 'pending' | 'active' | 'completed' | 'failed' | 'waiting'
 
@@ -32,6 +33,12 @@ export interface ConversationToolData {
   attemptLabel: string
 }
 
+export interface ConversationAttachment {
+  name: string
+  size: number
+  mediaType: string
+}
+
 export interface ConversationItem {
   id: string
   type: ConversationItemType
@@ -40,12 +47,57 @@ export interface ConversationItem {
   content: string
   status: ConversationItemStatus
   steps?: string[]
+  attachments?: ConversationAttachment[]
   tool?: ConversationToolData
   preview?: RoutePreview
   approval?: ApprovalRecord
   live?: boolean
   answerState?: PrimaryAnswerState
   presentationKind?: PublicPresentationKind
+  error?: {
+    code: string
+    retryable: boolean
+    correlationId: string
+    traceId: string
+  }
+  narrative?: ExecutionNarrativeGroup
+}
+
+export interface ExecutionNarrativeItem {
+  id: string
+  status: ConversationItemStatus
+  summary: string
+  detail: string
+  sourcePresentationIds: string[]
+  occurredAt: string
+  metadata: Array<{ label: string; value: string; code?: boolean }>
+  findings: string[]
+}
+
+export interface ExecutionNarrativeGroup {
+  groupId: string
+  turnId: string
+  title: string
+  status: ConversationItemStatus
+  summary: string
+  items: ExecutionNarrativeItem[]
+  sourcePresentationIds: string[]
+  startedAt: string
+  completedAt: string
+  expandable: boolean
+}
+
+export interface PresentationLocator {
+  turnId: string
+  presentationIds: string[]
+}
+
+export interface ConversationTurnView {
+  turn: import('./workbench').ConversationTurn
+  entries: ConversationItem[]
+  stepCount: number
+  agentCount: number
+  durationMs: number
 }
 
 export interface PrimaryAnswerView {

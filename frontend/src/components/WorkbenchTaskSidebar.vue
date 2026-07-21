@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import type { WorkItem } from '../types/workbench'
+import type { ConversationHistoryItem, WorkItem } from '../types/workbench'
 
-defineProps<{ items: WorkItem[]; selectedId: string; search: string }>()
+defineProps<{ items: ConversationHistoryItem[]; selectedId: string; search: string }>()
 const emit = defineEmits<{
   newTask: []
-  select: [item: WorkItem]
+  select: [item: ConversationHistoryItem]
   close: []
   'update:search': [value: string]
 }>()
@@ -34,15 +34,15 @@ function relativeTime(value: string) {
 
 <template>
   <aside class="task-sidebar">
-    <header class="task-sidebar-brand"><span>A</span><div><strong>Agent Workbench</strong><small>Enterprise Agent</small></div><button type="button" title="关闭任务栏" @click="emit('close')">×</button></header>
-    <button class="task-new-button" type="button" @click="emit('newTask')"><span>＋</span>新建任务</button>
-    <label class="task-search"><span>⌕</span><input :value="search" placeholder="搜索任务" @input="emit('update:search', ($event.target as HTMLInputElement).value)" /></label>
+    <header class="task-sidebar-brand"><span>A</span><div><strong>Agent Workbench</strong><small>Enterprise Agent</small></div><button type="button" aria-label="关闭任务栏" @click="emit('close')">×</button></header>
+    <button class="task-new-button" type="button" @click="emit('newTask')"><span>＋</span>新建对话</button>
+    <label class="task-search"><span>⌕</span><input :value="search" aria-label="搜索对话" placeholder="搜索对话" @input="emit('update:search', ($event.target as HTMLInputElement).value)" /></label>
     <section class="task-history">
-      <h2>最近任务</h2>
-      <button v-for="item in items" :key="item.workItemId" type="button" :class="{ selected: item.workItemId === selectedId }" @click="emit('select', item)">
-        <i :data-tone="stateTone(item)" /><div><strong>{{ item.originalGoal }}</strong><span><em>{{ targetLabel(item.activeExecutionTarget) }}</em><time>{{ relativeTime(item.updatedAt) }}</time></span></div>
+      <h2>最近对话</h2>
+      <button v-for="item in items" :key="item.conversationId" type="button" :class="{ selected: item.conversationId === selectedId }" @click="emit('select', item)">
+        <i :data-tone="stateTone(item.latestWorkItem)" /><div><strong>{{ item.title }}</strong><span><em>{{ targetLabel(item.latestWorkItem.activeExecutionTarget) }} · {{ item.workItemCount }} 轮</em><time>{{ relativeTime(item.updatedAt) }}</time></span></div>
       </button>
-      <p v-if="!items.length">还没有任务</p>
+      <p v-if="!items.length">还没有对话</p>
     </section>
     <nav class="task-product-nav" aria-label="产品导航">
       <RouterLink to="/approvals"><span>✓</span>审批中心</RouterLink>

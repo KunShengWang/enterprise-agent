@@ -111,9 +111,12 @@ public class RoutePolicyValidator {
                 reasons.add("one bounded OrderCare identifier passed source validation");
             }
             case INCIDENT_INVESTIGATION -> {
-                boolean scopePresent = typed.containsKey("batchId") || typed.containsKey("requestIds");
+                boolean scopePresent = !values(typed.get("requestIds")).isEmpty();
                 boolean queuePresent = typed.containsKey("queueName") || typed.containsKey("queueNames");
-                if (!scopePresent || !queuePresent) return clarified("incident scope and queueNames are required");
+                if (!scopePresent) {
+                    return clarified("explicit requestIds are required; batchId resolution is not available");
+                }
+                if (!queuePresent) return clarified("queueNames are required");
                 int requestCount = values(typed.get("requestIds")).size();
                 if (requestCount > properties.getMaxIncidentRequestIds()) {
                     return rejected("POLICY_REJECTED", "incident requestId scope exceeds configured maximum");

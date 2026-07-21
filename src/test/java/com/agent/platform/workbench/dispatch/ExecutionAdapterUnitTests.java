@@ -13,6 +13,7 @@ import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStartReq
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStartResponse;
 import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStatus;
 import com.agent.platform.ordercare.incident.recovery.persistence.IncidentRecoveryPlanStore;
+import com.agent.platform.ordercare.config.AgentScenarioProfileResolver;
 import com.agent.platform.runtime.AgentRunStore;
 import com.agent.platform.workbench.model.ValidatedExecutionInput;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
@@ -55,7 +56,7 @@ class ExecutionAdapterUnitTests {
         verify(executor, org.mockito.Mockito.times(2)).execute(requests.capture());
         AgentRequest general = requests.getAllValues().get(0);
         AgentRequest orderCare = requests.getAllValues().get(1);
-        assertEquals("", general.scenarioId());
+        assertEquals(AgentScenarioProfileResolver.GENERAL_AGENT_V1, general.scenarioId());
         assertEquals("ordercare-floworder-v1", orderCare.scenarioId());
         assertEquals("dispatch-general",
                 general.metadata().get(AgentRunStore.DISPATCH_REQUEST_METADATA_KEY));
@@ -106,6 +107,24 @@ class ExecutionAdapterUnitTests {
         assertEquals(requestedAt, captured.getValue().detectedAt());
         assertEquals(List.of("REQ-1"), captured.getValue().candidateRequestIds());
         assertEquals(List.of("orders.dlq"), captured.getValue().queueNames());
+    }
+
+    @Test
+    void incidentAdapterRejectsUnresolvedBatchBeforeCreatingIncident() {
+        IncidentInvestigationLauncher launcher = mock(IncidentInvestigationLauncher.class);
+        DispatchRequest request = new DispatchRequest(
+                "dispatch-batch", "work-1", "conversation-1", "investigate batch",
+                ExecutionTargetId.INCIDENT_INVESTIGATION.name(),
+                new AuthenticatedPrincipal("tenant-1", "alice", Set.of("INCIDENT_OPERATOR")),
+                new ValidatedExecutionInput(ExecutionTargetId.INCIDENT_INVESTIGATION.name(), Map.of(),
+                        Map.of("batchId", "BATCH-1", "queueNames", List.of("orders.dlq")), "digest-1"),
+                Instant.parse("2026-07-19T00:00:00Z"));
+
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> new IncidentInvestigationExecutionAdapter(launcher).dispatch(request));
+
+        assertEquals("validated incident investigation requires explicit requestIds; batchId resolution is unavailable",
+                failure.getMessage());
     }
 
     @Test

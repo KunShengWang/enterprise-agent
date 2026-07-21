@@ -6,12 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "test": "node scripts/conversation-items-smoke.mjs && node scripts/workbench-p3-smoke.mjs && node scripts/workbench-p4-smoke.mjs && node scripts/workbench-p5-smoke.mjs",
+    "test": "node scripts/conversation-items-smoke.mjs && node scripts/workbench-p3-smoke.mjs && node scripts/workbench-p4-smoke.mjs && node scripts/workbench-p5-smoke.mjs && node scripts/workbench-p6-smoke.mjs && node scripts/workbench-turn-history-smoke.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
     "dompurify": "^3.4.12",
+    "highlight.js": "^11.11.1",
     "marked": "^18.0.6",
+    "marked-highlight": "^2.2.4",
     "vue": "^3.5.22",
     "vue-router": "^4.5.1"
   },

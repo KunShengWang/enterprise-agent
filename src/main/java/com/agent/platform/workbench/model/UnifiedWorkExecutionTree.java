@@ -47,8 +47,10 @@ public record UnifiedWorkExecutionTree(
             int attempt,
             int maxAttempts,
             String status,
+            String runtimeStatus,
             String objective,
             String error,
+            String runtimeWarning,
             TraceRun trace,
             List<EvidenceRecord> evidence,
             NodeMetrics metrics

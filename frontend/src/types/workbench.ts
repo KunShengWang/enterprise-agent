@@ -9,6 +9,14 @@ export interface WorkInput {
   createdAt: string
 }
 
+export interface ComposerAttachment {
+  id: string
+  name: string
+  size: number
+  mediaType: string
+  content: string
+}
+
 export interface WorkItem {
   workItemId: string
   conversationId: string
@@ -23,10 +31,50 @@ export interface WorkItem {
   sourceInputId: string
   routeDecisionId?: string
   routingFailureCode: string
+  dispatchRequestId?: string
   version: number
   createdAt: string
   updatedAt: string
   completedAt?: string | null
+}
+
+export interface ConversationHistoryItem {
+  conversationId: string
+  title: string
+  latestWorkItem: WorkItem
+  workItemCount: number
+  updatedAt: string
+}
+
+export interface ConversationTurn {
+  turnId: string
+  conversationId: string
+  inputId: string
+  workItemId: string
+  userMessage: string
+  executionTarget: string
+  controlState: string
+  executionState: string
+  outcome: string
+  activeRunId: string
+  activeIncidentId: string
+  activePlanId: string
+  createdAt: string
+  completedAt?: string | null
+}
+
+export type InspectorScope = 'TURN' | 'WORK_ITEM' | 'CONVERSATION'
+
+export interface TurnExecutionSnapshot {
+  turn: ConversationTurn
+  detail: WorkItemDetail
+  publicPresentations: PublicPresentation[]
+  inspectorPresentations: PublicPresentation[]
+  events: WorkEvent[]
+  tree: WorkExecutionTree | null
+  budget: WorkItemBudget | null
+  approval: import('./agent').ApprovalRecord | null
+  answer: import('./conversation').PrimaryAnswerView
 }
 
 export interface WorkFocus { focusedWorkItemId: string; version: number }
@@ -40,6 +88,7 @@ export interface WorkEvent {
   projectedAt: string
   sourceType?: string
   sourceId?: string
+  sourceEventId?: string
   sourceSequence?: number
   sourceCreatedAt?: string
   correlationId?: string
@@ -62,7 +111,8 @@ export interface WorkStreamItem {
 export type PublicPresentationKind =
   | 'TASK_UNDERSTANDING' | 'ROUTE_SUMMARY' | 'STANDARD_PROCESS' | 'EXECUTION_PLAN'
   | 'ACTION_STARTED' | 'ACTION_COMPLETED' | 'TOOL_ACTIVITY' | 'AGENT_DELEGATION'
-  | 'WAITING_FOR_USER' | 'APPROVAL_REQUIRED' | 'RETRY' | 'RECOVERY' | 'FINAL_RESULT' | 'ERROR'
+  | 'WAITING_FOR_USER' | 'CONFIRMATION_REQUIRED' | 'APPROVAL_REQUIRED'
+  | 'RETRY' | 'RECOVERY' | 'FINAL_RESULT' | 'ERROR'
 export type PublicPresentationStatus = 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'FAILED' | 'WAITING'
 export interface PublicToolPresentation {
   toolName: string
@@ -127,8 +177,10 @@ export interface ExecutionAgentNode {
   attempt: number
   maxAttempts: number
   status: string
+  runtimeStatus: string
   objective: string
   error: string
+  runtimeWarning: string
   trace?: RuntimeRunTrace
   evidence: IncidentEvidence[]
   metrics: ExecutionNodeMetrics

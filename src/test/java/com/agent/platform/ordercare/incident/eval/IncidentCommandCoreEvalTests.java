@@ -48,7 +48,7 @@ class IncidentCommandCoreEvalTests {
     private final IncidentAssessmentAssembler assembler = new IncidentAssessmentAssembler();
 
     @Test
-    void eval01_acceptsOneToThreeUniqueReadOnlySpecialists() {
+    void eval01_acceptsCompleteReadOnlyDomainSpecialistPlan() {
         DelegationPlan plan = plan(List.of(
                 task("order", IncidentAgentRole.ORDER_ANALYST, "查询订单事实", EvidenceSubtype.ORDER_STATUS_SET),
                 task("inventory", IncidentAgentRole.INVENTORY_ANALYST, "查询库存事实", EvidenceSubtype.INVENTORY_DEDUCT_SET),
@@ -57,7 +57,7 @@ class IncidentCommandCoreEvalTests {
     }
 
     @Test
-    void eval02_rejectsMoreThanThreeSpecialists() {
+    void eval02_rejectsRolesOutsideCompleteDomainCoverage() {
         DelegationPlan plan = plan(List.of(
                 task("order", IncidentAgentRole.ORDER_ANALYST, "查询订单事实", EvidenceSubtype.ORDER_STATUS_SET),
                 task("inventory", IncidentAgentRole.INVENTORY_ANALYST, "查询库存事实", EvidenceSubtype.INVENTORY_DEDUCT_SET),

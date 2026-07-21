@@ -885,7 +885,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
     private AuthoritativeProjection readAuthoritativeProjection(Connection connection,
                                                                 WorkExecutionProjection projection) throws SQLException {
         String sql = switch (projection.sourceType()) {
-            case "AGENT_RUN" -> "SELECT status, NULL::text AS outcome, version, "
+            case "AGENT_RUN" -> "SELECT status, COALESCE(record_json::jsonb ->> 'failureReason', '') AS outcome, version, "
                     + "COALESCE((record_json::jsonb ->> 'resumeCount')::int, 0) AS source_attempt, updated_at "
                     + "FROM agent_run_state WHERE run_id=?";
             case "INCIDENT" -> "SELECT status, NULL::text AS outcome, version, 0 AS source_attempt, updated_at "

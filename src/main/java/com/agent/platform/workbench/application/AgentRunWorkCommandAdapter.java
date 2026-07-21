@@ -32,11 +32,11 @@ public class AgentRunWorkCommandAdapter {
     public AgentRunCommandResult execute(AuthenticatedPrincipal principal,
                                          AgentWorkItem work,
                                          WorkCommandType commandType) {
-        if (work.activeRunId() == null || work.activeRunId().isBlank()) {
+        AgentRunRecord before = resolveRun(work, commandType);
+        if (before == null) {
             return rejected("INVALID_TARGET_STATE", "work item has no active Agent Run", null);
         }
-        AgentRunRecord before = runStore.find(work.activeRunId()).orElse(null);
-        if (before == null || !before.conversationId().equals(work.conversationId())) {
+        if (!before.conversationId().equals(work.conversationId())) {
             return rejected("INVALID_TARGET_STATE", "linked Agent Run is missing or does not belong to the conversation", before);
         }
         if (before.userId() != null && !before.userId().isBlank()
@@ -49,6 +49,28 @@ public class AgentRunWorkCommandAdapter {
             case CANCEL_ACTIVE_WORK -> cancel(before);
             default -> rejected("UNSUPPORTED_FOR_TARGET", "command is not a Run control command", before);
         };
+    }
+
+    private AgentRunRecord resolveRun(AgentWorkItem work, WorkCommandType commandType) {
+        if (work.activeRunId() != null && !work.activeRunId().isBlank()) {
+            return runStore.find(work.activeRunId()).orElse(null);
+        }
+        if (commandType != WorkCommandType.CANCEL_ACTIVE_WORK
+                || work.dispatchRequestId() == null || work.dispatchRequestId().isBlank()) {
+            return null;
+        }
+        for (int attempt = 0; attempt < 20; attempt++) {
+            AgentRunRecord discovered = runStore.findByDispatchRequestId(work.dispatchRequestId()).orElse(null);
+            if (discovered != null) return discovered;
+            try {
+                Thread.sleep(50);
+            }
+            catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return null;
+            }
+        }
+        return null;
     }
 
     private AgentRunCommandResult pause(AgentRunRecord before) {

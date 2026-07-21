@@ -31,6 +31,7 @@ import com.agent.platform.workbench.model.ExecutionDecision;
 import com.agent.platform.workbench.model.RoutePreviewStatus;
 import com.agent.platform.workbench.model.WorkCommandType;
 import com.agent.platform.workbench.model.WorkControlState;
+import com.agent.platform.workbench.model.WorkExecutionState;
 import com.agent.platform.workbench.model.WorkLinkType;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
 import com.agent.platform.workbench.target.ExecutionTargetId;
@@ -77,6 +78,7 @@ class JdbcDispatchStorePostgresIT {
             execute(connection, "DELETE FROM agent_route_preview WHERE work_item_id IN (SELECT work_item_id FROM agent_work_item WHERE tenant_id LIKE ?)", "tenant-m1c-%");
             execute(connection, "DELETE FROM agent_routing_decision WHERE work_item_id IN (SELECT work_item_id FROM agent_work_item WHERE tenant_id LIKE ?)", "tenant-m1c-%");
             execute(connection, "DELETE FROM agent_work_command_decision WHERE tenant_id LIKE ?", "tenant-m1c-%");
+            execute(connection, "DELETE FROM agent_work_projection_cursor WHERE work_item_id IN (SELECT work_item_id FROM agent_work_item WHERE tenant_id LIKE ?)", "tenant-m1c-%");
             execute(connection, "DELETE FROM agent_work_event WHERE work_item_id IN (SELECT work_item_id FROM agent_work_item WHERE tenant_id LIKE ?)", "tenant-m1c-%");
             execute(connection, "DELETE FROM agent_work_link WHERE work_item_id IN (SELECT work_item_id FROM agent_work_item WHERE tenant_id LIKE ?)", "tenant-m1c-%");
             execute(connection, "DELETE FROM agent_work_relation WHERE source_work_item_id IN (SELECT work_item_id FROM agent_work_item WHERE tenant_id LIKE ?) OR target_work_item_id IN (SELECT work_item_id FROM agent_work_item WHERE tenant_id LIKE ?)", "tenant-m1c-%", "tenant-m1c-%");
@@ -101,6 +103,28 @@ class JdbcDispatchStorePostgresIT {
         assertEquals(1, fixture.workbench.listLinks(principal, work.workItemId()).size());
         assertEquals(1, fixture.dispatchStore.listAttempts(principal, work.workItemId()).stream()
                 .filter(attempt -> attempt.status() == DispatchAttemptStatus.EFFECTIVE).count());
+    }
+
+    @Test
+    void linkingEarlyDiscoveredRunPreservesCancellationIntent() throws Exception {
+        Fixture fixture = fixture("GENERAL_AGENT", Map.of(), new NoopDispatchFailureInjector());
+        AgentWorkItem work = routedWork(fixture, "explain cancellation during dispatch");
+        var claim = fixture.dispatchStore.claimDispatch(principal, work.workItemId(),
+                Instant.now().minusSeconds(1), 2, "dispatch-cancel-owner",
+                Instant.now().plusSeconds(30)).orElseThrow();
+        try (Connection connection = openConnection()) {
+            execute(connection, "UPDATE agent_work_item SET control_state='CANCEL_REQUESTED' WHERE work_item_id=?",
+                    work.workItemId());
+        }
+
+        fixture.dispatchStore.completeDispatch(principal, claim,
+                new DispatchResult(work.dispatchRequestId(), WorkLinkType.RUN, "run-cancel-early", true));
+
+        AgentWorkItem linked = fixture.workbench.findWorkItem(principal, work.workItemId()).orElseThrow();
+        assertEquals(WorkControlState.CANCEL_REQUESTED, linked.controlState());
+        assertEquals(WorkExecutionState.STARTING, linked.executionState());
+        assertEquals("run-cancel-early", linked.activeRunId());
+        assertEquals(1, fixture.workbench.listLinks(principal, work.workItemId()).size());
     }
 
     @Test
@@ -153,10 +177,10 @@ class JdbcDispatchStorePostgresIT {
     @Test
     void incidentPreviewIsImmutableAndNoAdapterRunsBeforeExplicitConfirmation() {
         Map<String, Object> inputs = Map.of(
-                "batchId", "BATCH-M1C-1", "queueName", "floworder.incident.e2e.dlq");
+                "requestIds", List.of("REQ-M1C-1"), "queueName", "floworder.incident.e2e.dlq");
         Fixture fixture = fixture("INCIDENT_INVESTIGATION", inputs, new NoopDispatchFailureInjector());
         AgentWorkItem work = routedWork(fixture,
-                "调查 BATCH-M1C-1，队列 floworder.incident.e2e.dlq 的事故");
+                "调查 requestId=REQ-M1C-1，队列 floworder.incident.e2e.dlq 的事故");
 
         AgentWorkItem waiting = fixture.workbench.findWorkItem(principal, work.workItemId()).orElseThrow();
         var preview = fixture.dispatchStore.findPreview(principal, work.workItemId()).orElseThrow();
@@ -181,10 +205,10 @@ class JdbcDispatchStorePostgresIT {
     @Test
     void expiredPreviewCannotReuseOldHumanConfirmation() throws Exception {
         Fixture fixture = fixture("INCIDENT_INVESTIGATION",
-                Map.of("batchId", "BATCH-M1C-2", "queueName", "floworder.incident.e2e.dlq"),
+                Map.of("requestIds", List.of("REQ-M1C-2"), "queueName", "floworder.incident.e2e.dlq"),
                 new NoopDispatchFailureInjector());
         AgentWorkItem work = routedWork(fixture,
-                "调查 BATCH-M1C-2，队列 floworder.incident.e2e.dlq 的事故");
+                "调查 requestId=REQ-M1C-2，队列 floworder.incident.e2e.dlq 的事故");
         var preview = fixture.dispatchStore.findPreview(principal, work.workItemId()).orElseThrow();
         try (Connection connection = openConnection()) {
             execute(connection, "UPDATE agent_route_preview SET expires_at=? WHERE preview_id=?",

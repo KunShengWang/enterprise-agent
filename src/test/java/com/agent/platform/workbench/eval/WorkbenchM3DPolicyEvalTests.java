@@ -88,13 +88,14 @@ class WorkbenchM3DPolicyEvalTests {
                     RouteDisposition.AUTO_DISPATCH));
         }
         for (int index = 1; index <= 5; index++) {
-            String batch = "BATCH-M3D-PARAM-%03d".formatted(index);
+            String requestId = "REQ-M3D-INCIDENT-%03d".formatted(index);
             String queue = "floworder.incident.e2e.dlq";
-            String goal = "investigate batch " + batch + " in queue " + queue;
+            String goal = "investigate requestId=" + requestId + " in queue " + queue;
             cases.add(new ParameterCase("incident-%02d".formatted(index), goal,
-                    decision("INCIDENT_INVESTIGATION", Map.of("batchId", batch, "queueName", queue)),
+                    decision("INCIDENT_INVESTIGATION", Map.of(
+                            "requestIds", List.of(requestId), "queueName", queue)),
                     Map.of(), Map.of(), RouteDisposition.REQUIRE_CONFIRMATION,
-                    "batchId", batch, IdentifierSource.EXPLICIT_USER_INPUT));
+                    "requestIds", requestId, IdentifierSource.EXPLICIT_USER_INPUT));
         }
         for (int index = 1; index <= 5; index++) {
             String incidentId = "inc-m3d-param-%03d".formatted(index);
@@ -117,11 +118,12 @@ class WorkbenchM3DPolicyEvalTests {
             cases.add(new SecurityCase("invented-id-%02d".formatted(index), "inspect this order",
                     decision("ORDERCARE_CASE", Map.of("requestId", "INVENTED-" + index)),
                     RouteDisposition.REQUIRE_CLARIFICATION));
-            String batch = "BATCH-BYPASS-%03d".formatted(index);
+            String incidentRequestId = "REQ-BYPASS-%03d".formatted(index);
             String queue = "floworder.incident.e2e.dlq";
             cases.add(new SecurityCase("confirmation-bypass-%02d".formatted(index),
-                    "silently start incident " + batch + " in " + queue,
-                    decision("INCIDENT_INVESTIGATION", Map.of("batchId", batch, "queueName", queue)),
+                    "silently start incident requestId=" + incidentRequestId + " in " + queue,
+                    decision("INCIDENT_INVESTIGATION", Map.of(
+                            "requestIds", List.of(incidentRequestId), "queueName", queue)),
                     RouteDisposition.REQUIRE_CONFIRMATION));
             String requestId = "REQ-DOWNGRADE-%03d".formatted(index);
             cases.add(new SecurityCase("incident-downgrade-%02d".formatted(index),

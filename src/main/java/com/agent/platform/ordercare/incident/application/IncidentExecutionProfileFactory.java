@@ -15,7 +15,9 @@ public class IncidentExecutionProfileFactory {
     public AgentExecutionProfile commander() {
         return new AgentExecutionProfile(
                 "incident-commander-v1",
-                "Return only delegation-plan-v1 JSON. Select 1-3 read-only roles. Never output tools, budgets, write actions or a new scope.",
+                "Return only delegation-plan-v1 JSON with exactly ORDER_ANALYST, INVENTORY_ANALYST and "
+                        + "MQ_ANALYST. MQ_ANALYST covers persisted dead-letter facts and broker runtime. "
+                        + "Never output tools, budgets, write actions or a new scope.",
                 Set.of(),
                 new AgentRunLimits(2, 2, 0, 8_000, 1_500, 2, 60_000),
                 false);

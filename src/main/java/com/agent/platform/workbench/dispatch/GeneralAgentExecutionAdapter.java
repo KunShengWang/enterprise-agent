@@ -2,6 +2,7 @@ package com.agent.platform.workbench.dispatch;
 
 import com.agent.platform.agent.AgentExecutor;
 import com.agent.platform.runtime.AgentRunStore;
+import com.agent.platform.ordercare.config.AgentScenarioProfileResolver;
 import com.agent.platform.workbench.target.ExecutionTargetId;
 import org.springframework.stereotype.Component;
 
@@ -11,5 +12,5 @@ public class GeneralAgentExecutionAdapter extends AbstractAgentRunExecutionAdapt
         super(executor, runStore);
     }
     @Override public ExecutionTargetId targetId() { return ExecutionTargetId.GENERAL_AGENT; }
-    @Override protected String scenarioId() { return ""; }
+    @Override protected String scenarioId() { return AgentScenarioProfileResolver.GENERAL_AGENT_V1; }
 }

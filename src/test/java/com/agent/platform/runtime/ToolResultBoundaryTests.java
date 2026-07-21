@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -40,6 +41,34 @@ class ToolResultBoundaryTests {
         assertEquals("第一段回答，第二段回答。", turn.assistantText());
         assertTrue(turn.toolCalls().isEmpty());
         assertEquals(List.of("第一段回答", "，第二段回答。"), deltas);
+    }
+
+    @Test
+    void providerLengthFinishCannotBecomeCompletedFinalAnswer() {
+        LlmService llmService = mock(LlmService.class);
+        when(llmService.stream(any())).thenReturn(Flux.just("```java\nclass Demo {"));
+        when(llmService.lastFinishReason()).thenReturn(Optional.of("length"));
+        JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
+
+        LlmCallException failure = assertThrows(LlmCallException.class,
+                () -> gateway.nextTurn(modelRequestWithTool(), ignored -> { }));
+
+        assertEquals("MODEL_OUTPUT_TRUNCATED", failure.errorType());
+        assertTrue(failure.safeMessage().contains("长度限制"));
+    }
+
+    @Test
+    void unclosedCodeFenceCannotBecomeCompletedWhenProviderOmitsFinishReason() {
+        LlmService llmService = mock(LlmService.class);
+        when(llmService.stream(any())).thenReturn(Flux.just(
+                "## Example\n```java\n", "public class Demo {"));
+        JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
+
+        LlmCallException failure = assertThrows(LlmCallException.class,
+                () -> gateway.nextTurn(modelRequestWithTool(), ignored -> { }));
+
+        assertEquals("MODEL_OUTPUT_TRUNCATED", failure.errorType());
+        assertTrue(failure.safeMessage().contains("代码块闭合前结束"));
     }
 
     @Test
@@ -73,6 +102,53 @@ class ToolResultBoundaryTests {
         assertTrue(turn.toolCalls().isEmpty());
         assertEquals("final_answer", turn.finishReason());
         assertEquals(turn.assistantText(), String.join("", deltas));
+    }
+
+    @Test
+    void legacyAssistantOnlyEnvelopeIsUnwrappedWithoutLeakingProtocolJson() {
+        LlmService llmService = mock(LlmService.class);
+        when(llmService.stream(any())).thenReturn(Flux.just(
+                "{\"assistantText\":\"## Java concurrency\"}"));
+        JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
+        List<String> deltas = new ArrayList<>();
+
+        AgentModelTurn turn = gateway.nextTurn(modelRequestWithTool(), deltas::add);
+
+        assertEquals("## Java concurrency", turn.assistantText());
+        assertEquals(List.of("## Java concurrency"), deltas);
+        assertFalse(String.join("", deltas).contains("assistantText"));
+    }
+
+    @Test
+    void businessJsonWithAssistantTextAndDomainFieldRemainsFinalAnswer() {
+        LlmService llmService = mock(LlmService.class);
+        String businessJson = "{\"assistantText\":\"operator note\",\"status\":\"ok\"}";
+        when(llmService.stream(any())).thenReturn(Flux.just(businessJson));
+        JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
+
+        AgentModelTurn turn = gateway.nextTurn(modelRequestWithTool(), ignored -> { });
+
+        assertEquals(businessJson, turn.assistantText());
+        assertEquals("final_answer", turn.finishReason());
+    }
+
+    @Test
+    void priorLegacyEnvelopeIsNormalizedAndPriorFormatIsScopedToItsTurn() {
+        LlmService llmService = mock(LlmService.class);
+        when(llmService.complete(any())).thenReturn("current answer");
+        JsonAgentModelGateway gateway = new JsonAgentModelGateway(llmService, new ObjectMapper());
+        AgentMessage prior = new AgentMessage(
+                "message-1", "session-1", "run-1", 1, AgentMessageType.ASSISTANT_TEXT,
+                "{\"assistantText\":\"prior answer\"}", "", "", Map.of(), Map.of(), 5, Instant.now());
+
+        gateway.nextTurn(new AgentModelRequest(
+                "run-2", "session-1", "system", List.of(prior), modelRequestWithTool().tools(), Map.of()));
+
+        ArgumentCaptor<PromptRequest> prompt = ArgumentCaptor.forClass(PromptRequest.class);
+        verify(llmService).complete(prompt.capture());
+        assertTrue(prompt.getValue().contextBlocks().get(0).contains("prior answer"));
+        assertFalse(prompt.getValue().contextBlocks().get(0).contains("assistantText"));
+        assertTrue(prompt.getValue().systemPrompt().contains("先前用户消息中的格式要求只约束对应的先前回答"));
     }
 
     @Test

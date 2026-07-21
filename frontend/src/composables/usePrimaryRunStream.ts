@@ -7,7 +7,7 @@ type StreamState = 'idle' | 'connecting' | 'live' | 'recovering' | 'error'
 
 export interface PrimaryRunStreamOptions {
   onDelta: (event: WorkStreamItem) => boolean
-  onTerminal: (state: 'COMPLETED' | 'FAILED' | 'CANCELLED') => void
+  onTerminal: (state: 'COMPLETED' | 'FAILED' | 'CANCELLED', event: WorkStreamItem) => void
   onSourceChanged?: (event: WorkStreamItem) => void
   onReplayStart?: () => void
   expectedRunId: () => string
@@ -96,7 +96,7 @@ export function usePrimaryRunStream(options: PrimaryRunStreamOptions) {
       const expected = options.expectedRunId()
       const terminal = event.sourceType === 'AGENT_RUN' && expected && event.sourceId !== expected
         ? null : terminalState(event)
-      if (terminal) options.onTerminal(terminal)
+      if (terminal) options.onTerminal(terminal, event)
       options.onSourceChanged?.(event)
     })
     next.addEventListener('model-delta', raw => {

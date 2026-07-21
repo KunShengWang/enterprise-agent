@@ -43,7 +43,7 @@ export const workbenchApi = {
     `/api/agent/work-items/${encodeURIComponent(workItemId)}/reject-route`,
     { method: 'POST', ...jsonBody({ previewId, clientInputId: `reject-${id()}` }) },
   ),
-  command: (workItemId: string, command: 'pause' | 'resume' | 'cancel', expectedVersion: number) =>
+  command: (workItemId: string, command: 'pause' | 'resume' | 'cancel' | 'abandon', expectedVersion: number) =>
     apiRequest<unknown>(`/api/agent/work-items/${encodeURIComponent(workItemId)}/${command}`, {
       method: 'POST',
       ...jsonBody({ expectedVersion, clientInputId: `${command}-${id()}` }),

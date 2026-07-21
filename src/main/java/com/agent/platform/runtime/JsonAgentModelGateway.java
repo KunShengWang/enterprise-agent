@@ -6,6 +6,8 @@ import com.agent.platform.llm.LlmCallException;
 import com.agent.platform.prompt.PromptRequest;
 import com.agent.platform.tool.ToolDefinition;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
@@ -25,6 +27,8 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 public class JsonAgentModelGateway implements AgentModelGateway {
 
+    private static final Logger log = LoggerFactory.getLogger(JsonAgentModelGateway.class);
+
     private final LlmService llmService;
     private final ObjectMapper objectMapper;
 
@@ -37,7 +41,7 @@ public class JsonAgentModelGateway implements AgentModelGateway {
     public AgentModelTurn nextTurn(AgentModelRequest request) {
         String raw = llmService.complete(modelPrompt(request));
         LlmUsage usage = llmService.lastUsage().orElse(new LlmUsage(0, 0, 0, 0, 0, "", "unavailable"));
-        return toModelTurn(raw, usage, !request.tools().isEmpty());
+        return toModelTurn(raw, usage, !request.tools().isEmpty(), llmService.lastFinishReason().orElse("unknown"));
     }
 
     @Override
@@ -49,12 +53,14 @@ public class JsonAgentModelGateway implements AgentModelGateway {
         AtomicReference<LlmUsage> streamedUsage = new AtomicReference<>(
                 new LlmUsage(0, 0, 0, 0, 0, "", "unavailable")
         );
+        AtomicReference<String> providerFinishReason = new AtomicReference<>("unknown");
         llmService.stream(modelPrompt(request))
                 .doOnNext(delta -> {
                     if (delta == null || delta.isEmpty()) {
                         return;
                     }
                     llmService.lastUsage().ifPresent(streamedUsage::set);
+                    llmService.lastFinishReason().ifPresent(providerFinishReason::set);
                     raw.append(delta);
                     if (!"fallback".equalsIgnoreCase(streamedUsage.get().source())) {
                         responseRouter.accept(delta);
@@ -62,7 +68,7 @@ public class JsonAgentModelGateway implements AgentModelGateway {
                 })
                 .blockLast();
         LlmUsage usage = streamedUsage.get();
-        AgentModelTurn turn = toModelTurn(raw.toString(), usage, toolCallsAllowed);
+        AgentModelTurn turn = toModelTurn(raw.toString(), usage, toolCallsAllowed, providerFinishReason.get());
         responseRouter.complete(turn);
         return turn;
     }
@@ -76,7 +82,8 @@ public class JsonAgentModelGateway implements AgentModelGateway {
         );
     }
 
-    private AgentModelTurn toModelTurn(String raw, LlmUsage usage, boolean toolCallsAllowed) {
+    private AgentModelTurn toModelTurn(String raw, LlmUsage usage, boolean toolCallsAllowed,
+                                       String providerFinishReason) {
         if ("fallback".equalsIgnoreCase(usage.source())) {
             throw new LlmCallException(
                     "MODEL_FALLBACK",
@@ -84,17 +91,32 @@ public class JsonAgentModelGateway implements AgentModelGateway {
                     null
             );
         }
+        if (truncated(providerFinishReason)) {
+            throw new LlmCallException(
+                    "MODEL_OUTPUT_TRUNCATED",
+                    "模型输出达到长度限制，本次任务没有形成完整最终答案。请缩小问题范围或提高模型输出上限。",
+                    null
+            );
+        }
+        if (incompleteFencedContent(raw)) {
+            throw new LlmCallException(
+                    "MODEL_OUTPUT_TRUNCATED",
+                    "模型输出在代码块闭合前结束，本次任务没有形成完整最终答案。请缩小问题范围或提高模型输出上限。",
+                    null
+            );
+        }
         // Commander, Reviewer and Planner deliberately have no capabilities but return domain JSON.
         // In that mode every provider response is final content; interpreting a JSON object as the
         // ToolCall envelope would turn valid structured output into a fake tool invocation.
         if (!toolCallsAllowed) {
-            return new AgentModelTurn(raw, List.of(), raw, usage, "final_answer_no_tools");
+            return new AgentModelTurn(raw, List.of(), raw, usage, normalizedFinishReason(providerFinishReason, "final_answer_no_tools"));
         }
         if (!looksLikeStructuredToolCall(raw)) {
-            return new AgentModelTurn(raw, List.of(), raw, usage, "final_answer");
+            return new AgentModelTurn(raw, List.of(), raw, usage, normalizedFinishReason(providerFinishReason, "final_answer"));
         }
         String structuredCandidate = raw == null ? "" : raw.stripLeading();
         if (!structuredCandidate.startsWith("{")) {
+            logProtocolFailure(structuredCandidate, "PREFIXED_TOOL_ENVELOPE", null);
             throw new LlmCallException(
                     "MODEL_PROTOCOL_ERROR",
                     "模型返回了无效的工具调用协议，系统已阻止该内容作为最终回答输出。",
@@ -105,6 +127,8 @@ public class JsonAgentModelGateway implements AgentModelGateway {
             return parseTurn(raw, usage);
         }
         catch (RuntimeException invalidStructuredOutput) {
+            logProtocolFailure(structuredCandidate, protocolFailureKind(structuredCandidate, invalidStructuredOutput),
+                    invalidStructuredOutput);
             throw new LlmCallException(
                     "MODEL_PROTOCOL_ERROR",
                     "模型返回了无效的工具调用协议，系统已阻止该内容作为最终回答输出。",
@@ -113,13 +137,53 @@ public class JsonAgentModelGateway implements AgentModelGateway {
         }
     }
 
+    private boolean truncated(String finishReason) {
+        String normalized = finishReason == null ? "" : finishReason.trim().toLowerCase(Locale.ROOT);
+        return normalized.equals("length") || normalized.equals("max_tokens")
+                || normalized.equals("max-tokens") || normalized.equals("token_limit");
+    }
+
+    private boolean incompleteFencedContent(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        return markerCount(raw, "```") % 2 != 0 || markerCount(raw, "~~~") % 2 != 0;
+    }
+
+    private int markerCount(String value, String marker) {
+        int count = 0;
+        int offset = 0;
+        while ((offset = value.indexOf(marker, offset)) >= 0) {
+            count++;
+            offset += marker.length();
+        }
+        return count;
+    }
+
+    private String normalizedFinishReason(String providerFinishReason, String fallback) {
+        return providerFinishReason == null || providerFinishReason.isBlank()
+                || "unknown".equalsIgnoreCase(providerFinishReason) ? fallback : providerFinishReason;
+    }
+
+    private String protocolFailureKind(String candidate, RuntimeException failure) {
+        if (candidate == null || candidate.isBlank()) return "EMPTY_RESPONSE";
+        String message = failure == null || failure.getMessage() == null
+                ? "" : failure.getMessage().toLowerCase(Locale.ROOT);
+        if (message.contains("neither assistanttext nor toolcalls")) return "EMPTY_TOOL_ENVELOPE";
+        return "MALFORMED_TOOL_ENVELOPE";
+    }
+
+    private void logProtocolFailure(String candidate, String kind, RuntimeException failure) {
+        String causeType = failure == null ? "none" : failure.getClass().getSimpleName();
+        log.warn("model protocol rejected: kind={}, responseChars={}, causeType={}",
+                kind, candidate == null ? 0 : candidate.length(), causeType);
+    }
+
     private boolean looksLikeStructuredToolCall(String raw) {
         String candidate = raw == null ? "" : raw.stripLeading();
         if (candidate.startsWith("{")) {
             try {
                 Map<?, ?> root = objectMapper.readValue(extractJsonObject(candidate), Map.class);
                 return root.get("toolCalls") instanceof List<?>
-                        || (root.containsKey("assistantText") && root.containsKey("toolCalls"));
+                        || legacyAssistantEnvelope(root);
             }
             catch (RuntimeException incompleteOrMalformedJson) {
                 return explicitEnvelopeFields(candidate);
@@ -137,6 +201,9 @@ public class JsonAgentModelGateway implements AgentModelGateway {
         String assistantText = stringValue(root.get("assistantText"));
         List<AgentToolCall> toolCalls = new ArrayList<>();
         Object rawToolCalls = root.get("toolCalls");
+        if (root.containsKey("toolCalls") && !(rawToolCalls instanceof List<?>)) {
+            throw new IllegalArgumentException("toolCalls must be an array");
+        }
         if (rawToolCalls instanceof List<?> calls) {
             for (Object value : calls) {
                 if (!(value instanceof Map<?, ?> call)) {
@@ -181,6 +248,7 @@ public class JsonAgentModelGateway implements AgentModelGateway {
         return (request.systemPrompt() + "\n\n" + """
                 你正在统一 Agent Runtime 中运行。每一轮必须在“最终正文”和“ToolCall JSON”之间二选一。
                 如果已经可以回答，直接输出最终回答正文，不要使用 JSON 包装。
+                先前用户消息中的格式要求只约束对应的先前回答；除非当前用户再次明确要求，否则不得沿用先前的 JSON、Markdown 或其他输出格式。
                 如果需要能力调用，返回：
                 {"assistantText":"","toolCalls":[{"id":"唯一调用ID","name":"工具名","arguments":{},"reason":"原因"}]}
                 规则：
@@ -191,6 +259,8 @@ public class JsonAgentModelGateway implements AgentModelGateway {
                 4. 工具失败或被拒绝后，应根据结果重新规划或给出安全回答。
                 5. 有副作用的能力是否执行由 Runtime 权限策略决定，不能在文本中绕过审批。
                 6. ToolCall 协议必须使用上述固定 JSON 包装；普通业务 JSON 不得伪装成 ToolCall。
+                7. 最终正文只输出用户可见答案，不输出分析过程、任务复述或“我可以回答”等内部过渡语。
+                8. 使用 Markdown 时必须保证语法完整：标题标记后留空格；代码围栏及语言标识单独占一行；代码从下一行开始；所有围栏必须闭合。
                 """).strip();
     }
 
@@ -304,8 +374,9 @@ public class JsonAgentModelGateway implements AgentModelGateway {
             if (!message.arguments().isEmpty()) {
                 builder.append(" arguments_json=").append(structuralJson(message.arguments()));
             }
-            if (!message.content().isBlank()) {
-                builder.append(" content_json=").append(structuralJson(message.content()));
+            String content = modelVisibleContent(message);
+            if (!content.isBlank()) {
+                builder.append(" content_json=").append(structuralJson(content));
             }
             if (!message.metadata().isEmpty() && message.type() == AgentMessageType.TOOL_RESULT) {
                 builder.append(" result_metadata_json=").append(structuralJson(message.metadata()));
@@ -313,6 +384,28 @@ public class JsonAgentModelGateway implements AgentModelGateway {
             builder.append('\n');
         }
         return builder.append("</agent_messages>").toString();
+    }
+
+    private String modelVisibleContent(AgentMessage message) {
+        if (message.type() != AgentMessageType.ASSISTANT_TEXT) return message.content();
+        String candidate = message.content().stripLeading();
+        if (!candidate.startsWith("{")) return message.content();
+        try {
+            Map<?, ?> root = objectMapper.readValue(extractJsonObject(candidate), Map.class);
+            return legacyAssistantEnvelope(root) ? stringValue(root.get("assistantText")) : message.content();
+        }
+        catch (RuntimeException ignored) {
+            return message.content();
+        }
+    }
+
+    private boolean legacyAssistantEnvelope(Map<?, ?> root) {
+        if (!(root.get("assistantText") instanceof String)) return false;
+        if (!root.keySet().stream().allMatch(key -> "assistantText".equals(key) || "toolCalls".equals(key))) {
+            return false;
+        }
+        Object calls = root.get("toolCalls");
+        return calls == null || calls instanceof List<?>;
     }
 
     private String structuralJson(Object value) {

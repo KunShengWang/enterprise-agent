@@ -12,6 +12,7 @@ import com.agent.platform.guardrail.GuardrailStage;
 import com.agent.platform.memory.MemoryService;
 import com.agent.platform.llm.ConfiguredLlmCostCalculator;
 import com.agent.platform.llm.LlmUsage;
+import com.agent.platform.llm.LlmCallException;
 import com.agent.platform.tool.ToolCallRequest;
 import com.agent.platform.tool.ToolCallResult;
 import com.agent.platform.tool.ToolDefinition;
@@ -353,6 +354,60 @@ class DefaultAgentRuntimeStateTests {
         assertTrue(deltas.size() >= 2);
         assertEquals(answer, deltas.stream().map(AgentEvent::content).reduce("", String::concat));
         assertTrue(deltas.stream().allMatch(event -> event.sequence() > 0));
+    }
+
+    @Test
+    void protocolFailureRetriesOnceWithinModelBudgetAndThenCompletes() {
+        Fixture fixture = new Fixture();
+        fixture.properties.setMaxModelProtocolRetries(1);
+        AtomicInteger calls = new AtomicInteger();
+        List<AgentEvent> delivered = new ArrayList<>();
+        List<AgentEventDraft> drafts = new ArrayList<>();
+
+        when(fixture.runStore.create(any())).thenAnswer(invocation -> {
+            AgentRunRecord created = invocation.getArgument(0);
+            fixture.persisted.set(created);
+            return created;
+        });
+        when(fixture.runStore.find(anyString()))
+                .thenAnswer(invocation -> Optional.ofNullable(fixture.persisted.get()));
+        when(fixture.runStore.update(anyString(), any())).thenAnswer(invocation -> {
+            java.util.function.UnaryOperator<AgentRunRecord> updater = invocation.getArgument(1);
+            AgentRunRecord updated = updater.apply(fixture.persisted.get());
+            fixture.persisted.set(updated);
+            return updated;
+        });
+        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(new AgentContextView(List.of(), 0, 0, false));
+        org.mockito.Mockito.doAnswer(invocation -> {
+            AgentEventDraft draft = invocation.getArgument(3);
+            drafts.add(draft);
+            return new AgentEvent("event-" + drafts.size(), invocation.getArgument(2),
+                    invocation.getArgument(0), drafts.size(), draft.type(), draft.content(),
+                    draft.payload(), Instant.now());
+        }).when(fixture.timelineStore).appendEvent(anyString(), anyString(), anyString(), any());
+        org.mockito.Mockito.doAnswer(invocation -> {
+            if (calls.incrementAndGet() == 1) {
+                throw new LlmCallException("MODEL_PROTOCOL_ERROR", "invalid protocol", null);
+            }
+            AgentModelDeltaListener listener = invocation.getArgument(1);
+            listener.onDelta("retry succeeded");
+            return finalTurn("retry succeeded");
+        }).when(fixture.modelGateway).nextTurn(any(), any());
+
+        AgentRuntimeResult result = fixture.runtime().run(
+                new AgentRequest("session-protocol", "user-1", "question", Map.of()),
+                delivered::add
+        );
+
+        assertEquals(AgentRunState.COMPLETED, result.state());
+        assertEquals("retry succeeded", result.answer());
+        assertEquals(2, calls.get());
+        assertEquals(2, fixture.persisted.get().budgetSnapshot().modelCalls());
+        assertTrue(drafts.stream().anyMatch(event -> event.type() == AgentEventType.MODEL_FAILED
+                && Boolean.TRUE.equals(event.payload().get("recoverableByProtocolRetry"))));
+        assertTrue(drafts.stream().anyMatch(event -> event.type() == AgentEventType.MODEL_STARTED
+                && Integer.valueOf(1).equals(event.payload().get("protocolRetry"))));
     }
 
     private static AgentModelTurn finalTurn(String answer) {

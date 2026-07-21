@@ -14,4 +14,8 @@ public interface LlmService {
     default Optional<LlmUsage> lastUsage() {
         return Optional.empty();
     }
+
+    default Optional<String> lastFinishReason() {
+        return Optional.empty();
+    }
 }

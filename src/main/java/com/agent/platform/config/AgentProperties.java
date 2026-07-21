@@ -27,6 +27,8 @@ public class AgentProperties {
 
     private int maxContextOverflowRetries = 1;
 
+    private int maxModelProtocolRetries = 1;
+
     private double maxEstimatedCostPerRun = 0;
 
     private ModelPricing modelPricing = new ModelPricing();
@@ -143,6 +145,14 @@ public class AgentProperties {
 
     public void setMaxContextOverflowRetries(int maxContextOverflowRetries) {
         this.maxContextOverflowRetries = maxContextOverflowRetries;
+    }
+
+    public int getMaxModelProtocolRetries() {
+        return maxModelProtocolRetries;
+    }
+
+    public void setMaxModelProtocolRetries(int maxModelProtocolRetries) {
+        this.maxModelProtocolRetries = Math.max(0, maxModelProtocolRetries);
     }
 
     public double getMaxEstimatedCostPerRun() {

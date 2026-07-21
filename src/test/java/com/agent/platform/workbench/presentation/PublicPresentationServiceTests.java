@@ -164,6 +164,120 @@ class PublicPresentationServiceTests {
     }
 
     @Test
+    void modelFailurePublishesOnlySafeActionableDiagnostics() {
+        Fixture fixture = fixture(List.of(
+                event(4, WorkEventType.RUN_EVENT_PROJECTED, "MODEL_FAILED", Map.of(
+                        "errorType", "MODEL_PROTOCOL_ERROR", "providerBody", "sensitive")),
+                event(5, WorkEventType.RUN_EVENT_PROJECTED, "RUN_FAILED", Map.of(
+                        "stopReason", "MODEL_ERROR", "traceId", "trace-1"))));
+        fixture.stub();
+
+        PublicPresentation failure = fixture.service.publicTimeline(principal, "work-1", -1, 100).stream()
+                .filter(item -> item.kind() == PublicPresentationKind.ERROR)
+                .filter(item -> "模型调用失败".equals(item.title()))
+                .findFirst().orElseThrow();
+
+        assertEquals("系统未能获得模型响应，本次任务没有形成最终答案。", failure.summary());
+        assertEquals("MODEL_PROTOCOL_ERROR", failure.detail().attributes().get("safeErrorCode"));
+        assertEquals("true", failure.detail().attributes().get("retryable"));
+        assertEquals("correlation", failure.detail().attributes().get("correlationId"));
+        assertEquals("trace-1", failure.detail().attributes().get("traceId"));
+        assertFalse(failure.toString().contains("sensitive"));
+    }
+
+    @Test
+    void routeConfirmationIsNotPublishedAsToolApproval() {
+        Fixture fixture = fixture(List.of(event(2, WorkEventType.ROUTE_CONFIRMATION_REQUIRED,
+                "WAITING_CONFIRMATION", Map.of("previewId", "preview-1"))));
+        fixture.stub();
+
+        List<PublicPresentation> timeline = fixture.service.publicTimeline(principal, "work-1", -1, 100);
+
+        PublicPresentation confirmation = timeline.stream()
+                .filter(item -> item.kind() == PublicPresentationKind.CONFIRMATION_REQUIRED)
+                .findFirst().orElseThrow();
+        assertEquals("ROUTE_PREVIEW", confirmation.detail().referenceType());
+        assertEquals("preview-1", confirmation.detail().referenceId());
+        assertFalse(timeline.stream().anyMatch(item -> item.kind() == PublicPresentationKind.APPROVAL_REQUIRED));
+    }
+
+    @Test
+    void clarificationPublishesConcreteMissingInputsWithoutInternalReason() {
+        Fixture fixture = fixture(List.of(event(3, WorkEventType.CLARIFICATION_REQUIRED, "WAITING_INPUT",
+                Map.of("reasons", List.of("missing required inputs: queueNames,requestIds")))));
+        fixture.routingDecision = routing(Map.of(
+                "targetId", "INCIDENT_INVESTIGATION",
+                "missingInputs", List.of("queueNames", "requestIds"),
+                "reason", "internal router reason",
+                "userFacingSummary", "需要补充事故范围。"));
+        fixture.stub();
+
+        PublicPresentation clarification = fixture.service.publicTimeline(principal, "work-1", -1, 100)
+                .stream().filter(item -> item.kind() == PublicPresentationKind.WAITING_FOR_USER)
+                .findFirst().orElseThrow();
+
+        assertEquals("请在下方输入框补充以下信息，提交后系统会继续当前任务。", clarification.summary());
+        assertEquals(List.of(
+                "消息队列名称（queueNames），可填写一个或多个实际队列名",
+                "一个或多个请求 ID（requestIds）"), clarification.steps());
+        assertEquals("ADD_INPUT", clarification.detail().attributes().get("inputMode"));
+        assertFalse(clarification.toString().contains("internal router reason"));
+    }
+
+    @Test
+    void rejectedWorkCommandUsesItsOwnSafeCodeAndDoesNotPretendRunFailed() {
+        Fixture fixture = fixture(List.of(event(6, WorkEventType.WORK_COMMAND_REJECTED, "REJECTED",
+                Map.of("command", "ADD_INPUT_TO_ACTIVE_WORK", "code", "UNSUPPORTED_FOR_TARGET"))));
+        fixture.stub();
+
+        PublicPresentation rejected = fixture.service.publicTimeline(principal, "work-1", -1, 100)
+                .stream().filter(item -> item.kind() == PublicPresentationKind.ERROR).findFirst().orElseThrow();
+
+        assertEquals("指令未执行", rejected.title());
+        assertEquals("UNSUPPORTED_FOR_TARGET", rejected.detail().attributes().get("safeErrorCode"));
+        assertEquals("false", rejected.detail().attributes().get("retryable"));
+        assertFalse(rejected.toString().contains("RUN_FAILED"));
+    }
+
+    @Test
+    void incidentPublishesSafeDomainNarrativeWithoutRawPayloadOrReasoning() {
+        Fixture fixture = fixture(List.of(
+                event(1, WorkEventType.INCIDENT_EVENT_PROJECTED, "INCIDENT_STATE_CHANGED",
+                        Map.of("targetStatus", "PLANNING", "internalReason", "hidden")),
+                event(2, WorkEventType.INCIDENT_EVENT_PROJECTED, "TASK_ASSIGNMENT",
+                        Map.of("recipientRole", "ORDER_ANALYST", "taskId", "task-order")),
+                event(3, WorkEventType.INCIDENT_EVENT_PROJECTED, "EVIDENCE_SUBMITTED",
+                        Map.of("senderRole", "ORDER_ANALYST", "taskId", "task-order",
+                                "evidenceIds", List.of("evidence-1", "evidence-2"), "rawOutput", "secret")),
+                event(4, WorkEventType.INCIDENT_EVENT_PROJECTED, "INCIDENT_STATE_CHANGED",
+                        Map.of("targetStatus", "CHECKING_CONSISTENCY")),
+                event(5, WorkEventType.INCIDENT_EVENT_PROJECTED, "INCIDENT_STATE_CHANGED",
+                        Map.of("targetStatus", "REVIEWING")),
+                event(6, WorkEventType.INCIDENT_EVENT_PROJECTED, "INCIDENT_STATE_CHANGED",
+                        Map.of("targetStatus", "ASSESSED", "prompt", "private"))));
+        fixture.stub();
+
+        List<PublicPresentation> timeline = fixture.service.publicTimeline(principal, "work-1", -1, 100);
+
+        assertEquals(List.of(
+                        "已启动只读 Multi-Agent 调查",
+                        "已派发 Order Specialist",
+                        "Order Specialist 已完成取证",
+                        "Specialist 已完成取证",
+                        "Reviewer 正在汇总证据",
+                        "已生成事故 Assessment"),
+                timeline.stream().map(PublicPresentation::title).toList());
+        assertEquals("2", timeline.get(2).detail().attributes().get("evidenceCount"));
+        assertEquals("evidence-1, evidence-2", timeline.get(2).detail().attributes().get("evidenceIds"));
+        assertEquals("Order", timeline.get(2).detail().attributes().get("role"));
+        assertEquals("run-1", timeline.get(2).detail().attributes().get("incidentId"));
+        assertTrue(timeline.get(5).summary().contains("未执行任何恢复操作"));
+        assertFalse(timeline.toString().contains("hidden"));
+        assertFalse(timeline.toString().contains("secret"));
+        assertFalse(timeline.toString().contains("private"));
+    }
+
+    @Test
     void sequenceReplayIsIdempotentAndOwnershipFailureIsClosed() {
         Fixture fixture = fixture(List.of(event(2, WorkEventType.ROUTING_DECIDED, "ROUTED",
                 Map.of("targetId", "GENERAL_AGENT"))));

@@ -15,6 +15,11 @@ import java.util.Set;
 @Component
 public class DelegationPlanValidator {
 
+    private static final Set<IncidentAgentRole> REQUIRED_INVESTIGATION_ROLES = Set.of(
+            IncidentAgentRole.ORDER_ANALYST,
+            IncidentAgentRole.INVENTORY_ANALYST,
+            IncidentAgentRole.MQ_ANALYST);
+
     private static final Set<String> FORBIDDEN_INTENTS = Set.of(
             "recover", "replay", "execute", "update", "delete", "write", "approve",
             "恢复", "重放", "执行", "更新", "删除", "审批", "修改");
@@ -30,8 +35,8 @@ public class DelegationPlanValidator {
         if (snapshot == null || !snapshot.incidentId().equals(plan.incidentId())) {
             errors.add("incidentId does not match immutable snapshot");
         }
-        if (plan.tasks().isEmpty() || plan.tasks().size() > 3) {
-            errors.add("task count must be between 1 and 3");
+        if (plan.tasks().size() != REQUIRED_INVESTIGATION_ROLES.size()) {
+            errors.add("investigation must contain exactly three domain specialist tasks");
         }
         if (snapshot != null && snapshot.deadlineAt() != null && !Instant.now().isBefore(snapshot.deadlineAt())) {
             errors.add("incident deadline is exhausted");
@@ -60,6 +65,9 @@ public class DelegationPlanValidator {
             if (FORBIDDEN_INTENTS.stream().anyMatch(normalizedObjective::contains)) {
                 errors.add("write or recovery intent is forbidden in Phase 1");
             }
+        }
+        if (!roles.equals(REQUIRED_INVESTIGATION_ROLES)) {
+            errors.add("investigation must cover ORDER_ANALYST, INVENTORY_ANALYST and MQ_ANALYST");
         }
         return new ValidationResult(errors.isEmpty(), List.copyOf(errors));
     }

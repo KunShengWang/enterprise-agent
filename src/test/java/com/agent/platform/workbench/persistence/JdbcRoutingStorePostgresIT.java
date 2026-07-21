@@ -6,6 +6,7 @@ import com.agent.platform.llm.LlmService;
 import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
 import com.agent.platform.prompt.PromptRequest;
 import com.agent.platform.workbench.application.DefaultWorkCommandClassifier;
+import com.agent.platform.workbench.application.CommandClassifierResult;
 import com.agent.platform.workbench.application.LlmUnifiedTaskRouter;
 import com.agent.platform.workbench.application.NoopRoutingFailureInjector;
 import com.agent.platform.workbench.application.RouteContextResolver;
@@ -25,6 +26,7 @@ import com.agent.platform.workbench.model.ClassifierType;
 import com.agent.platform.workbench.model.DecisionStatus;
 import com.agent.platform.workbench.model.ExecutionDecision;
 import com.agent.platform.workbench.model.WorkCommandType;
+import com.agent.platform.workbench.model.WorkCommandClassification;
 import com.agent.platform.workbench.model.WorkControlState;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
 import com.agent.platform.workbench.target.ExecutionTargetRegistry;
@@ -179,10 +181,10 @@ class JdbcRoutingStorePostgresIT {
     void incidentRouteStopsAtConfirmationAndCreatesNoChildExecution() {
         Fixture fixture = fixture(successRouter(
                 "INCIDENT_INVESTIGATION",
-                Map.of("batchId", "BATCH-1", "queueName", "floworder.incident.e2e.dlq"), 50, 20),
+                Map.of("requestIds", List.of("REQ-1"), "queueName", "floworder.incident.e2e.dlq"), 50, 20),
                 new NoopRoutingFailureInjector());
         AgentWorkItem work = createWork(fixture,
-                "调查 BATCH-1，队列 floworder.incident.e2e.dlq 的异常订单事故");
+                "调查 requestId=REQ-1，队列 floworder.incident.e2e.dlq 的异常订单事故");
 
         fixture.coordinator.route(principal, work.workItemId(), work.routingRequestId());
 
@@ -190,6 +192,32 @@ class JdbcRoutingStorePostgresIT {
         assertEquals(WorkControlState.WAITING_CONFIRMATION, routed.controlState());
         assertTrue(routed.dispatchRequestId().isBlank());
         assertTrue(fixture.workbench.listLinks(principal, work.workItemId()).isEmpty());
+    }
+
+    @Test
+    void modelAddInputAgainstCompletedWorkBecomesNewGoalInSameConversation() throws Exception {
+        Fixture fixture = fixture(successRouter("GENERAL_AGENT", Map.of(), 10, 5),
+                new NoopRoutingFailureInjector());
+        AgentWorkItem completed = createWork(fixture, "解释 Spring 三级缓存");
+        try (Connection connection = openConnection()) {
+            execute(connection, "UPDATE agent_work_item SET control_state='CLOSED', execution_state='COMPLETED', outcome='ANSWERED', completed_at=? WHERE work_item_id=?",
+                    Instant.now(), completed.workItemId());
+        }
+        UnifiedWorkIntakeService followUpIntake = new UnifiedWorkIntakeService(
+                fixture.routing, fixture.workbench, request -> new CommandClassifierResult(
+                new WorkCommandClassification(WorkCommandType.ADD_INPUT_TO_ACTIVE_WORK, .96,
+                        "expand the completed answer", completed.workItemId(), ""),
+                ClassifierType.MODEL, "model", "prompt", "raw", "{}", 10, 5, 3, "trace"));
+
+        var followUp = followUpIntake.accept(principal, new UnifiedWorkInputRequest(
+                "input-follow-up-" + prefix, "client-follow-up-" + prefix, completed.conversationId(),
+                "给出代码解释", ClassifierType.MODEL, null, ""));
+
+        assertFalse(followUp.commandOnly());
+        assertEquals(WorkCommandType.NORMAL_GOAL, followUp.commandDecision().commandType());
+        assertEquals(WorkControlState.ROUTING, followUp.workItem().controlState());
+        assertEquals(completed.conversationId(), followUp.workItem().conversationId());
+        assertFalse(completed.workItemId().equals(followUp.workItem().workItemId()));
     }
 
     private Fixture fixture(UnifiedTaskRouter router, RoutingFailureInjector injector) {

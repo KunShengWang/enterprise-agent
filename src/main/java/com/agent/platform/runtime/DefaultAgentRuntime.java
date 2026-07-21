@@ -697,6 +697,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     toolResults, usedTools, usedRag, budget);
             AgentModelTurn modelTurn;
             StreamingModelDeltaPublisher modelDeltaPublisher;
+            int modelProtocolRetries = 0;
             while (true) {
                 modelDeltaPublisher = new StreamingModelDeltaPublisher(
                         sessionId,
@@ -720,11 +721,14 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 catch (RuntimeException modelFailure) {
                     // 判断是否是上下文溢出异常
                     boolean contextOverflow = isContextOverflow(modelFailure);
+                    String errorType = modelErrorType(modelFailure);
+                    boolean protocolFailure = "MODEL_PROTOCOL_ERROR".equals(errorType);
                     publish(sessionId, userId, runId, AgentEventType.MODEL_FAILED,
                             contextOverflow ? "model rejected context" : "model turn failed",
                             Map.of(
-                                    "errorType", modelErrorType(modelFailure),
-                                    "recoverableByCompaction", contextOverflow
+                                    "errorType", errorType,
+                                    "recoverableByCompaction", contextOverflow,
+                                    "recoverableByProtocolRetry", protocolFailure
                             ), listener);
                     if (!contextOverflow) {
                         budget.recordModelCall(new LlmUsage(0, 0, 0, 0, 0, "", "failed"), 0);
@@ -737,6 +741,23 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                             return finishBudgetStop(request, runId, sessionId, userId, interruptedStop.get(),
                                     toolResults, usedTools, usedRag, budget, listener);
                         }
+                    }
+                    if (protocolFailure
+                            && modelProtocolRetries < Math.max(0, properties.getMaxModelProtocolRetries())) {
+                        modelProtocolRetries++;
+                        Optional<AgentStopReason> retryStop = budget.beforeModelCall();
+                        if (retryStop.isPresent()) {
+                            return finishBudgetStop(request, runId, sessionId, userId, retryStop.get(),
+                                    toolResults, usedTools, usedRag, budget, listener);
+                        }
+                        publish(sessionId, userId, runId, AgentEventType.MODEL_STARTED,
+                                "model turn retry after protocol rejection",
+                                Map.of(
+                                        "turn", budget.snapshot().turns(),
+                                        "protocolRetry", modelProtocolRetries,
+                                        "maxRetries", properties.getMaxModelProtocolRetries()
+                                ), listener);
+                        continue;
                     }
                     // ============ 上下文溢出处理 ============
                     if (contextOverflow

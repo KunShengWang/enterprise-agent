@@ -9,7 +9,7 @@ spring:
       chat:
         model: ${DEEPSEEK_CHAT_MODEL:deepseek-chat}
         temperature: 0.2
-        max-tokens: 1200
+        max-tokens: ${DEEPSEEK_MAX_TOKENS:4096}
 
 server:
   port: 8083
@@ -32,6 +32,7 @@ enterprise-agent:
   context-safety-margin-tokens: ${AGENT_CONTEXT_SAFETY_MARGIN_TOKENS:1000}
   context-summary-max-tokens: ${AGENT_CONTEXT_SUMMARY_MAX_TOKENS:1500}
   max-context-overflow-retries: ${AGENT_CONTEXT_OVERFLOW_RETRIES:1}
+  max-model-protocol-retries: ${AGENT_MODEL_PROTOCOL_RETRIES:1}
   # Cost limiting is opt-in because provider prices change. Configure both prices and a positive limit.
   max-estimated-cost-per-run: ${AGENT_MAX_ESTIMATED_COST_PER_RUN:0}
   model-pricing:

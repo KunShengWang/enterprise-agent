@@ -49,6 +49,7 @@ public class SpringAiLlmService implements LlmService {
     private final ResilienceProperties resilienceProperties;
 
     private final ThreadLocal<LlmUsage> lastUsage = new ThreadLocal<>();
+    private final ThreadLocal<String> lastFinishReason = new ThreadLocal<>();
 
     private final ThreadPoolExecutor callExecutor;
     private final AtomicInteger consecutiveFailures = new AtomicInteger();
@@ -85,6 +86,7 @@ public class SpringAiLlmService implements LlmService {
             response = callWithRetry(toSpringPrompt(promptRequest));
             // 从 LLM 返回信息中提取 token 调用额度并保存
             lastUsage.set(extractUsage(response));
+            captureFinishReason(response);
         }
         catch (RuntimeException exception) {
             // 上下文溢出必须交给 Agent Runtime 压缩后重试，不能降级成一条伪最终回答。
@@ -109,7 +111,11 @@ public class SpringAiLlmService implements LlmService {
     @Override
     public Flux<String> stream(PromptRequest promptRequest) {
         return streamWithRetry(toSpringPrompt(promptRequest), 1)
-                .doOnNext(response -> lastUsage.set(extractUsage(response)))
+                .doOnSubscribe(ignored -> lastFinishReason.remove())
+                .doOnNext(response -> {
+                    lastUsage.set(extractUsage(response));
+                    captureFinishReason(response);
+                })
                 .map(response -> {
                     if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
                         return "";
@@ -167,6 +173,17 @@ public class SpringAiLlmService implements LlmService {
     @Override
     public Optional<LlmUsage> lastUsage() {
         return Optional.ofNullable(lastUsage.get());
+    }
+
+    @Override
+    public Optional<String> lastFinishReason() {
+        return Optional.ofNullable(lastFinishReason.get());
+    }
+
+    private void captureFinishReason(ChatResponse response) {
+        if (response == null || response.getResult() == null || response.getResult().getMetadata() == null) return;
+        String reason = response.getResult().getMetadata().getFinishReason();
+        if (reason != null && !reason.isBlank()) lastFinishReason.set(reason.trim());
     }
 
     private ChatModel requireChatModel() {

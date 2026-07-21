@@ -24,6 +24,7 @@ import com.agent.platform.runtime.JdbcAgentTimelineStore;
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.storage.AgentStorageException;
 import com.agent.platform.workbench.model.ProjectedWorkEventDraft;
+import com.agent.platform.workbench.model.AgentWorkItem;
 import com.agent.platform.workbench.model.WorkEvent;
 import com.agent.platform.workbench.model.WorkEventType;
 import com.agent.platform.workbench.model.WorkLinkType;
@@ -211,6 +212,53 @@ class UnifiedWorkEventProjectorPostgresIT {
         assertEquals(WorkExecutionState.RUNNING, resumedWork.executionState());
         assertEquals(WorkOutcome.UNDETERMINED, resumedWork.outcome());
         assertEquals(null, resumedWork.completedAt());
+    }
+
+    @Test
+    void failedRunWithFailureReasonConvergesAndReplayCannotChangeTerminalState() {
+        JdbcWorkbenchStore workbench = new JdbcWorkbenchStore(properties, objectMapper);
+        var created = new WorkInputService(new WorkItemService(workbench)).submit(
+                principal, SubmitWorkInputCommand.direct(
+                        "client-failed-" + suffix, "conversation-failed-" + suffix, "failed goal", 0));
+        insertLink(created.workItem().workItemId(), WorkLinkType.RUN, runId, "dispatch-failed");
+
+        JdbcAgentRuntimeStore runs = new JdbcAgentRuntimeStore(properties, objectMapper);
+        AgentRequest request = new AgentRequest(created.workItem().conversationId(), principal.principalId(),
+                "failed goal", Map.of("workItemId", created.workItem().workItemId(),
+                com.agent.platform.runtime.AgentRunStore.DISPATCH_REQUEST_METADATA_KEY,
+                "dispatch-failed-" + suffix));
+        runs.create(AgentRunRecord.create(runId, "trace-" + suffix,
+                        created.workItem().conversationId(), request)
+                .finished(AgentRunState.FAILED, AgentRunPhase.FAILED, "", "MODEL_ERROR",
+                        List.of(), List.of(), false, false));
+
+        JdbcAgentTimelineStore timeline = new JdbcAgentTimelineStore(properties, objectMapper);
+        timeline.openSession(sessionId, principal.principalId());
+        timeline.appendEvent(sessionId, principal.principalId(), runId,
+                new AgentEventDraft(AgentEventType.RUN_FAILED, "run failed", Map.of("stopReason", "MODEL_ERROR")));
+        WorkProjectionSource source = new WorkProjectionSource(created.workItem().workItemId(), "AGENT_RUN", runId);
+        seedProjectionCursors(List.of(source));
+        handoffProjectionLease(List.of(source), "projector-test", 2, Instant.now().plusSeconds(30));
+        WorkbenchProjectionProperties projectionProperties = new WorkbenchProjectionProperties();
+        projectionProperties.setEnabled(true);
+        projectionProperties.setInstanceId("projector-test");
+        var projector = new UnifiedWorkEventProjector(
+                new FixedSourceProjectionStore(workbench, List.of(source)), timeline, runs,
+                new JdbcIncidentStore(properties, objectMapper), new JdbcIncidentStore(properties, objectMapper),
+                new JdbcIncidentRecoveryPlanStore(properties, objectMapper), projectionProperties);
+
+        projector.projectOnce();
+        AgentWorkItem failed = workbench.findWorkItem(principal, created.workItem().workItemId()).orElseThrow();
+        long failedVersion = failed.version();
+        assertEquals(WorkControlState.CLOSED, failed.controlState());
+        assertEquals(WorkExecutionState.FAILED, failed.executionState());
+        assertEquals(WorkOutcome.FAILED, failed.outcome());
+        assertTrue(failed.completedAt() != null);
+
+        for (int replay = 0; replay < 10; replay++) projector.projectOnce();
+        AgentWorkItem replayed = workbench.findWorkItem(principal, created.workItem().workItemId()).orElseThrow();
+        assertEquals(failedVersion, replayed.version());
+        assertEquals(WorkExecutionState.FAILED, replayed.executionState());
     }
 
     private IncidentRecord incident() {

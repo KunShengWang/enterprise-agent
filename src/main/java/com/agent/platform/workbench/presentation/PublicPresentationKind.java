@@ -10,6 +10,7 @@ public enum PublicPresentationKind {
     TOOL_ACTIVITY,
     AGENT_DELEGATION,
     WAITING_FOR_USER,
+    CONFIRMATION_REQUIRED,
     APPROVAL_REQUIRED,
     RETRY,
     RECOVERY,

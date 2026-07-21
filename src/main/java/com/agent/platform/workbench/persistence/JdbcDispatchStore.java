@@ -550,12 +550,25 @@ public class JdbcDispatchStore implements DispatchStore {
             case RECOVERY_PLAN -> "active_recovery_plan_id";
             default -> throw new IllegalArgumentException("unsupported primary dispatch link: " + link.linkType());
         };
-        try (PreparedStatement statement = connection.prepareStatement("UPDATE agent_work_item SET control_state='DISPATCHED', execution_state='RUNNING', "
-                + column + "=?, version=version+1, updated_at=? WHERE work_item_id=?")) {
+        String sql = """
+                UPDATE agent_work_item SET
+                    control_state=CASE WHEN control_state IN ('CANCEL_REQUESTED','CLOSED')
+                        THEN control_state ELSE 'DISPATCHED' END,
+                    execution_state=CASE WHEN control_state IN ('CANCEL_REQUESTED','CLOSED')
+                        THEN execution_state ELSE 'RUNNING' END,
+                    %s=?, version=version+1, updated_at=?
+                WHERE work_item_id=? AND (
+                    control_state IN ('DISPATCHING','CANCEL_REQUESTED')
+                    OR (control_state='CLOSED' AND outcome='CANCELLED')
+                )
+                """.formatted(column);
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, link.linkedId());
             statement.setTimestamp(2, Timestamp.from(now));
             statement.setString(3, work.workItemId());
-            statement.executeUpdate();
+            if (statement.executeUpdate() != 1) {
+                throw new WorkbenchCasConflictException("work item left dispatchable state before linking target");
+            }
         }
     }
 

@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import type { WorkItem } from '../types/workbench'
+import type { ConversationHistoryItem, WorkItem } from '../types/workbench'
 
 const CONVERSATION_KEY = 'unified-workbench-conversation'
 const HISTORY_KEY = 'unified-workbench-conversations'
@@ -35,9 +35,24 @@ export function useWorkbenchSelection() {
 
   rememberConversation(conversationId.value)
 
+  const conversationHistory = computed<ConversationHistoryItem[]>(() => {
+    const grouped = new Map<string, WorkItem[]>()
+    history.value.forEach(item => grouped.set(item.conversationId,
+      [...(grouped.get(item.conversationId) ?? []), item]))
+    return [...grouped.entries()].map(([id, items]) => {
+      const chronological = [...items].sort((left, right) =>
+        new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime())
+      const latest = [...items].sort((left, right) =>
+        new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())[0]
+      return { conversationId: id, title: chronological[0].originalGoal,
+        latestWorkItem: latest, workItemCount: items.length, updatedAt: latest.updatedAt }
+    }).sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())
+  })
+
   const filteredHistory = computed(() => {
     const keyword = search.value.trim().toLowerCase()
-    return history.value.filter(item => !keyword || [item.originalGoal, item.activeExecutionTarget, item.controlState]
+    return conversationHistory.value.filter(item => !keyword || [item.title,
+      item.latestWorkItem.originalGoal, item.latestWorkItem.activeExecutionTarget, item.latestWorkItem.controlState]
       .some(value => String(value ?? '').toLowerCase().includes(keyword)))
   })
 
@@ -48,9 +63,9 @@ export function useWorkbenchSelection() {
     return conversationId.value
   }
 
-  function select(item: WorkItem) {
+  function select(item: ConversationHistoryItem) {
     conversationId.value = item.conversationId
-    selectedWorkItemId.value = item.workItemId
+    selectedWorkItemId.value = item.latestWorkItem.workItemId
     rememberConversation(item.conversationId)
   }
 
@@ -61,7 +76,7 @@ export function useWorkbenchSelection() {
   }
 
   return {
-    conversationId, selectedWorkItemId, history, filteredHistory, search,
+    conversationId, selectedWorkItemId, history, conversationHistory, filteredHistory, search,
     knownConversations, rememberConversation, beginNewConversation, select, replaceHistory,
   }
 }

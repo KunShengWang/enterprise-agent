@@ -2,6 +2,7 @@ package com.agent.platform.workbench.application;
 
 import com.agent.platform.ordercare.incident.application.IncidentTraceProjector;
 import com.agent.platform.ordercare.incident.model.AgentTaskRecord;
+import com.agent.platform.ordercare.incident.model.AgentTaskStatus;
 import com.agent.platform.ordercare.incident.model.EvidenceRecord;
 import com.agent.platform.ordercare.incident.model.IncidentAggregate;
 import com.agent.platform.ordercare.incident.model.IncidentTrace;
@@ -107,8 +108,9 @@ public class UnifiedWorkExecutionTreeService {
             AgentTaskRecord task = tasks.get(child.taskId());
             int attempt = attempt(child.runRole(), task);
             nodes.add(node(child.runRole(), child.taskId(), child.trace().traceId(), attempt,
-                    task == null ? 1 : task.maxAttempts(), child.trace().status(),
-                    objective(child.runRole(), task), error(child.trace(), task), child.trace(),
+                    task == null ? 1 : task.maxAttempts(), authoritativeStatus(child.trace(), task),
+                    objective(child.runRole(), task), authoritativeError(child.trace(), task),
+                    runtimeWarning(child.trace(), task), child.trace(),
                     evidenceFor(aggregate.evidence(), child.trace().traceId(), child.taskId())));
             representedRuns.add(child.trace().traceId());
         }
@@ -124,7 +126,7 @@ public class UnifiedWorkExecutionTreeService {
             addMissingRoleNode(nodes, representedRuns,
                     "SPECIALIST:" + task.role() + ":ATTEMPT_" + (task.attempt() + 1),
                     task.taskId(), task.childRunId(), task.attempt() + 1, task.maxAttempts(),
-                    task.status().name(), task.objective(), task.lastError(), aggregate.evidence());
+                    task.status().name(), task.objective(), task.lastError(), aggregate.evidence(), task);
         }
         addMissingRoleNode(nodes, representedRuns, "REVIEWER", "",
                 aggregate.incident().reviewerRunId(), 1, 1, aggregate.incident().status().name(),
@@ -152,6 +154,22 @@ public class UnifiedWorkExecutionTreeService {
                                     String objective,
                                     String fallbackError,
                                     List<EvidenceRecord> evidence) {
+        addMissingRoleNode(nodes, representedRuns, role, taskId, runId, attempt, maxAttempts,
+                fallbackStatus, objective, fallbackError, evidence, null);
+    }
+
+    private void addMissingRoleNode(List<UnifiedWorkExecutionTree.AgentNode> nodes,
+                                    Set<String> representedRuns,
+                                    String role,
+                                    String taskId,
+                                    String runId,
+                                    int attempt,
+                                    int maxAttempts,
+                                    String fallbackStatus,
+                                    String objective,
+                                    String fallbackError,
+                                    List<EvidenceRecord> evidence,
+                                    AgentTaskRecord authoritativeTask) {
         if (!hasText(runId)) {
             if (hasText(taskId)) {
                 nodes.add(node(role, taskId, "", attempt, maxAttempts, fallbackStatus,
@@ -162,8 +180,9 @@ public class UnifiedWorkExecutionTreeService {
         if (representedRuns.contains(runId)) return;
         TraceRun trace = runtimeTraces.project(runId).orElse(null);
         nodes.add(node(role, taskId, runId, attempt, maxAttempts,
-                trace == null ? fallbackStatus : trace.status(), objective,
-                trace == null ? normalize(fallbackError) : error(trace, null), trace,
+                trace == null ? fallbackStatus : authoritativeStatus(trace, authoritativeTask), objective,
+                trace == null ? normalize(fallbackError) : authoritativeError(trace, authoritativeTask),
+                trace == null ? "" : runtimeWarning(trace, authoritativeTask), trace,
                 evidenceFor(evidence, runId, taskId)));
         representedRuns.add(runId);
     }
@@ -244,11 +263,54 @@ public class UnifiedWorkExecutionTreeService {
                                                      String error,
                                                      TraceRun trace,
                                                      List<EvidenceRecord> evidence) {
+        return node(role, taskId, runId, attempt, maxAttempts, status, objective, error, "", trace, evidence);
+    }
+
+    private UnifiedWorkExecutionTree.AgentNode node(String role,
+                                                     String taskId,
+                                                     String runId,
+                                                     int attempt,
+                                                     int maxAttempts,
+                                                     String status,
+                                                     String objective,
+                                                     String error,
+                                                     String runtimeWarning,
+                                                     TraceRun trace,
+                                                     List<EvidenceRecord> evidence) {
         String identity = hasText(runId) ? runId : normalize(taskId) + ":" + Math.max(1, attempt);
         return new UnifiedWorkExecutionTree.AgentNode(
                 role + ":" + identity, role, normalize(taskId), normalize(runId),
                 Math.max(1, attempt), Math.max(1, maxAttempts), normalize(status),
-                normalize(objective), normalize(error), trace, evidence, metrics(trace));
+                trace == null ? normalize(status) : normalize(trace.status()),
+                normalize(objective), normalize(error), normalize(runtimeWarning), trace, evidence, metrics(trace));
+    }
+
+    private String authoritativeStatus(TraceRun trace, AgentTaskRecord task) {
+        if (isCurrentTaskRun(trace, task)) return task.status().name();
+        return trace.status();
+    }
+
+    private String authoritativeError(TraceRun trace, AgentTaskRecord task) {
+        if (!isCurrentTaskRun(trace, task)) return error(trace, task);
+        if (task.status() == AgentTaskStatus.SUCCEEDED) return "";
+        return hasText(task.lastError()) ? task.lastError() : normalize(trace.failureReason());
+    }
+
+    private String runtimeWarning(TraceRun trace, AgentTaskRecord task) {
+        if (!isCurrentTaskRun(trace, task)
+                || task.status() != AgentTaskStatus.SUCCEEDED
+                || !"FAILED".equalsIgnoreCase(trace.status())) return "";
+        if (Boolean.TRUE.equals(task.outputSummary().get("recoveredFromDuplicateToolRequest"))) {
+            return "Runtime blocked a duplicate tool request (" + normalize(trace.failureReason())
+                    + "); the task recovered from the first persisted read-only result.";
+        }
+        return "Runtime ended as FAILED (" + normalize(trace.failureReason())
+                + "), but the authoritative task completed from persisted evidence.";
+    }
+
+    private boolean isCurrentTaskRun(TraceRun trace, AgentTaskRecord task) {
+        return trace != null && task != null && hasText(task.childRunId())
+                && task.childRunId().equals(trace.traceId());
     }
 
     private UnifiedWorkExecutionTree.NodeMetrics metrics(TraceRun trace) {

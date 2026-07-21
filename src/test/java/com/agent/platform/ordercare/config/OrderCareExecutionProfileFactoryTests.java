@@ -3,6 +3,8 @@ package com.agent.platform.ordercare.config;
 import com.agent.platform.ordercare.tool.OrderCareToolCatalog;
 import com.agent.platform.runtime.AgentExecutionProfile;
 import com.agent.platform.runtime.DefaultAgentCapabilityRegistry;
+import com.agent.platform.config.AgentProperties;
+import com.agent.platform.config.GeneralAgentExecutionProfileFactory;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
@@ -38,7 +40,8 @@ class OrderCareExecutionProfileFactoryTests {
     @Test
     void resolverAcceptsOnlyServerKnownScenarioIds() {
         AgentScenarioProfileResolver resolver = new AgentScenarioProfileResolver(
-                new OrderCareExecutionProfileFactory()
+                new OrderCareExecutionProfileFactory(),
+                new GeneralAgentExecutionProfileFactory(new AgentProperties())
         );
 
         assertEquals(OrderCareExecutionProfileFactory.PROFILE_NAME,
@@ -46,6 +49,8 @@ class OrderCareExecutionProfileFactoryTests {
                         .orElseThrow()
                         .name());
         assertFalse(resolver.resolve("").isPresent());
+        assertEquals(GeneralAgentExecutionProfileFactory.PROFILE_NAME,
+                resolver.resolve(AgentScenarioProfileResolver.GENERAL_AGENT_V1).orElseThrow().name());
         assertThrows(IllegalArgumentException.class, () -> resolver.resolve("user-defined-profile"));
     }
 }

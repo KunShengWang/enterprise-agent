@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.Generation;
+import org.springframework.ai.chat.metadata.ChatGenerationMetadata;
 import org.springframework.ai.chat.prompt.Prompt;
 import reactor.core.publisher.Flux;
 
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -59,6 +62,30 @@ class SpringAiLlmServiceStreamingTests {
             assertThrows(LlmCallException.class,
                     () -> service.stream(prompt()).collectList().block(Duration.ofSeconds(2)));
             verify(chatModel, times(1)).stream(any(Prompt.class));
+        }
+        finally {
+            service.shutdownExecutor();
+        }
+    }
+
+    @Test
+    void retainsProviderFinishReasonFromFinalStreamingChunk() {
+        ChatModel chatModel = mock(ChatModel.class);
+        ObjectProvider<ChatModel> provider = provider(chatModel);
+        ResilienceProperties properties = properties();
+        ChatResponse response = mock(ChatResponse.class);
+        Generation generation = mock(Generation.class);
+        ChatGenerationMetadata metadata = mock(ChatGenerationMetadata.class);
+        when(response.getResult()).thenReturn(generation);
+        when(generation.getMetadata()).thenReturn(metadata);
+        when(metadata.getFinishReason()).thenReturn("length");
+        when(generation.getOutput()).thenReturn(null);
+        when(chatModel.stream(any(Prompt.class))).thenReturn(Flux.just(response));
+        SpringAiLlmService service = new SpringAiLlmService(provider, properties);
+
+        try {
+            service.stream(prompt()).collectList().block(Duration.ofSeconds(2));
+            assertEquals("length", service.lastFinishReason().orElseThrow());
         }
         finally {
             service.shutdownExecutor();

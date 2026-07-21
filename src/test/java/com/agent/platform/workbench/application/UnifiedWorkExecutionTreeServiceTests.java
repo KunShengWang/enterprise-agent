@@ -96,6 +96,12 @@ class UnifiedWorkExecutionTreeServiceTests {
         assertEquals(List.of(1, 2), tree.agents().stream()
                 .filter(node -> node.role().startsWith("SPECIALIST:"))
                 .map(node -> node.attempt()).toList());
+        assertEquals(List.of("FAILED", "SUCCEEDED"), tree.agents().stream()
+                .filter(node -> node.role().startsWith("SPECIALIST:"))
+                .map(node -> node.status()).toList());
+        assertEquals(List.of("FAILED", "COMPLETED"), tree.agents().stream()
+                .filter(node -> node.role().startsWith("SPECIALIST:"))
+                .map(node -> node.runtimeStatus()).toList());
         assertEquals(List.of("evidence-1", "evidence-2"), tree.agents().stream()
                 .filter(node -> node.role().startsWith("SPECIALIST:"))
                 .flatMap(node -> node.evidence().stream())
@@ -103,6 +109,34 @@ class UnifiedWorkExecutionTreeServiceTests {
         assertEquals("COUNT_MISMATCH", tree.conflicts().get(0).conflictType());
         assertEquals("RESOLVED", tree.assessment().get("outcome"));
         assertEquals(5, tree.metrics().modelCalls());
+    }
+
+    @Test
+    void recoveredSpecialistUsesAuthoritativeTaskStatusAndPreservesRuntimeWarning() {
+        AgentWorkItem work = work("INCIDENT_INVESTIGATION");
+        when(workbench.findWorkItem(principal, work.workItemId())).thenReturn(Optional.of(work));
+        when(workbench.listLinks(principal, work.workItemId())).thenReturn(List.of(
+                link(WorkLinkType.INCIDENT, "incident-1")));
+        AgentTaskRecord task = recoveredTask();
+        IncidentAggregate aggregate = new IncidentAggregate(
+                incident(), List.of(task), List.of(evidence("evidence-1", task.childRunId())), List.of());
+        when(incidents.findAggregate("incident-1", 10_000)).thenReturn(Optional.of(aggregate));
+        TraceRun failedRuntime = trace(task.childRunId(), "FAILED", 2, 1,
+                "TOOL_BUDGET_EXHAUSTED");
+        when(incidentTraces.project("incident-1")).thenReturn(Optional.of(new IncidentTrace(
+                "incident-1", coordinator(), List.of(new IncidentTrace.ChildRunTrace(
+                "SPECIALIST:ORDER_ANALYST:ATTEMPT_1", task.taskId(), failedRuntime)), Map.of())));
+        when(plans.listByIncident("incident-1")).thenReturn(List.of());
+
+        var node = service.project(principal, work.workItemId()).agents().stream()
+                .filter(candidate -> candidate.role().startsWith("SPECIALIST:"))
+                .findFirst().orElseThrow();
+
+        assertEquals("SUCCEEDED", node.status());
+        assertEquals("FAILED", node.runtimeStatus());
+        assertEquals("", node.error());
+        assertTrue(node.runtimeWarning().contains("TOOL_BUDGET_EXHAUSTED"));
+        assertTrue(node.runtimeWarning().contains("first persisted read-only result"));
     }
 
     @Test
@@ -204,6 +238,16 @@ class UnifiedWorkExecutionTreeServiceTests {
                 "", null, 0, null, "", 1, now, now);
     }
 
+    private AgentTaskRecord recoveredTask() {
+        Instant now = Instant.now();
+        return new AgentTaskRecord(
+                "task-order", "incident-1", "order", "FACT_QUERY", "ORDER_ANALYST",
+                "Compare order facts", 1, List.of(), List.of(EvidenceSubtype.ORDER_STATUS_SET),
+                Map.of(), Map.of("recoveredFromDuplicateToolRequest", true), AgentTaskStatus.SUCCEEDED, 0, 2,
+                "run-specialist-1", "run-specialist-1", now.plusSeconds(60),
+                "", null, 0, null, "", 1, now, now);
+    }
+
     private EvidenceRecord evidence(String evidenceId, String runId) {
         Instant now = Instant.now();
         return new EvidenceRecord(
@@ -233,9 +277,14 @@ class UnifiedWorkExecutionTreeServiceTests {
     }
 
     private TraceRun trace(String runId, String status, long modelCalls, long toolCalls) {
+        return trace(runId, status, modelCalls, toolCalls, "");
+    }
+
+    private TraceRun trace(String runId, String status, long modelCalls, long toolCalls,
+                           String failureReason) {
         Instant now = Instant.now();
         return new TraceRun(
-                runId, "conversation", "question", status, now.minusSeconds(1), now, 1000, "",
+                runId, "conversation", "question", status, now.minusSeconds(1), now, 1000, failureReason,
                 modelCalls * 10, modelCalls * 5, modelCalls * 0.001,
                 List.of(), List.of(), List.of(),
                 Map.of("modelCalls", modelCalls, "toolCalls", toolCalls));

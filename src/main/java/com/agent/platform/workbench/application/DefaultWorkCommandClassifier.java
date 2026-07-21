@@ -27,6 +27,8 @@ public class DefaultWorkCommandClassifier implements WorkCommandClassifier {
             {"commandType":"RESUME_ACTIVE_WORK|ABANDON_ACTIVE_WORK|PAUSE_ACTIVE_WORK|CANCEL_ACTIVE_WORK|ADD_INPUT_TO_ACTIVE_WORK|START_NEW_WORK|NORMAL_GOAL|AMBIGUOUS","modelConfidence":0.0,"reason":"brief","targetWorkItemId":"","derivedGoalText":""}
             Apply these product semantics exactly:
             - NORMAL_GOAL: any standalone goal, even when unrelated to the focused work. Do not infer START_NEW_WORK merely because topics differ.
+            - A follow-up to a terminal focused WorkItem (CLOSED, COMPLETED, FAILED or CANCELLED) is NORMAL_GOAL. It creates a new WorkItem in the same Conversation and may use prior conversational context.
+            - ADD_INPUT_TO_ACTIVE_WORK is only for information that changes or unblocks a nonterminal focused WorkItem. Never choose it for a completed answer that the user wants expanded or explained.
             - START_NEW_WORK: only explicit intent to create a separate/new task or keep old work while starting another; derivedGoalText is required.
             - ABANDON_ACTIVE_WORK: user no longer cares about the focused product work (for example "放弃" or "不用做了"); it does not mean stop the underlying execution.
             - CANCEL_ACTIVE_WORK: explicit request to cancel/stop the underlying execution now.
@@ -62,7 +64,7 @@ public class DefaultWorkCommandClassifier implements WorkCommandClassifier {
         }
         String userPrompt = "<untrusted_input>\n" + request.input().content() + "\n</untrusted_input>\n"
                 + "focusedWorkItemId=" + request.focusedWorkItemId() + "\n"
-                + "focusedSummary=" + request.focusedWorkSummary();
+                + "focusedWork=" + request.focusedWorkSummary();
         long started = System.nanoTime();
         String raw = llmService.complete(new PromptRequest(
                 SYSTEM_PROMPT, userPrompt, List.of(), Map.of("purpose", "work_command_classifier")));
