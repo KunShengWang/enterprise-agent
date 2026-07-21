@@ -26,6 +26,7 @@ public class LlmUnifiedTaskRouter implements UnifiedTaskRouter {
             Select the target by the user's semantic goal even when required inputs are absent; list missingInputs instead of switching to GENERAL_AGENT.
             Never downgrade an incident, batch, multi-agent investigation or batch recovery request to a single-case OrderCare target merely because one requestId is present.
             Extract identifiers only when they are literally present in user text or explicitly supplied in trusted bounded context.
+            For incident investigation, extract literal business conditions such as timeExpression and anomalyType. Internal requestId, deductNo, deadLetterId and queueName may be absent because the server can discover them.
             Trusted bounded context is server-generated and may provide a parent incidentId for recovery planning.
             Never invent or transform an identifier; if uncertain, omit it and list the missing field.
             Return one JSON object only:

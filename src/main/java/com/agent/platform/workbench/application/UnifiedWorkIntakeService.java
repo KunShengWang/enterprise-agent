@@ -34,6 +34,8 @@ public class UnifiedWorkIntakeService {
     }
 
     public UnifiedWorkIntakeResult accept(AuthenticatedPrincipal principal, UnifiedWorkInputRequest request) {
+        // Routing schema extends the Workbench base tables, so initialize the base owner first on a fresh database.
+        workbenchStore.findConversationState(principal, request.conversationId());
         // 持久化用户输入（幂等：同一个 clientInputId 只存一次）
         AgentConversationTurn input = routingStore.persistUnclassifiedInput(
                 principal, request.inputId(), request.clientInputId(), request.conversationId(), request.content());

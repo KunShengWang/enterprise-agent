@@ -53,6 +53,22 @@ class DelegationPlanValidatorTests {
                 fallback.tasks().stream().map(DelegationPlan.DelegatedTask::role).toList());
     }
 
+    @Test
+    void scopeWithoutAuthoritativeQueueUsesOnlyOrderAndInventorySpecialists() {
+        IncidentSnapshot original = snapshot();
+        IncidentSnapshot scoped = new IncidentSnapshot(
+                original.snapshotId(), original.incidentId(), original.alertBatchId(),
+                original.alertType(), original.tenantScope(), original.orderScope(),
+                new IncidentSnapshot.IncidentBusinessScope(List.of()), original.timeWindow(),
+                original.detectedAt(), original.investigationStartedAt(), original.deadlineAt(),
+                original.scopeHash());
+        DelegationPlan plan = new SafeDelegationPlanFactory().create(scoped);
+
+        assertEquals(2, plan.tasks().size());
+        assertTrue(new DelegationPlanValidator().validate(plan, scoped).valid());
+        assertFalse(plan.tasks().stream().anyMatch(task -> task.role() == IncidentAgentRole.MQ_ANALYST));
+    }
+
     private DelegationPlan completePlan() {
         return new DelegationPlan("delegation-plan-v1", "inc-1", "read-only investigation", List.of(
                 new DelegationPlan.DelegatedTask("orders", IncidentAgentRole.ORDER_ANALYST,

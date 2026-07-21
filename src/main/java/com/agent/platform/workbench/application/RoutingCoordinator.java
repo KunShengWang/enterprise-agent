@@ -45,6 +45,7 @@ public class RoutingCoordinator {
     private final RoutingFailureInjector failureInjector;
     private final RouteDecisionPostProcessor postProcessor;
     private final WorkItemBudgetGate budgets;
+    private final IncidentScopeRoutePreflight incidentScopePreflight;
 
     @Autowired
     public RoutingCoordinator(RoutingStore routingStore,
@@ -56,7 +57,8 @@ public class RoutingCoordinator {
                               WorkbenchRoutingProperties properties,
                               RoutingFailureInjector failureInjector,
                               RouteDecisionPostProcessor postProcessor,
-                              WorkItemBudgetGate budgets) {
+                              WorkItemBudgetGate budgets,
+                              IncidentScopeRoutePreflight incidentScopePreflight) {
         this.routingStore = routingStore;
         this.workbenchStore = workbenchStore;
         this.router = router;
@@ -67,6 +69,7 @@ public class RoutingCoordinator {
         this.failureInjector = failureInjector;
         this.postProcessor = postProcessor;
         this.budgets = budgets;
+        this.incidentScopePreflight = incidentScopePreflight;
     }
 
     public RoutingCoordinator(RoutingStore routingStore,
@@ -78,7 +81,8 @@ public class RoutingCoordinator {
                               WorkbenchRoutingProperties properties,
                               RoutingFailureInjector failureInjector) {
         this(routingStore, workbenchStore, router, validator, contextResolver, targetRegistry,
-                properties, failureInjector, (principal, workItem, decision) -> { }, WorkItemBudgetGate.NOOP);
+                properties, failureInjector, (principal, workItem, decision) -> { }, WorkItemBudgetGate.NOOP,
+                IncidentScopeRoutePreflight.NOOP);
     }
 
     public RoutingCoordinator(RoutingStore routingStore,
@@ -91,7 +95,22 @@ public class RoutingCoordinator {
                               RoutingFailureInjector failureInjector,
                               RouteDecisionPostProcessor postProcessor) {
         this(routingStore, workbenchStore, router, validator, contextResolver, targetRegistry,
-                properties, failureInjector, postProcessor, WorkItemBudgetGate.NOOP);
+                properties, failureInjector, postProcessor, WorkItemBudgetGate.NOOP,
+                IncidentScopeRoutePreflight.NOOP);
+    }
+
+    public RoutingCoordinator(RoutingStore routingStore,
+                              WorkbenchStore workbenchStore,
+                              UnifiedTaskRouter router,
+                              RoutePolicyValidator validator,
+                              RouteContextResolver contextResolver,
+                              ExecutionTargetRegistry targetRegistry,
+                              WorkbenchRoutingProperties properties,
+                              RoutingFailureInjector failureInjector,
+                              RouteDecisionPostProcessor postProcessor,
+                              WorkItemBudgetGate budgets) {
+        this(routingStore, workbenchStore, router, validator, contextResolver, targetRegistry,
+                properties, failureInjector, postProcessor, budgets, IncidentScopeRoutePreflight.NOOP);
     }
 
     public Optional<RoutingDecisionRecord> route(AuthenticatedPrincipal principal,
@@ -133,11 +152,13 @@ public class RoutingCoordinator {
                     claimedWork, claimedWork.normalizedGoal(), targets, context.conversationSummary()));
             budgets.settleRouter(budget, modelResult);
             failureInjector.afterModelResult(attempt, modelResult);
-            RouteValidationResult validation = validator.validate(
-                    modelResult.decision(),
-                    new RouteValidationContext(
-                            principal, claimedWork, claimedWork.originalGoal(),
-                            context.trustedIdentifiers(), context.serverResolvedIdentifiers()));
+            RouteValidationResult validation = incidentScopePreflight
+                    .resolve(principal, claimedWork, modelResult.decision(), context)
+                    .orElseGet(() -> validator.validate(
+                            modelResult.decision(),
+                            new RouteValidationContext(
+                                    principal, claimedWork, claimedWork.originalGoal(),
+                                    context.trustedIdentifiers(), context.serverResolvedIdentifiers())));
             completed = routingStore.completeRouting(principal, attempt, modelResult, validation);
         }
         catch (RoutingResultPersistenceUnknownException exception) {

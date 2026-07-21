@@ -15,7 +15,7 @@ import java.util.Set;
 @Component
 public class DelegationPlanValidator {
 
-    private static final Set<IncidentAgentRole> REQUIRED_INVESTIGATION_ROLES = Set.of(
+    private static final Set<IncidentAgentRole> ALL_INVESTIGATION_ROLES = Set.of(
             IncidentAgentRole.ORDER_ANALYST,
             IncidentAgentRole.INVENTORY_ANALYST,
             IncidentAgentRole.MQ_ANALYST);
@@ -35,8 +35,9 @@ public class DelegationPlanValidator {
         if (snapshot == null || !snapshot.incidentId().equals(plan.incidentId())) {
             errors.add("incidentId does not match immutable snapshot");
         }
-        if (plan.tasks().size() != REQUIRED_INVESTIGATION_ROLES.size()) {
-            errors.add("investigation must contain exactly three domain specialist tasks");
+        Set<IncidentAgentRole> requiredRoles = requiredRoles(snapshot);
+        if (plan.tasks().size() != requiredRoles.size()) {
+            errors.add("investigation task count does not match authoritative scope domains");
         }
         if (snapshot != null && snapshot.deadlineAt() != null && !Instant.now().isBefore(snapshot.deadlineAt())) {
             errors.add("incident deadline is exhausted");
@@ -66,10 +67,18 @@ public class DelegationPlanValidator {
                 errors.add("write or recovery intent is forbidden in Phase 1");
             }
         }
-        if (!roles.equals(REQUIRED_INVESTIGATION_ROLES)) {
-            errors.add("investigation must cover ORDER_ANALYST, INVENTORY_ANALYST and MQ_ANALYST");
+        if (!roles.equals(requiredRoles)) {
+            errors.add("investigation roles do not match authoritative scope domains");
         }
         return new ValidationResult(errors.isEmpty(), List.copyOf(errors));
+    }
+
+    private Set<IncidentAgentRole> requiredRoles(IncidentSnapshot snapshot) {
+        if (snapshot == null || snapshot.businessScope() == null
+                || snapshot.businessScope().queueNames().isEmpty()) {
+            return Set.of(IncidentAgentRole.ORDER_ANALYST, IncidentAgentRole.INVENTORY_ANALYST);
+        }
+        return ALL_INVESTIGATION_ROLES;
     }
 
     public record ValidationResult(boolean valid, List<String> errors) {

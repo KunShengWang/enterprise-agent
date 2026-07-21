@@ -202,6 +202,35 @@ class PublicPresentationServiceTests {
     }
 
     @Test
+    void scopeDiscoveryPublishesSafeBusinessProgressWithoutRawFacts() {
+        Fixture fixture = fixture(List.of(
+                event(1, WorkEventType.SCOPE_DISCOVERY_STARTED, "SCOPE_DISCOVERY_STARTED",
+                        Map.of("timeExpression", "昨晚", "sql", "select secret")),
+                event(2, WorkEventType.ORDER_CANDIDATES_DISCOVERED, "ORDER_CANDIDATES_DISCOVERED",
+                        Map.of("snapshotId", "scope-1", "candidateCount", 18)),
+                event(3, WorkEventType.RESOURCE_ENRICHMENT_COMPLETED, "RESOURCE_ENRICHMENT_COMPLETED",
+                        Map.of("snapshotId", "scope-1", "sourceHealth", Map.of("resource", "AVAILABLE"))),
+                event(4, WorkEventType.DEAD_LETTERS_RESOLVED, "DEAD_LETTERS_RESOLVED",
+                        Map.of("snapshotId", "scope-1", "deadLetterCount", 9)),
+                event(5, WorkEventType.QUEUES_RESOLVED, "QUEUES_RESOLVED",
+                        Map.of("snapshotId", "scope-1", "queueCount", 1)),
+                event(6, WorkEventType.SCOPE_DISCOVERY_COMPLETED, "SCOPE_DISCOVERY_COMPLETED",
+                        Map.of("snapshotId", "scope-1", "candidateCount", 11, "rawPayload", "private")),
+                event(7, WorkEventType.SCOPE_CONFIRMATION_REQUIRED, "SCOPE_CONFIRMATION_REQUIRED",
+                        Map.of("snapshotId", "scope-1", "candidateFingerprint", "fingerprint"))));
+        fixture.stub();
+
+        List<PublicPresentation> result = fixture.service.publicTimeline(principal, "work-1", -1, 100);
+
+        assertEquals(7, result.size());
+        assertEquals("已发现候选订单", result.get(1).title());
+        assertTrue(result.get(1).summary().contains("18"));
+        assertEquals("INCIDENT_SCOPE_SNAPSHOT", result.get(6).detail().referenceType());
+        assertFalse(result.toString().contains("select secret"));
+        assertFalse(result.toString().contains("private"));
+    }
+
+    @Test
     void clarificationPublishesConcreteMissingInputsWithoutInternalReason() {
         Fixture fixture = fixture(List.of(event(3, WorkEventType.CLARIFICATION_REQUIRED, "WAITING_INPUT",
                 Map.of("reasons", List.of("missing required inputs: queueNames,requestIds")))));

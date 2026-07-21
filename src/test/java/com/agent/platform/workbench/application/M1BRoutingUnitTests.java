@@ -85,7 +85,7 @@ class M1BRoutingUnitTests {
         assertFalse(general.supportedIntents().stream().anyMatch(value -> value.contains("INCIDENT")));
         var investigation = registry.findEnabled(
                 principal(), ExecutionTargetId.INCIDENT_INVESTIGATION.name()).orElseThrow();
-        assertTrue(investigation.requiredInputs().contains("requestIds"));
+        assertTrue(investigation.requiredInputs().contains("oneOf:requestIds,timeExpression,orderNo"));
         assertFalse(investigation.requiredInputs().contains("oneOf:batchId,requestIds"));
     }
 
@@ -120,7 +120,7 @@ class M1BRoutingUnitTests {
                 new RouteValidationContext(principal(), work,
                         "调查 BATCH-1，队列 q.incident", Map.of(), Map.of()));
         assertEquals(RouteDisposition.REQUIRE_CLARIFICATION, batchClarification.disposition());
-        assertTrue(batchClarification.reasons().get(0).contains("explicit requestIds"));
+        assertTrue(batchClarification.reasons().get(0).contains("requestIds"));
     }
 
     @Test

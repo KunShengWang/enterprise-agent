@@ -131,6 +131,52 @@ public class PublicPresentationService {
                     PublicPresentationStatus.WAITING, "需要确认调查范围", "请确认预览中的目标和只读边界后再启动调查。",
                     List.of(), reference("ROUTE_PREVIEW", text(event.payload().get("previewId"))), PublicVisibility.PUBLIC));
         }
+        if (event.eventType() == WorkEventType.SCOPE_DISCOVERY_STARTED) {
+            return List.of(scopeItem(work, event, PublicPresentationKind.ACTION_STARTED,
+                    PublicPresentationStatus.ACTIVE, "正在发现事故范围",
+                    "系统正在根据业务时间和异常现象查询 FlowOrder 权威只读事实。"));
+        }
+        if (event.eventType() == WorkEventType.ORDER_CANDIDATES_DISCOVERED) {
+            return List.of(scopeItem(work, event, PublicPresentationKind.ACTION_COMPLETED,
+                    PublicPresentationStatus.COMPLETED, "已发现候选订单",
+                    "已发现 " + text(event.payload().get("candidateCount")) + " 条候选记录。"));
+        }
+        if (event.eventType() == WorkEventType.RESOURCE_ENRICHMENT_COMPLETED) {
+            return List.of(scopeItem(work, event, PublicPresentationKind.ACTION_COMPLETED,
+                    PublicPresentationStatus.COMPLETED, "已核对库存释放状态",
+                    "系统已补充库存扣减、释放状态和来源健康度。"));
+        }
+        if (event.eventType() == WorkEventType.DEAD_LETTERS_RESOLVED) {
+            return List.of(scopeItem(work, event, PublicPresentationKind.ACTION_COMPLETED,
+                    PublicPresentationStatus.COMPLETED, "已关联持久化死信",
+                    "已关联 " + text(event.payload().get("deadLetterCount")) + " 条持久化死信记录。"));
+        }
+        if (event.eventType() == WorkEventType.QUEUES_RESOLVED) {
+            return List.of(scopeItem(work, event, PublicPresentationKind.ACTION_COMPLETED,
+                    PublicPresentationStatus.COMPLETED, "已识别相关 DLQ",
+                    "已从持久化事实中识别 " + text(event.payload().get("queueCount")) + " 个权威队列。"));
+        }
+        if (event.eventType() == WorkEventType.SCOPE_DISCOVERY_COMPLETED) {
+            return List.of(scopeItem(work, event, PublicPresentationKind.ACTION_COMPLETED,
+                    PublicPresentationStatus.COMPLETED, "候选事故范围已生成",
+                    "候选范围已冻结，启动调查前仍需明确确认。"));
+        }
+        if (event.eventType() == WorkEventType.SCOPE_CONFIRMATION_REQUIRED) {
+            return List.of(scopeItem(work, event, PublicPresentationKind.ACTION_COMPLETED,
+                    PublicPresentationStatus.COMPLETED, "候选范围等待确认",
+                    "请在范围预览中确认后启动只读 Multi-Agent 调查。"));
+        }
+        if (event.eventType() == WorkEventType.SCOPE_CONFIRMED) {
+            return List.of(scopeItem(work, event, PublicPresentationKind.ACTION_COMPLETED,
+                    PublicPresentationStatus.COMPLETED, "事故范围已确认",
+                    "已锁定该 Snapshot 版本和指纹，正在启动调查。"));
+        }
+        if (event.eventType() == WorkEventType.SCOPE_DISCOVERY_FAILED
+                || event.eventType() == WorkEventType.SCOPE_EXPIRED) {
+            return List.of(scopeItem(work, event, PublicPresentationKind.ERROR,
+                    PublicPresentationStatus.FAILED, "事故范围发现未完成",
+                    "请调整时间或业务条件后重试。"));
+        }
         if (event.eventType() == WorkEventType.DISPATCH_STARTED) {
             return List.of(item(work, event, 0, PublicPresentationKind.ACTION_STARTED,
                     PublicPresentationStatus.ACTIVE, "正在启动执行", "系统正在创建或恢复目标执行。",
@@ -491,6 +537,23 @@ public class PublicPresentationService {
         return item(work, event, 0, PublicPresentationKind.ACTION_COMPLETED,
                 PublicPresentationStatus.COMPLETED, "工作项状态事件", "工作项记录了一项技术状态变更。",
                 List.of(), PublicPresentationDetail.empty(), PublicVisibility.INSPECTOR_ONLY);
+    }
+
+    private PublicPresentation scopeItem(AgentWorkItem work,
+                                         WorkEvent event,
+                                         PublicPresentationKind kind,
+                                         PublicPresentationStatus status,
+                                         String title,
+                                         String summary) {
+        Map<String, String> attributes = new LinkedHashMap<>();
+        for (String key : List.of("snapshotId", "snapshotVersion", "candidateFingerprint",
+                "candidateCount", "deadLetterCount", "queueCount", "truncated", "timeExpression")) {
+            String value = text(event.payload().get(key));
+            if (!value.isBlank()) attributes.put(key, value);
+        }
+        return item(work, event, 0, kind, status, title, summary, List.of(),
+                new PublicPresentationDetail("Incident Scope Discovery", "INCIDENT_SCOPE_SNAPSHOT",
+                        text(event.payload().get("snapshotId")), null, attributes), PublicVisibility.PUBLIC);
     }
 
     private PublicPresentation item(AgentWorkItem work, WorkEvent event, int ordinal,

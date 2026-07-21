@@ -37,7 +37,10 @@ public class IncidentSnapshotFactory {
             throw new IllegalArgumentException("candidateRequestIds must contain 1.." + properties.getMaxRequestIds());
         }
         List<String> queues = normalize(request.queueNames());
-        if (!properties.getAllowedQueues().containsAll(queues)) {
+        if (queues.size() > 20) {
+            throw new IllegalArgumentException("queueNames must contain at most 20 entries");
+        }
+        if (request.scopeSnapshotId().isBlank() && !properties.getAllowedQueues().containsAll(queues)) {
             throw new IllegalArgumentException("queueNames contain a queue outside the server whitelist");
         }
         Instant startedAt = Instant.now();
@@ -61,7 +64,10 @@ public class IncidentSnapshotFactory {
                 request.detectedAt(),
                 startedAt,
                 startedAt.plusSeconds(properties.getDeadlineSeconds()),
-                scopeHash
+                scopeHash,
+                request.scopeSnapshotId(),
+                request.candidateFingerprint(),
+                request.scopeProvenance()
         );
     }
 

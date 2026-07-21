@@ -311,9 +311,16 @@ public class IncidentInvestigationOrchestrator {
     }
 
     private PlanningResult plan(IncidentRecord incident, IncidentInvestigationRequest request) {
+        boolean mqRequired = !incident.snapshot().businessScope().queueNames().isEmpty();
+        String requiredRoles = mqRequired
+                ? "ORDER_ANALYST、INVENTORY_ANALYST、MQ_ANALYST"
+                : "ORDER_ANALYST、INVENTORY_ANALYST";
+        String mqInstruction = mqRequired
+                ? "MQ_ANALYST 同时核对持久化死信事实和消息队列运行态。"
+                : "没有权威 queueName，不得创建 MQ_ANALYST。";
         String prompt = """
-                生成 delegation-plan-v1 JSON。必须且只能包含 ORDER_ANALYST、INVENTORY_ANALYST、MQ_ANALYST 三个角色。
-                MQ_ANALYST 同时核对持久化死信事实和消息队列运行态。
+                生成 delegation-plan-v1 JSON。必须且只能包含 %s。
+                %s
                 incidentId=%s
                 alertType=%s
                 symptom=%s
@@ -321,7 +328,7 @@ public class IncidentInvestigationOrchestrator {
                 queueCount=%d
                 不得输出工具名、预算、服务地址、新范围、恢复或写操作。
                 """.formatted(
-                incident.incidentId(), request.alertType(), request.symptom(),
+                requiredRoles, mqInstruction, incident.incidentId(), request.alertType(), request.symptom(),
                 incident.snapshot().orderScope().requestIds().size(),
                 incident.snapshot().businessScope().queueNames().size()).trim();
         AgentExecutionProfile profile = profileFactory.commander();

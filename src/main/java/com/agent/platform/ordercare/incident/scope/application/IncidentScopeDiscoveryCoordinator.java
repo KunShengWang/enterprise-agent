@@ -78,6 +78,7 @@ public class IncidentScopeDiscoveryCoordinator {
             orders.candidates().stream().map(FlowOrderOrderCandidates.Candidate::deductNo)
                     .filter(value -> value != null && !value.isBlank()).forEach(deductNos::add);
             FlowOrderResourceEnrichment enrichment = requestIds.isEmpty() && deductNos.isEmpty()
+                    && criteria.deadLetterIds().isEmpty()
                     ? new FlowOrderResourceEnrichment(command.discoveryRequestId(), null,
                     List.of(), List.of(), Map.of("resource", "NOT_QUERIED"))
                     : client.enrichResources(command.discoveryRequestId(), requestIds,

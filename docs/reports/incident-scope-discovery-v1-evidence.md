@@ -7,7 +7,7 @@ Updated: 2026-07-21 (Asia/Shanghai)
 - Phase 0: PASSED
 - M4-A FlowOrder contracts: PASSED
 - M4-B discovery and snapshot: PASSED
-- M4-C routing, confirmation and Incident integration: NOT STARTED at this checkpoint
+- M4-C routing, confirmation and Incident integration: PASSED
 - M4-D frontend and E2E: NOT STARTED at this checkpoint
 - Manual browser acceptance: PENDING
 - Push: not performed
@@ -62,6 +62,8 @@ Real MySQL `EXPLAIN` changed from a full scan with filesort to a range access us
 - Resource enrichment response: HTTP 200, release state `UNRELEASED`, one dead letter, queue `floworder.order.state.dlq`, relation `STRONG`.
 - Wrong internal token: HTTP 401.
 - RabbitMQ was not required for M4-A; queue names came from persisted authoritative dead-letter facts.
+
+M4-C exposed and closed one backward-compatible contract gap: a standalone `deadLetterId` was a valid product anchor but was not present in the enrichment request. FlowOrder follow-up checkpoint `38bdc3efcd63f1335bb6e6d6b85bcf74f6d945b3` adds bounded positive `deadLetterIds`, resolves their persisted `biz_key` to a real deduction when possible, and never promotes a missing/weak relation to strong. The resource-service regression produced 21 Surefire reports with zero failures or errors.
 
 ## M4-B enterprise-agent discovery and snapshot
 
@@ -163,13 +165,84 @@ Seventeen isolated real-PostgreSQL suites passed against `enterprise_agent_m4b_f
 
 The isolated database was dropped after the suite completed.
 
+## M4-C routing, confirmation and Incident integration
+
+### Resolution actions
+
+The four frozen execution targets remain unchanged. `INCIDENT_INVESTIGATION` now has a deterministic Java preflight with three internal actions:
+
+| Action | Condition | Result |
+|---|---|---|
+| `DIRECT_EXECUTION` | explicit, source-valid requestIds are already present | existing route validation and Incident adapter path |
+| `DISCOVER_SCOPE` | no internal IDs, but supported business anomaly plus time/order/deduction/dead-letter anchor exists | FlowOrder read-only discovery, immutable Snapshot, preview and explicit confirmation |
+| `CLARIFY` | no searchable anchor or no supported anomaly | asks only for time, order number, or a clearer business phenomenon |
+
+The model does not receive a discovery tool and cannot generate internal IDs, SQL, URLs, queue names, or confirmation. Java maps the supported business phenomenon and normalizes time. Discovered identifiers are marked `SERVER_RESOLVED_FROM_SCOPE_DISCOVERY`.
+
+### Preview and confirmation binding
+
+The route preview includes:
+
+- exact absolute time range and timezone;
+- anomaly types and source health;
+- request/order/deduction/dead-letter/queue counts and identifiers;
+- safe candidate summaries and provenance;
+- `scopeSnapshotId`, Snapshot version, criteria digest, and candidate fingerprint;
+- truncation state and the read-only/no-Recovery boundary.
+
+Confirmation validates the route preview identity, version, validated-input digest, and scope digest. It then confirms the Snapshot using the separately bound Snapshot version and candidate fingerprint before moving the WorkItem to `READY_TO_DISPATCH`. Repeated confirmation is idempotent. An expired or changed Snapshot is rejected and cannot silently reuse the old approval.
+
+### Existing Incident path reuse
+
+- `IncidentInvestigationExecutionAdapter` remains the execution adapter.
+- `dispatchRequestId` remains the idempotency key; discovery does not create a second Incident or PRIMARY link.
+- `IncidentSnapshot` stores the discovery Snapshot ID, candidate fingerprint, and bounded provenance summary.
+- Explicit requestId input continues through the original route without discovery.
+- queueNames are no longer globally required. With no authoritative queue, Java creates only Order and Inventory Specialist tasks plus Reviewer. MQ Specialist is added only when persisted dead-letter facts provide an authoritative queue.
+- No Recovery action is available from discovery or investigation.
+
+### Public events
+
+The WorkItem event stream and PublicPresentation projection cover:
+
+- `SCOPE_DISCOVERY_STARTED`
+- `ORDER_CANDIDATES_DISCOVERED`
+- `RESOURCE_ENRICHMENT_COMPLETED`
+- `DEAD_LETTERS_RESOLVED`
+- `QUEUES_RESOLVED`
+- `SCOPE_DISCOVERY_COMPLETED`
+- `SCOPE_DISCOVERY_FAILED`
+- `SCOPE_CONFIRMATION_REQUIRED`
+- `SCOPE_CONFIRMED`
+- `SCOPE_EXPIRED`
+- `SCOPE_EXPANSION_SUGGESTED`
+
+Public summaries expose business counts and safe references only. SQL, URLs, credentials, prompts, hidden reasoning, and raw database payloads remain outside the public timeline.
+
+### M4-C tests
+
+Targeted tests passed for:
+
+- explicit requestIds preserving the original path;
+- fuzzy business conditions entering discovery;
+- no-anchor input entering clarification;
+- Snapshot version/fingerprint confirmation binding;
+- queue-optional direct validation;
+- two Specialists without an authoritative queue and MQ inclusion with a queue;
+- safe public discovery progress;
+- existing execution adapter idempotency.
+
+The full Maven regression passed. Seventeen isolated real-PostgreSQL suites passed after M4-C, including routing, dispatch, command, event/replay/SSE, tenant isolation, presentation, budget, continuation, Incident, recovery-plan, and scope Snapshot stores.
+
+During the fresh-database gate, `UnifiedWorkIntakeService` exposed a pre-existing initialization-order defect: RoutingStore extended Workbench tables before the base owner initialized them. The unified intake now initializes the Workbench base schema before persisting the first input. `WorkCommandHandlerPostgresIT` then passed on a fresh isolated database and in the 17-suite gate.
+
 ## E2E truth table
 
 | Boundary | Current evidence |
 |---|---|
 | Real MySQL | M4-A passed |
 | Real PostgreSQL | M4-B passed |
-| Real cross-service HTTP | M4-A endpoints passed independently |
+| Real cross-service HTTP | M4-A endpoints passed independently; complete M4-D chain pending |
 | RabbitMQ | Not exercised; persisted `dead_queue` only |
 | Real model | Not exercised for M4-B |
 | Frontend smoke | Not started for M4-D |
@@ -185,6 +258,5 @@ The isolated database was dropped after the suite completed.
 
 ## Remaining work
 
-- M4-C: route action (`DIRECT_EXECUTION`, `DISCOVER_SCOPE`, `CLARIFY`), confirmation binding, existing Incident adapter reuse, deterministic Specialist selection, public events and replay.
 - M4-D: Scope Preview UI, candidate details, frontend gates, cross-service E2E, refresh/replay evidence.
 - Manual browser acceptance remains pending and will not be fabricated.

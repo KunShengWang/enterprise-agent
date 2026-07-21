@@ -55,9 +55,10 @@ public class ExecutionTargetRegistry {
                 "ordercare-floworder-v1", true));
         definitions.put(ExecutionTargetId.INCIDENT_INVESTIGATION, new ExecutionTargetDefinition(
                 ExecutionTargetId.INCIDENT_INVESTIGATION,
-                "Read-only multi-agent investigation over explicit bounded requestIds",
+                "Read-only multi-agent investigation over explicit IDs or discoverable bounded business conditions",
                 Set.of("INCIDENT_INVESTIGATION"),
-                Set.of("requestIds", "queueNames"), TargetRiskLevel.HIGH, TargetCostClass.HIGH,
+                Set.of("oneOf:requestIds,timeExpression,orderNo", "anomalyType"),
+                TargetRiskLevel.HIGH, TargetCostClass.HIGH,
                 "ordercare-incident-command-v1", incidentProperties.isEnabled() && incidentRole));
         definitions.put(ExecutionTargetId.INCIDENT_RECOVERY_PLAN, new ExecutionTargetDefinition(
                 ExecutionTargetId.INCIDENT_RECOVERY_PLAN,

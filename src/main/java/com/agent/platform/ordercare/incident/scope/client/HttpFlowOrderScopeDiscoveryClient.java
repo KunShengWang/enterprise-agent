@@ -76,6 +76,8 @@ public class HttpFlowOrderScopeDiscoveryClient implements FlowOrderScopeDiscover
         body.put("discoveryRequestId", discoveryRequestId);
         body.put("requestIds", requestIds);
         body.put("deductNos", deductNos);
+        body.put("deadLetterIds", criteria.deadLetterIds().stream()
+                .map(this::positiveLong).toList());
         body.put("anomalyTypes", criteria.anomalyTypes());
         return send(properties.getFloworderBaseUrl(), RESOURCE_PATH, body, traceId,
                 FlowOrderResourceEnrichment.class);
@@ -127,5 +129,15 @@ public class HttpFlowOrderScopeDiscoveryClient implements FlowOrderScopeDiscover
         String result = value == null ? "" : value.trim();
         while (result.endsWith("/")) result = result.substring(0, result.length() - 1);
         return result;
+    }
+
+    private long positiveLong(String value) {
+        try {
+            long parsed = Long.parseLong(value);
+            if (parsed <= 0) throw new NumberFormatException("non-positive");
+            return parsed;
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("deadLetterId must be a positive numeric identifier", exception);
+        }
     }
 }

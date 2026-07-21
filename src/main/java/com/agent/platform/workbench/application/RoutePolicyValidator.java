@@ -55,8 +55,15 @@ public class RoutePolicyValidator {
         if (decision.extractedInputs().keySet().stream().anyMatch(FORBIDDEN_MODEL_FIELDS::contains)) {
             return rejected("POLICY_REJECTED", "model attempted to set a protected execution field");
         }
-        if (!decision.missingInputs().isEmpty()) {
-            return clarified("missing required inputs: " + String.join(",", decision.missingInputs()));
+        boolean incidentWithExplicitScope = "INCIDENT_INVESTIGATION".equals(decision.targetId())
+                && !values(decision.extractedInputs().get("requestIds")).isEmpty();
+        List<String> effectiveMissing = incidentWithExplicitScope
+                ? decision.missingInputs().stream()
+                        .filter(value -> !Set.of("requestIds", "queueName", "queueNames").contains(value))
+                        .toList()
+                : decision.missingInputs();
+        if (!effectiveMissing.isEmpty()) {
+            return clarified("missing required inputs: " + String.join(",", effectiveMissing));
         }
 
         Map<String, ValidatedIdentifier> identifiers = new LinkedHashMap<>();
@@ -112,18 +119,17 @@ public class RoutePolicyValidator {
             }
             case INCIDENT_INVESTIGATION -> {
                 boolean scopePresent = !values(typed.get("requestIds")).isEmpty();
-                boolean queuePresent = typed.containsKey("queueName") || typed.containsKey("queueNames");
                 if (!scopePresent) {
-                    return clarified("explicit requestIds are required; batchId resolution is not available");
+                    return clarified("requestIds or discoverable business conditions are required");
                 }
-                if (!queuePresent) return clarified("queueNames are required");
                 int requestCount = values(typed.get("requestIds")).size();
                 if (requestCount > properties.getMaxIncidentRequestIds()) {
                     return rejected("POLICY_REJECTED", "incident requestId scope exceeds configured maximum");
                 }
                 if (identifiers.values().stream().anyMatch(identifier ->
                         identifier.source() != IdentifierSource.EXPLICIT_USER_INPUT
-                                && identifier.source() != IdentifierSource.SERVER_RESOLVED_FROM_BATCH)) {
+                                && identifier.source() != IdentifierSource.SERVER_RESOLVED_FROM_BATCH
+                                && identifier.source() != IdentifierSource.SERVER_RESOLVED_FROM_SCOPE_DISCOVERY)) {
                     return clarified("incident identifiers require explicit or server-resolved sources");
                 }
                 disposition = RouteDisposition.REQUIRE_CONFIRMATION;

@@ -41,7 +41,10 @@ public class IncidentInvestigationExecutionAdapter implements ExecutionAdapter {
                         request.goalText(),
                         requestIds,
                         queues(payload),
-                        request.workItemId()));
+                        request.workItemId(),
+                        text(payload.get("scopeSnapshotId")),
+                        text(payload.get("candidateFingerprint")),
+                        scopeProvenance(payload)));
         return new DispatchResult(
                 request.dispatchRequestId(), WorkLinkType.INCIDENT, started.incidentId(), true);
     }
@@ -62,6 +65,18 @@ public class IncidentInvestigationExecutionAdapter implements ExecutionAdapter {
         if (value instanceof List<?> list) return list.stream().map(String::valueOf).map(String::trim).filter(v -> !v.isBlank()).toList();
         String single = text(value);
         return single.isBlank() ? List.of() : List.of(single);
+    }
+
+    private java.util.Map<String, Object> scopeProvenance(java.util.Map<String, Object> payload) {
+        if (text(payload.get("scopeSnapshotId")).isBlank()) return java.util.Map.of();
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        for (String key : List.of("criteriaDigest", "candidateCount", "truncated", "timeStart",
+                "timeEnd", "timezone", "defaultTimezoneUsed", "anomalyTypes", "sourceHealth")) {
+            Object value = payload.get(key);
+            if (value != null) result.put(key, value);
+        }
+        result.put("resolutionSource", "SERVER_RESOLVED_FROM_SCOPE_DISCOVERY");
+        return java.util.Map.copyOf(result);
     }
 
     private String text(Object value) { return value == null ? "" : String.valueOf(value).trim(); }
