@@ -214,6 +214,7 @@ public class DefaultIncidentScopeRoutePreflight implements IncidentScopeRoutePre
 
     private String timeExpression(String goal) {
         if (goal == null) return "";
+        if (goal.contains("前天")) return "前天";
         if (goal.contains("昨晚")) return "昨晚";
         if (goal.contains("今天")) return "今天";
         Matcher recent = RECENT_HOURS.matcher(goal);

@@ -42,7 +42,11 @@ public class IncidentTimeRangeResolver {
         ZonedDateTime now = ZonedDateTime.ofInstant(clock.instant(), zone.zoneId());
         ZonedDateTime start;
         ZonedDateTime end;
-        if ("昨晚".equals(normalized)) {
+        if ("前天".equals(normalized)) {
+            LocalDate today = now.toLocalDate();
+            start = today.minusDays(2).atStartOfDay(zone.zoneId());
+            end = today.minusDays(1).atStartOfDay(zone.zoneId());
+        } else if ("昨晚".equals(normalized)) {
             LocalDate today = now.toLocalDate();
             start = ZonedDateTime.of(today.minusDays(1), LocalTime.of(18, 0), zone.zoneId());
             ZonedDateTime fixedEnd = ZonedDateTime.of(today, LocalTime.of(6, 0), zone.zoneId());

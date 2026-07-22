@@ -27,6 +27,16 @@ class IncidentTimeRangeResolverTests {
     }
 
     @Test
+    void resolvesDayBeforeYesterdayAsACompleteLocalCalendarDay() {
+        ResolvedIncidentTimeRange range = resolver.resolve("前天", "Asia/Shanghai");
+
+        assertThat(range.startTime()).isEqualTo(Instant.parse("2026-07-18T16:00:00Z"));
+        assertThat(range.endTime()).isEqualTo(Instant.parse("2026-07-19T16:00:00Z"));
+        assertThat(range.timezone()).isEqualTo("Asia/Shanghai");
+        assertThat(range.defaultTimezoneUsed()).isFalse();
+    }
+
+    @Test
     void resolvesRecentHoursAndExplicitIsoRange() {
         assertThat(resolver.resolve("最近 3 小时", "Asia/Shanghai").startTime())
                 .isEqualTo(Instant.parse("2026-07-21T01:00:00Z"));

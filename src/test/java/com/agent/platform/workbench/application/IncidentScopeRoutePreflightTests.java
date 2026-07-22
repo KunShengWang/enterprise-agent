@@ -72,6 +72,22 @@ class IncidentScopeRoutePreflightTests {
     }
 
     @Test
+    void dayBeforeYesterdayIsAcceptedAsAQueryableBusinessAnchor() {
+        IncidentScopeSnapshot ready = snapshot(IncidentScopeSnapshotStatus.CANDIDATES_READY, 2);
+        IncidentScopeSnapshot waiting = snapshot(IncidentScopeSnapshotStatus.WAITING_CONFIRMATION, 3);
+        when(coordinator.discover(any(), any())).thenReturn(ready);
+        when(scopeStore.markWaitingConfirmation(principal(), ready.snapshotId(), ready.version()))
+                .thenReturn(waiting);
+
+        var result = preflight.resolve(principal(),
+                work("调查前天订单超时但库存未释放的问题"), decision(Map.of()), context()).orElseThrow();
+
+        assertThat(result.disposition()).isEqualTo(RouteDisposition.REQUIRE_CONFIRMATION);
+        verify(coordinator).discover(any(), org.mockito.ArgumentMatchers.argThat(
+                command -> "前天".equals(command.timeExpression())));
+    }
+
+    @Test
     void missingBusinessAnchorRequiresClarificationWithoutDiscovery() {
         var result = preflight.resolve(principal(), work("调查订单问题"), decision(Map.of()), context())
                 .orElseThrow();
