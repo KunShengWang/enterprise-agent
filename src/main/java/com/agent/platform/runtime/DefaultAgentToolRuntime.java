@@ -81,6 +81,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                                           AgentToolCall toolCall,
                                           ToolDefinition definition) {
         ToolCallRequest request = new ToolCallRequest(toolCall.toolName(), toolCall.toolCallId(), toolCall.arguments());
+        // 把当前 Agent Run、会话、用户、租户、角色和请求属性封装成统一的工具策略上下文，供后续 Guardrail 权限判断和审批请求绑定使用
         ToolPolicyContext policyContext = ToolPolicyContext.from(runId, sessionId, userId, attributes);
         // 工具调用审查
         GuardrailDecision policy = guardrailService.checkToolCall(definition, request, policyContext);
@@ -128,13 +129,23 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         return prepared;
     }
 
+    /**
+     * 工具的执行：
+     * 1、判断工具是否审批通过
+     * 2、工具执行护栏检查
+     * 3、同一个 toolCallId 全局只执行一次，已经执行过的直接返回缓存结果
+     * 4、拿到工具执行权，执行工具
+     * 5、判断工具执行是成功、失败还是进入人工审批
+     */
     @Override
     public AgentToolRuntimeResult executeApproved(ApprovalRecord approval,
                                                   ToolDefinition definition,
                                                   ToolPolicyContext context) {
+        // 工具的执行必须是审批通过
         if (approval == null || approval.status() != ApprovalStatus.APPROVED) {
             throw new IllegalArgumentException("approved approval record is required");
         }
+        // 工具调用的参数
         ToolCallRequest request = approval.toolCallRequest();
         if (request == null || definition == null || !definition.name().equals(request.toolName())) {
             throw new IllegalArgumentException("approval tool does not match capability definition");
@@ -159,6 +170,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         ToolExecutionClaim claim = toolExecutionStore.claim(runId, request);
         // 没拿到执行权
         if (!claim.claimed()) {
+            // 没拿到执行权，但是之前执行成功过，直接拿缓存结果
             if (claim.state() == ToolExecutionState.SUCCEEDED && claim.cachedResult() != null) {
                 return new AgentToolRuntimeResult(
                         AgentToolExecutionStatus.COMPLETED,
@@ -170,6 +182,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                         true
                 );
             }
+            // 能走到 !claim.claimed() 的失败场景只有一种：跨 run 冲突——另一个 run 占了这个 toolCallId。这种情况不能重试，只能人工判断
             return new AgentToolRuntimeResult(
                     AgentToolExecutionStatus.MANUAL_REVIEW,
                     request,
@@ -181,12 +194,13 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
             );
         }
         // 拿到执行权 → 真正执行
-        ToolCallResult result = executeWithRetry(request);
+        ToolCallResult result = executeWithRetry(request);// 有最大重试次数的执行工具
         try {
             if (result.success()) {
                 toolExecutionStore.markSucceeded(request.requestId(), result);
                 return completed(request, result, policyAction, policyReason, false);
             }
+            // 人工审批
             if (manualReview(result)) {
                 toolExecutionStore.markManualReview(request.requestId(), result.errorMessage());
                 return new AgentToolRuntimeResult(
@@ -253,6 +267,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
     }
 
     private ToolCallResult executeWithRetry(ToolCallRequest request) {
+        // 工具的执行有最大重试次数
         int maxAttempts = Math.max(1, properties.getMaxToolExecutionAttempts());
         ToolCallResult lastResult = null;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -269,7 +284,10 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                         Map.of("attempt", attempt, "retryable", true)
                 );
             }
-            if (lastResult.success() || !retryable(lastResult) || attempt >= maxAttempts) {
+            if (lastResult.success() // ① 成功了 → 不用重试
+                    || !retryable(lastResult) // ② 失败了但不可重试（如权限不足）→ 重试也没用
+                    || attempt >= maxAttempts // ③ 重试次数用完了 → 不能再试了
+            ) {
                 return withAttemptMetadata(lastResult, attempt);
             }
             sleepBackoff(attempt);

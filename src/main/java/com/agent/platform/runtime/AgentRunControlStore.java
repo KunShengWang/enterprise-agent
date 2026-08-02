@@ -31,6 +31,9 @@ public interface AgentRunControlStore {
 
     boolean pauseRequested(String runId);
 
+    /**
+     * 清理当前 agent runId 的暂停请求
+     */
     boolean clearPauseRequest(String runId);
 
     /**

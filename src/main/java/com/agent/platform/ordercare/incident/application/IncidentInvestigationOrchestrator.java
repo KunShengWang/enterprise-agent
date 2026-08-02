@@ -181,6 +181,7 @@ public class IncidentInvestigationOrchestrator {
 
             List<AgentTaskRecord> tasks = createTasks(incident, planning.plan());
             incident = transition(incident, IncidentStatus.INVESTIGATING, "incident-investigating");
+            // Planner 产生三个任务后，IncidentTaskScheduler 会并行执行
             List<IncidentTaskExecution> executions = taskScheduler.execute(tasks, snapshot);
             List<EvidenceGap> gaps = executions.stream().flatMap(item -> item.gaps().stream()).toList();
 

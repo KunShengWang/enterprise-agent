@@ -41,8 +41,10 @@ public class OrderCareProposalBindingStore {
     }
 
     public OrderCareProposalBinding requireForRun(String proposalId, String runId) {
+        // 查询 Proposal 绑定记录
         OrderCareProposalBinding binding = find(proposalId)
                 .orElseThrow(() -> new IllegalArgumentException("当前 Runtime 没有该 Proposal 的成功 preview 记录"));
+        // 验证 Proposal 是否属于当前 Run
         if (runId == null || runId.isBlank() || !Objects.equals(binding.runId(), runId)) {
             throw new IllegalArgumentException("Proposal 不属于当前 Run，禁止跨案例或跨 Run 执行");
         }

@@ -15,6 +15,9 @@ public interface ApprovalStore {
                               ApprovalRecord expiredRecord,
                               java.time.Instant expirationCheckTime);
 
+    /**
+     * 从 agent_store_record 表中搜索 category = "approval"; key = approvalId 的记录，并反序列化为 ApprovalRecord
+     */
     Optional<ApprovalRecord> find(String approvalId);
 
     List<ApprovalRecord> recent(int limit);

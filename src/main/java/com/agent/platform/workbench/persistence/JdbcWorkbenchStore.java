@@ -387,13 +387,14 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
     @Override
     public Optional<ConversationWorkState> findConversationState(AuthenticatedPrincipal principal,
                                                                   String conversationId) {
+        // 判空
         requirePrincipal(principal);
         if (!hasText(conversationId)) {
             return Optional.empty();
         }
         ensureSchema();
         try (Connection connection = openConnection()) {
-            return readConversation(connection, principal, conversationId.trim(), false);
+            return readConversation(connection, principal, conversationId.trim(), false);// 不加行锁
         }
         catch (SQLException exception) {
             throw storageFailure("Failed to find conversation work state", exception);

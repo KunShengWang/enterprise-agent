@@ -13,5 +13,8 @@ public interface AgentCapabilityRegistry {
      */
     List<ToolDefinition> listCapabilities();
 
+    /**
+     * 根据工具名称查询执行的工具
+     */
     Optional<ToolDefinition> findCapability(String name);
 }

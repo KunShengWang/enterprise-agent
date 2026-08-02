@@ -1,5 +1,8 @@
 package com.agent.platform.workbench.model;
 
+/**
+ * 用户问题的分类结果
+ */
 public enum WorkCommandType {
     /** 继续当前工作任务 */
     RESUME_ACTIVE_WORK,

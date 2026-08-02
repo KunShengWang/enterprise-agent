@@ -73,12 +73,15 @@ public class DefaultAgentCapabilityRegistry implements AgentCapabilityRegistry {
         Map<String, ToolDefinition> capabilities = new LinkedHashMap<>();
         register(capabilities, KNOWLEDGE_SEARCH_DEFINITION, "runtime");
         register(capabilities, SKILL_CATALOG_DEFINITION, "runtime");
-        for (ToolDefinition definition : toolRegistry.listTools()) {
+        for (ToolDefinition definition : toolRegistry.listTools()) {// 列出全部工具
             register(capabilities, definition, providerOf(definition));
         }
         return List.copyOf(capabilities.values());
     }
 
+    /**
+     * 根据工具名称查询执行的工具
+     */
     @Override
     public Optional<ToolDefinition> findCapability(String name) {
         if (name == null || name.isBlank()) {
@@ -97,6 +100,10 @@ public class DefaultAgentCapabilityRegistry implements AgentCapabilityRegistry {
             throw new IllegalStateException("capability definition must have a non-blank name; provider=" + provider);
         }
         String name = definition.name().trim();
+        /*
+            如果 key name 不存在 → 插入并返回 null
+            如果 key name 已存在 → 不覆盖，返回已存在的旧值
+         */
         ToolDefinition existing = capabilities.putIfAbsent(name, definition);
         if (existing != null) {
             throw new IllegalStateException(

@@ -18,6 +18,9 @@ public class JdbcGuardrailAuditRecorder implements GuardrailAuditRecorder {
         this.store = store;
     }
 
+    /**
+     * 往 agent_store_record 中记录审批记录
+     */
     @Override
     public void record(GuardrailAuditRecord record) {
         if (record != null) {

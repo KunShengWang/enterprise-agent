@@ -12,6 +12,10 @@ import java.util.Optional;
 @Service
 public class LocalToolRegistry implements ToolRegistry {
 
+    /*
+        Spring 提供的一种延迟获取 Bean 的方式
+        不直接注入 McpToolGateway 对象，而是注入一个“获取它的供应器”，需要的时候再从 Spring 容器中拿
+     */
     private final ObjectProvider<McpToolGateway> mcpToolGatewayProvider;
 
     private final ObjectProvider<ToolCatalogContributor> catalogContributors;
@@ -70,11 +74,12 @@ public class LocalToolRegistry implements ToolRegistry {
     }
 
     /**
-     * 寻找服务商的工具
+     * 列出全部工具
      */
     @Override
     public List<ToolDefinition> listTools() {
-        List<ToolDefinition> mergedTools = new ArrayList<>(tools);
+        List<ToolDefinition> mergedTools = new ArrayList<>(tools);// ① 内置工具
+        // 遍历 ToolCatalogContributor 的子类，把他们的工具整合到 mergedTools
         catalogContributors.orderedStream()
                 .forEach(contributor -> mergedTools.addAll(contributor.definitions()));
         mcpToolGatewayProvider.ifAvailable(gateway -> mergedTools.addAll(gateway.discoverTools()));

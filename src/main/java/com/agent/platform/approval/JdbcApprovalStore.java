@@ -70,8 +70,12 @@ public class JdbcApprovalStore implements ApprovalStore {
         );
     }
 
+    /**
+     * 从 agent_store_record 表中搜索 category = "approval"; key = approvalId 的记录，并反序列化为 ApprovalRecord
+     */
     @Override
     public Optional<ApprovalRecord> find(String approvalId) {
+        // 从 agent_store_record 表中搜索 category = "approval"; key = approvalId 的记录，并反序列化为 ApprovalRecord
         return store.find(CATEGORY, approvalId, ApprovalRecord.class);
     }
 

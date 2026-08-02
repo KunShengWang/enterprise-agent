@@ -103,7 +103,7 @@ public class UnifiedWorkController {
     @PostMapping("/conversations/{conversationId}/inputs")
     public Mono<ResponseEntity<ApiResponse<?>>> submit(
             @PathVariable String conversationId,
-            @RequestHeader("Idempotency-Key") String clientInputId,
+            @RequestHeader("Idempotency-Key") String clientInputId,// 客户端输入幂等键，前端因为超时重复提交同一句话，服务端用这个值判断是不是同一个输入
             @RequestBody UnifiedInputBody body) {
         AuthenticatedPrincipal principal = principals.current();
         return Mono.fromCallable(() -> submitBlocking(principal, conversationId, clientInputId, body))
@@ -261,6 +261,7 @@ public class UnifiedWorkController {
         UnifiedWorkIntakeResult result = intake.accept(principal, new UnifiedWorkInputRequest(
                 "input-" + UUID.randomUUID(), clientInputId, conversationId, body.content(),
                 ClassifierType.MODEL, null, ""));
+        // 命令输入，如：继续、暂停、停止，给当前任务补充信息，那么它不是新业务目标，不创建新的 WorkItem，也不进入第二级目标路由
         if (result.commandOnly()) {
             return commandResponse(commandHandler.handle(principal,
                     new WorkCommandRequest(result.input(), result.commandDecision(), "", null)));

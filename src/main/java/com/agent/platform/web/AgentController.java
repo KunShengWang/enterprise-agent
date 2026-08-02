@@ -101,12 +101,18 @@ public class AgentController {
         return streamEventsInternal(request);
     }
 
+    /**
+     * 查询最近的 Run，返回形式是 AgentRunRecord
+     */
     @GetMapping("/runs")
     public Mono<ApiResponse<List<AgentRunRecord>>> recentRuns(@RequestParam(defaultValue = "20") int limit) {
         return Mono.fromSupplier(() -> ApiResponse.success(agentRunStore.recent(limit)))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
+    /**
+     * 查询指定 Run 的权威状态
+     */
     @GetMapping("/runs/{runId}")
     public Mono<ApiResponse<AgentRunRecord>> findRun(@PathVariable String runId) {
         return Mono.fromSupplier(() -> agentRunStore.find(runId)
@@ -118,6 +124,9 @@ public class AgentController {
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
+    /**
+     * 拉取某次 agent 执行指定序列之后的有限事件
+     */
     @GetMapping("/runs/{runId}/events")
     public Mono<ApiResponse<List<AgentEvent>>> runEvents(@PathVariable String runId,
                                                          @RequestParam(defaultValue = "-1") long afterSequence,
@@ -155,12 +164,18 @@ public class AgentController {
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
+    /**
+     * agent 执行恢复，非流式返回，返回 JSON。返回的结果能看到 agent 的完整执行步骤AgentStep和追踪记录TraceEvent
+     */
     @PostMapping("/runs/{runId}/resume")
     public Mono<ApiResponse<AgentResponse>> resumeRun(@PathVariable String runId) {
         return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.resume(runId)))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
+    /**
+     * agent 执行恢复，流式返回。
+     */
     @PostMapping(value = "/runs/{runId}/resume/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<AgentStreamEvent> resumeRunEvents(@PathVariable String runId) {
         return streamingAgentExecutor.resume(runId);

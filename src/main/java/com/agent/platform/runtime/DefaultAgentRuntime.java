@@ -118,7 +118,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         AgentExecutionProfile profile = executionProfile == null
                 ? defaultExecutionProfile()
                 : executionProfile;
-        // 该接口是同步接口，使用空监听器，也就是如果有事件发送不做任何处理（不推送前端）
+        // 监听器，用于把事件推送到前端
         AgentEventListener effectiveListener = listener == null ? AgentEventListener.NOOP : listener;
         // 多轮对话的上下文标识——同一会话所有消息共享
         String sessionId = normalize(originalRequest.conversationId(), DEFAULT_SESSION_ID);
@@ -140,14 +140,16 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             AgentRunRecord createdRun = AgentRunRecord.create(
                     runId, runId, sessionId, originalRequest, profile, budget.snapshot()
             );
+            // TODO 不懂
             int maxFollowUps = requestedInputCheckpoints.get();
             if (maxFollowUps > 0) {
                 continuationStore();
                 createdRun = createdRun.enableInputCheckpoint(maxFollowUps);
             }
+            // 把 agent 的运行记录持久化到数据库
             runStore.create(createdRun);
             runCreated = true;
-            // 往数据库中添加 agent 事件
+            // 往数据库中添加 agent 事件并把事件推送前端
             publish(sessionId, userId, runId, AgentEventType.RUN_STARTED,
                     "agent run started", Map.of(
                             "question", originalRequest.question(),
@@ -210,24 +212,30 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         }
     }
 
+    /**
+     * agent 执行恢复
+     */
     @Override
     public AgentRuntimeResult resume(String runId, AgentEventListener listener) {
         AgentEventListener effectiveListener = listener == null ? AgentEventListener.NOOP : listener;
         AgentRunRecord stored = runStore.find(runId)
                 .orElseThrow(() -> new IllegalArgumentException("agent run not found: " + runId));
+        // 接管崩溃后遗留的 stale Run
         if (stored.state() == AgentRunState.RUNNING) {
             return recoverRunning(stored, effectiveListener);
         }
+        // 恢复已请求暂停状态和已暂停状态
         if (stored.state() == AgentRunState.PAUSED || stored.state() == AgentRunState.PAUSE_REQUESTED) {
             return resumePaused(stored, effectiveListener);
         }
+        // 不是等待审批状态
         if (stored.state() != AgentRunState.WAITING_APPROVAL) {
             return resultFromStored(stored, inferStoredStopReason(stored));// 不是审批状态，不能恢复
         }
         // ① 找到审批记录
         ApprovalRecord approval = approvalService.find(stored.approvalId())
                 .orElseThrow(() -> new IllegalArgumentException("approval not found: " + stored.approvalId()));
-        // ② 还在等 → 返回"还在审批中"
+        // ② 还在等 → 返回"还在审批中"，就不能把 agent 恢复
         if (approval.status() == ApprovalStatus.REQUESTED) {
             return resultFromStored(stored, AgentStopReason.WAITING_APPROVAL);
         }
@@ -242,9 +250,10 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         AgentRunRecord claimed = stored;
         try {
             // ③ 审完了 → 从 checkpoint 恢复
-            acquireRun(sessionId, runId, leaseOwnerId, budget);// 重新抢租约
+            acquireRun(sessionId, runId, leaseOwnerId, budget);// 重新抢租约，防止在同一个 sessio 下有两个不同的 runId
             acquired = true;
-            Optional<AgentRunRecord> claim = runStore.claimForResume(runId);// 抢执行权
+            // 更新数据库中的 agent 运行状态和阶段
+            Optional<AgentRunRecord> claim = runStore.claimForResume(runId);// 抢执行权，当两个人同时对同一个 runId 点击恢复，只有一个人能把 state=WAITING_APPROVAL → 改为 RUNNING
             if (claim.isEmpty()) {
                 AgentRunRecord current = runStore.find(runId).orElse(stored);
                 return resultFromStored(current, inferStoredStopReason(current));
@@ -255,6 +264,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             List<ToolCallResult> toolResults = new ArrayList<>(claimed.toolResults());
             List<String> usedTools = new ArrayList<>(claimed.usedTools());
             budget.resumeExecution();
+            // 查看是否有 agent 的取消请求
             synchronizeCancellation(runId, budget);
             if (budget.pauseRequested()) {
                 return pauseAtCheckpoint(runId, sessionId, userId, budget, effectiveListener);
@@ -267,7 +277,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             }
 
             ToolCallResult result;
-            // ④ 审批结果判断
+            // ④ 审批结果判断，如果是审批拒绝或者是审批过期
             if (approval.status() == ApprovalStatus.REJECTED || approval.status() == ApprovalStatus.EXPIRED) {
                 String approvalError = approval.status() == ApprovalStatus.EXPIRED
                         ? "human approval expired"
@@ -281,11 +291,14 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                         Map.of("approvalId", approval.approvalId(), "approvalStatus", approval.status().name())
                 );
             }
+            // ④ 审批结果判断，审批通过，执行工具
             else {
+                // 根据工具名称查找工具
                 ToolDefinition definition = capabilityRegistry.findCapability(approval.toolCallRequest().toolName())
                         .orElseThrow(() -> new IllegalArgumentException(
                                 "approved capability no longer exists: " + approval.toolCallRequest().toolName()
                         ));
+                // 执行工具
                 AgentToolRuntimeResult execution = toolRuntime.executeApproved(
                         approval,
                         definition,
@@ -318,8 +331,10 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     approval.status() == ApprovalStatus.APPROVED
             );
             toolResults.add(projectedResult);
+            // 记录此刻 agent 的执行阶段，如果接下来发生崩溃，从上下文准备阶段继续
             checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
                     toolResults, usedTools, claimed.usedRag(), budget);
+            // 往前端发送事件——工具调用已完成
             publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
                     result.success() ? "approved tool completed" : "approved tool returned failure",
                     toolResultPayload(approval.toolCallRequest().requestId(), result), effectiveListener);
@@ -574,13 +589,16 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             return false;
         }
         String normalizedRunId = runId.trim();
+        // 查下当前 runId 的 agent 是否有运行记录，有的话就找出来
         AgentRunRecord stored = runStore.find(normalizedRunId).orElse(null);
         if (stored == null || isTerminal(stored.state())) {
             return false;
         }
+        // 已暂停 || 已请求暂停
         if (stored.state() == AgentRunState.PAUSED || stored.state() == AgentRunState.PAUSE_REQUESTED) {
             return true;
         }
+        // 没有正在运行中
         if (stored.state() != AgentRunState.RUNNING) {
             return false;
         }
@@ -598,21 +616,32 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                         ? current.pauseRequested(localBudget == null ? current.budgetSnapshot() : localBudget.snapshot())
                         : current
         );
+        // 如果是已请求暂停状态，往前端发送事件
         if (requested.state() == AgentRunState.PAUSE_REQUESTED) {
             publish(
                     requested.conversationId(),
                     normalize(requested.userId(), DEFAULT_USER_ID),
                     requested.runId(),
-                    AgentEventType.RUN_PAUSE_REQUESTED,
+                    AgentEventType.RUN_PAUSE_REQUESTED,// 已请求在安全检查点暂停事件类型
                     "agent run pause requested",
                     Map.of("phase", requested.phase().name()),
-                    AgentEventListener.NOOP
+                    AgentEventListener.NOOP// 浏览器: 关闭 / 刷新 / 网络断开，此时 SSE 已经断开，所以就不需要往前端推送事件了
             );
             return true;
         }
         return requested.state() == AgentRunState.PAUSED;
     }
 
+    /**
+     * executeLoop() 是整个单 Agent 的核心循环，负责反复执行：
+     * 准备上下文
+     * → 调用 LLM
+     * → 判断 LLM 是直接回答还是调用工具
+     * → 执行工具
+     * → 把工具结果放回上下文
+     * → 再次调用 LLM
+     * → 直到形成最终回答或被中断
+     */
     private AgentRuntimeResult executeLoop(AgentRequest request,
                                            String runId,
                                            String leaseOwnerId,
@@ -636,8 +665,9 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             }
             // 查看是否有 agent 的取消请求，有取消请求的话就不往下执行了
             synchronizeCancellation(runId, budget);
+            // ③ 暂停
             if (budget.pauseRequested()) {
-                return pauseAtCheckpoint(runId, sessionId, userId, budget, listener);
+                return pauseAtCheckpoint(runId, sessionId, userId, budget, listener);// ← 暂停，可恢复
             }
             // 在 agent 的执行轮次之前判断是否取消 agent
             Optional<AgentStopReason> turnStop = budget.beforeTurn();
@@ -651,6 +681,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     toolResults, usedTools, usedRag, budget);
             // 计算上下文消息预算
             long contextTokenBudget = contextMessageBudget(profile);
+            // 从数据库中加载消息 AgentMessage 并做处理
             AgentContextView context = contextManager.project(
                     sessionId,
                     userId,
@@ -843,6 +874,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 return finishBudgetStop(request, runId, sessionId, userId, asynchronousStop.get(),
                         toolResults, usedTools, usedRag, budget, listener);
             }
+            // ② 正常完成（LLM 不再要调工具）
             // 本次 LLM 调用没有返回工具调用，直接对本地 LLM 答案做护栏输出并添加 LLM 返回消息，然后返回结果
             if (!modelTurn.hasToolCalls()) {
                 return finishFinalAnswer(request, runId, sessionId, userId, modelTurn.assistantText(),
@@ -902,7 +934,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
 
                 boolean capabilityAllowed = profile.allows(call.toolName());
                 Optional<ToolDefinition> definition = capabilityAllowed
-                        ? capabilityRegistry.findCapability(call.toolName())
+                        ? capabilityRegistry.findCapability(call.toolName())// 根据工具名称查询执行的工具
                         : Optional.empty();
                 if (definition.isEmpty()) {
                     String errorType = capabilityAllowed ? "UNKNOWN_CAPABILITY" : "CAPABILITY_NOT_ALLOWED";
@@ -1017,6 +1049,9 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         }
     }
 
+    /**
+     * 把 agent 从暂停状态恢复为运行状态
+     */
     private AgentRuntimeResult resumePaused(AgentRunRecord stored, AgentEventListener listener) {
         String runId = stored.runId();
         String sessionId = stored.conversationId();
@@ -1028,20 +1063,27 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         AgentRunBudget budget = new AgentRunBudget(profile.limits(), stored.budgetSnapshot());
         boolean acquired = false;
         try {
+            // 获取 session 租约
             acquireRun(sessionId, runId, leaseOwnerId, budget);
             acquired = true;
+            // 更新数据库中的 agent 运行状态，只恢复已请求暂停状态和已暂停状态的 agent，把 agent 从暂停状态恢复为运行状态并持久化到数据库
             Optional<AgentRunRecord> claim = runStore.claimPausedForResume(runId);
+            // 如果 agent 不是已请求暂停状态和已暂停状态，返回空
             if (claim.isEmpty()) {
+                // 查一遍最新状态
                 AgentRunRecord current = runStore.find(runId).orElse(stored);
                 return resultFromStored(current, inferStoredStopReason(current));
             }
             AgentRunRecord claimed = claim.get();
+            // 清理当前 agent runId 的暂停请求
             if (!runControlStore.clearPauseRequest(runId)) {
                 throw new IllegalStateException("failed to clear pause request for run: " + runId);
             }
+            // 清理暂停请求
             budget.clearPauseRequest();
-            budget.resumeExecution();
+            budget.resumeExecution();// 恢复 agent 执行
             runStore.update(runId, current -> current.withBudgetSnapshot(budget.snapshot()));
+            // 往前端推送运行已恢复时间
             publish(sessionId, userId, runId, AgentEventType.RUN_RESUMED,
                     "user-paused checkpoint resumed", Map.of(
                             "phase", claimed.phase().name(),
@@ -1276,14 +1318,19 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         budget.pauseExecution();
         AgentRunBudgetSnapshot pausedBudget = budget.snapshot();
         AgentRunRecord paused = runStore.update(runId, current -> {
+            // ① 已经结束了（COMPLETED/FAILED/BLOCKED）→ 不暂停，原样返回
+            // ② 正在等审批 → 不暂停，原样返回
             if (isTerminal(current.state()) || current.state() == AgentRunState.WAITING_APPROVAL) {
-                return current;
+                return current;// 不修改业务状态，但仍会产生一次版本更新
             }
+            // ③ 正常 → 改为 PAUSED，存预算快照
             return current.paused(pausedBudget);
         });
+        // 如果没能把状态设置为 PAUSED，说明已经结束了，返回结束状态（COMPLETED/FAILED/BLOCKED/WAITING_APPROVAL）
         if (paused.state() != AgentRunState.PAUSED) {
             return resultFromStored(paused, inferStoredStopReason(paused));
         }
+        // 如果暂停成功，往前端推送消息
         publish(sessionId, userId, runId, AgentEventType.RUN_PAUSED,
                 "agent run paused at durable checkpoint", Map.of(
                         "phase", paused.phase().name(),
@@ -1793,7 +1840,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
     }
 
     /**
-     * 往数据库中添加 agent 事件
+     * 往数据库中添加 agent 事件并把事件推送前端
      */
     private AgentEvent publish(String sessionId,
                                String userId,
@@ -1809,10 +1856,14 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 runId,
                 new AgentEventDraft(type, content, payload)
         );
+        // 把事件推送前端
         dispatch(event, listener);
         return event;
     }
 
+    /**
+     * 把事件推送前端
+     */
     private void dispatch(AgentEvent event, AgentEventListener listener) {
         if (event == null || listener == null) {
             return;
@@ -1952,6 +2003,9 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         );
     }
 
+    /**
+     * 根据 agent 的运行状态推断停止原因
+     */
     private AgentStopReason inferStoredStopReason(AgentRunRecord stored) {
         return switch (stored.state()) {
             case COMPLETED -> AgentStopReason.COMPLETED;

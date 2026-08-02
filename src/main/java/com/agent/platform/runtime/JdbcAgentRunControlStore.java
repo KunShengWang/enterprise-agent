@@ -38,7 +38,7 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
                                     Duration leaseDuration) {
         ensureSchema();
         Instant now = Instant.now();
-        Instant leaseUntil = now.plus(normalizeDuration(leaseDuration));
+        Instant leaseUntil = now.plus(normalizeDuration(leaseDuration));// 默认租约持续 3 分钟
         try (Connection connection = openConnection()) {
             // 开启事务
             connection.setAutoCommit(false);
@@ -47,6 +47,7 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
                 registerRunControl(connection, sessionId, runId, now);
                 /*
                     ② 抢 session 租约 — 防止并发冲突
+                    同一时间只能有一个线程拿到这个 sql 去执行
                     租约获取有四种情况：
                     1、无记录，直接插入，获取租约
                     2、有记录，满足条件一，是同一个 owner，续约
@@ -186,6 +187,9 @@ public class JdbcAgentRunControlStore implements AgentRunControlStore {
         }
     }
 
+    /**
+     * 清理当前 agent runId 的暂停请求
+     */
     @Override
     public boolean clearPauseRequest(String runId) {
         ensureSchema();

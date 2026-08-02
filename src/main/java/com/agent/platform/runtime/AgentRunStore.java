@@ -26,7 +26,14 @@ public interface AgentRunStore {
      */
     AgentRunRecord update(String runId, UnaryOperator<AgentRunRecord> updater);
 
+    /**
+     * 更新数据库中的 agent 运行状态和阶段
+     */
     Optional<AgentRunRecord> claimForResume(String runId);
 
+    /**
+     * 只恢复已请求暂停状态和已暂停状态的 agent
+     * 把 agent 从暂停状态恢复为运行状态并持久化到数据库
+     */
     Optional<AgentRunRecord> claimPausedForResume(String runId);
 }

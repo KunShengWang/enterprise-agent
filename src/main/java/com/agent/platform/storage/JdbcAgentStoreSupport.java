@@ -58,6 +58,9 @@ public class JdbcAgentStoreSupport {
         }
     }
 
+    /**
+     * 从 agent_store_record 表中搜索对应 category 和 key 的记录，并反序列化为执行的类型
+     */
     public <T> Optional<T> find(String category, String key, Class<T> type) {
         if (key == null || key.isBlank()) {
             return Optional.empty();

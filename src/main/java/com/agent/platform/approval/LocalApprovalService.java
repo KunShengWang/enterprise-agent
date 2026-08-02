@@ -111,6 +111,9 @@ public class LocalApprovalService implements ApprovalService {
         );
     }
 
+    /**
+     * 根据 approvalId 寻找审批记录，顺便检查审批是否已经过期，并通过并发安全的方式把状态从 REQUESTED 更新为 EXPIRED。
+     */
     @Override
     public Optional<ApprovalRecord> find(String approvalId) {
         return approvalStore.find(approvalId).map(this::expireIfNecessary);
@@ -123,16 +126,25 @@ public class LocalApprovalService implements ApprovalService {
                 .toList();
     }
 
+    /**
+     * 读取审批记录时，顺便检查审批是否已经过期，并通过并发安全的方式把状态从 REQUESTED 更新为 EXPIRED。
+     */
     private ApprovalRecord expireIfNecessary(ApprovalRecord current) {
+        // 取当前时间，类似 Instant.now()，但是可以注入模拟时间
         Instant checkedAt = clock.instant();
+        // 检查当前状态和过期时间：审批已经不是等待状态，直接返回，不能再把它改成过期 || 当前时间还早于过期时间
         if (current.status() != ApprovalStatus.REQUESTED || checkedAt.isBefore(current.expiresAt())) {
+            // 没过期：原样返回
             return current;
         }
+        // “仍在等待审批，并且已经过期”才会执行下面代码
+        // 在内存中构造过期记录,只修改审批结果相关字段：status、处理者、原因、更新时间/决策时间
         ApprovalRecord expired = new ApprovalRecord(
                 current.approvalId(), current.runId(), current.conversationId(), current.toolCallRequest(),
                 current.reason(), ApprovalStatus.EXPIRED, "system", "approval expired",
                 current.createdAt(), current.expiresAt(), checkedAt
         );
+        // 用条件更新写入数据库，因为考虑审批人与过期检查同时发生
         if (approvalStore.expireIfRequested(current.approvalId(), expired, checkedAt)) {
             return expired;
         }

@@ -11,8 +11,17 @@ import java.util.Map;
 @Component
 public class IncidentToolCatalog implements ToolCatalogContributor {
 
+    /**
+     * 查询事故范围内的订单事实
+     */
     public static final String ORDER_FACTS = "floworder_incident_order_facts";
+    /**
+     * 查询事故范围内的库存扣减和库存不变量事实
+     */
     public static final String INVENTORY_FACTS = "floworder_incident_inventory_facts";
+    /**
+     * 查询事故范围内的持久化死信事实和 RabbitMQ 实时运行状态
+     */
     public static final String MQ_FACTS = "floworder_incident_mq_facts";
 
     private static final String SNAPSHOT_SCHEMA = """

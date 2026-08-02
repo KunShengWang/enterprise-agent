@@ -66,6 +66,7 @@ public class JdbcRoutingStore implements RoutingStore {
                                                            String clientInputId,
                                                            String conversationId,
                                                            String content) {
+        // 判空
         requirePrincipal(principal);
         inputId = requireText(inputId, "inputId");
         clientInputId = requireText(clientInputId, "clientInputId");
@@ -100,6 +101,7 @@ public class JdbcRoutingStore implements RoutingStore {
                     statement.setString(10, json(principal.roles()));
                     statement.executeUpdate();
                 }
+                // 无论本次是新插入，还是重复请求命中了已有记录，都统一返回数据库里最终对应的那条数据
                 AgentConversationTurn persisted = readInputByClientId(
                         connection, principal, clientInputId, true).orElseThrow();
                 if (!persisted.requestDigest().equals(requestDigest)

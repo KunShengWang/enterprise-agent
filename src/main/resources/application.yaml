@@ -299,4 +299,4 @@ enterprise-agent:
         max-estimated-cost: 10
 llm:
   http-log:
-    enabled: ${LLM_HTTP_LOG_ENABLED:false}
+    enabled: ${LLM_HTTP_LOG_ENABLED:true}

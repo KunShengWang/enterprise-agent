@@ -1,87 +1,99 @@
 package com.agent.platform.config;
 
+import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.http.client.reactive.ClientHttpConnector;
+import org.springframework.http.client.reactive.ClientHttpRequest;
+import org.springframework.http.client.reactive.ClientHttpRequestDecorator;
+import org.springframework.http.client.reactive.ClientHttpResponseDecorator;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 /**
- * 自定义 RestClient.Builder，给 Spring AI 的 ChatModel 调用加 HTTP 拦截器。
- * 同时拦截请求和响应，打印发给 LLM 的 HTTP 请求体和 LLM 返回的 HTTP 响应体。
+ * Logs the provider-native HTTP payload before Spring AI deserializes it.
  *
- * 响应体是流式的，读一次就消费完，所以用 BufferingClientHttpResponseWrapper
- * 把响应体缓存到 byte[]，让拦截器读一次后还能让 Spring AI 再读一次。
- *
- * 这是 super-agent 项目里 ObservedChatModelService 的最小教学版：
- * 拦截请求/响应 → 打印/记录 → 继续执行
+ * <p>The synchronous DeepSeek call uses {@link RestClient}; streaming uses
+ * {@link WebClient}. Both builders are supplied here so requests and responses
+ * are captured after JSON serialization and before JSON/SSE decoding.</p>
  */
 @Configuration
 @ConditionalOnProperty(prefix = "llm.http-log", name = "enabled", havingValue = "true")
 public class HttpLoggingConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(HttpLoggingConfig.class);
+    private static final AtomicLong CALL_SEQUENCE = new AtomicLong();
+
     @Bean
-    public RestClient.Builder restClientBuilder() {
-        return RestClient.builder().requestInterceptor(loggingInterceptor());
+    public RestClient.Builder llmRestClientBuilder() {
+        return RestClient.builder().requestInterceptor(synchronousLoggingInterceptor());
     }
 
-    private static ClientHttpRequestInterceptor loggingInterceptor() {
-        return (request, body, execution) -> {
-            System.out.println("\n========== 实际发给 LLM 的 HTTP 请求 ==========");
-            System.out.println("Method : " + request.getMethod());
-            System.out.println("URI    : " + request.getURI());
-            System.out.println("Headers: ");
-            request.getHeaders().forEach((name, values) -> {
-                String lowerName = name.toLowerCase();
-                if (lowerName.contains("authorization")
-                        || lowerName.contains("api-key")
-                        || lowerName.contains("token")
-                        || lowerName.contains("secret")) {
-                    System.out.println("  " + name + ": [HIDDEN]");
-                } else {
-                    System.out.println("  " + name + ": " + values);
-                }
-            });
-            System.out.println("Body   :");
-            System.out.println(new String(body, StandardCharsets.UTF_8));
-            System.out.println("==============================================");
+    @Bean
+    public WebClient.Builder llmWebClientBuilder() {
+        return WebClient.builder()
+                .clientConnector(new RawLoggingClientHttpConnector(new ReactorClientHttpConnector()));
+    }
 
-            // 真正执行 HTTP 请求
+    private static ClientHttpRequestInterceptor synchronousLoggingInterceptor() {
+        return (request, body, execution) -> {
+            String callId = nextCallId();
+            log.info("[LLM][RAW HTTP REQUEST] callId={} method={} uri={}\n{}",
+                    callId,
+                    request.getMethod(),
+                    request.getURI(),
+                    utf8(body));
+
             ClientHttpResponse response = execution.execute(request, body);
-            // 用缓冲包装器把响应体读进内存，这样拦截器读一次后下游还能再读
-            BufferedResponse buffered = new BufferedResponse(response);
-            System.out.println("\n========== LLM 返回的 HTTP 响应 ==========");
-            System.out.println("Status : " + buffered.getStatusCode());
-            System.out.println("Headers: ");
-            buffered.getHeaders().forEach((name, values) ->
-                    System.out.println("  " + name + ": " + values));
-            System.out.println("Body   :");
-            System.out.println(new String(buffered.bufferedBody, StandardCharsets.UTF_8));
-            System.out.println("==============================================\n");
+            BufferedClientHttpResponse buffered = new BufferedClientHttpResponse(response);
+            log.info("[LLM][RAW HTTP RESPONSE] callId={} status={}\n{}",
+                    callId,
+                    buffered.getStatusCode(),
+                    utf8(buffered.body));
             return buffered;
         };
     }
 
-    /**
-     * 响应包装器：把原始响应体读进 byte[] 缓存，getBody() 每次返回新的 ByteArrayInputStream。
-     * 这样拦截器读完响应体后，Spring AI 还能再读一次。
-     */
-    private static class BufferedResponse implements ClientHttpResponse {
+    private static String nextCallId() {
+        return "llm-http-" + CALL_SEQUENCE.incrementAndGet();
+    }
+
+    private static String utf8(byte[] bytes) {
+        return new String(bytes == null ? new byte[0] : bytes, StandardCharsets.UTF_8);
+    }
+
+    private static final class BufferedClientHttpResponse implements ClientHttpResponse {
 
         private final ClientHttpResponse delegate;
-        private final byte[] bufferedBody;
+        private final byte[] body;
 
-        BufferedResponse(ClientHttpResponse delegate) throws IOException {
+        private BufferedClientHttpResponse(ClientHttpResponse delegate) throws IOException {
             this.delegate = delegate;
             try (InputStream input = delegate.getBody()) {
-                this.bufferedBody = input.readAllBytes();
+                this.body = input.readAllBytes();
             }
         }
 
@@ -102,7 +114,7 @@ public class HttpLoggingConfig {
 
         @Override
         public InputStream getBody() {
-            return new ByteArrayInputStream(bufferedBody);
+            return new ByteArrayInputStream(body);
         }
 
         @Override
@@ -110,5 +122,140 @@ public class HttpLoggingConfig {
             return delegate.getHeaders();
         }
     }
-}
 
+    static final class RawLoggingClientHttpConnector implements ClientHttpConnector {
+
+        private final ClientHttpConnector delegate;
+
+        RawLoggingClientHttpConnector(ClientHttpConnector delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public Mono<org.springframework.http.client.reactive.ClientHttpResponse> connect(
+                HttpMethod method,
+                URI uri,
+                Function<? super ClientHttpRequest, Mono<Void>> requestCallback) {
+            String callId = nextCallId();
+            return delegate.connect(method, uri, request ->
+                            requestCallback.apply(new LoggingClientHttpRequest(request, callId)))
+                    .map(response -> {
+                        log.info("[LLM][RAW HTTP RESPONSE] callId={} status={}",
+                                callId, response.getStatusCode());
+                        return new LoggingClientHttpResponse(response, callId);
+                    });
+        }
+    }
+
+    private static final class LoggingClientHttpRequest extends ClientHttpRequestDecorator {
+
+        private final String callId;
+
+        private LoggingClientHttpRequest(ClientHttpRequest delegate, String callId) {
+            super(delegate);
+            this.callId = callId;
+        }
+
+        @Override
+        public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
+            return DataBufferUtils.join(body)
+                    .map(Optional::of)
+                    .defaultIfEmpty(Optional.empty())
+                    .flatMap(joined -> {
+                        if (joined.isEmpty()) {
+                            log.info("[LLM][RAW HTTP REQUEST] callId={} method={} uri={}",
+                                    callId, getMethod(), getURI());
+                            return super.setComplete();
+                        }
+                        DataBuffer buffer = joined.orElseThrow();
+                        byte[] bytes = readAndRelease(buffer);
+                        log.info("[LLM][RAW HTTP REQUEST] callId={} method={} uri={}\n{}",
+                                callId, getMethod(), getURI(), utf8(bytes));
+                        return super.writeWith(Mono.just(bufferFactory().wrap(bytes)));
+                    });
+        }
+
+        @Override
+        public Mono<Void> writeAndFlushWith(
+                Publisher<? extends Publisher<? extends DataBuffer>> body) {
+            return writeWith(Flux.from(body).concatMap(Flux::from));
+        }
+    }
+
+    private static final class LoggingClientHttpResponse extends ClientHttpResponseDecorator {
+
+        private final RawLineLogger bodyLogger;
+
+        private LoggingClientHttpResponse(
+                org.springframework.http.client.reactive.ClientHttpResponse delegate,
+                String callId) {
+            super(delegate);
+            this.bodyLogger = new RawLineLogger(callId);
+        }
+
+        @Override
+        public Flux<DataBuffer> getBody() {
+            return super.getBody()
+                    .doOnNext(bodyLogger::accept)
+                    .doOnComplete(bodyLogger::complete)
+                    .doOnError(ignored -> bodyLogger.complete());
+        }
+    }
+
+    /**
+     * Reassembles transport fragments into complete raw SSE lines. It does not
+     * deserialize or modify the JSON carried by each {@code data:} line.
+     */
+    private static final class RawLineLogger {
+
+        private final String callId;
+        private final ByteArrayOutputStream currentLine = new ByteArrayOutputStream();
+
+        private RawLineLogger(String callId) {
+            this.callId = callId;
+        }
+
+        private synchronized void accept(DataBuffer buffer) {
+            ByteBuffer bytes = buffer.toByteBuffer();
+            while (bytes.hasRemaining()) {
+                byte value = bytes.get();
+                if (value == '\n') {
+                    emitLine();
+                }
+                else {
+                    currentLine.write(value);
+                }
+            }
+        }
+
+        private synchronized void complete() {
+            if (currentLine.size() > 0) {
+                emitLine();
+            }
+        }
+
+        private void emitLine() {
+            byte[] bytes = currentLine.toByteArray();
+            currentLine.reset();
+            int length = bytes.length;
+            if (length > 0 && bytes[length - 1] == '\r') {
+                length--;
+            }
+            if (length > 0) {
+                log.info("[LLM][RAW HTTP RESPONSE BODY] callId={}\n{}",
+                        callId, new String(bytes, 0, length, StandardCharsets.UTF_8));
+            }
+        }
+    }
+
+    private static byte[] readAndRelease(DataBuffer buffer) {
+        try {
+            byte[] bytes = new byte[buffer.readableByteCount()];
+            buffer.read(bytes);
+            return bytes;
+        }
+        finally {
+            DataBufferUtils.release(buffer);
+        }
+    }
+}

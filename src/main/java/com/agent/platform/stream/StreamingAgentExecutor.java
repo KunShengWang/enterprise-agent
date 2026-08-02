@@ -7,5 +7,8 @@ public interface StreamingAgentExecutor {
 
     Flux<AgentStreamEvent> stream(AgentRequest request);
 
+    /**
+     * agent 执行恢复，流式返回。
+     */
     Flux<AgentStreamEvent> resume(String runId);
 }

@@ -237,11 +237,17 @@ public class JdbcAgentTimelineStore implements AgentTimelineStore {
         }
     }
 
+    /**
+     * 拉取某次 agent 执行从开始序列之后的有限事件
+     */
     @Override
     public List<AgentEvent> loadEvents(String runId, int limit) {
         return loadEventsAfter(runId, -1, limit);
     }
 
+    /**
+     * 拉取某次 agent 执行指定序列之后的有限事件
+     */
     @Override
     public List<AgentEvent> loadEventsAfter(String runId, long afterSequence, int limit) {
         if (runId == null || runId.isBlank()) {

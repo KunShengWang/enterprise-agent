@@ -35,7 +35,9 @@ public class OrderCareApprovalRequestPreparer implements ApprovalToolCallRequest
     public ToolCallRequest prepare(String approvalId,
                                    ToolCallRequest request,
                                    ToolPolicyContext context) {
+        // 把参数字符串化，如："prop-2239556c-1101-3459-bb4d-954b8351b2be"
         String proposalId = stringArgument(request.arguments(), "proposalId");
+        // 检查这个 proposalId 是不是当前这次 Agent 运行自己创建的
         OrderCareProposalBinding binding = bindingStore.requireForRun(proposalId, context.runId());
         OrderCareRecoveryProposal current = flowOrderClient.getProposal(proposalId, request.requestId());
         ensureSameImmutablePreview(binding.immutablePreview(), current);

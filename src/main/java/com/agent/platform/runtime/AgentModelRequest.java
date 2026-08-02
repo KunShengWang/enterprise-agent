@@ -9,7 +9,7 @@ public record AgentModelRequest(
         String runId,
         String sessionId,
         String systemPrompt,
-        List<AgentMessage> messages,
+        List<AgentMessage> messages,// USER、ASSISTANT_TEXT、TOOL_RESULT、ASSISTANT_TOOL_CALL 四种消息
         List<ToolDefinition> tools,
         Map<String, Object> metadata
 ) {

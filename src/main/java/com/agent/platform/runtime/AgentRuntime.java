@@ -10,6 +10,9 @@ public interface AgentRuntime {
                            AgentExecutionProfile executionProfile,
                            AgentEventListener listener);
 
+    /**
+     * agent 执行恢复
+     */
     AgentRuntimeResult resume(String runId, AgentEventListener listener);
 
     /** 持久化取消请求；同实例正在运行时同时触发本地预算取消。 */

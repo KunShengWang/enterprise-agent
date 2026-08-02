@@ -8,6 +8,8 @@ import com.agent.platform.runtime.AgentEventListener;
 import com.agent.platform.runtime.AgentRuntime;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
 import reactor.core.publisher.BufferOverflowStrategy;
 import reactor.core.publisher.Flux;
@@ -26,6 +28,8 @@ import java.util.function.Consumer;
  */
 @Service
 public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
+
+    private static final Logger log = LoggerFactory.getLogger(DefaultStreamingAgentExecutor.class);
 
     private final AgentRuntime runtime;
     private final AgentProperties properties;
@@ -68,6 +72,9 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                 );
     }
 
+    /**
+     * agent 执行恢复，流式返回。
+     */
     @Override
     public Flux<AgentStreamEvent> resume(String runId) {
         if (runId == null || runId.isBlank()) {
@@ -84,6 +91,7 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
     private Flux<AgentStreamEvent> streamExecution(String initialRunId,
                                                     String initialSessionId,
                                                     Consumer<AgentEventListener> invocation) {
+        // 用 AtomicReference 包住因为 lambda 里不能修改外部局部变量，而 AtomicReference 本身引用不变，只改里面存的值
         AtomicReference<String> runId = new AtomicReference<>(initialRunId);
         AtomicReference<String> sessionId = new AtomicReference<>(initialSessionId);
         AtomicLong lastSequence = new AtomicLong(0);
@@ -108,6 +116,7 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                                     sessionId.set(event.sessionId());
                                 }
                                 lastSequence.accumulateAndGet(event.sequence(), Math::max);
+                                // SSE 断开，agent 暂停执行
                                 if (cancelled.get()) {
                                     // agent 暂停，数据库持久化暂停标志，AgentRunBudget 标志暂停
                                     runtime.pause(event.runId());
@@ -119,10 +128,13 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                             });
                             // 执行完成检查，客户端断了就别 complete 了
                             if (!sink.isCancelled()) {
-                                sink.complete();
+                                sink.complete();// ← Agent 执行完了，SSE 流正常结束
                             }
                         }
                         catch (RuntimeException exception) {
+                            // 代理运行时 SSE 执行意外终止
+                            log.warn("Agent Runtime SSE execution terminated unexpectedly: runId={}, sessionId={}, lastSequence={}",
+                                    runId.get(), sessionId.get(), lastSequence.get(), exception);
                             if (!sink.isCancelled()) {
                                 sink.next(errorEvent(
                                         runId.get(),
@@ -138,6 +150,7 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                         }
                     });
                     // 客户端主动断连只请求暂停；永久取消仍由显式 cancel API 完成。
+                    // 浏览器: 关闭 / 刷新 / 网络断开 -> HTTP 连接断开 -> WebFlux 检测到 -> sink.onCancel() 触发
                     sink.onCancel(() -> {
                         cancelled.set(true);// 标记客户端已中断接收
                         String activeRunId = runId.get();
@@ -148,6 +161,7 @@ public class DefaultStreamingAgentExecutor implements StreamingAgentExecutor {
                         task.dispose();// 关执行任务
                     });
                     // 任务正常结束（不杀 Agent）
+                    // sink.complete() -> 触发 reactive 流完成信号 -> WebFlux 收到 → 关闭 HTTP response body -> Netty 发 FIN → 通知 TCP 关闭 -> 触发 sink.onDispose() 回调
                     sink.onDispose(() -> {
                         heartbeat.dispose();// 关掉定时心跳
                         task.dispose();// 关执行任务

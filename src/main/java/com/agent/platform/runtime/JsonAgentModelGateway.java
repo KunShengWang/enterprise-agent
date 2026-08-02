@@ -63,7 +63,7 @@ public class JsonAgentModelGateway implements AgentModelGateway {
                     llmService.lastFinishReason().ifPresent(providerFinishReason::set);
                     raw.append(delta);
                     if (!"fallback".equalsIgnoreCase(streamedUsage.get().source())) {
-                        responseRouter.accept(delta);
+                        responseRouter.accept(delta); // ← 分流：文本 vs 工具调用
                     }
                 })
                 .blockLast();
@@ -285,7 +285,7 @@ public class JsonAgentModelGateway implements AgentModelGateway {
         private void accept(String delta) {
             if (!toolCallsAllowed) {
                 kind = ResponseKind.FINAL_TEXT;
-                listener.onDelta(delta);
+                listener.onDelta(delta);// ← 只推文本，工具调用吞掉
                 return;
             }
             // ① 已经确定是普通文本 → 直接透传

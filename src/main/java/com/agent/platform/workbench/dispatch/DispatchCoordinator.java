@@ -62,6 +62,7 @@ public class DispatchCoordinator {
         if (claimed.isEmpty()) return Optional.empty();
         DispatchClaim claim = claimed.get();
         ScheduledFuture<?> heartbeat = startHeartbeat(claim);
+        // 寻找 agent 执行适配器
         ExecutionAdapter adapter = adapters.require(claim.request().targetId());
         BudgetReservationHandle budget;
         try {

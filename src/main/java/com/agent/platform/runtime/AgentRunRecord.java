@@ -20,9 +20,9 @@ public record AgentRunRecord(
         AgentRequest request,
         AgentExecutionProfile executionProfile,
         AgentRunBudgetSnapshot budgetSnapshot,
-        AgentRunState state,
-        AgentRunPhase phase,
-        String approvalId,
+        AgentRunState state,// agent 运行的状态
+        AgentRunPhase phase,// agent 执行到的阶段
+        String approvalId,// 审批 id
         ToolCallRequest pendingToolCall,// 当前准备执行的工具调用
         List<ToolCallResult> toolResults,
         List<String> usedTools,
@@ -201,6 +201,7 @@ public record AgentRunRecord(
     }
 
     public AgentRunRecord claimedForResume() {
+        // 审批结束后的下一步必然是“处理之前被冻结的工具调用”
         return copy(
                 AgentRunState.RUNNING,
                 AgentRunPhase.EXECUTING_TOOL,
@@ -236,7 +237,7 @@ public record AgentRunRecord(
 
     public AgentRunRecord pauseRequested(AgentRunBudgetSnapshot currentBudget) {
         return copy(
-                AgentRunState.PAUSE_REQUESTED,
+                AgentRunState.PAUSE_REQUESTED,// 已请求暂停
                 phase,
                 approvalId,
                 pendingToolCall,

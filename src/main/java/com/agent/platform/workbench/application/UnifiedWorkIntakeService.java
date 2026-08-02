@@ -34,7 +34,7 @@ public class UnifiedWorkIntakeService {
     }
 
     public UnifiedWorkIntakeResult accept(AuthenticatedPrincipal principal, UnifiedWorkInputRequest request) {
-        // Routing schema extends the Workbench base tables, so initialize the base owner first on a fresh database.
+        // 路由方案扩展了 Workbench 基础表，因此首先在新数据库上初始化基础所有者
         workbenchStore.findConversationState(principal, request.conversationId());
         // 持久化用户输入（幂等：同一个 clientInputId 只存一次）
         AgentConversationTurn input = routingStore.persistUnclassifiedInput(
@@ -54,6 +54,7 @@ public class UnifiedWorkIntakeService {
                 ? classification.derivedGoalText() : input.content();
         GoalOrigin origin = classification.commandType() == WorkCommandType.START_NEW_WORK
                 ? GoalOrigin.DERIVED_FROM_START_NEW_WORK : GoalOrigin.DIRECT_NORMAL_GOAL;
+        // 创建 WorkItem
         WorkItemCreationResult created = workbenchStore.createWorkItemFromPersistedInput(
                 principal,
                 new CreatePersistedInputWorkItemCommand(
@@ -67,14 +68,19 @@ public class UnifiedWorkIntakeService {
     private WorkCommandDecision classify(AuthenticatedPrincipal principal,
                                          AgentConversationTurn input,
                                          UnifiedWorkInputRequest request) {
+        // 根据用户身份和 conversationId 查询当前会话状态
         ConversationWorkState focus = workbenchStore.findConversationState(principal, input.conversationId())
                 .orElseThrow(() -> new IllegalStateException("conversation focus state disappeared"));
+        // 存在 focusedWorkItemId 时，加载对应的工作项；否则 focused = null
         AgentWorkItem focused = focus.focusedWorkItemId().isBlank() ? null
                 : workbenchStore.findWorkItem(principal, focus.focusedWorkItemId()).orElse(null);
+        // 确定分类器类型并生成追踪 ID
         ClassifierType classifierType = request.classifierType();
         String traceId = "command-classifier-" + UUID.randomUUID();
+        // 创建分类尝试记录
         WorkCommandDecision started = routingStore.beginCommandAttempt(
                 principal, input.inputId(), classifierType, traceId);
+        // 如果 beginCommandAttempt() 返回的记录已经是 EFFECTIVE，说明这条输入之前已经完成过有效分类，因此直接返回，不再重复调用分类器
         if (started.decisionStatus().name().equals("EFFECTIVE")) return started;
         try {
             CommandClassifierResult result = classifier.classify(new CommandClassificationRequest(

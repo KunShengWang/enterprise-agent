@@ -142,6 +142,7 @@ public class DefaultGuardrailService implements GuardrailService {
     }
 
     private void audit(String subject, GuardrailDecision decision, String safeContent, Map<String, Object> metadata) {
+        // 往 agent_store_record 中记录审批记录
         auditRecorder.record(new GuardrailAuditRecord(
                 UUID.randomUUID().toString(),
                 decision.stage(),

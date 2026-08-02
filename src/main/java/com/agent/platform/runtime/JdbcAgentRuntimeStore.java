@@ -154,19 +154,25 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore,
         }
     }
 
+    /**
+     * 更新数据库中的 agent 运行状态和阶段
+     */
     @Override
     public Optional<AgentRunRecord> claimForResume(String runId) {
         ensureSchema();
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
+                // 从 agent_run_state 表中读取 record_json 并反序列化为 AgentRunRecord
                 AgentRunRecord current = loadRunForUpdate(connection, runId).orElse(null);
                 if (current == null || current.state() != AgentRunState.WAITING_APPROVAL) {
                     connection.rollback();
-                    return Optional.empty();
+                    return Optional.empty();// 不是审批等待态 → 空
                 }
+                // 更新数据库中 agent 执行的阶段是执行工具
                 AgentRunRecord claimed = current.claimedForResume()
                         .withVersion(current.version() + 1, Instant.now());
+                // 持久化到数据库
                 writeRun(connection, claimed);
                 connection.commit();
                 return Optional.of(claimed);
@@ -181,20 +187,28 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore,
         }
     }
 
+    /**
+     * 只恢复已请求暂停状态和已暂停状态的 agent
+     * 把 agent 从暂停状态恢复为运行状态并持久化到数据库
+     */
     @Override
     public Optional<AgentRunRecord> claimPausedForResume(String runId) {
         ensureSchema();
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
+                // 加载数据库中持久化的 agent 运行状态
                 AgentRunRecord current = loadRunForUpdate(connection, runId).orElse(null);
+                // 只恢复已请求暂停状态和已暂停状态的 agent
                 if (current == null || (current.state() != AgentRunState.PAUSED
                         && current.state() != AgentRunState.PAUSE_REQUESTED)) {
                     connection.rollback();
                     return Optional.empty();
                 }
+                // 把 agent 从暂停状态恢复为运行状态
                 AgentRunRecord claimed = current.claimedPausedForResume()
                         .withVersion(current.version() + 1, Instant.now());
+                // 然后持久化到数据库
                 writeRun(connection, claimed);
                 connection.commit();
                 return Optional.of(claimed);
@@ -358,6 +372,7 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore,
             try {
                 // ① 查数据库：这个 toolCallId 之前见过吗？
                 ToolExecutionRecord current = loadToolForUpdate(connection, request.requestId()).orElse(null);
+                // 之前没执行过 toolCallId 的工具
                 if (current == null) {
                     // ② 没见过 → 插入 RUNNING 记录 → 拿到执行权
                     insertTool(connection, ToolExecutionRecord.running(runId, request));
@@ -371,11 +386,13 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore,
                             "tool execution id already belongs to another run"
                     );
                 }
+                // 当前 runId 执行过这个工具且执行成功了，直接拿到缓存的结果。toolCallId 全局唯一，相同的工具和传参才会拿到缓存的结果
                 if (current.state() == ToolExecutionState.SUCCEEDED) {
                     connection.commit();
                     // ④ 已经成功执行过 → 返回缓存结果
                     return ToolExecutionClaim.existing(current, "toolCallId already succeeded");
                 }
+                // 之前执行失败，重试
                 if (current.state() == ToolExecutionState.FAILED) {
                     // ⑤ 上次失败了 → 允许重试
                     writeTool(connection, current.retrying());

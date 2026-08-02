@@ -38,5 +38,8 @@ public interface AgentTimelineStore {
 
     List<AgentEvent> loadEvents(String runId, int limit);
 
+    /**
+     * 拉取某次 agent 执行指定序列之后的有限事件
+     */
     List<AgentEvent> loadEventsAfter(String runId, long afterSequence, int limit);
 }

@@ -6,7 +6,7 @@ import java.util.Optional;
 public interface ToolRegistry {
 
     /**
-     * 寻找服务商的工具
+     * 列出全部工具
      */
     List<ToolDefinition> listTools();
 
