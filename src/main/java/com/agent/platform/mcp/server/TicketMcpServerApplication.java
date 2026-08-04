@@ -62,16 +62,16 @@ public class TicketMcpServerApplication {
 
     private static String toolsListResponse(String id) {
         return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"result\":{\"tools\":["
-                + tool("ticket_status", "Query ticket status from ticket MCP server.",
+                + tool("ticket_status", "从工单 MCP 服务查询工单状态。",
                 "{\"type\":\"object\",\"properties\":{\"ticketId\":{\"type\":\"string\"}},\"required\":[\"ticketId\"]}")
                 + ","
-                + tool("ticket_create", "Create a ticket from ticket MCP server.",
+                + tool("ticket_create", "通过工单 MCP 服务创建工单。",
                 "{\"type\":\"object\",\"properties\":{\"title\":{\"type\":\"string\"},\"priority\":{\"type\":\"string\",\"enum\":[\"P0\",\"P1\",\"P2\",\"P3\"]}},\"required\":[\"title\"]}")
                 + ","
-                + tool("ticket_priority_update", "Update ticket priority from ticket MCP server.",
+                + tool("ticket_priority_update", "通过工单 MCP 服务更新工单优先级。",
                 "{\"type\":\"object\",\"properties\":{\"ticketId\":{\"type\":\"string\"},\"priority\":{\"type\":\"string\",\"enum\":[\"P0\",\"P1\",\"P2\",\"P3\"]}},\"required\":[\"ticketId\",\"priority\"]}")
                 + ","
-                + tool("ticket_close", "Close a ticket from ticket MCP server.",
+                + tool("ticket_close", "通过工单 MCP 服务关闭工单。",
                 "{\"type\":\"object\",\"properties\":{\"ticketId\":{\"type\":\"string\"},\"closeReason\":{\"type\":\"string\"}},\"required\":[\"ticketId\",\"closeReason\"]}")
                 + "]}}";
     }

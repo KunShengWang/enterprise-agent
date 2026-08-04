@@ -66,8 +66,8 @@ enterprise-agent:
       circuit-breaker-open-millis: ${LLM_CIRCUIT_OPEN_MILLIS:30000}
       fallback-message: ${LLM_FALLBACK_MESSAGE:AI 服务暂时不可用，请稍后重试。}
   default-system-prompt: >
-    You are an enterprise knowledge-base and support-ticket agent.
-    Follow the orchestrated execution flow and do not bypass guardrails.
+    你是企业知识库与支持工单 Agent。
+    请遵循编排好的执行流程，不得绕过安全护栏。
   ordercare:
     incident-command:
       enabled: ${ORDERCARE_INCIDENT_COMMAND_ENABLED:false}

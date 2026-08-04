@@ -44,10 +44,13 @@ public class IncidentInvestigationLauncher {
 
     public IncidentStartResponse startForDispatch(String dispatchRequestId,
                                                   IncidentInvestigationRequest request) {
+        // 分发 → 事故调查"的幂等初始化登记：生成快照、创建 Incident、幂等落库、初始化预算
         IncidentDispatchInitialization initialized = orchestrator.initializeForDispatch(dispatchRequestId, request);
         IncidentRecord incident = initialized.incident();
+        // initializeForDispatch 是幂等的——如果之前已经创建过 Incident 并触发过调查，那么重试时 newlyCreated=false，就不会再启动一次调查。只有真正新建的（第一次）才触发执行
         if (initialized.newlyCreated()) {
             try {
+                // 异步线程执行调查
                 executor.execute(() -> execute(incident.incidentId(), request));
             }
             catch (RuntimeException rejected) {

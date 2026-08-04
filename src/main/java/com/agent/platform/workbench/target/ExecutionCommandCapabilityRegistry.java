@@ -26,6 +26,9 @@ public class ExecutionCommandCapabilityRegistry {
         capabilities = Map.copyOf(values);
     }
 
+    /**
+     * 返回某个执行目标（如 ORDERCARE_CASE）对每一种命令（暂停/继续/取消/放弃）支持到什么程度（SUPPORTED_EXISTING_RUNTIME / PRODUCT_ONLY / UNSUPPORTED），以及它有哪些约束
+     */
     public ExecutionCommandCapabilities require(ExecutionTargetId targetId) {
         ExecutionCommandCapabilities value = capabilities.get(targetId);
         if (value == null) {
@@ -35,6 +38,7 @@ public class ExecutionCommandCapabilityRegistry {
     }
 
     private ExecutionCommandCapabilities runtimeCapabilities(Set<String> constraints) {
+        // 把所有命令类型（WorkCommandType 的所有枚举值）都先塞进 map，默认值全部是 UNSUPPORTED（不支持）
         EnumMap<WorkCommandType, ExecutionCommandSupport> commands = defaults();
         commands.put(WorkCommandType.PAUSE_ACTIVE_WORK, ExecutionCommandSupport.SUPPORTED_EXISTING_RUNTIME);
         commands.put(WorkCommandType.RESUME_ACTIVE_WORK, ExecutionCommandSupport.SUPPORTED_EXISTING_RUNTIME);
@@ -49,6 +53,9 @@ public class ExecutionCommandCapabilityRegistry {
         return new ExecutionCommandCapabilities(commands, constraints);
     }
 
+    /**
+     * 把所有命令类型（WorkCommandType 的所有枚举值）都先塞进 map，默认值全部是 UNSUPPORTED（不支持）
+     */
     private EnumMap<WorkCommandType, ExecutionCommandSupport> defaults() {
         EnumMap<WorkCommandType, ExecutionCommandSupport> commands = new EnumMap<>(WorkCommandType.class);
         for (WorkCommandType command : WorkCommandType.values()) {

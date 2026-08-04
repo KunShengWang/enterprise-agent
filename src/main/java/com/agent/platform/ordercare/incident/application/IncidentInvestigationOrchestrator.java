@@ -131,17 +131,24 @@ public class IncidentInvestigationOrchestrator {
         }
     }
 
+    /**
+     * 把一个"分发请求"初始化成一个持久化的 Incident（事故调查）记录，并确保这个分发请求只对应一个 Incident（幂等），同时初始化它的预算
+     */
     public IncidentDispatchInitialization initializeForDispatch(String dispatchRequestId,
                                                                 IncidentInvestigationRequest request) {
         String incidentId = "inc-" + UUID.randomUUID();
+        // 生成快照
         IncidentSnapshot snapshot = snapshotFactory.create(incidentId, request);
         Instant now = Instant.now();
+        // 构造 Incident 记录（CREATED 状态）
         IncidentRecord candidate = new IncidentRecord(
                 incidentId, null, null, "incident:" + incidentId, SCENARIO_ID,
                 IncidentStatus.CREATED, snapshot, Map.of(), Map.of(),
                 0, 1, 1, 0, now, now);
+        // 幂等落库（关键）
         IncidentRecord persisted = incidentStore.createForDispatch(dispatchRequestId, candidate);
         try {
+            // 初始化预算
             budgets.initializeIncident(persisted.incidentId(), request.budgetOwnerWorkItemId());
         }
         catch (RuntimeException exception) {
@@ -173,8 +180,11 @@ public class IncidentInvestigationOrchestrator {
         }
         IncidentSnapshot snapshot = incident.snapshot();
         try {
+            // 状态机的状态转移
             incident = transition(incident, IncidentStatus.PLANNING, "incident-planning");
+            // 让 Commander（指挥官 Agent）制定事故调查方案
             PlanningResult planning = plan(incident, request);
+            // 把 Commander 的规划结果持久化到 Incident
             incident = incidentStore.updateDetails(
                     incidentId, incident.version(), planning.commanderRunId(), null,
                     objectMapper.convertValue(planning.plan(), Map.class), null, false);
@@ -311,7 +321,11 @@ public class IncidentInvestigationOrchestrator {
         }
     }
 
+    /**
+     * 让 Commander（指挥官 Agent）制定事故调查方案
+     */
     private PlanningResult plan(IncidentRecord incident, IncidentInvestigationRequest request) {
+        // 根据事故快照里是否涉及 MQ（消息队列），决定需要哪些 Specialist 角色
         boolean mqRequired = !incident.snapshot().businessScope().queueNames().isEmpty();
         String requiredRoles = mqRequired
                 ? "ORDER_ANALYST、INVENTORY_ANALYST、MQ_ANALYST"
@@ -319,6 +333,7 @@ public class IncidentInvestigationOrchestrator {
         String mqInstruction = mqRequired
                 ? "MQ_ANALYST 同时核对持久化死信事实和消息队列运行态。"
                 : "没有权威 queueName，不得创建 MQ_ANALYST。";
+        // 构造 Commander 的 prompt
         String prompt = """
                 生成 delegation-plan-v1 JSON。必须且只能包含 %s。
                 %s
@@ -332,7 +347,9 @@ public class IncidentInvestigationOrchestrator {
                 requiredRoles, mqInstruction, incident.incidentId(), request.alertType(), request.symptom(),
                 incident.snapshot().orderScope().requestIds().size(),
                 incident.snapshot().businessScope().queueNames().size()).trim();
+        // 获取"指挥官（Commander）Agent 的执行配置"
         AgentExecutionProfile profile = profileFactory.commander();
+        // 为"一次 Agent Run"（比如指挥官这次运行）预留预算——在真正调用模型之前，先从该 Incident 的预算账户里占住一块额度，防止超支
         IncidentBudgetReservation budget = budgets.reserveIncidentRun(
                 incident.incidentId(), "commander", "COMMANDER", profile);
         AgentRuntimeResult result = agentRuntime.run(
@@ -570,6 +587,9 @@ public class IncidentInvestigationOrchestrator {
                 + objectMapper.writeValueAsString(payload);
     }
 
+    /**
+     * 把 Incident 从一个状态（如 PLANNING）安全地迁移到目标状态（如 INVESTIGATING），同时保证并发安全、幂等、合法性校验和审计事件记录。
+     */
     private IncidentRecord transition(IncidentRecord incident,
                                       IncidentStatus target,
                                       String key) {

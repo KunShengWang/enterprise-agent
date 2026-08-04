@@ -18,8 +18,8 @@ class IncidentExecutionProfileFactoryTests {
 
             assertEquals(1, profile.allowedCapabilities().size(), role.name());
             assertEquals(1, profile.limits().maxToolCalls(), role.name());
-            assertTrue(profile.systemPrompt().contains("exactly once"), role.name());
-            assertTrue(profile.systemPrompt().contains("never call any capability again"), role.name());
+            assertTrue(profile.systemPrompt().contains("必须且只能调用所提供的唯一能力一次"), role.name());
+            assertTrue(profile.systemPrompt().contains("绝不能再次调用任何能力"), role.name());
         }
     }
 }

@@ -60,6 +60,10 @@ public class JdbcRoutingStore implements RoutingStore {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 持久化未分类消息，先落库是为了不丢请求
+     * 用户刚发来的输入，系统还不知道它是普通对话、还是某个命令/意图，所以先以 UNCLASSIFIED / PENDING 状态落库，等后续分类器去判断。
+     */
     @Override
     public AgentConversationTurn persistUnclassifiedInput(AuthenticatedPrincipal principal,
                                                            String inputId,
@@ -136,7 +140,7 @@ public class JdbcRoutingStore implements RoutingStore {
                 Optional<WorkCommandDecision> effective = findEffectiveCommand(connection, input.inputId());
                 if (effective.isPresent()) {
                     connection.commit();
-                    return effective.get();
+                    return effective.get();// 已有生效分类，直接复用，不新建
                 }
                 int attemptNo = nextCommandAttempt(connection, input.inputId());
                 String decisionId = "cmddec-" + UUID.randomUUID();

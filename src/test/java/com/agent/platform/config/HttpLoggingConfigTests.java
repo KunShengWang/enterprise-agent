@@ -58,17 +58,17 @@ class HttpLoggingConfigTests {
         assertEquals(responseJson, response);
         assertTrue(output.getOut().contains(requestJson));
         assertTrue(output.getOut().contains(responseJson));
-        assertTrue(output.getOut().contains("[LLM][RAW HTTP REQUEST]"));
-        assertTrue(output.getOut().contains("[LLM][RAW HTTP RESPONSE]"));
+        assertTrue(output.getOut().contains("[LLM][FULL HTTP REQUEST JSON]"));
+        assertTrue(output.getOut().contains("[LLM][FULL HTTP RESPONSE JSON]"));
     }
 
     @Test
-    void logsRawStreamingSseWithoutConsumingIt(CapturedOutput output) throws Exception {
+    void logsOneCompleteStreamingResponseJsonWithoutConsumingSse(CapturedOutput output) throws Exception {
         String requestJson = """
                 {"model":"deepseek-chat","messages":[{"role":"user","content":"stream"}],"stream":true}
                 """.strip();
-        String firstEvent = "data: {\"id\":\"chat-2\",\"choices\":[{\"delta\":{\"content\":\"part-1\"}}]}\n\n";
-        String secondEvent = "data: {\"id\":\"chat-2\",\"choices\":[{\"delta\":{\"content\":\"part-2\"}}]}\n\n";
+        String firstEvent = "data: {\"id\":\"chat-2\",\"object\":\"chat.completion.chunk\",\"model\":\"deepseek-chat\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"part-1\"},\"finish_reason\":null}]}\n\n";
+        String secondEvent = "data: {\"id\":\"chat-2\",\"object\":\"chat.completion.chunk\",\"model\":\"deepseek-chat\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"part-2\"},\"finish_reason\":\"stop\"}],\"usage\":{\"total_tokens\":12}}\n\n";
         String done = "data: [DONE]\n\n";
         AtomicReference<String> receivedRequest = new AtomicReference<>();
         startServer("/stream", exchange -> {
@@ -97,10 +97,13 @@ class HttpLoggingConfigTests {
         assertEquals(requestJson, receivedRequest.get());
         assertEquals(3, events == null ? 0 : events.size());
         assertTrue(output.getOut().contains(requestJson));
-        assertTrue(output.getOut().contains(firstEvent.trim()));
-        assertTrue(output.getOut().contains(secondEvent.trim()));
-        assertTrue(output.getOut().contains(done.trim()));
-        assertTrue(output.getOut().contains("[LLM][RAW HTTP RESPONSE BODY]"));
+        assertTrue(output.getOut().contains("[LLM][FULL HTTP RESPONSE JSON]"));
+        assertTrue(output.getOut().contains("transport=sse reconstructed=true"));
+        assertTrue(output.getOut().contains("\"content\":\"part-1part-2\""));
+        assertTrue(output.getOut().contains("\"finish_reason\":\"stop\""));
+        assertTrue(output.getOut().contains("\"total_tokens\":12"));
+        assertEquals(1, occurrences(output.getOut(), "[LLM][FULL HTTP RESPONSE JSON]"));
+        assertEquals(0, occurrences(output.getOut(), "[LLM][RAW HTTP RESPONSE BODY]"));
     }
 
     private void startServer(String path, ExchangeHandler handler) throws IOException {
@@ -129,6 +132,10 @@ class HttpLoggingConfigTests {
         exchange.getResponseHeaders().set("Content-Type", contentType);
         exchange.sendResponseHeaders(200, bytes.length);
         exchange.getResponseBody().write(bytes);
+    }
+
+    private int occurrences(String value, String token) {
+        return value.split(java.util.regex.Pattern.quote(token), -1).length - 1;
     }
 
     @FunctionalInterface

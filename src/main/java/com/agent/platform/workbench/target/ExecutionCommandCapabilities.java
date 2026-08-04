@@ -7,7 +7,7 @@ import java.util.Set;
 
 public record ExecutionCommandCapabilities(
         Map<WorkCommandType, ExecutionCommandSupport> commands,
-        Set<String> constraints
+        Set<String> constraints// 限制条件
 ) {
     public ExecutionCommandCapabilities {
         commands = commands == null ? Map.of() : Map.copyOf(commands);

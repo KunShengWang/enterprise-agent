@@ -111,6 +111,7 @@ public class IncidentTaskScheduler {
         List<CompletableFuture<IncidentTaskExecution>> futures = new ArrayList<>();
         for (AgentTaskRecord task : tasks) {
             try {
+                // 每个任务提交到线程池：异步并行执行（fork）
                 futures.add(CompletableFuture.supplyAsync(() -> executeSafely(task, snapshot), executor));
             }
             catch (RuntimeException rejected) {
@@ -118,11 +119,13 @@ public class IncidentTaskScheduler {
                         task, "specialist executor queue rejected task")));
             }
         }
+        // 逐个等待完成（join）：阻塞直到所有任务都结束（join）
         return futures.stream().map(future -> {
             try {
-                return future.join();
+                return future.join();// ← 这里会阻塞等待这个任务完成
             }
             catch (RuntimeException exception) {
+                // 失败也返回结果，不中断
                 return new IncidentTaskExecution(
                         null, List.of(),
                         List.of(new EvidenceGap("SPECIALIST_FAILED", "agent-runtime",

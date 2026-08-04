@@ -32,11 +32,11 @@ public class IncidentToolCatalog implements ToolCatalogContributor {
     public List<ToolDefinition> definitions() {
         return List.of(
                 definition(ORDER_FACTS, "订单事实查询",
-                        "Read bounded order facts for an immutable incident snapshot. Never accepts requestIds directly."),
+                        "读取不可变事故快照范围内的订单事实。绝不直接接收 requestId。"),
                 definition(INVENTORY_FACTS, "库存事实查询",
-                        "Read bounded deduct and inventory invariant facts for an immutable incident snapshot."),
+                        "读取不可变事故快照范围内的扣减事实和库存不变量事实。"),
                 definition(MQ_FACTS, "消息事实查询",
-                        "Read persisted dead-letter facts first, then observe RabbitMQ queue runtime; Broker timeout returns partial facts."));
+                        "先读取已持久化的死信事实，再观察 RabbitMQ 队列运行态；消息代理超时时返回部分事实。"));
     }
 
     private ToolDefinition definition(String name, String displayName, String description) {

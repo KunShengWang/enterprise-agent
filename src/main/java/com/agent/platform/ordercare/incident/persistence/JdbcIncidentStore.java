@@ -223,16 +223,19 @@ public class JdbcIncidentStore implements IncidentStore,
             try {
                 IncidentRecord current = loadIncident(connection, incidentId, true)
                         .orElseThrow(() -> new IllegalArgumentException("incident not found: " + incidentId));
+                // 幂等：同一迁移不重复执行
                 Optional<TaskEventRecord> previous = findEventByIdempotencyKey(connection, idempotencyKey);
                 if (previous.isPresent()) {
                     assertSameTransition(previous.get(), targetStatus.name());
                     connection.commit();
                     return loadIncident(connection, incidentId, false).orElseThrow();
                 }
+                //  CAS 乐观锁：防止并发覆盖
                 if (current.version() != expectedVersion) {
                     throw new IncidentCasConflictException(
                             "incident version mismatch: expected=" + expectedVersion + ", actual=" + current.version());
                 }
+                //  合法迁移校验：防止非法跳转。状态机保证状态之间不能非法的跳转
                 if (!canTransition(current.status(), targetStatus)) {
                     throw new IllegalStateException(
                             "invalid incident transition: " + current.status() + " -> " + targetStatus);
@@ -240,6 +243,7 @@ public class JdbcIncidentStore implements IncidentStore,
                 Instant now = Instant.now();
                 Map<String, Object> payload = transitionPayload(
                         current.status().name(), targetStatus.name(), expectedVersion, expectedVersion + 1);
+                // 审计事件
                 appendEvent(connection, new TaskEventRecord(
                         UUID.randomUUID().toString(),
                         incidentId,

@@ -131,7 +131,7 @@ public class StdioMcpToolGateway implements McpToolGateway {
         String originalName = nameValue == null ? "" : String.valueOf(nameValue);
         String unifiedName = server.getToolNamePrefix() + originalName;
         Object descriptionValue = tool.get("description");
-        String description = descriptionValue == null ? "MCP tool: " + originalName : String.valueOf(descriptionValue);
+        String description = descriptionValue == null ? "MCP 工具：" + originalName : String.valueOf(descriptionValue);
         Object inputSchemaValue = tool.get("inputSchema");
         String inputSchema = toJson(inputSchemaValue == null ? Map.of("type", "object") : inputSchemaValue);
         return new ToolDefinition(

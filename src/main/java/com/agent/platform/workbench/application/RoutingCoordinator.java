@@ -120,6 +120,7 @@ public class RoutingCoordinator {
         AgentWorkItem workItem = workbenchStore.findWorkItem(principal, workItemId)
                 .orElseThrow(() -> new IllegalArgumentException("work item not found"));
         String leaseOwner = "routing-" + UUID.randomUUID();
+        // 抢占路由执行权
         Optional<RoutingAttempt> claimed = routingStore.claimRouting(
                 principal,
                 workItem.workItemId(),
@@ -132,6 +133,7 @@ public class RoutingCoordinator {
         if (claimed.isEmpty()) return routingStore.findEffectiveRouting(principal, workItemId);
 
         RoutingAttempt attempt = claimed.get();
+        // 为一次路由执行（RoutingAttempt）启动一个周期性的"心跳"任务，不断续约路由执行的租约，防止租约过期被其他实例抢走
         ScheduledFuture<?> heartbeat = startHeartbeat(attempt);
         RoutingDecisionRecord completed;
         BudgetReservationHandle budget;
@@ -189,6 +191,9 @@ public class RoutingCoordinator {
         return Optional.of(completed);
     }
 
+    /**
+     * 为一次路由执行（RoutingAttempt）启动一个周期性的"心跳"任务，不断续约路由执行的租约，防止租约过期被其他实例抢走
+     */
     private ScheduledFuture<?> startHeartbeat(RoutingAttempt attempt) {
         if (attempt.fencingToken() <= 0 || attempt.leaseOwner().isBlank()) return null;
         long period = Math.max(250, properties.getLeaseMillis() / 3);

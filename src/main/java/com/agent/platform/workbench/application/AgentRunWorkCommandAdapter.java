@@ -32,13 +32,17 @@ public class AgentRunWorkCommandAdapter {
     public AgentRunCommandResult execute(AuthenticatedPrincipal principal,
                                          AgentWorkItem work,
                                          WorkCommandType commandType) {
+        // 找出当前 WorkItem 对应的底层 Agent Run（运行记录），以便后续对其实施命令（如取消/暂停）
         AgentRunRecord before = resolveRun(work, commandType);
+        // Run 必须存在
         if (before == null) {
             return rejected("INVALID_TARGET_STATE", "work item has no active Agent Run", null);
         }
+        // Run 必须属于当前会话
         if (!before.conversationId().equals(work.conversationId())) {
             return rejected("INVALID_TARGET_STATE", "linked Agent Run is missing or does not belong to the conversation", before);
         }
+        // Run 必须属于当前认证用户（越权防护）
         if (before.userId() != null && !before.userId().isBlank()
                 && !before.userId().equals(principal.principalId())) {
             return rejected("FORBIDDEN", "linked Agent Run is not owned by the authenticated principal", before);
@@ -51,6 +55,9 @@ public class AgentRunWorkCommandAdapter {
         };
     }
 
+    /**
+     * 找出当前 WorkItem 对应的底层 Agent Run（运行记录），以便后续对其实施命令（如取消/暂停）
+     */
     private AgentRunRecord resolveRun(AgentWorkItem work, WorkCommandType commandType) {
         if (work.activeRunId() != null && !work.activeRunId().isBlank()) {
             return runStore.find(work.activeRunId()).orElse(null);
@@ -59,6 +66,7 @@ public class AgentRunWorkCommandAdapter {
                 || work.dispatchRequestId() == null || work.dispatchRequestId().isBlank()) {
             return null;
         }
+        // 只有当：命令是 CANCEL_ACTIVE_WORK（取消） + WorkItem 有 dispatchRequestId（分派请求 ID）
         for (int attempt = 0; attempt < 20; attempt++) {
             AgentRunRecord discovered = runStore.findByDispatchRequestId(work.dispatchRequestId()).orElse(null);
             if (discovered != null) return discovered;

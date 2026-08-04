@@ -22,8 +22,9 @@ public class IncidentInvestigationExecutionAdapter implements ExecutionAdapter {
 
     @Override
     public DispatchResult dispatch(DispatchRequest request) {
+        // 在真正启动 Incident 调查之前，先查一下"这个分发请求是不是已经有对应的 Incident 了"
         Optional<DispatchResult> existing = reconcile(request);
-        if (existing.isPresent()) return existing.get();
+        if (existing.isPresent()) return existing.get();// 已有 → 直接复用，不再启动
         var payload = request.validatedInput().typedPayload();
         String batchId = text(payload.get("batchId"));
         if (batchId.isBlank()) batchId = "WB-" + request.validatedInput().inputDigest().substring(0, 16);

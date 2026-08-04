@@ -28,6 +28,9 @@ public interface WorkbenchStore {
 
     List<AgentConversationTurn> listInputs(AuthenticatedPrincipal principal, String conversationId, int limit);
 
+    /**
+     * 查询数据库中的 WorkItem
+     */
     Optional<AgentWorkItem> findWorkItem(AuthenticatedPrincipal principal, String workItemId);
 
     List<AgentWorkItem> listWorkItems(AuthenticatedPrincipal principal, String conversationId, int limit);

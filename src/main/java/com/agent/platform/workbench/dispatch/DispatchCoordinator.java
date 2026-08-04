@@ -55,17 +55,20 @@ public class DispatchCoordinator {
     public Optional<WorkLink> dispatch(AuthenticatedPrincipal principal, String workItemId) {
         if (!properties.isEnabled()) return Optional.empty();
         String leaseOwner = "dispatch-" + UUID.randomUUID();
+        // 抢占"分发（Dispatch）执行权"——为一个已经路由好、就绪待派发的 WorkItem，拿到"把它真正派发给底层执行器启动 Agent"的独占权
         Optional<DispatchClaim> claimed = store.claimDispatch(
                 principal, workItemId, Instant.now().minusMillis(properties.getStaleAfterMillis()),
                 properties.getMaxAttempts(), leaseOwner,
                 Instant.now().plusMillis(properties.getLeaseMillis()));
         if (claimed.isEmpty()) return Optional.empty();
         DispatchClaim claim = claimed.get();
+        // 租约续约心跳
         ScheduledFuture<?> heartbeat = startHeartbeat(claim);
         // 寻找 agent 执行适配器
         ExecutionAdapter adapter = adapters.require(claim.request().targetId());
         BudgetReservationHandle budget;
         try {
+            // 预算预留
             budget = budgets.reserveTarget(principal,
                     claim.request().workItemId(), ExecutionTargetId.valueOf(claim.request().targetId()),
                     "dispatch:" + claim.request().dispatchRequestId());
@@ -77,13 +80,17 @@ public class DispatchCoordinator {
             return Optional.empty();
         }
         try {
+            // 区分"对账接管"还是"全新派发"，防止崩溃恢复时重复派发导致副作用（比如同一个任务被启动了两次 Agent）
             DispatchResult result;
+            // 对账接管（reconciliation=true，之前崩溃残留）：先 adapter.reconcile(...) 查下游是否已经派发过——只有确认没派发过（返回空 Optional），才重新 dispatch(
             if (claim.attempt().reconciliation()) {
                 result = adapter.reconcile(claim.request()).orElseGet(() -> adapter.dispatch(claim.request()));
             }
+            // 全新派发（reconciliation=false）：直接调 adapter.dispatch(...) 启动 Agent Run
             else {
                 result = adapter.dispatch(claim.request());
             }
+            // 结算预算 + 完成分发
             budgets.settleTarget(budget, result);
             failureInjector.afterAdapterResult(claim, result);
             return Optional.of(store.completeDispatch(principal, claim, result));

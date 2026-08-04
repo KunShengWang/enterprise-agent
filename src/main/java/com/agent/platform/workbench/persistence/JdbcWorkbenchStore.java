@@ -346,6 +346,9 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
         }
     }
 
+    /**
+     * 查询数据库中的 WorkItem
+     */
     @Override
     public Optional<AgentWorkItem> findWorkItem(AuthenticatedPrincipal principal, String workItemId) {
         requirePrincipal(principal);
@@ -353,6 +356,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
             return Optional.empty();
         }
         ensureSchema();
+        // 根据 workItemId 等查询数据库中的数据
         return readWorkItemById(workItemId.trim(), principal);
     }
 
@@ -394,6 +398,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
         }
         ensureSchema();
         try (Connection connection = openConnection()) {
+            // 读取数据库是为了用来知道用户当前正在操作哪个 WorkItem
             return readConversation(connection, principal, conversationId.trim(), false);// 不加行锁
         }
         catch (SQLException exception) {
@@ -1347,6 +1352,9 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
         }
     }
 
+    /**
+     * 读取数据库是为了用来知道用户当前正在操作哪个 WorkItem
+     */
     private Optional<ConversationWorkState> readConversation(Connection connection,
                                                               AuthenticatedPrincipal principal,
                                                               String conversationId,
@@ -1365,6 +1373,9 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
         }
     }
 
+    /**
+     * 根据 workItemId 等查询数据库中的数据
+     */
     private Optional<AgentWorkItem> readWorkItemById(String workItemId,
                                                       AuthenticatedPrincipal principal) {
         try (Connection connection = openConnection()) {
@@ -1375,6 +1386,9 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
         }
     }
 
+    /**
+     * 根据 workItemId 等查询数据库中的数据
+     */
     private Optional<AgentWorkItem> readWorkItemById(Connection connection,
                                                       AuthenticatedPrincipal principal,
                                                       String workItemId,

@@ -43,26 +43,26 @@ public class ExecutionTargetRegistry {
         EnumMap<ExecutionTargetId, ExecutionTargetDefinition> definitions = new EnumMap<>(ExecutionTargetId.class);
         definitions.put(ExecutionTargetId.GENERAL_AGENT, new ExecutionTargetDefinition(
                 ExecutionTargetId.GENERAL_AGENT,
-                "General explanation, knowledge and low-risk read-only assistance",
+                "通用解释、知识问答和低风险只读协助",
                 Set.of("EXPLAIN", "KNOWLEDGE", "LOW_RISK_ASSISTANCE"),
                 Set.of(), TargetRiskLevel.LOW, TargetCostClass.LOW,
                 "general-safe-v1", true));
         definitions.put(ExecutionTargetId.ORDERCARE_CASE, new ExecutionTargetDefinition(
                 ExecutionTargetId.ORDERCARE_CASE,
-                "One bounded FlowOrder case identified by requestId, orderNo or deductNo",
+                "由 requestId、orderNo 或 deductNo 标识的单个有界 FlowOrder 案例",
                 Set.of("ORDER_DIAGNOSIS", "ORDER_RECOVERY_REQUEST"),
                 Set.of("oneOf:requestId,orderNo,deductNo"), TargetRiskLevel.MEDIUM, TargetCostClass.MEDIUM,
                 "ordercare-floworder-v1", true));
         definitions.put(ExecutionTargetId.INCIDENT_INVESTIGATION, new ExecutionTargetDefinition(
                 ExecutionTargetId.INCIDENT_INVESTIGATION,
-                "Read-only multi-agent investigation over explicit IDs or discoverable bounded business conditions",
+                "基于明确标识或可发现的有界业务条件执行只读多 Agent 事故调查",
                 Set.of("INCIDENT_INVESTIGATION"),
                 Set.of("oneOf:requestIds,timeExpression,orderNo", "anomalyType"),
                 TargetRiskLevel.HIGH, TargetCostClass.HIGH,
                 "ordercare-incident-command-v1", incidentProperties.isEnabled() && incidentRole));
         definitions.put(ExecutionTargetId.INCIDENT_RECOVERY_PLAN, new ExecutionTargetDefinition(
                 ExecutionTargetId.INCIDENT_RECOVERY_PLAN,
-                "Controlled recovery planning for one accessible ASSESSED incident",
+                "针对一个当前用户可访问且状态为 ASSESSED 的事故制定受控恢复计划",
                 Set.of("INCIDENT_RECOVERY_PLAN"),
                 Set.of("incidentId"), TargetRiskLevel.HIGH, TargetCostClass.HIGH,
                 "ordercare-incident-recovery-v1",

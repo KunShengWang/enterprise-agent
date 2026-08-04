@@ -36,10 +36,10 @@ public class UnifiedWorkIntakeService {
     public UnifiedWorkIntakeResult accept(AuthenticatedPrincipal principal, UnifiedWorkInputRequest request) {
         // 路由方案扩展了 Workbench 基础表，因此首先在新数据库上初始化基础所有者
         workbenchStore.findConversationState(principal, request.conversationId());
-        // 持久化用户输入（幂等：同一个 clientInputId 只存一次）
+        // 持久化用户输入，当前是未分类消息，先落库是为了不丢请求（幂等：同一个 clientInputId 只存一次）
         AgentConversationTurn input = routingStore.persistUnclassifiedInput(
                 principal, request.inputId(), request.clientInputId(), request.conversationId(), request.content());
-        // 检查是否已有分类结果（幂等：重复请求直接拿缓存）
+        // 检查这个 input（用户输入）是否已经有一个"生效中"的命令分类决策（幂等：重复请求直接拿缓存）
         Optional<WorkCommandDecision> existing = routingStore.findEffectiveCommand(principal, input.inputId());
         WorkCommandDecision commandDecision = existing.orElseGet(() -> classify(principal, input, request));
         WorkCommandClassification classification = classification(commandDecision);
@@ -47,7 +47,7 @@ public class UnifiedWorkIntakeService {
                 && classification.commandType() != WorkCommandType.START_NEW_WORK) {
             return new UnifiedWorkIntakeResult(input, commandDecision, null, true);
         }
-
+        // 用户当前正在操作哪个 WorkItem
         ConversationWorkState focus = workbenchStore.findConversationState(principal, input.conversationId())
                 .orElseThrow(() -> new IllegalStateException("conversation focus state disappeared"));
         String goalText = classification.commandType() == WorkCommandType.START_NEW_WORK
@@ -68,21 +68,23 @@ public class UnifiedWorkIntakeService {
     private WorkCommandDecision classify(AuthenticatedPrincipal principal,
                                          AgentConversationTurn input,
                                          UnifiedWorkInputRequest request) {
-        // 根据用户身份和 conversationId 查询当前会话状态
+        // 根据用户身份和 conversationId 查询当前会话状态，用于知道用户当前正在操作哪个 WorkItem
         ConversationWorkState focus = workbenchStore.findConversationState(principal, input.conversationId())
                 .orElseThrow(() -> new IllegalStateException("conversation focus state disappeared"));
         // 存在 focusedWorkItemId 时，加载对应的工作项；否则 focused = null
         AgentWorkItem focused = focus.focusedWorkItemId().isBlank() ? null
                 : workbenchStore.findWorkItem(principal, focus.focusedWorkItemId()).orElse(null);
-        // 确定分类器类型并生成追踪 ID
+        // 确定分类器类型
         ClassifierType classifierType = request.classifierType();
+        // 生成追踪 ID
         String traceId = "command-classifier-" + UUID.randomUUID();
-        // 创建分类尝试记录
+        // 在调用 LLM 分类器之前，先向数据库"登记"一次分类尝试（Attempt），为这次分类建立一个追踪记录，状态为 STARTED（开始但未完成）
         WorkCommandDecision started = routingStore.beginCommandAttempt(
                 principal, input.inputId(), classifierType, traceId);
         // 如果 beginCommandAttempt() 返回的记录已经是 EFFECTIVE，说明这条输入之前已经完成过有效分类，因此直接返回，不再重复调用分类器
         if (started.decisionStatus().name().equals("EFFECTIVE")) return started;
         try {
+            // 真正调用 LLM 分类器
             CommandClassifierResult result = classifier.classify(new CommandClassificationRequest(
                     input,
                     focused == null ? "" : focused.workItemId(),
@@ -91,9 +93,11 @@ public class UnifiedWorkIntakeService {
                     request.explicitCommand(),
                     request.explicitGoalText()));
             result = normalizeForFocusedState(result, focused);
+            // 分类成功 → 完成分类（把 STARTED 更新为最终结果）
             return routingStore.completeCommandAttempt(principal, started.commandDecisionId(), result);
         }
         catch (RuntimeException exception) {
+            // 分类失败 → 标记失败
             routingStore.failCommandAttempt(principal, started.commandDecisionId(),
                     "COMMAND_CLASSIFICATION_FAILED", safeMessage(exception));
             throw exception;

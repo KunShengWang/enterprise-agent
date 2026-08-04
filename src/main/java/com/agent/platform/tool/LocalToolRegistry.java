@@ -23,9 +23,9 @@ public class LocalToolRegistry implements ToolRegistry {
     private final List<ToolDefinition> tools = List.of(
             new ToolDefinition(
                     "ticket_status",
-                    "Query support ticket status by ticketId. Use this before answering concrete ticket status.",
+                    "根据 ticketId 查询支持工单状态。回答具体工单状态前应先调用此工具。",
                     """
-                            {"type":"object","properties":{"ticketId":{"type":"string","description":"Ticket id such as T1001"}},"required":["ticketId"]}
+                            {"type":"object","properties":{"ticketId":{"type":"string","description":"工单 ID，例如 T1001"}},"required":["ticketId"]}
                             """.strip(),
                     ToolRiskLevel.LOW,
                     Map.of("provider", "local", "publicDisplayName", "工单状态查询",
@@ -34,9 +34,9 @@ public class LocalToolRegistry implements ToolRegistry {
             ),
             new ToolDefinition(
                     "ticket_create",
-                    "Create a support ticket for a user issue. Use this when the user asks to create or report an issue.",
+                    "为用户问题创建支持工单。当用户要求创建工单或上报问题时使用。",
                     """
-                            {"type":"object","properties":{"title":{"type":"string","description":"Issue title"},"priority":{"type":"string","enum":["P0","P1","P2","P3"],"description":"Business priority"}},"required":["title"]}
+                            {"type":"object","properties":{"title":{"type":"string","description":"问题标题"},"priority":{"type":"string","enum":["P0","P1","P2","P3"],"description":"业务优先级"}},"required":["title"]}
                             """.strip(),
                     ToolRiskLevel.MEDIUM,
                     Map.of("provider", "local", "publicDisplayName", "创建支持工单",
@@ -45,7 +45,7 @@ public class LocalToolRegistry implements ToolRegistry {
             ),
             new ToolDefinition(
                     "ticket_priority_update",
-                    "Update ticket priority. High risk because it changes business handling priority.",
+                    "更新工单优先级。此操作会改变业务处理优先级，属于高风险操作。",
                     """
                             {"type":"object","properties":{"ticketId":{"type":"string"},"priority":{"type":"string","enum":["P0","P1","P2","P3"]}},"required":["ticketId","priority"]}
                             """.strip(),
@@ -56,7 +56,7 @@ public class LocalToolRegistry implements ToolRegistry {
             ),
             new ToolDefinition(
                     "ticket_close",
-                    "Close a support ticket with a close reason. High risk because it changes ticket lifecycle state.",
+                    "填写关闭原因并关闭支持工单。此操作会改变工单生命周期状态，属于高风险操作。",
                     """
                             {"type":"object","properties":{"ticketId":{"type":"string"},"closeReason":{"type":"string"}},"required":["ticketId","closeReason"]}
                             """.strip(),

@@ -34,7 +34,7 @@ public class DefaultAgentCapabilityRegistry implements AgentCapabilityRegistry {
      */
     private static final ToolDefinition KNOWLEDGE_SEARCH_DEFINITION = new ToolDefinition(
             KNOWLEDGE_SEARCH,
-            "Search the enterprise knowledge base. Use when the answer depends on internal policies, procedures or troubleshooting documents.",
+            "检索企业知识库。当回答依赖内部制度、操作流程或故障排查文档时使用。",
             """
                     {"type":"object","properties":{"query":{"type":"string"},"topK":{"type":"integer","minimum":1,"maximum":10}},"required":["query"]}
                     """.strip(),
@@ -47,9 +47,9 @@ public class DefaultAgentCapabilityRegistry implements AgentCapabilityRegistry {
 
     private static final ToolDefinition SKILL_CATALOG_DEFINITION = new ToolDefinition(
             SKILL_CATALOG,
-            "List persisted Agent skills or load one skill by name. Skills provide task guidance but never grant tool permissions.",
+            "列出已持久化的 Agent Skill，或按名称加载一个 Skill。Skill 只提供任务指导，绝不会授予工具权限。",
             """
-                    {"type":"object","properties":{"name":{"type":"string","description":"Optional exact skill name"}}}
+                    {"type":"object","properties":{"name":{"type":"string","description":"可选的精确 Skill 名称"}}}
                     """.strip(),
             ToolRiskLevel.LOW,
             Map.of("provider", "skill-registry", "readOnly", true, "grantsPermissions", false,

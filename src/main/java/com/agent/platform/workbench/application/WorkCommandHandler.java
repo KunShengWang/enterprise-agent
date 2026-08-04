@@ -54,10 +54,12 @@ public class WorkCommandHandler {
         AgentConversationTurn input = requireInput(principal, request.input());
         WorkCommandDecision decision = requireDecision(input, request.decision());
         WorkCommandType commandType = decision.commandType();
+        // 判断命令类型（NORMAL_GOAL/START_NEW_WORK 直接拒绝，不该进这里）
         if (commandType == WorkCommandType.NORMAL_GOAL || commandType == WorkCommandType.START_NEW_WORK) {
             return error("INVALID_TARGET_STATE", "new goals do not enter WorkCommandHandler",
                     input, decision, "", "", WorkCommandExecutionStatus.REJECTED);
         }
+        // 幂等查询（findByInput，已有执行记录直接复用）
         WorkCommandExecution existing = commands.findByInput(principal, input.inputId()).orElse(null);
         if (existing != null) {
             return fromExisting(principal, existing);
@@ -69,6 +71,7 @@ public class WorkCommandHandler {
 
         AgentWorkItem work;
         try {
+            // 确定一个命令（如继续/暂停/取消）应该作用在哪个 WorkItem 上
             work = resolveWork(principal, input, decision, request.explicitWorkItemId());
         }
         catch (WorkbenchNotFoundException exception) {
@@ -83,6 +86,7 @@ public class WorkCommandHandler {
         String leaseOwner = "work-command-" + UUID.randomUUID();
         WorkCommandClaim claim;
         try {
+            // 对同一条命令输入，只有一个人能真正执行，并给执行者一个有有效期的租约，防止并发冲突和重复执行
             claim = commands.claim(principal, input.inputId(), work.workItemId(), commandType,
                     expectedVersion, leaseOwner, COMMAND_LEASE);
         }
@@ -91,6 +95,7 @@ public class WorkCommandHandler {
                     work.activeExecutionTarget(), work.workItemId(), WorkCommandExecutionStatus.REJECTED);
         }
         if (!claim.acquired()) {
+            // 查看任务是否还在执行，如果正在执行返回一个"命令进行中"的结果；如果命令已完成，返回数据库里已经保存的执行结果
             return fromExisting(principal, claim.execution());
         }
 
@@ -107,6 +112,7 @@ public class WorkCommandHandler {
                     rejected("UNSUPPORTED_FOR_TARGET", "work item has no registered execution target",
                             work, commandType));
         }
+        // 返回某个执行目标（如 ORDERCARE_CASE）对每一种命令（暂停/继续/取消/放弃）支持到什么程度（SUPPORTED_EXISTING_RUNTIME / PRODUCT_ONLY / UNSUPPORTED），以及它有哪些约束
         ExecutionCommandSupport support = capabilities.require(targetId).support(commandType);
         if (support == ExecutionCommandSupport.UNSUPPORTED) {
             return complete(principal, work, claim.execution(), leaseOwner,
@@ -129,27 +135,39 @@ public class WorkCommandHandler {
                 runtimeCompletion(work, commandType, runtimeResult));
     }
 
+    /**
+     * 确定一个命令（如继续/暂停/取消）应该作用在哪个 WorkItem 上
+     */
     private AgentWorkItem resolveWork(AuthenticatedPrincipal principal,
                                       AgentConversationTurn input,
                                       WorkCommandDecision decision,
                                       String explicitWorkItemId) {
+        // 有显式 explicitWorkItemId
         if (explicitWorkItemId != null && !explicitWorkItemId.isBlank()) {
+            // ① 按 ID 查 WorkItem，查不到就抛"不存在"
             AgentWorkItem explicit = workbench.findWorkItem(principal, explicitWorkItemId.trim())
                     .orElseThrow(() -> new WorkbenchNotFoundException("work item not found"));
+            // ② 校验：这个 WorkItem 必须属于当前会话
             if (!explicit.conversationId().equals(input.conversationId())) {
                 throw new WorkbenchNotFoundException("work item not found");
             }
-            return explicit;
+            return explicit;// 校验通过，直接返回
         }
+
+        // 无显式 ID，用会话聚焦的 WorkItem
+        // ① 查当前会话的焦点状态
         ConversationWorkState focus = workbench.findConversationState(principal, input.conversationId())
                 .orElseThrow(() -> new WorkbenchNotFoundException("FOCUS_NOT_FOUND"));
+        // ② 当前会话必须"聚焦"着某个 WorkItem
         if (focus.focusedWorkItemId() == null || focus.focusedWorkItemId().isBlank()) {
             throw new WorkbenchNotFoundException("FOCUS_NOT_FOUND");
         }
+        // ③ 关键校验：分类时记录的焦点 vs 现在的焦点不能变
         if (decision.focusedWorkItemId() != null && !decision.focusedWorkItemId().isBlank()
                 && !decision.focusedWorkItemId().equals(focus.focusedWorkItemId())) {
             throw new WorkbenchCasConflictException("focused work item changed after command classification");
         }
+        // ④ 查到聚焦的 WorkItem，且确认属于当前会话
         return workbench.findWorkItem(principal, focus.focusedWorkItemId())
                 .filter(item -> item.conversationId().equals(input.conversationId()))
                 .orElseThrow(() -> new WorkbenchNotFoundException("FOCUS_NOT_FOUND"));
@@ -160,18 +178,26 @@ public class WorkCommandHandler {
                                        WorkCommandExecution execution,
                                        String leaseOwner,
                                        WorkCommandCompletion completion) {
+        // 当一个命令（暂停/继续/取消等）被真正执行完之后，把执行结果持久化到数据库，并释放租约，同时更新 WorkItem 的状态
         WorkCommandExecution completed = commands.complete(principal, execution.commandRequestId(),
                 leaseOwner, execution.claimToken(), completion);
+        // 重新从数据库加载这个 WorkItem 的最新状态，并保证它必须存在（否则抛异常）
         AgentWorkItem updated = commands.requireWorkItem(principal, work.workItemId());
+        // 用最新状态的 WorkItem 组装返回值
         return new WorkCommandResult(completed.status() == WorkCommandExecutionStatus.SUCCEEDED,
                 completed.resultCode(), completed.message(), completed.commandRequestId(), completed.inputId(),
                 completed.commandType(), updated.activeExecutionTarget(), updated.workItemId(),
                 completed.underlyingExecutionChanged(), completed.underlyingRunId(), completed.status(), updated);
     }
 
+    /**
+     * 查看任务是否还在执行，如果正在执行返回一个"命令进行中"的结果；如果命令已完成，返回数据库里已经保存的执行结果
+     */
     private WorkCommandResult fromExisting(AuthenticatedPrincipal principal, WorkCommandExecution execution) {
+        // ① 加载该命令对应的 WorkItem（可能没有，防御性处理）
         AgentWorkItem work = execution.workItemId() == null || execution.workItemId().isBlank()
                 ? null : commands.requireWorkItem(principal, execution.workItemId());
+        // ② 情况一：别人还在执行中，返回一个"命令进行中"的结果
         if (execution.status() == WorkCommandExecutionStatus.EXECUTING) {
             return new WorkCommandResult(false, "COMMAND_IN_PROGRESS", "command is owned by another instance",
                     execution.commandRequestId(), execution.inputId(), execution.commandType(),
@@ -179,6 +205,7 @@ public class WorkCommandHandler {
                     work == null ? "" : work.workItemId(), false, execution.underlyingRunId(),
                     execution.status(), work);
         }
+        // ③ 情况二：命令已完成 → 返回数据库里已经保存的执行结果
         return new WorkCommandResult(execution.status() == WorkCommandExecutionStatus.SUCCEEDED,
                 execution.resultCode(), execution.message(), execution.commandRequestId(), execution.inputId(),
                 execution.commandType(), work == null ? "" : work.activeExecutionTarget(),

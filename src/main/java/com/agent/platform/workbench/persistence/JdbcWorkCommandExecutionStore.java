@@ -39,6 +39,9 @@ public class JdbcWorkCommandExecutionStore implements WorkCommandExecutionStore 
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 对同一条命令输入，只有一个人能真正执行，并给执行者一个有有效期的租约，防止并发冲突和重复执行
+     */
     @Override
     public WorkCommandClaim claim(AuthenticatedPrincipal principal,
                                   String inputId,
@@ -63,11 +66,13 @@ public class JdbcWorkCommandExecutionStore implements WorkCommandExecutionStore 
                         return new WorkCommandClaim(execution, false);
                     }
                     Instant now = Instant.now();
+                    // 若租约还有效且不是自己 → 别人正在执行，acquired=false
                     if (execution.leaseUntil() != null && execution.leaseUntil().isAfter(now)
                             && !execution.leaseOwner().equals(leaseOwner)) {
                         connection.commit();
                         return new WorkCommandClaim(execution, false);
                     }
+                    // 否则（租约过期/自己持有）→ 抢回租约
                     WorkCommandExecution reclaimed = reclaim(
                             connection, execution, leaseOwner, now.plus(normalize(leaseDuration)), now);
                     connection.commit();
@@ -76,6 +81,7 @@ public class JdbcWorkCommandExecutionStore implements WorkCommandExecutionStore 
                 if (work.version() != expectedWorkVersion) {
                     throw new WorkbenchCasConflictException("work item version mismatch");
                 }
+                // 校验命令决策仍有效
                 requireEffectiveCommandDecision(connection, principal, inputId, commandType);
                 Instant now = Instant.now();
                 WorkCommandExecution created = new WorkCommandExecution(
@@ -103,6 +109,9 @@ public class JdbcWorkCommandExecutionStore implements WorkCommandExecutionStore 
         }
     }
 
+    /**
+     * 当一个命令（暂停/继续/取消等）被真正执行完之后，把执行结果持久化到数据库，并释放租约，同时更新 WorkItem 的状态
+     */
     @Override
     public WorkCommandExecution complete(AuthenticatedPrincipal principal,
                                          String commandRequestId,
@@ -116,27 +125,32 @@ public class JdbcWorkCommandExecutionStore implements WorkCommandExecutionStore 
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
+                // 加载执行记录 + 状态校验
                 WorkCommandExecution current = readById(connection, principal, commandRequestId, true)
                         .orElseThrow(() -> new WorkbenchNotFoundException("work command not found"));
                 if (current.status() != WorkCommandExecutionStatus.EXECUTING) {
                     connection.commit();
-                    return current;
+                    return current;// 已经不是执行中 → 说明已完成或已失效，直接返回
                 }
+                // 确认提交者就是当初拿到租约的那个人（leaseOwner + claimToken 都匹配）
                 if (!current.leaseOwner().equals(leaseOwner) || current.claimToken() != claimToken) {
                     throw new WorkbenchCasConflictException("work command claim is no longer owned");
                 }
                 AgentWorkItem work = readWork(connection, principal, current.workItemId(), true)
                         .orElseThrow(() -> new WorkbenchNotFoundException("work item not found"));
                 Instant now = Instant.now();
+                // 更新 WorkItem 状态
                 boolean changesState = completion.controlState() != null
                         || completion.executionState() != null || completion.outcome() != null;
                 if (changesState) {
                     updateWorkState(connection, work, completion, now);
                     work = readWork(connection, principal, work.workItemId(), true).orElseThrow();
                 }
+                // 追加事件
                 appendEvent(connection, work, current.commandRequestId() + ":completed",
                         completion.eventType().name(), completion.phase(), completion.message(),
                         completion.eventPayload(), current.inputId(), now);
+                // 更新执行记录 + 释放租约
                 try (PreparedStatement statement = connection.prepareStatement("""
                         UPDATE agent_work_command_execution SET status=?, result_code=?,
                             underlying_execution_changed=?, underlying_run_id=?, message=?,
@@ -225,10 +239,14 @@ public class JdbcWorkCommandExecutionStore implements WorkCommandExecutionStore 
         }
     }
 
+    /**
+     * 重新从数据库加载这个 WorkItem 的最新状态，并保证它必须存在（否则抛异常）。
+     */
     @Override
     public AgentWorkItem requireWorkItem(AuthenticatedPrincipal principal, String workItemId) {
         ensureSchema();
         try (Connection connection = openConnection()) {
+            // 重新从数据库加载这个 WorkItem 的最新状态，并保证它必须存在（否则抛异常）。
             return readWork(connection, principal, workItemId, false)
                     .orElseThrow(() -> new WorkbenchNotFoundException("work item not found"));
         }
@@ -423,6 +441,9 @@ public class JdbcWorkCommandExecutionStore implements WorkCommandExecutionStore 
         }
     }
 
+    /**
+     * 重新从数据库加载这个 WorkItem 的最新状态，并保证它必须存在（否则抛异常）。
+     */
     private Optional<AgentWorkItem> readWork(Connection connection,
                                              AuthenticatedPrincipal principal,
                                              String workItemId,
