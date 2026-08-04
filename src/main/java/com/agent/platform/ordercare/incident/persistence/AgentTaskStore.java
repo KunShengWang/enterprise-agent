@@ -13,6 +13,11 @@ public interface AgentTaskStore {
 
     AgentTaskRecord create(AgentTaskRecord task);
 
+    /**
+     * 以 (incidentId, clientTaskKey) 作为业务幂等键创建任务；已存在时返回首次创建的任务。
+     */
+    AgentTaskRecord createOrGet(AgentTaskRecord task);
+
     Optional<AgentTaskRecord> findTask(String taskId);
 
     List<AgentTaskRecord> listTasks(String incidentId);

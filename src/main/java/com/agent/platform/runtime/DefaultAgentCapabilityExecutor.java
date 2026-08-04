@@ -8,6 +8,7 @@ import com.agent.platform.skill.SkillRegistry;
 import com.agent.platform.tool.ToolCallRequest;
 import com.agent.platform.tool.ToolCallResult;
 import com.agent.platform.tool.ToolExecutor;
+import com.agent.platform.tool.ToolExecutionContext;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class DefaultAgentCapabilityExecutor implements AgentCapabilityExecutor {
+public class DefaultAgentCapabilityExecutor implements ContextualAgentCapabilityExecutor {
 
     private final RagService ragService;
     private final ToolExecutor toolExecutor;
@@ -32,13 +33,18 @@ public class DefaultAgentCapabilityExecutor implements AgentCapabilityExecutor {
 
     @Override
     public ToolCallResult execute(ToolCallRequest request) {
+        return execute(request, ToolExecutionContext.empty());
+    }
+
+    @Override
+    public ToolCallResult execute(ToolCallRequest request, ToolExecutionContext context) {
         if (DefaultAgentCapabilityRegistry.KNOWLEDGE_SEARCH.equals(request.toolName())) {
             return executeKnowledgeSearch(request);
         }
         if (DefaultAgentCapabilityRegistry.SKILL_CATALOG.equals(request.toolName())) {
             return executeSkillCatalog(request);
         }
-        return toolExecutor.execute(request);
+        return toolExecutor.execute(request, context);
     }
 
     private ToolCallResult executeSkillCatalog(ToolCallRequest request) {

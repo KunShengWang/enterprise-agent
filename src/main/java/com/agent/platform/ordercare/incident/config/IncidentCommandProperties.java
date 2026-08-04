@@ -12,6 +12,7 @@ public class IncidentCommandProperties {
     private int maxRequestIds = 100;
     private int deadlineSeconds = 120;
     private int maxParallelSpecialists = 3;
+    private boolean subAgentToolsEnabled = true;
     private boolean recoveryPlannerEnabled;
     private int maxRecoveryPlanItems = 5;
     private boolean phase3Enabled;
@@ -39,6 +40,10 @@ public class IncidentCommandProperties {
     public int getMaxParallelSpecialists() { return maxParallelSpecialists; }
     public void setMaxParallelSpecialists(int maxParallelSpecialists) {
         this.maxParallelSpecialists = Math.max(1, Math.min(3, maxParallelSpecialists));
+    }
+    public boolean isSubAgentToolsEnabled() { return subAgentToolsEnabled; }
+    public void setSubAgentToolsEnabled(boolean subAgentToolsEnabled) {
+        this.subAgentToolsEnabled = subAgentToolsEnabled;
     }
     public boolean isRecoveryPlannerEnabled() { return recoveryPlannerEnabled; }
     public void setRecoveryPlannerEnabled(boolean recoveryPlannerEnabled) {

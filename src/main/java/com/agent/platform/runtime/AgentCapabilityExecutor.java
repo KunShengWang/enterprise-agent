@@ -6,4 +6,5 @@ import com.agent.platform.tool.ToolCallResult;
 public interface AgentCapabilityExecutor {
 
     ToolCallResult execute(ToolCallRequest request);
+
 }

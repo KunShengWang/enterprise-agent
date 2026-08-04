@@ -12,6 +12,7 @@ import com.agent.platform.guardrail.ToolPolicyContext;
 import com.agent.platform.tool.ToolCallRequest;
 import com.agent.platform.tool.ToolCallResult;
 import com.agent.platform.tool.ToolDefinition;
+import com.agent.platform.tool.ToolExecutionContext;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -114,7 +115,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                     false
             );
         }
-        return executeClaimed(runId, request, policy.action(), policy.reason());
+        return executeClaimed(runId, request, policy.action(), policy.reason(), executionContext(policyContext));
     }
 
     private ToolCallRequest prepareApprovalRequest(String approvalId,
@@ -158,14 +159,16 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                 approval.runId(),
                 request,
                 GuardrailAction.ALLOW,
-                "human approval satisfied: " + approval.approvalId()
+                "human approval satisfied: " + approval.approvalId(),
+                executionContext(context)
         );
     }
 
     private AgentToolRuntimeResult executeClaimed(String runId,
                                                   ToolCallRequest request,
                                                   GuardrailAction policyAction,
-                                                  String policyReason) {
+                                                  String policyReason,
+                                                  ToolExecutionContext executionContext) {
         // "工具调用 claim 就是分布式幂等锁——同一个 toolCallId 全局只执行一次，已经执行过的直接返回缓存结果；如果同时多个请求抢执行权，数据库行锁保证只有一个赢
         ToolExecutionClaim claim = toolExecutionStore.claim(runId, request);
         // 没拿到执行权
@@ -194,7 +197,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
             );
         }
         // 拿到执行权 → 真正执行
-        ToolCallResult result = executeWithRetry(request);// 有最大重试次数的执行工具
+        ToolCallResult result = executeWithRetry(request, executionContext);// 有最大重试次数的执行工具
         try {
             if (result.success()) {
                 toolExecutionStore.markSucceeded(request.requestId(), result);
@@ -266,14 +269,17 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         return execution;
     }
 
-    private ToolCallResult executeWithRetry(ToolCallRequest request) {
+    private ToolCallResult executeWithRetry(ToolCallRequest request,
+                                            ToolExecutionContext executionContext) {
         // 工具的执行有最大重试次数
         int maxAttempts = Math.max(1, properties.getMaxToolExecutionAttempts());
         ToolCallResult lastResult = null;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 // 工具执行
-                lastResult = capabilityExecutor.execute(request);
+                lastResult = capabilityExecutor instanceof ContextualAgentCapabilityExecutor contextual
+                        ? contextual.execute(request, executionContext)
+                        : capabilityExecutor.execute(request);
             }
             catch (RuntimeException exception) {
                 lastResult = new ToolCallResult(
@@ -381,5 +387,14 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         catch (RuntimeException ignored) {
             // The caller already receives MANUAL_REVIEW; preserve the original uncertain state.
         }
+    }
+
+    private ToolExecutionContext executionContext(ToolPolicyContext context) {
+        if (context == null) {
+            return ToolExecutionContext.empty();
+        }
+        return new ToolExecutionContext(
+                context.runId(), context.sessionId(), context.userId(), context.tenantId(),
+                context.roles(), context.attributes());
     }
 }

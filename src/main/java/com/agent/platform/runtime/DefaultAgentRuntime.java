@@ -32,6 +32,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 单一模型驱动 Agent Runtime。
@@ -69,6 +75,17 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
     private final ConcurrentMap<String, AgentRunBudget> activeBudgets = new ConcurrentHashMap<>();
     /** 只在同步创建 Specialist Run 的调用栈内生效，真实续跑配置仍持久化到 AgentRunRecord。 */
     private final ThreadLocal<Integer> requestedInputCheckpoints = ThreadLocal.withInitial(() -> 0);
+    private final AtomicInteger parallelToolThreadSequence = new AtomicInteger();
+    private final ExecutorService parallelSubAgentExecutor = new ThreadPoolExecutor(
+            3, 3, 30, TimeUnit.SECONDS, new ArrayBlockingQueue<>(12),
+            runnable -> {
+                Thread thread = new Thread(runnable,
+                        "agent-subtool-" + parallelToolThreadSequence.incrementAndGet());
+                thread.setDaemon(true);
+                return thread;
+            },
+            // 队列满时由提交线程执行，形成反压并确保已记录的 ToolCall 都能得到闭合结果。
+            new ThreadPoolExecutor.CallerRunsPolicy());
 
     public DefaultAgentRuntime(AgentProperties properties,
                                AgentTimelineStore timelineStore,
@@ -895,6 +912,16 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 ));
             }
 
+            if (parallelSafeSubAgentBatch(modelTurn.toolCalls(), profile, usedTools)) {
+                AgentRuntimeResult terminal = executeParallelSubAgentBatch(
+                        request, runId, sessionId, userId, profile, modelTurn.toolCalls(),
+                        toolResults, usedTools, usedRag, budget, listener);
+                if (terminal != null) {
+                    return terminal;
+                }
+                continue;
+            }
+
             for (AgentToolCall rawCall : modelTurn.toolCalls()) {
                 synchronizeCancellation(runId, budget);
                 if (budget.pauseRequested()) {
@@ -954,6 +981,26 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                             toolResults, usedTools, usedRag, budget);
                     publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
                             "unknown capability returned to model", toolResultPayload(call.toolCallId(), unknown), listener);
+                    continue;
+                }
+                if (Boolean.TRUE.equals(definition.get().metadata().get("singleUse"))
+                        && usedTools.contains(call.toolName())) {
+                    ToolCallResult duplicate = new ToolCallResult(
+                            call.toolName(), false, "",
+                            "single-use capability has already been called in this parent run",
+                            Map.of(
+                                    "errorType", "SINGLE_USE_CAPABILITY_REPEATED",
+                                    "retryable", false,
+                                    "profile", profile.name()));
+                    ToolCallResult projectedDuplicate = appendToolResult(
+                            sessionId, userId, runId, call.toolCallId(), duplicate, false);
+                    toolResults.add(projectedDuplicate);
+                    budget.recordToolCall();
+                    checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
+                            toolResults, usedTools, usedRag, budget);
+                    publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
+                            "repeated single-use capability rejected",
+                            toolResultPayload(call.toolCallId(), duplicate), listener);
                     continue;
                 }
                 // 工具调用
@@ -1048,6 +1095,213 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             }
         }
     }
+
+    private boolean parallelSafeSubAgentBatch(List<AgentToolCall> rawCalls,
+                                              AgentExecutionProfile profile,
+                                              List<String> usedTools) {
+        if (rawCalls == null || rawCalls.size() < 2 || rawCalls.size() > 3) {
+            return false;
+        }
+        Set<String> names = new java.util.HashSet<>();
+        for (AgentToolCall call : rawCalls) {
+            if (call == null || !profile.allows(call.toolName()) || !names.add(call.toolName())) {
+                return false;
+            }
+            ToolDefinition definition = capabilityRegistry.findCapability(call.toolName()).orElse(null);
+            if (definition == null
+                    || definition.riskLevel() != com.agent.platform.tool.ToolRiskLevel.LOW
+                    || !Boolean.TRUE.equals(definition.metadata().get("readOnly"))
+                    || !Boolean.TRUE.equals(definition.metadata().get("parallelSafe"))
+                    || !"SUB_AGENT".equals(definition.metadata().get("executionKind"))
+                    || (Boolean.TRUE.equals(definition.metadata().get("singleUse"))
+                    && usedTools.contains(call.toolName()))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 仅并行执行显式声明为只读、低风险且可并行的 SubAgent Tool。
+     * ToolExecutionStore 和领域 Task 幂等仍然是最终执行边界；普通工具继续走下方串行路径。
+     */
+    private AgentRuntimeResult executeParallelSubAgentBatch(AgentRequest request,
+                                                            String runId,
+                                                            String sessionId,
+                                                            String userId,
+                                                            AgentExecutionProfile profile,
+                                                            List<AgentToolCall> rawCalls,
+                                                            List<ToolCallResult> toolResults,
+                                                            List<String> usedTools,
+                                                            boolean usedRag,
+                                                            AgentRunBudget budget,
+                                                            AgentEventListener listener) {
+        Optional<AgentStopReason> toolStop = budget.beforeToolCalls(rawCalls.size());
+        if (toolStop.isPresent()) {
+            return finishBudgetStop(request, runId, sessionId, userId, toolStop.get(),
+                    toolResults, usedTools, usedRag, budget, listener);
+        }
+
+        List<ParallelSubAgentCall> calls = new ArrayList<>();
+        for (AgentToolCall rawCall : rawCalls) {
+            String modelToolCallId = rawCall.toolCallId();
+            AgentToolCall call = assignExecutionId(rawCall);
+            ToolDefinition definition = capabilityRegistry.findCapability(call.toolName()).orElseThrow();
+            ToolCallRequest checkpointCall = new ToolCallRequest(
+                    call.toolName(), call.toolCallId(), call.arguments());
+            checkpoint(runId, AgentRunPhase.EXECUTING_TOOL, checkpointCall,
+                    toolResults, usedTools, usedRag, budget);
+            timelineStore.appendMessages(sessionId, userId, runId, List.of(
+                    AgentMessageDraft.toolCall(
+                            call.toolCallId(), call.toolName(), call.arguments(),
+                            Map.of("reason", call.reason(), "modelToolCallId", modelToolCallId),
+                            tokenEstimator.estimate(String.valueOf(call.arguments())))));
+            publish(sessionId, userId, runId, AgentEventType.TOOL_REQUESTED,
+                    "model requested parallel-safe sub-agent capability",
+                    Map.of(
+                            "toolCallId", call.toolCallId(),
+                            "modelToolCallId", modelToolCallId,
+                            "toolName", call.toolName(),
+                            "arguments", call.arguments(),
+                            "parallelBatch", true),
+                    listener);
+            calls.add(new ParallelSubAgentCall(call, definition));
+        }
+
+        List<CompletableFuture<ParallelSubAgentExecution>> futures = calls.stream()
+                .map(item -> CompletableFuture.supplyAsync(
+                        () -> executeParallelCall(request, runId, sessionId, userId, item),
+                        parallelSubAgentExecutor))
+                .toList();
+        List<ParallelSubAgentExecution> executions = futures.stream()
+                .map(CompletableFuture::join)
+                .toList();
+
+        List<ParallelSubAgentExecution> waitingApproval = new ArrayList<>();
+        boolean manualReview = false;
+        for (ParallelSubAgentExecution item : executions) {
+            AgentToolCall call = item.call();
+            AgentToolRuntimeResult execution = item.execution();
+            publish(sessionId, userId, runId, AgentEventType.POLICY_DECIDED,
+                    execution.policyReason(),
+                    Map.of(
+                            "toolCallId", call.toolCallId(),
+                            "toolName", call.toolName(),
+                            "action", execution.policyAction() == null
+                                    ? "UNKNOWN" : execution.policyAction().name(),
+                            "parallelBatch", true),
+                    listener);
+            if (execution.status() == AgentToolExecutionStatus.WAITING_APPROVAL) {
+                waitingApproval.add(item);
+                continue;
+            }
+            budget.recordToolCall();
+            if (execution.status() == AgentToolExecutionStatus.MANUAL_REVIEW) {
+                ToolCallRequest reviewRequest = execution.request() == null
+                        ? new ToolCallRequest(call.toolName(), call.toolCallId(), call.arguments())
+                        : execution.request();
+                ToolCallResult reviewResult = appendTerminalManualReviewResult(
+                        sessionId, userId, runId, reviewRequest, execution.result(),
+                        execution.policyReason(), "", listener);
+                toolResults.add(reviewResult);
+                usedTools.add(call.toolName());
+                manualReview = true;
+                continue;
+            }
+
+            ToolCallResult result = execution.result() == null
+                    ? parallelFailure(call, "parallel sub-agent returned no result")
+                    : execution.result();
+            ToolCallResult projected = appendToolResult(
+                    sessionId, userId, runId, call.toolCallId(), result,
+                    execution.status() == AgentToolExecutionStatus.COMPLETED
+                            || execution.status() == AgentToolExecutionStatus.FAILED);
+            toolResults.add(projected);
+            usedTools.add(call.toolName());
+            publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
+                    result.success() ? "parallel sub-agent completed"
+                            : "parallel sub-agent failure returned to model",
+                    toolResultPayload(call.toolCallId(), result), listener);
+        }
+
+        if (manualReview || waitingApproval.size() > 1) {
+            for (ParallelSubAgentExecution waiting : waitingApproval) {
+                budget.recordToolCall();
+                ToolCallRequest pending = waiting.execution().request();
+                ToolCallResult closed = appendTerminalManualReviewResult(
+                        sessionId, userId, runId, pending, null,
+                        "multiple outcomes in one parallel batch require manual review",
+                        waiting.execution().approvalId(), listener);
+                toolResults.add(closed);
+                usedTools.add(waiting.call().toolName());
+            }
+            checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
+                    toolResults, usedTools, usedRag, budget);
+            return finish(
+                    runId, sessionId, userId, AgentRunState.MANUAL_REVIEW, AgentStopReason.TOOL_ERROR,
+                    "并行子 Agent 执行出现不确定结果，需要人工核对。", "", toolResults, usedTools,
+                    usedRag, false, budget, listener);
+        }
+
+        if (waitingApproval.size() == 1) {
+            ParallelSubAgentExecution waiting = waitingApproval.get(0);
+            AgentToolRuntimeResult execution = waiting.execution();
+            budget.pauseExecution();
+            runStore.update(runId, current -> current.waitingForApproval(
+                    execution.approvalId(), execution.request(), List.copyOf(toolResults),
+                    List.copyOf(usedTools), usedRag, budget.snapshot()));
+            publish(sessionId, userId, runId, AgentEventType.APPROVAL_REQUIRED,
+                    "parallel sub-agent tool call is waiting for human approval",
+                    Map.of(
+                            "approvalId", execution.approvalId(),
+                            "toolCallId", waiting.call().toolCallId(),
+                            "toolName", waiting.call().toolName(),
+                            "parallelBatch", true),
+                    listener);
+            return new AgentRuntimeResult(
+                    runId, sessionId, AgentRunState.WAITING_APPROVAL,
+                    AgentStopReason.WAITING_APPROVAL, "等待人工审批", execution.approvalId(),
+                    budget.snapshot(), timelineStore.loadEvents(runId, MAX_RETURNED_EVENTS));
+        }
+
+        checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
+                toolResults, usedTools, usedRag, budget);
+        return null;
+    }
+
+    private ParallelSubAgentExecution executeParallelCall(AgentRequest request,
+                                                          String runId,
+                                                          String sessionId,
+                                                          String userId,
+                                                          ParallelSubAgentCall item) {
+        try {
+            return new ParallelSubAgentExecution(
+                    item.call(),
+                    toolRuntime.execute(
+                            runId, sessionId, userId, request.metadata(), item.call(), item.definition()));
+        }
+        catch (RuntimeException exception) {
+            ToolCallRequest failedRequest = new ToolCallRequest(
+                    item.call().toolName(), item.call().toolCallId(), item.call().arguments());
+            ToolCallResult failure = parallelFailure(
+                    item.call(), "parallel sub-agent execution failed: " + exception.getClass().getSimpleName());
+            return new ParallelSubAgentExecution(
+                    item.call(),
+                    new AgentToolRuntimeResult(
+                            AgentToolExecutionStatus.FAILED, failedRequest, failure,
+                            GuardrailAction.ALLOW, "parallel execution boundary caught failure", "", false));
+        }
+    }
+
+    private ToolCallResult parallelFailure(AgentToolCall call, String message) {
+        return new ToolCallResult(
+                call.toolName(), false, "", message,
+                Map.of("retryable", true, "executionKind", "SUB_AGENT", "parallelBatch", true));
+    }
+
+    private record ParallelSubAgentCall(AgentToolCall call, ToolDefinition definition) { }
+
+    private record ParallelSubAgentExecution(AgentToolCall call, AgentToolRuntimeResult execution) { }
 
     /**
      * 把 agent 从暂停状态恢复为运行状态

@@ -394,6 +394,49 @@ public class JdbcIncidentStore implements IncidentStore,
     }
 
     @Override
+    public AgentTaskRecord createOrGet(AgentTaskRecord task) {
+        validateTask(task);
+        ensureSchema();
+        try (Connection connection = openConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                // 所有同一 Incident 的任务创建先锁定父记录，使“先查再插”在多实例下仍然串行。
+                lockIncident(connection, task.incidentId());
+                Optional<AgentTaskRecord> existing = loadTaskByClientKey(
+                        connection, task.incidentId(), task.clientTaskKey());
+                if (existing.isPresent()) {
+                    assertSameTaskIdentity(existing.get(), task);
+                    connection.commit();
+                    return existing.get();
+                }
+                insertTask(connection, task);
+                appendEvent(connection, new TaskEventRecord(
+                        UUID.randomUUID().toString(), task.incidentId(), task.taskId(), task.childRunId(),
+                        allocateEventSequence(connection, task.incidentId()), TaskEventType.TASK_ASSIGNMENT,
+                        TaskEventCategory.COMMUNICATION, TaskEventActorType.ORCHESTRATOR,
+                        "incident-subagent-tool", "INCIDENT_COMMANDER", task.role(), 1,
+                        task.taskId(), null,
+                        "task-assignment:" + task.incidentId() + ":" + task.clientTaskKey(),
+                        Map.of(
+                                "taskId", task.taskId(),
+                                "objective", task.objective(),
+                                "requiredEvidenceSubtypes", task.requiredEvidenceSubtypes(),
+                                "delegatedAsTool", true),
+                        task.createdAt()));
+                connection.commit();
+                return task;
+            }
+            catch (RuntimeException | SQLException exception) {
+                rollbackQuietly(connection);
+                throw exception;
+            }
+        }
+        catch (SQLException exception) {
+            throw storageFailure("Failed to create or read incident task: " + task.clientTaskKey(), exception);
+        }
+    }
+
+    @Override
     public Optional<AgentTaskRecord> findTask(String taskId) {
         if (!hasText(taskId)) {
             return Optional.empty();
@@ -1219,6 +1262,33 @@ public class JdbcIncidentStore implements IncidentStore,
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next() ? Optional.of(readTask(resultSet)) : Optional.empty();
             }
+        }
+    }
+
+    private Optional<AgentTaskRecord> loadTaskByClientKey(Connection connection,
+                                                          String incidentId,
+                                                          String clientTaskKey) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT * FROM agent_task WHERE incident_id = ? AND client_task_key = ?
+                """)) {
+            statement.setString(1, incidentId);
+            statement.setString(2, clientTaskKey);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next() ? Optional.of(readTask(resultSet)) : Optional.empty();
+            }
+        }
+    }
+
+    private void assertSameTaskIdentity(AgentTaskRecord existing, AgentTaskRecord requested) {
+        boolean sameScope = java.util.Objects.equals(
+                existing.inputPayload().get("snapshotId"), requested.inputPayload().get("snapshotId"))
+                && java.util.Objects.equals(
+                existing.inputPayload().get("scopeHash"), requested.inputPayload().get("scopeHash"));
+        if (!existing.role().equals(requested.role())
+                || !existing.taskType().equals(requested.taskType())
+                || !sameScope) {
+            throw new IncidentIdempotencyConflictException(
+                    "clientTaskKey is already bound to another role, task type or incident scope");
         }
     }
 

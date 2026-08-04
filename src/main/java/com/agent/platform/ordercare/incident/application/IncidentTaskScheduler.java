@@ -253,6 +253,11 @@ public class IncidentTaskScheduler {
         IncidentAgentRole role = IncidentAgentRole.valueOf(running.role());
         String prompt = specialistPrompt(running, snapshot, role);
         AgentExecutionProfile profile = profileFactory.specialist(role);
+        String parentRunId = String.valueOf(
+                running.inputPayload().getOrDefault("parentRunId", snapshot.incidentId()));
+        int delegationDepth = running.inputPayload().get("delegationDepth") instanceof Number number
+                ? number.intValue()
+                : 0;
         IncidentBudgetReservation budget;
         try {
             budget = budgets.reserveIncidentRun(
@@ -272,7 +277,11 @@ public class IncidentTaskScheduler {
                             Map.of(
                                     "incidentId", snapshot.incidentId(),
                                     "parentIncidentId", snapshot.incidentId(),
+                                    "parentRunId", parentRunId,
                                     "runRole", "SPECIALIST",
+                                    "subAgentRole", role.name(),
+                                    "internalSubAgent", true,
+                                    "delegationDepth", delegationDepth,
                                     "taskId", running.taskId(),
                                     "snapshotId", snapshot.snapshotId()),
                             "ordercare-incident-command-v1"),

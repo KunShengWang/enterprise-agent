@@ -12,6 +12,7 @@ import com.agent.platform.ordercare.incident.model.EvidenceRecord;
 import com.agent.platform.ordercare.incident.model.EvidenceSubtype;
 import com.agent.platform.ordercare.incident.model.EvidenceTrust;
 import com.agent.platform.ordercare.incident.model.IncidentAggregate;
+import com.agent.platform.ordercare.incident.model.IncidentAgentRole;
 import com.agent.platform.ordercare.incident.model.IncidentAssessment;
 import com.agent.platform.ordercare.incident.model.IncidentInvestigationRequest;
 import com.agent.platform.ordercare.incident.model.IncidentInvestigationResult;
@@ -28,12 +29,15 @@ import com.agent.platform.ordercare.incident.persistence.AgentTaskStore;
 import com.agent.platform.ordercare.incident.persistence.EvidenceStore;
 import com.agent.platform.ordercare.incident.persistence.IncidentStore;
 import com.agent.platform.ordercare.incident.persistence.TaskEventStore;
+import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
 import com.agent.platform.runtime.AgentContinuationRuntime;
 import com.agent.platform.runtime.AgentFollowUpInput;
 import com.agent.platform.runtime.AgentRunState;
+import com.agent.platform.runtime.AgentRunStore;
 import com.agent.platform.runtime.AgentRuntime;
 import com.agent.platform.runtime.AgentRuntimeResult;
 import com.agent.platform.runtime.AgentExecutionProfile;
+import com.agent.platform.runtime.ToolExecutionStore;
 import com.agent.platform.workbench.budget.IncidentBudgetGate;
 import com.agent.platform.workbench.budget.IncidentBudgetReservation;
 import org.springframework.stereotype.Service;
@@ -71,6 +75,12 @@ public class IncidentInvestigationOrchestrator {
     private final AgentContinuationRuntime continuationRuntime;
     private final ObjectMapper objectMapper;
     private final IncidentBudgetGate budgets;
+    private final IncidentCommandProperties properties;
+    private final ToolExecutionStore toolExecutionStore;
+    private final AgentRunStore agentRunStore;
+    private final IncidentEvidenceProjector evidenceProjector;
+    private final IncidentSubAgentTaskService subAgentTaskService;
+    private final IncidentReviewerAgentService reviewerAgentService;
 
     public IncidentInvestigationOrchestrator(IncidentStore incidentStore,
                                              AgentTaskStore taskStore,
@@ -88,7 +98,13 @@ public class IncidentInvestigationOrchestrator {
                                              AgentRuntime agentRuntime,
                                              AgentContinuationRuntime continuationRuntime,
                                              ObjectMapper objectMapper,
-                                             IncidentBudgetGate budgets) {
+                                             IncidentBudgetGate budgets,
+                                             IncidentCommandProperties properties,
+                                             ToolExecutionStore toolExecutionStore,
+                                             AgentRunStore agentRunStore,
+                                             IncidentEvidenceProjector evidenceProjector,
+                                             IncidentSubAgentTaskService subAgentTaskService,
+                                             IncidentReviewerAgentService reviewerAgentService) {
         this.incidentStore = incidentStore;
         this.taskStore = taskStore;
         this.evidenceStore = evidenceStore;
@@ -106,6 +122,12 @@ public class IncidentInvestigationOrchestrator {
         this.continuationRuntime = continuationRuntime;
         this.objectMapper = objectMapper;
         this.budgets = budgets;
+        this.properties = properties;
+        this.toolExecutionStore = toolExecutionStore;
+        this.agentRunStore = agentRunStore;
+        this.evidenceProjector = evidenceProjector;
+        this.subAgentTaskService = subAgentTaskService;
+        this.reviewerAgentService = reviewerAgentService;
     }
 
     public IncidentInvestigationResult investigate(IncidentInvestigationRequest request) {
@@ -182,17 +204,30 @@ public class IncidentInvestigationOrchestrator {
         try {
             // 状态机的状态转移
             incident = transition(incident, IncidentStatus.PLANNING, "incident-planning");
-            // 让 Commander（指挥官 Agent）制定事故调查方案
-            PlanningResult planning = plan(incident, request);
-            // 把 Commander 的规划结果持久化到 Incident
-            incident = incidentStore.updateDetails(
-                    incidentId, incident.version(), planning.commanderRunId(), null,
-                    objectMapper.convertValue(planning.plan(), Map.class), null, false);
-
-            List<AgentTaskRecord> tasks = createTasks(incident, planning.plan());
-            incident = transition(incident, IncidentStatus.INVESTIGATING, "incident-investigating");
-            // Planner 产生三个任务后，IncidentTaskScheduler 会并行执行
-            List<IncidentTaskExecution> executions = taskScheduler.execute(tasks, snapshot);
+            PlanningResult planning;
+            List<IncidentTaskExecution> executions;
+            if (properties.isSubAgentToolsEnabled()) {
+                // 新路径：先进入调查态，再让 Commander 通过普通 ToolCall 委派 Specialist。
+                incident = transition(incident, IncidentStatus.INVESTIGATING,
+                        "incident-investigating-subagent-tools");
+                ToolDelegationResult delegated = delegateWithSubAgentTools(incident, request);
+                planning = new PlanningResult(delegated.commanderRunId(), delegated.plan());
+                incident = current(incidentId);
+                incident = incidentStore.updateDetails(
+                        incidentId, incident.version(), planning.commanderRunId(), null,
+                        objectMapper.convertValue(planning.plan(), Map.class), null, false);
+                executions = delegated.executions();
+            }
+            else {
+                // 兼容路径：Commander 输出 delegation-plan-v1，Java 解析后创建和调度任务。
+                planning = plan(incident, request);
+                incident = incidentStore.updateDetails(
+                        incidentId, incident.version(), planning.commanderRunId(), null,
+                        objectMapper.convertValue(planning.plan(), Map.class), null, false);
+                List<AgentTaskRecord> tasks = createTasks(incident, planning.plan());
+                incident = transition(incident, IncidentStatus.INVESTIGATING, "incident-investigating");
+                executions = taskScheduler.execute(tasks, snapshot);
+            }
             List<EvidenceGap> gaps = executions.stream().flatMap(item -> item.gaps().stream()).toList();
 
             incident = current(incidentId);
@@ -207,7 +242,10 @@ public class IncidentInvestigationOrchestrator {
 
             incident = current(incidentId);
             incident = transition(incident, IncidentStatus.REVIEWING, "incident-reviewing");
-            ReviewResult review = review(incident, evidence, conflicts, gaps);
+            ReviewResult review = properties.isSubAgentToolsEnabled()
+                    ? reviewThroughCommanderTool(
+                    incident, evidence, conflicts, gaps, planning.commanderRunId())
+                    : review(incident, evidence, conflicts, gaps);
             incident = incidentStore.updateDetails(
                     incidentId, incident.version(), null, review.reviewerRunId(), null, null, false);
 
@@ -324,6 +362,64 @@ public class IncidentInvestigationOrchestrator {
     /**
      * 让 Commander（指挥官 Agent）制定事故调查方案
      */
+    private ToolDelegationResult delegateWithSubAgentTools(IncidentRecord incident,
+                                                           IncidentInvestigationRequest request) {
+        boolean mqRequired = !incident.snapshot().businessScope().queueNames().isEmpty();
+        AgentExecutionProfile profile = profileFactory.commanderWithSubAgents(mqRequired);
+        IncidentBudgetReservation budget = budgets.reserveIncidentRun(
+                incident.incidentId(), "commander-subagent-tools", "COMMANDER", profile);
+        String prompt = """
+                请通过已提供的 Specialist Tools 对当前服务器绑定的事故快照执行只读调查。
+                incidentId=%s
+                alertType=%s
+                symptom=%s
+                requestIdCount=%d
+                queueCount=%d
+                业务标识和队列范围只用于说明，禁止把它们复制进 Tool arguments；每个 Tool 只填写 objective。
+                """.formatted(
+                incident.incidentId(), request.alertType(), request.symptom(),
+                incident.snapshot().orderScope().requestIds().size(),
+                incident.snapshot().businessScope().queueNames().size()).trim();
+        AgentRuntimeResult commander = continuationRuntime.runUntilInputCheckpoint(
+                new AgentRequest(
+                        "incident:" + incident.incidentId() + ":commander",
+                        "incident-commander", prompt,
+                        Map.of(
+                                "incidentId", incident.incidentId(),
+                                "snapshotId", incident.snapshot().snapshotId(),
+                                "scopeHash", incident.snapshot().scopeHash(),
+                                "parentIncidentId", incident.incidentId(),
+                                "runRole", "COMMANDER",
+                                "delegationDepth", 0),
+                        SCENARIO_ID),
+                profile, event -> { });
+        if (commander.state() != AgentRunState.WAITING_INPUT) {
+            budgets.settle(budget, commander);
+        }
+
+        // 模型遗漏某个必需角色时仍通过同一幂等领域入口补齐；不会创建第二套任务或 Child Run。
+        DelegationPlan plan = fallbackPlanFactory.create(incident.snapshot());
+        List<IncidentTaskExecution> executions = new ArrayList<>();
+        for (DelegationPlan.DelegatedTask required : plan.tasks()) {
+            IncidentSubAgentTaskService.DelegationOutcome outcome = subAgentTaskService.delegate(
+                    incident.snapshot(), commander.runId(), required.role(), required.objective());
+            List<EvidenceGap> gaps = new ArrayList<>(outcome.execution().gaps());
+            AgentTaskRecord task = outcome.execution().task();
+            if (task.childRunId() != null && !task.childRunId().isBlank()) {
+                gaps.addAll(evidenceProjector.projectGaps(toolExecutionStore.findByRun(task.childRunId())));
+            }
+            executions.add(subAgentTaskService.executionFromStored(task, List.copyOf(gaps)));
+        }
+        DelegationPlan persistedPlan = new DelegationPlan(
+                "delegation-plan-v1", incident.incidentId(),
+                "Commander 通过受约束的 SubAgent Tools 完成只读 Specialist 委派；Java 仅校验并补齐必需角色。",
+                plan.tasks());
+        return new ToolDelegationResult(commander.runId(), persistedPlan, List.copyOf(executions));
+    }
+
+    /**
+     * 让 Commander（指挥官 Agent）制定事故调查方案
+     */
     private PlanningResult plan(IncidentRecord incident, IncidentInvestigationRequest request) {
         // 根据事故快照里是否涉及 MQ（消息队列），决定需要哪些 Specialist 角色
         boolean mqRequired = !incident.snapshot().businessScope().queueNames().isEmpty();
@@ -395,20 +491,72 @@ public class IncidentInvestigationOrchestrator {
                                 List<EvidenceRecord> evidence,
                                 List<EvidenceConflict> conflicts,
                                 List<EvidenceGap> gaps) {
-        String prompt = reviewerPrompt(incident.snapshot(), evidence, conflicts, gaps);
-        AgentExecutionProfile profile = profileFactory.reviewer();
-        IncidentBudgetReservation budget = budgets.reserveIncidentRun(
-                incident.incidentId(), "reviewer", "REVIEWER", profile);
-        AgentRuntimeResult result = continuationRuntime.runUntilInputCheckpoint(
-                new AgentRequest(
-                        "incident:" + incident.incidentId() + ":reviewer",
-                        "incident-reviewer", prompt,
-                        Map.of("incidentId", incident.incidentId(), "parentIncidentId", incident.incidentId(),
-                                "runRole", "REVIEWER"), SCENARIO_ID),
-                profile, event -> { });
-        if (result.state() != AgentRunState.WAITING_INPUT) budgets.settle(budget, result);
-        ReviewerAssessmentDraft draft = reviewerDraftParser.parse(result.answer());
-        return new ReviewResult(result.runId(), draft, budget);
+        IncidentReviewerAgentService.ReviewAgentOutcome outcome = reviewerAgentService.review(
+                incident, evidence, conflicts, gaps);
+        return new ReviewResult(outcome.reviewerRunId(), outcome.draft(), outcome.budget());
+    }
+
+    private ReviewResult reviewThroughCommanderTool(IncidentRecord incident,
+                                                     List<EvidenceRecord> evidence,
+                                                     List<EvidenceConflict> conflicts,
+                                                     List<EvidenceGap> gaps,
+                                                     String commanderRunId) {
+        var commanderRun = agentRunStore.find(commanderRunId).orElse(null);
+        if (commanderRun == null || commanderRun.state() != AgentRunState.WAITING_INPUT) {
+            // 第一阶段没有形成可续跑检查点时，不能伪造第二阶段输入，直接复用 Java Reviewer。
+            return review(incident, evidence, conflicts, gaps);
+        }
+        AgentExecutionProfile commanderProfile = profileFactory.commanderWithSubAgents(
+                !incident.snapshot().businessScope().queueNames().isEmpty());
+        IncidentBudgetReservation commanderBudget = budgets.reserveIncidentRun(
+                incident.incidentId(), "commander-subagent-tools", "COMMANDER", commanderProfile);
+        AgentRuntimeResult continued;
+        try {
+            continued = continuationRuntime.continueWithInput(
+                    commanderRunId,
+                    new AgentFollowUpInput(
+                            "follow-up-task-v1", "REVIEW_READY", "", "", List.of(),
+                            "REVIEW_READY：Specialist 已全部汇合，Java 一致性检查已完成。"
+                                    + "现在必须且只能调用一次 review_incident_evidence，objective 说明审查已规范化证据和冲突；"
+                                    + "不得再次调用任何 Specialist Tool。",
+                            1, 2_000,
+                            Map.of("incidentId", incident.incidentId(), "stateGate", "REVIEWING")),
+                    event -> { });
+        }
+        catch (RuntimeException exception) {
+            // 续跑前置校验、租约或模型调用失败时，不让 Reviewer 阶段拖垮整个 Incident。
+            try {
+                continuationRuntime.completeWaitingInput(commanderRunId);
+            }
+            catch (RuntimeException ignored) {
+                // best effort：即使 Commander 检查点清理失败，仍允许独立 Reviewer 完成业务审查。
+            }
+            budgets.settleStored(commanderBudget, commanderRunId);
+            return review(incident, evidence, conflicts, gaps);
+        }
+        if (continued.state() != AgentRunState.WAITING_INPUT) {
+            budgets.settle(commanderBudget, continued);
+        }
+
+        var reviewerExecution = toolExecutionStore.findByRun(commanderRunId).stream()
+                .filter(item -> com.agent.platform.ordercare.incident.tool.IncidentToolCatalog
+                        .REVIEW_INCIDENT_EVIDENCE.equals(item.toolName()))
+                .filter(item -> item.result() != null && item.result().success())
+                .max(java.util.Comparator.comparing(com.agent.platform.runtime.ToolExecutionRecord::updatedAt))
+                .orElse(null);
+        if (reviewerExecution == null) {
+            // 模型未遵守第二阶段调用协议时，仍复用同一个 Reviewer 创建服务完成安全降级。
+            return review(incident, evidence, conflicts, gaps);
+        }
+        ReviewerAssessmentDraft draft = reviewerDraftParser.parse(reviewerExecution.result().content());
+        String reviewerRunId = String.valueOf(
+                reviewerExecution.result().metadata().getOrDefault("reviewerRunId", ""));
+        if (reviewerRunId.isBlank()) {
+            return review(incident, evidence, conflicts, gaps);
+        }
+        IncidentBudgetReservation reviewerBudget = budgets.reserveIncidentRun(
+                incident.incidentId(), "reviewer", "REVIEWER", profileFactory.reviewer());
+        return new ReviewResult(reviewerRunId, draft, reviewerBudget);
     }
 
     private ClarificationResult clarify(IncidentRecord incident,
@@ -635,6 +783,9 @@ public class IncidentInvestigationOrchestrator {
     }
 
     private record PlanningResult(String commanderRunId, DelegationPlan plan) {}
+    private record ToolDelegationResult(String commanderRunId,
+                                        DelegationPlan plan,
+                                        List<IncidentTaskExecution> executions) {}
     private record ReviewResult(String reviewerRunId,
                                 ReviewerAssessmentDraft draft,
                                 IncidentBudgetReservation budget) {}

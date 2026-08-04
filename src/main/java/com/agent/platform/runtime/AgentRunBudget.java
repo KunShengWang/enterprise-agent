@@ -108,11 +108,16 @@ public final class AgentRunBudget {
     }
 
     public synchronized Optional<AgentStopReason> beforeToolCall() {
+        return beforeToolCalls(1);
+    }
+
+    public synchronized Optional<AgentStopReason> beforeToolCalls(int requestedCalls) {
         Optional<AgentStopReason> common = commonStopReason();
         if (common.isPresent()) {
             return common;
         }
-        return toolCalls >= limits.maxToolCalls()
+        int requested = Math.max(1, requestedCalls);
+        return toolCalls + requested > limits.maxToolCalls()
                 ? Optional.of(AgentStopReason.TOOL_BUDGET_EXHAUSTED)
                 : Optional.empty();
     }

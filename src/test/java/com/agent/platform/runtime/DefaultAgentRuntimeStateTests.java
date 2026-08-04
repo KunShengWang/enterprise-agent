@@ -421,6 +421,89 @@ class DefaultAgentRuntimeStateTests {
     }
 
     @Test
+    void parallelSafeSubAgentToolsRunConcurrentlyAndJoinBeforeNextModelTurn() throws Exception {
+        Fixture fixture = new Fixture();
+        fixture.properties.setMaxToolCallsPerRun(3);
+        when(fixture.runStore.create(any())).thenAnswer(invocation -> {
+            AgentRunRecord created = invocation.getArgument(0);
+            fixture.persisted.set(created);
+            return created;
+        });
+        when(fixture.runStore.find(anyString()))
+                .thenAnswer(invocation -> Optional.ofNullable(fixture.persisted.get()));
+        when(fixture.runStore.update(anyString(), any())).thenAnswer(invocation -> {
+            java.util.function.UnaryOperator<AgentRunRecord> updater = invocation.getArgument(1);
+            AgentRunRecord updated = updater.apply(fixture.persisted.get());
+            fixture.persisted.set(updated);
+            return updated;
+        });
+        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(new AgentContextView(List.of(), 0, 0, false));
+        ToolDefinition order = subAgentDefinition("delegate_order_analyst");
+        ToolDefinition inventory = subAgentDefinition("delegate_inventory_analyst");
+        when(fixture.capabilityRegistry.findCapability("delegate_order_analyst"))
+                .thenReturn(Optional.of(order));
+        when(fixture.capabilityRegistry.findCapability("delegate_inventory_analyst"))
+                .thenReturn(Optional.of(inventory));
+
+        AtomicInteger modelCalls = new AtomicInteger();
+        when(fixture.modelGateway.nextTurn(any())).thenAnswer(invocation -> {
+            if (modelCalls.incrementAndGet() == 1) {
+                return new AgentModelTurn(
+                        "",
+                        List.of(
+                                new AgentToolCall("provider-1", order.name(), Map.of("objective", "orders"), "delegate"),
+                                new AgentToolCall("provider-2", inventory.name(), Map.of("objective", "inventory"), "delegate")),
+                        "", new LlmUsage(10, 5, 15, 0, 0, "test-model", "test"), "tool_calls");
+            }
+            return finalTurn("joined");
+        });
+
+        CountDownLatch bothStarted = new CountDownLatch(2);
+        AtomicInteger active = new AtomicInteger();
+        AtomicInteger maxActive = new AtomicInteger();
+        when(fixture.toolRuntime.execute(anyString(), anyString(), anyString(), any(), any(), any()))
+                .thenAnswer(invocation -> {
+                    AgentToolCall call = invocation.getArgument(4);
+                    int current = active.incrementAndGet();
+                    maxActive.accumulateAndGet(current, Math::max);
+                    bothStarted.countDown();
+                    assertTrue(bothStarted.await(5, TimeUnit.SECONDS));
+                    active.decrementAndGet();
+                    ToolCallRequest request = new ToolCallRequest(
+                            call.toolName(), call.toolCallId(), call.arguments());
+                    ToolCallResult result = new ToolCallResult(
+                            call.toolName(), true, call.toolName() + " done", "", Map.of());
+                    return new AgentToolRuntimeResult(
+                            AgentToolExecutionStatus.COMPLETED, request, result,
+                            GuardrailAction.ALLOW, "allowed", "", false);
+                });
+
+        AgentExecutionProfile profile = new AgentExecutionProfile(
+                "parallel-subagents", "prompt", Set.of(order.name(), inventory.name()),
+                AgentRunLimits.from(fixture.properties), false);
+        AgentRuntimeResult result = fixture.runtime().run(
+                new AgentRequest("session-parallel", "user-1", "investigate", Map.of()),
+                profile, AgentEventListener.NOOP);
+
+        assertEquals(AgentRunState.COMPLETED, result.state());
+        assertEquals("joined", result.answer());
+        assertEquals(2, maxActive.get());
+        assertEquals(2, fixture.persisted.get().toolResults().size());
+        assertEquals(2, fixture.persisted.get().budgetSnapshot().toolCalls());
+    }
+
+    private static ToolDefinition subAgentDefinition(String name) {
+        return new ToolDefinition(
+                name, "delegate", "{}", ToolRiskLevel.LOW,
+                Map.of(
+                        "readOnly", true,
+                        "parallelSafe", true,
+                        "singleUse", true,
+                        "executionKind", "SUB_AGENT"));
+    }
+
+    @Test
     void staleToolExecutionCheckpointRequiresManualReviewInsteadOfRepeatingSideEffect() {
         Fixture fixture = new Fixture();
         AgentRunLimits limits = AgentRunLimits.from(fixture.properties);

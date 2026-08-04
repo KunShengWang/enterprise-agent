@@ -42,10 +42,15 @@ public class LocalToolExecutor implements ToolExecutor {
 
     @Override
     public ToolCallResult execute(ToolCallRequest request) {
+        return execute(request, ToolExecutionContext.empty());
+    }
+
+    @Override
+    public ToolCallResult execute(ToolCallRequest request, ToolExecutionContext context) {
         long startNanos = System.nanoTime();
         ToolCallResult result;
         try {
-            result = executeInternal(request);
+            result = executeInternal(request, context == null ? ToolExecutionContext.empty() : context);
         }
         catch (RuntimeException exception) {
             result = new ToolCallResult(
@@ -69,7 +74,7 @@ public class LocalToolExecutor implements ToolExecutor {
         return result;
     }
 
-    private ToolCallResult executeInternal(ToolCallRequest request) {
+    private ToolCallResult executeInternal(ToolCallRequest request, ToolExecutionContext context) {
         if (request == null || request.toolName() == null || request.toolName().isBlank()) {
             return new ToolCallResult("", false, "", "toolName must not be blank", Map.of("provider", "unknown"));
         }
@@ -98,7 +103,10 @@ public class LocalToolExecutor implements ToolExecutor {
                 .filter(handler -> handler.supports(request.toolName()))
                 .findFirst();
         if (businessHandler.isPresent()) {
-            return businessHandler.get().execute(request);
+            ToolHandler handler = businessHandler.get();
+            return handler instanceof ContextualToolHandler contextual
+                    ? contextual.execute(request, context)
+                    : handler.execute(request);
         }
 
         return switch (request.toolName()) {
