@@ -7,6 +7,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.metadata.ChatGenerationMetadata;
 import org.springframework.ai.chat.prompt.Prompt;
 import reactor.core.publisher.Flux;
@@ -86,6 +87,38 @@ class SpringAiLlmServiceStreamingTests {
         try {
             service.stream(prompt()).collectList().block(Duration.ofSeconds(2));
             assertEquals("length", service.lastFinishReason().orElseThrow());
+        }
+        finally {
+            service.shutdownExecutor();
+        }
+    }
+
+    @Test
+    void nativeStreamPreservesStructuredAssistantMessage() {
+        ChatModel chatModel = mock(ChatModel.class);
+        ObjectProvider<ChatModel> provider = provider(chatModel);
+        ResilienceProperties properties = properties();
+        ChatResponse response = mock(ChatResponse.class);
+        Generation generation = mock(Generation.class);
+        AssistantMessage output = AssistantMessage.builder()
+                .content("")
+                .toolCalls(List.of(new AssistantMessage.ToolCall(
+                        "call-1", "function", "ticket_status", "{\"id\":\"T1\"}")))
+                .build();
+        when(response.getResult()).thenReturn(generation);
+        when(generation.getOutput()).thenReturn(output);
+        when(chatModel.stream(any(Prompt.class))).thenReturn(Flux.just(response));
+        SpringAiLlmService service = new SpringAiLlmService(provider, properties);
+
+        try {
+            List<ChatResponse> responses = service.streamNative(new Prompt("question"))
+                    .collectList()
+                    .block(Duration.ofSeconds(2));
+
+            assertEquals(1, responses.size());
+            assertTrue(responses.get(0).getResult().getOutput().hasToolCalls());
+            assertEquals("ticket_status",
+                    responses.get(0).getResult().getOutput().getToolCalls().get(0).name());
         }
         finally {
             service.shutdownExecutor();

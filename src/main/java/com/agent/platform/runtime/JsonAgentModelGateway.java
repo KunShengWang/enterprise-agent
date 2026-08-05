@@ -5,7 +5,6 @@ import com.agent.platform.llm.LlmUsage;
 import com.agent.platform.llm.LlmCallException;
 import com.agent.platform.prompt.PromptRequest;
 import com.agent.platform.tool.ToolDefinition;
-import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.ObjectMapper;
@@ -24,7 +23,6 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>Gateway 只负责让模型在“最终文本”和“tool_calls”之间做选择。循环、权限、
  * 审批、工具执行和停止条件全部由 Runtime 控制，模型不能通过输出文本绕过。</p>
  */
-@Service
 public class JsonAgentModelGateway implements AgentModelGateway {
 
     private static final Logger log = LoggerFactory.getLogger(JsonAgentModelGateway.class);

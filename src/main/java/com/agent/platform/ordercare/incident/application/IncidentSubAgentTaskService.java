@@ -38,8 +38,9 @@ public class IncidentSubAgentTaskService {
                                       String parentRunId,
                                       IncidentAgentRole role,
                                       String objective) {
-        AgentTaskRecord requested = newTask(snapshot, parentRunId, role, objective);
-        AgentTaskRecord task = taskStore.createOrGet(requested);
+        AgentTaskRecord requested = newTask(snapshot, parentRunId, role, objective);// 幂等键 clientTaskKey(role)
+        AgentTaskRecord task = taskStore.createOrGet(requested);// 幂等：已存在复用
+        // 是否重复使用
         boolean reused = !task.taskId().equals(requested.taskId());
         return new DelegationOutcome(executeOrReuse(task, snapshot), reused);
     }
@@ -60,22 +61,26 @@ public class IncidentSubAgentTaskService {
     }
 
     private IncidentTaskExecution executeOrReuse(AgentTaskRecord task, IncidentSnapshot snapshot) {
+        // SUCCEEDED/WAITING_CLARIFICATION → 复用
         if (task.status() == AgentTaskStatus.SUCCEEDED
                 || task.status() == AgentTaskStatus.WAITING_CLARIFICATION) {
             return executionFromStored(task, List.of());
         }
+        // CLAIMED/RUNNING → 返回"已在跑"
         if (task.status() == AgentTaskStatus.CLAIMED || task.status() == AgentTaskStatus.RUNNING) {
             return new IncidentTaskExecution(
                     task, List.of(),
                     List.of(new EvidenceGap("SUB_AGENT_ALREADY_RUNNING", "subagent-tool",
                             "the idempotent specialist task is already running")), false);
         }
+        // terminal → 失败 gap
         if (task.status().terminal()) {
             return new IncidentTaskExecution(
                     task, List.of(),
                     List.of(new EvidenceGap("SUB_AGENT_TERMINAL_FAILURE", "subagent-tool",
                             task.lastError() == null ? "specialist task already failed" : task.lastError())), false);
         }
+        // PENDING
         List<IncidentTaskExecution> executions = schedulerProvider.getObject().execute(List.of(task), snapshot);
         return executions.isEmpty()
                 ? new IncidentTaskExecution(task, List.of(),

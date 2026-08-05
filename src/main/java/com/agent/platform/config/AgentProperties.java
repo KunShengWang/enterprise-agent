@@ -7,6 +7,8 @@ public class AgentProperties {
 
     private boolean mockMode = false;
 
+    private ModelToolCallingMode modelToolCallingMode = ModelToolCallingMode.NATIVE;
+
     private int maxTurnsPerRun = 12;
 
     private int maxModelCallsPerRun = 8;
@@ -65,6 +67,16 @@ public class AgentProperties {
 
     public void setMockMode(boolean mockMode) {
         this.mockMode = mockMode;
+    }
+
+    public ModelToolCallingMode getModelToolCallingMode() {
+        return modelToolCallingMode;
+    }
+
+    public void setModelToolCallingMode(ModelToolCallingMode modelToolCallingMode) {
+        this.modelToolCallingMode = modelToolCallingMode == null
+                ? ModelToolCallingMode.NATIVE
+                : modelToolCallingMode;
     }
 
     public int getMaxModelCallsPerRun() {
@@ -305,5 +317,10 @@ public class AgentProperties {
         public void setCacheWritePerMillionTokens(double cacheWritePerMillionTokens) {
             this.cacheWritePerMillionTokens = Math.max(0, cacheWritePerMillionTokens);
         }
+    }
+
+    public enum ModelToolCallingMode {
+        NATIVE,
+        JSON
     }
 }

@@ -75,14 +75,17 @@ public class LocalToolExecutor implements ToolExecutor {
     }
 
     private ToolCallResult executeInternal(ToolCallRequest request, ToolExecutionContext context) {
+        // 校验 toolName
         if (request == null || request.toolName() == null || request.toolName().isBlank()) {
             return new ToolCallResult("", false, "", "toolName must not be blank", Map.of("provider", "unknown"));
         }
+        // 找 ToolDefinition
         Optional<ToolDefinition> definition = toolRegistry.findTool(request.toolName());
         if (definition.isEmpty()) {
             return new ToolCallResult(request.toolName(), false, "", "unknown tool: " + request.toolName(), Map.of("provider", "unknown"));
         }
 
+        // 参数校验（parameterValidator）
         ToolValidationResult validationResult = parameterValidator.validate(definition.get(), request);
         if (!validationResult.valid()) {
             return new ToolCallResult(request.toolName(), false, "", validationResult.message(), Map.of(
@@ -91,6 +94,7 @@ public class LocalToolExecutor implements ToolExecutor {
             ));
         }
 
+        // isMcpTool → MCP gateway
         if (isMcpTool(definition.get())) {
             McpToolGateway gateway = mcpToolGatewayProvider == null ? null : mcpToolGatewayProvider.getIfAvailable();
             if (gateway == null) {

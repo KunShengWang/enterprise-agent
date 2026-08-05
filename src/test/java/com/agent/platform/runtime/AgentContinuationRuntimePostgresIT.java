@@ -206,6 +206,7 @@ class AgentContinuationRuntimePostgresIT {
                 registry,
                 mock(AgentToolRuntime.class),
                 guardrail,
+                List.of(),
                 mock(ApprovalService.class),
                 new ConservativeTokenEstimator(),
                 new JdbcAgentRunControlStore(storage),

@@ -42,6 +42,7 @@ public class IncidentSubAgentToolHandler implements ContextualToolHandler {
 
     @Override
     public ToolCallResult execute(ToolCallRequest request, ToolExecutionContext context) {
+        // 解析 role（toolName → IncidentAgentRole）
         IncidentAgentRole role = request == null ? null : role(request.toolName());
         if (role == null) {
             return failure(request, "unsupported incident sub-agent tool", false, "UNSUPPORTED_TOOL");
@@ -51,6 +52,7 @@ public class IncidentSubAgentToolHandler implements ContextualToolHandler {
             return failure(request, "trusted Commander execution context is required", false,
                     "UNTRUSTED_PARENT_CONTEXT");
         }
+        // 委派深度要 < 1
         if (context.intAttribute("delegationDepth", 0) >= 1) {
             return failure(request, "maximum delegation depth exceeded", false, "DELEGATION_DEPTH_EXCEEDED");
         }
@@ -71,6 +73,7 @@ public class IncidentSubAgentToolHandler implements ContextualToolHandler {
                     "MQ_SCOPE_NOT_AUTHORIZED");
         }
 
+        // 从“普通工具调用”进入“领域 SubAgent 任务”
         IncidentSubAgentTaskService.DelegationOutcome outcome = taskService.delegate(
                 incident.snapshot(), context.runId(), role, objective(request));
         return result(request, outcome.execution(), outcome.reused());

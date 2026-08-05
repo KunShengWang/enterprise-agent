@@ -63,6 +63,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
     private final AgentCapabilityRegistry capabilityRegistry;
     private final AgentToolRuntime toolRuntime;
     private final GuardrailService guardrailService;
+    private final List<AgentFollowUpGuardrailPolicy> followUpGuardrailPolicies;
     private final ApprovalService approvalService;
     private final TokenEstimator tokenEstimator;
     private final AgentRunControlStore runControlStore;
@@ -96,6 +97,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                                AgentCapabilityRegistry capabilityRegistry,
                                AgentToolRuntime toolRuntime,
                                GuardrailService guardrailService,
+                               List<AgentFollowUpGuardrailPolicy> followUpGuardrailPolicies,
                                ApprovalService approvalService,
                                TokenEstimator tokenEstimator,
                                AgentRunControlStore runControlStore,
@@ -111,6 +113,9 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         this.capabilityRegistry = capabilityRegistry;
         this.toolRuntime = toolRuntime;
         this.guardrailService = guardrailService;
+        this.followUpGuardrailPolicies = followUpGuardrailPolicies == null
+                ? List.of()
+                : List.copyOf(followUpGuardrailPolicies);
         this.approvalService = approvalService;
         this.tokenEstimator = tokenEstimator;
         this.runControlStore = runControlStore;
@@ -157,9 +162,10 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             AgentRunRecord createdRun = AgentRunRecord.create(
                     runId, runId, sessionId, originalRequest, profile, budget.snapshot()
             );
-            // TODO 不懂
+            // runUntilInputCheckpoint 启动时 set(1)，所以这里读到 1 说明"当前 Run 是续跑模式"
             int maxFollowUps = requestedInputCheckpoints.get();
             if (maxFollowUps > 0) {
+                // 前置校验
                 continuationStore();
                 createdRun = createdRun.enableInputCheckpoint(maxFollowUps);
             }
@@ -397,6 +403,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
     public AgentRuntimeResult runUntilInputCheckpoint(AgentRequest request,
                                                       AgentExecutionProfile profile,
                                                       AgentEventListener listener) {
+        // > 0：当前线程已经有一个 input-checkpoint Run 正在执行 → 再启动一个就是嵌套 → 直接抛异常拒绝
         if (requestedInputCheckpoints.get() > 0) {
             throw new IllegalStateException("nested input-checkpoint runs are not supported");
         }
@@ -426,7 +433,8 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             return resultFromStored(stored, inferStoredStopReason(stored));
         }
         validateFollowUpBudget(stored, input);
-        GuardrailDecision inputDecision = guardrailService.checkInput(input.question());
+        GuardrailDecision inputDecision = followUpGuardrailDecision(stored, input)
+                .orElseGet(() -> guardrailService.checkInput(input.question()));
         if (inputDecision.action() == GuardrailAction.BLOCK) {
             throw new IllegalArgumentException("follow-up input was blocked by guardrail: " + inputDecision.reason());
         }
@@ -761,12 +769,14 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                             sessionId,
                             profile.systemPrompt(),
                             context.messages(),
-                            capabilitiesFor(profile),
+                            capabilitiesFor(profile, request.metadata(), usedTools),
                             request.metadata()
                     ), modelDeltaPublisher::accept);
                     break;
                 }
                 catch (RuntimeException modelFailure) {
+                    LOGGER.error("Agent model turn failed before Runtime recovery; runId={}, profile={}, turn={}, errorType={}",
+                            runId, profile.name(), budget.snapshot().turns(), modelErrorType(modelFailure), modelFailure);
                     // 判断是否是上下文溢出异常
                     boolean contextOverflow = isContextOverflow(modelFailure);
                     String errorType = modelErrorType(modelFailure);
@@ -912,7 +922,9 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 ));
             }
 
-            if (parallelSafeSubAgentBatch(modelTurn.toolCalls(), profile, usedTools)) {
+            // 运行 SubAgent Tool
+            if (parallelSafeSubAgentBatch(
+                    modelTurn.toolCalls(), profile, request.metadata(), usedTools)) {
                 AgentRuntimeResult terminal = executeParallelSubAgentBatch(
                         request, runId, sessionId, userId, profile, modelTurn.toolCalls(),
                         toolResults, usedTools, usedRag, budget, listener);
@@ -960,14 +972,26 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                         listener);
 
                 boolean capabilityAllowed = profile.allows(call.toolName());
-                Optional<ToolDefinition> definition = capabilityAllowed
+                Optional<ToolDefinition> registeredDefinition = capabilityAllowed
                         ? capabilityRegistry.findCapability(call.toolName())// 根据工具名称查询执行的工具
                         : Optional.empty();
+                boolean phaseVisible = registeredDefinition
+                        .map(item -> AgentCapabilityVisibilityPolicy.visible(item, request.metadata()))
+                        .orElse(false);
+                Optional<ToolDefinition> definition = phaseVisible
+                        ? registeredDefinition
+                        : Optional.empty();
                 if (definition.isEmpty()) {
-                    String errorType = capabilityAllowed ? "UNKNOWN_CAPABILITY" : "CAPABILITY_NOT_ALLOWED";
-                    String errorMessage = capabilityAllowed
+                    String errorType = !capabilityAllowed
+                            ? "CAPABILITY_NOT_ALLOWED"
+                            : registeredDefinition.isEmpty()
+                            ? "UNKNOWN_CAPABILITY"
+                            : "CAPABILITY_NOT_AVAILABLE_IN_PHASE";
+                    String errorMessage = !capabilityAllowed
+                            ? "capability is not allowed by execution profile: " + call.toolName()
+                            : registeredDefinition.isEmpty()
                             ? "unknown capability: " + call.toolName()
-                            : "capability is not allowed by execution profile: " + call.toolName();
+                            : "capability is not available in the current Agent phase: " + call.toolName();
                     ToolCallResult unknown = new ToolCallResult(
                             call.toolName(), false, "", errorMessage,
                             Map.of("errorType", errorType, "profile", profile.name())
@@ -1097,23 +1121,27 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
     }
 
     private boolean parallelSafeSubAgentBatch(List<AgentToolCall> rawCalls,
-                                              AgentExecutionProfile profile,
-                                              List<String> usedTools) {
+                                               AgentExecutionProfile profile,
+                                               Map<String, Object> requestMetadata,
+                                               List<String> usedTools) {
+        // 子代理数量 2~3
         if (rawCalls == null || rawCalls.size() < 2 || rawCalls.size() > 3) {
             return false;
         }
         Set<String> names = new java.util.HashSet<>();
         for (AgentToolCall call : rawCalls) {
+            // 名称不重复、profile 允许
             if (call == null || !profile.allows(call.toolName()) || !names.add(call.toolName())) {
                 return false;
             }
             ToolDefinition definition = capabilityRegistry.findCapability(call.toolName()).orElse(null);
             if (definition == null
-                    || definition.riskLevel() != com.agent.platform.tool.ToolRiskLevel.LOW
-                    || !Boolean.TRUE.equals(definition.metadata().get("readOnly"))
-                    || !Boolean.TRUE.equals(definition.metadata().get("parallelSafe"))
-                    || !"SUB_AGENT".equals(definition.metadata().get("executionKind"))
-                    || (Boolean.TRUE.equals(definition.metadata().get("singleUse"))
+                    || !AgentCapabilityVisibilityPolicy.visible(definition, requestMetadata)
+                    || definition.riskLevel() != com.agent.platform.tool.ToolRiskLevel.LOW // 低风险
+                    || !Boolean.TRUE.equals(definition.metadata().get("readOnly")) // 只读
+                    || !Boolean.TRUE.equals(definition.metadata().get("parallelSafe")) // 可并行
+                    || !"SUB_AGENT".equals(definition.metadata().get("executionKind")) // 执行类型是 SUB_AGENT
+                    || (Boolean.TRUE.equals(definition.metadata().get("singleUse")) // 满足单次使用约束
                     && usedTools.contains(call.toolName()))) {
                 return false;
             }
@@ -1136,6 +1164,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                                                             boolean usedRag,
                                                             AgentRunBudget budget,
                                                             AgentEventListener listener) {
+        // 预算检查，超预算直接终止
         Optional<AgentStopReason> toolStop = budget.beforeToolCalls(rawCalls.size());
         if (toolStop.isPresent()) {
             return finishBudgetStop(request, runId, sessionId, userId, toolStop.get(),
@@ -1145,17 +1174,20 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         List<ParallelSubAgentCall> calls = new ArrayList<>();
         for (AgentToolCall rawCall : rawCalls) {
             String modelToolCallId = rawCall.toolCallId();
-            AgentToolCall call = assignExecutionId(rawCall);
+            AgentToolCall call = assignExecutionId(rawCall);// 分配执行 ID
             ToolDefinition definition = capabilityRegistry.findCapability(call.toolName()).orElseThrow();
             ToolCallRequest checkpointCall = new ToolCallRequest(
                     call.toolName(), call.toolCallId(), call.arguments());
+            // 持久化检查点
             checkpoint(runId, AgentRunPhase.EXECUTING_TOOL, checkpointCall,
                     toolResults, usedTools, usedRag, budget);
+            // 追加时间线消息
             timelineStore.appendMessages(sessionId, userId, runId, List.of(
                     AgentMessageDraft.toolCall(
                             call.toolCallId(), call.toolName(), call.arguments(),
                             Map.of("reason", call.reason(), "modelToolCallId", modelToolCallId),
                             tokenEstimator.estimate(String.valueOf(call.arguments())))));
+            // 推送事件
             publish(sessionId, userId, runId, AgentEventType.TOOL_REQUESTED,
                     "model requested parallel-safe sub-agent capability",
                     Map.of(
@@ -1168,11 +1200,13 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             calls.add(new ParallelSubAgentCall(call, definition));
         }
 
+        // 并行执行（核心）
         List<CompletableFuture<ParallelSubAgentExecution>> futures = calls.stream()
                 .map(item -> CompletableFuture.supplyAsync(
                         () -> executeParallelCall(request, runId, sessionId, userId, item),
                         parallelSubAgentExecutor))
                 .toList();
+        // 等待全部完成
         List<ParallelSubAgentExecution> executions = futures.stream()
                 .map(CompletableFuture::join)
                 .toList();
@@ -1633,9 +1667,10 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         modelDeltaPublisher.complete(safeAnswer);
         AgentRunRecord current = runStore.find(runId).orElse(null);
         if (current != null
-                && current.inputCheckpointEnabled()
-                && current.followUpCount() < current.maxFollowUps()) {
-            budget.pauseExecution();
+                && current.inputCheckpointEnabled()// 条件1：这个 Run 启用了输入检查点
+                && current.followUpCount() < current.maxFollowUps()) {// 条件2：还有续跑次数没用完
+            budget.pauseExecution();// 冻结预算计时
+            // 持久化暂停
             AgentContinuationTransition transition = continuationStore().checkpointWaitingInput(
                     runId,
                     current.version(),
@@ -1658,8 +1693,8 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             return new AgentRuntimeResult(
                     runId,
                     sessionId,
-                    AgentRunState.WAITING_INPUT,
-                    AgentStopReason.WAITING_INPUT,
+                    AgentRunState.WAITING_INPUT,// 状态 = 等待输入
+                    AgentStopReason.WAITING_INPUT,// 停止原因 = 等待输入
                     safeAnswer,
                     "",
                     budget.snapshot(),
@@ -1961,6 +1996,33 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 .toList();
     }
 
+    private List<ToolDefinition> capabilitiesFor(AgentExecutionProfile profile,
+                                                  Map<String, Object> requestMetadata,
+                                                  List<String> usedTools) {
+        return capabilityRegistry.listCapabilities().stream()
+                .filter(definition -> profile.allows(definition.name()))
+                .filter(definition -> AgentCapabilityVisibilityPolicy.visibleToModel(
+                        definition, requestMetadata, usedTools))
+                .toList();
+    }
+
+    private Optional<GuardrailDecision> followUpGuardrailDecision(AgentRunRecord stored,
+                                                                  AgentFollowUpInput input) {
+        for (AgentFollowUpGuardrailPolicy policy : followUpGuardrailPolicies) {
+            try {
+                Optional<GuardrailDecision> decision = policy.evaluate(stored, input);
+                if (decision.isPresent()) {
+                    return decision;
+                }
+            }
+            catch (RuntimeException exception) {
+                LOGGER.warn("deterministic follow-up guardrail failed; falling back to general input guardrail; policy={}",
+                        policy.getClass().getSimpleName(), exception);
+            }
+        }
+        return Optional.empty();
+    }
+
     /**
      * 默认执行配置文件，包括 agent 能使用的工具、系统提示词、agent 运行时的限制条件、启用长期内存存储
      */
@@ -2064,6 +2126,9 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 || state == AgentRunState.MANUAL_REVIEW;
     }
 
+    /**
+     * 检查配置的 AgentRunStore 是否实现了 AgentContinuationStore 接口（即支持持久化 WAITING_INPUT 暂停/恢复）。不支持就 fail-fast——因为"启用续跑但存储层不支持"会导致后面暂停无法落库
+     */
     private AgentContinuationStore continuationStore() {
         if (runStore instanceof AgentContinuationStore store) {
             return store;

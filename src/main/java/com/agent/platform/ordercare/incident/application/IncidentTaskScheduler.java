@@ -213,18 +213,25 @@ public class IncidentTaskScheduler {
     }
 
     private IncidentTaskExecution executeOne(AgentTaskRecord original, IncidentSnapshot snapshot) {
+        // 阶段 0：deadline 检查（有界调查）
+        // 事故调查有总截止时间（snapshot.deadlineAt()），超时直接取消，不再启动专家——保证调查有界，不无限拖延。
         if (!Instant.now().isBefore(snapshot.deadlineAt())) {
             return cancelled(original, "incident deadline exceeded before specialist execution");
         }
+
+        // 阶段 1：认领任务（多实例防重复执行）
+        // 租约，防止多实例防重复执行
         AgentTaskRecord claimed;
         if (properties.isPhase3Enabled()) {
             if (original.status() == AgentTaskStatus.CLAIMED
                     && original.leaseOwnedBy(workerIdentity.value(), original.fencingToken(), Instant.now())) {
-                claimed = original;
+                claimed = original;// 已经是我持租约的 → 直接用
             } else {
+                // 抢租约
                 TaskLeaseClaim lease = taskStore.claimTask(
                         original.taskId(), original.version(), workerIdentity.value(),
                         Instant.now().plusSeconds(properties.getTaskLeaseSeconds()), false);
+                // 别人在跑 → 让开
                 if (!lease.claimed()) {
                     return new IncidentTaskExecution(
                             lease.task(), List.of(),
@@ -234,11 +241,15 @@ public class IncidentTaskScheduler {
                 claimed = lease.task();
             }
         } else {
+            // 非 Phase3：纯状态迁移
             claimed = taskStore.transitionTask(
                     original.taskId(), original.version(), AgentTaskStatus.CLAIMED, null, "",
                     TaskEventActorType.ORCHESTRATOR, "incident-task-scheduler",
                     "task-claimed:" + original.taskId() + ":" + original.attempt());
         }
+
+        // 阶段 2：推进到 RUNNING
+        // 把任务从 CLAIMED 推进到 RUNNING（即将启动子代理）
         AgentTaskRecord running = properties.isPhase3Enabled()
                 ? taskStore.transitionLeasedTask(
                         claimed.taskId(), claimed.version(), AgentTaskStatus.RUNNING, null, "",
@@ -249,7 +260,11 @@ public class IncidentTaskScheduler {
                         claimed.taskId(), claimed.version(), AgentTaskStatus.RUNNING, null, "",
                         TaskEventActorType.ORCHESTRATOR, "incident-task-scheduler",
                         "task-running:" + claimed.taskId() + ":" + claimed.attempt());
+
         AtomicReference<AgentTaskRecord> boundTask = new AtomicReference<>(running);
+
+        // 阶段 3：准备执行参数
+        // 从任务里取角色、拼 prompt、拿 Profile、取父 Run ID 和委派深度。
         IncidentAgentRole role = IncidentAgentRole.valueOf(running.role());
         String prompt = specialistPrompt(running, snapshot, role);
         AgentExecutionProfile profile = profileFactory.specialist(role);
@@ -258,21 +273,25 @@ public class IncidentTaskScheduler {
         int delegationDepth = running.inputPayload().get("delegationDepth") instanceof Number number
                 ? number.intValue()
                 : 0;
+
+        // 阶段 4：预算预留
         IncidentBudgetReservation budget;
         try {
             budget = budgets.reserveIncidentRun(
                     running.incidentId(), specialistOperation(running), running.role(), profile);
         }
         catch (BudgetExceededException exhausted) {
-            return failed(running, exhausted.code() + ": " + exhausted.getMessage());
+            return failed(running, exhausted.code() + ": " + exhausted.getMessage());// 超预算直接失败
         }
+
+        // 阶段 5：启动子代理 Agent Run（核心）
         AgentRuntimeResult result;
         ScheduledFuture<?> heartbeat = startHeartbeat(running);
         try {
             result = continuationRuntime.runUntilInputCheckpoint(
                     new AgentRequest(
-                            "incident:" + snapshot.incidentId() + ":task:" + running.taskId(),
-                            "incident-specialist",
+                            "incident:" + snapshot.incidentId() + ":task:" + running.taskId(),// 独立 session
+                            "incident-specialist",// 角色
                             prompt,
                             Map.of(
                                     "incidentId", snapshot.incidentId(),
@@ -289,6 +308,7 @@ public class IncidentTaskScheduler {
                     event -> {
                         if (event.type() == AgentEventType.RUN_STARTED) {
                             AgentTaskRecord current = boundTask.get();
+                            // 绑定子 Run
                             AgentTaskRecord bound = taskStore.bindChildRun(
                                     current.taskId(), current.version(), event.runId(),
                                     "bind-child-run:" + current.taskId() + ":" + current.attempt());
@@ -302,9 +322,14 @@ public class IncidentTaskScheduler {
         } finally {
             if (heartbeat != null) heartbeat.cancel(false);
         }
+
+        // 阶段 6：结果判定（成功 vs 失败）
+        // 非暂停才结算
         if (result.state() != AgentRunState.WAITING_INPUT) budgets.settle(budget, result);
         AgentTaskRecord owned = boundTask.get();
+        // 子代理"没停在检查点"= 异常结束
         if (result.state() != AgentRunState.WAITING_INPUT) {
+            // 恢复已持久化的事实
             IncidentTaskExecution recovered = recoverPersistedFactsAfterDuplicateToolRequest(
                     owned, result);
             if (recovered != null) {
@@ -313,20 +338,24 @@ public class IncidentTaskScheduler {
             String stoppedReason =
                     "specialist stopped in state " + result.state() + ": " + result.stopReason();
             if (isRetryableStopReason(result.stopReason())) {
-                return retryOrFail(owned, snapshot, stoppedReason);
+                return retryOrFail(owned, snapshot, stoppedReason);// 可重试原因 → 重试
             }
             closeWaitingCheckpoint(owned);
-            return failed(owned, stoppedReason);
+            return failed(owned, stoppedReason);// 否则失败
         }
+
+        // 阶段 7：证据提交（成功路径）
+        // // 专家停在 WAITING_INPUT → 提取工具执行记录 → 投影成证据
         List<com.agent.platform.runtime.ToolExecutionRecord> toolExecutions =
                 toolExecutionStore.findByRun(result.runId());
         List<EvidenceCandidate> candidates = evidenceProjector.project(toolExecutions);
         if (candidates.isEmpty()) {
             return retryOrFail(owned, snapshot, "specialist returned no successful read-only fact tool result");
         }
+        // 提交（幂等 + fencing 保护）
         TaskResultCommitResult committed = resultCommitter.commit(new TaskResultSubmission(
                 owned.incidentId(), owned.taskId(), result.runId(), owned.version(),
-                "specialist-result:" + owned.taskId() + ":" + owned.attempt(),
+                "specialist-result:" + owned.taskId() + ":" + owned.attempt(),// 幂等键
                 AgentTaskStatus.WAITING_CLARIFICATION,
                 Map.of("answer", result.answer(), "evidenceCount", candidates.size()),
                 candidates, leaseOwner(owned), owned.fencingToken()));

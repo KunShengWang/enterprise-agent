@@ -22,6 +22,7 @@ management:
 
 enterprise-agent:
   mock-mode: false
+  model-tool-calling-mode: ${AGENT_MODEL_TOOL_CALLING_MODE:native}
   max-turns-per-run: ${AGENT_MAX_TURNS_PER_RUN:12}
   max-model-calls-per-run: 8
   max-tool-calls-per-run: 6

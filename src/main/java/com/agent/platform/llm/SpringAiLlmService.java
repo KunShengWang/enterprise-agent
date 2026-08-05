@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @ConditionalOnProperty(prefix = "enterprise-agent", name = "mock-mode", havingValue = "false", matchIfMissing = true)
-public class SpringAiLlmService implements LlmService {
+public class SpringAiLlmService implements LlmService, NativeChatModelClient {
 
     private static final String MISSING_CHAT_MODEL_MESSAGE = """
             未找到真实 ChatModel Bean，无法调用真实模型。
@@ -133,6 +133,38 @@ public class SpringAiLlmService implements LlmService {
                     }
                     return Flux.error(toLlmCallException(error));
                 });
+    }
+
+    @Override
+    public ChatResponse completeNative(Prompt prompt) {
+        try {
+            ChatResponse response = callWithRetry(prompt);
+            lastUsage.set(extractUsage(response));
+            captureFinishReason(response);
+            return response;
+        }
+        catch (RuntimeException exception) {
+            if (isContextOverflow(exception)) {
+                throw contextOverflowException(exception);
+            }
+            throw toLlmCallException(exception);
+        }
+    }
+
+    @Override
+    public Flux<ChatResponse> streamNative(Prompt prompt) {
+        return streamWithRetry(prompt, 1)
+                .doOnSubscribe(ignored -> {
+                    lastUsage.remove();
+                    lastFinishReason.remove();
+                })
+                .doOnNext(response -> {
+                    lastUsage.set(extractUsage(response));
+                    captureFinishReason(response);
+                })
+                .onErrorMap(error -> isContextOverflow(error)
+                        ? contextOverflowException(error)
+                        : toLlmCallException(error));
     }
 
     /**

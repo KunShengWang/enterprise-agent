@@ -122,6 +122,16 @@ public class IncidentReviewerToolHandler implements ContextualToolHandler {
             metadata.put("reviewerRunId", outcome.reviewerRunId());
             metadata.put("reusedReviewer", outcome.reused());
             metadata.put("stateGate", IncidentStatus.REVIEWING.name());
+            metadata.put("reviewerOutputValid", outcome.valid());
+            metadata.put("validationErrors", outcome.validationErrors());
+            if (!outcome.valid()) {
+                metadata.put("errorCode", "REVIEWER_OUTPUT_INVALID");
+                return new ToolCallResult(
+                        request.toolName(), false,
+                        objectMapper.writeValueAsString(outcome.draft()),
+                        "reviewer output failed authoritative Java validation",
+                        Map.copyOf(metadata));
+            }
             return new ToolCallResult(
                     request.toolName(), true,
                     objectMapper.writeValueAsString(outcome.draft()), "", Map.copyOf(metadata));

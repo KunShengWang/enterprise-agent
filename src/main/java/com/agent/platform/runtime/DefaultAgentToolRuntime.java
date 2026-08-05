@@ -278,10 +278,11 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
             try {
                 // 工具执行
                 lastResult = capabilityExecutor instanceof ContextualAgentCapabilityExecutor contextual
-                        ? contextual.execute(request, executionContext)
-                        : capabilityExecutor.execute(request);
+                        ? contextual.execute(request, executionContext)// 带上下文执行
+                        : capabilityExecutor.execute(request);// 普通执行
             }
             catch (RuntimeException exception) {
+                // 失败标记可重试
                 lastResult = new ToolCallResult(
                         request.toolName(),
                         false,
@@ -296,7 +297,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
             ) {
                 return withAttemptMetadata(lastResult, attempt);
             }
-            sleepBackoff(attempt);
+            sleepBackoff(attempt);// 指数退避
         }
         return lastResult == null
                 ? new ToolCallResult(request.toolName(), false, "", "capability returned no result", Map.of())

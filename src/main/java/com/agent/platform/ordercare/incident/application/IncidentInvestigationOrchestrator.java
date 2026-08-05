@@ -40,6 +40,8 @@ import com.agent.platform.runtime.AgentExecutionProfile;
 import com.agent.platform.runtime.ToolExecutionStore;
 import com.agent.platform.workbench.budget.IncidentBudgetGate;
 import com.agent.platform.workbench.budget.IncidentBudgetReservation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
@@ -56,6 +58,7 @@ import java.util.stream.Collectors;
 @Service
 public class IncidentInvestigationOrchestrator {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(IncidentInvestigationOrchestrator.class);
     private static final String SCENARIO_ID = "ordercare-incident-command-v1";
 
     private final IncidentStore incidentStore;
@@ -226,19 +229,19 @@ public class IncidentInvestigationOrchestrator {
                         objectMapper.convertValue(planning.plan(), Map.class), null, false);
                 List<AgentTaskRecord> tasks = createTasks(incident, planning.plan());
                 incident = transition(incident, IncidentStatus.INVESTIGATING, "incident-investigating");
-                executions = taskScheduler.execute(tasks, snapshot);
+                executions = taskScheduler.execute(tasks, snapshot);// ← Specialist 全部返回（工具委派路径）
             }
-            List<EvidenceGap> gaps = executions.stream().flatMap(item -> item.gaps().stream()).toList();
+            List<EvidenceGap> gaps = executions.stream().flatMap(item -> item.gaps().stream()).toList();// ① 收集证据缺口
 
             incident = current(incidentId);
-            incident = transition(incident, IncidentStatus.CHECKING_CONSISTENCY, "incident-checking");
-            List<EvidenceRecord> evidence = evidenceStore.listEvidence(incidentId);
+            incident = transition(incident, IncidentStatus.CHECKING_CONSISTENCY, "incident-checking");// ② 状态机→一致性检查
+            List<EvidenceRecord> evidence = evidenceStore.listEvidence(incidentId);// ③ 加载全部证据
             Set<EvidenceSubtype> required = planning.plan().tasks().stream()
                     .flatMap(task -> task.requiredEvidenceSubtypes().stream())
-                    .collect(Collectors.toSet());
-            EvidenceConsistencyResult consistency = consistencyChecker.check(snapshot, evidence, required);
-            List<EvidenceConflict> conflicts = persistConflicts(incidentId, consistency.conflicts());
-            persistTrust(incidentId, trustAssessor.assess(snapshot, evidence, conflicts));
+                    .collect(Collectors.toSet());// ④ 必需证据类型（来自计划）
+            EvidenceConsistencyResult consistency = consistencyChecker.check(snapshot, evidence, required);// ⑤ 缺失检查 + 跨域冲突检测
+            List<EvidenceConflict> conflicts = persistConflicts(incidentId, consistency.conflicts());// ⑥ 持久化 Conflict
+            persistTrust(incidentId, trustAssessor.assess(snapshot, evidence, conflicts)); // ⑦ 可信度计算 + 持久化 Trust
 
             incident = current(incidentId);
             incident = transition(incident, IncidentStatus.REVIEWING, "incident-reviewing");
@@ -365,6 +368,7 @@ public class IncidentInvestigationOrchestrator {
     private ToolDelegationResult delegateWithSubAgentTools(IncidentRecord incident,
                                                            IncidentInvestigationRequest request) {
         boolean mqRequired = !incident.snapshot().businessScope().queueNames().isEmpty();
+        // 找出 commander 控制子 agent 的执行配置
         AgentExecutionProfile profile = profileFactory.commanderWithSubAgents(mqRequired);
         IncidentBudgetReservation budget = budgets.reserveIncidentRun(
                 incident.incidentId(), "commander-subagent-tools", "COMMANDER", profile);
@@ -541,11 +545,32 @@ public class IncidentInvestigationOrchestrator {
         var reviewerExecution = toolExecutionStore.findByRun(commanderRunId).stream()
                 .filter(item -> com.agent.platform.ordercare.incident.tool.IncidentToolCatalog
                         .REVIEW_INCIDENT_EVIDENCE.equals(item.toolName()))
-                .filter(item -> item.result() != null && item.result().success())
+                .filter(item -> item.result() != null)
                 .max(java.util.Comparator.comparing(com.agent.platform.runtime.ToolExecutionRecord::updatedAt))
                 .orElse(null);
         if (reviewerExecution == null) {
             // 模型未遵守第二阶段调用协议时，仍复用同一个 Reviewer 创建服务完成安全降级。
+            return review(incident, evidence, conflicts, gaps);
+        }
+        if (!reviewerExecution.result().success()) {
+            String errorCode = String.valueOf(
+                    reviewerExecution.result().metadata().getOrDefault("errorCode", ""));
+            String failedReviewerRunId = String.valueOf(
+                    reviewerExecution.result().metadata().getOrDefault("reviewerRunId", ""));
+            if ("REVIEWER_OUTPUT_INVALID".equals(errorCode)
+                    && !failedReviewerRunId.isBlank()
+                    && reviewerExecution.result().content() != null
+                    && !reviewerExecution.result().content().isBlank()) {
+                LOGGER.warn("Commander Reviewer Tool returned an invalid final draft; incidentId={}, reviewerRunId={}, errors={}",
+                        incident.incidentId(), failedReviewerRunId,
+                        reviewerExecution.result().metadata().getOrDefault("validationErrors", List.of()));
+                IncidentBudgetReservation reviewerBudget = budgets.reserveIncidentRun(
+                        incident.incidentId(), "reviewer", "REVIEWER", profileFactory.reviewer());
+                return new ReviewResult(
+                        failedReviewerRunId,
+                        reviewerDraftParser.parse(reviewerExecution.result().content()),
+                        reviewerBudget);
+            }
             return review(incident, evidence, conflicts, gaps);
         }
         ReviewerAssessmentDraft draft = reviewerDraftParser.parse(reviewerExecution.result().content());
@@ -693,6 +718,8 @@ public class IncidentInvestigationOrchestrator {
             return draft;
         }
         catch (IncidentAssessmentValidationException exception) {
+            LOGGER.warn("Reviewer draft rejected; using deterministic fallback; incidentId={}, validationErrors={}",
+                    snapshot.incidentId(), exception.validationErrors());
             return fallbackDraft(evidence, conflicts);
         }
     }

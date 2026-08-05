@@ -106,6 +106,42 @@ class HttpLoggingConfigTests {
         assertEquals(0, occurrences(output.getOut(), "[LLM][RAW HTTP RESPONSE BODY]"));
     }
 
+    @Test
+    void reconstructsNativeStreamingToolCallsInCompleteHttpJson(CapturedOutput output) throws Exception {
+        String requestJson = """
+                {"model":"deepseek-chat","messages":[{"role":"user","content":"status"}],"tools":[{"type":"function","function":{"name":"ticket_status","parameters":{"type":"object"}}}],"stream":true}
+                """.strip();
+        String firstEvent = "data: {\"id\":\"chat-tool\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"tool_calls\":[{\"index\":0,\"id\":\"call-1\",\"type\":\"function\",\"function\":{\"name\":\"ticket_\",\"arguments\":\"{\\\"id\\\":\"}}]},\"finish_reason\":null}]}\n\n";
+        String secondEvent = "data: {\"id\":\"chat-tool\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"name\":\"status\",\"arguments\":\"\\\"T1\\\"}\"}}]},\"finish_reason\":\"tool_calls\"}]}\n\n";
+        String done = "data: [DONE]\n\n";
+        startServer("/tool-stream", exchange -> {
+            readBody(exchange);
+            exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
+            exchange.sendResponseHeaders(200, 0);
+            exchange.getResponseBody().write(firstEvent.getBytes(StandardCharsets.UTF_8));
+            exchange.getResponseBody().write(secondEvent.getBytes(StandardCharsets.UTF_8));
+            exchange.getResponseBody().write(done.getBytes(StandardCharsets.UTF_8));
+            exchange.close();
+        });
+
+        List<String> events = new HttpLoggingConfig().llmWebClientBuilder()
+                .build()
+                .post()
+                .uri(url("/tool-stream"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(requestJson)
+                .retrieve()
+                .bodyToFlux(String.class)
+                .collectList()
+                .block(Duration.ofSeconds(5));
+
+        assertEquals(3, events == null ? 0 : events.size());
+        assertTrue(output.getOut().contains("\"name\":\"ticket_status\""));
+        assertTrue(output.getOut().contains("\\\"id\\\":\\\"T1\\\""));
+        assertTrue(output.getOut().contains("\"finish_reason\":\"tool_calls\""));
+        assertEquals(1, occurrences(output.getOut(), "[LLM][FULL HTTP RESPONSE JSON]"));
+    }
+
     private void startServer(String path, ExchangeHandler handler) throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext(path, exchange -> {

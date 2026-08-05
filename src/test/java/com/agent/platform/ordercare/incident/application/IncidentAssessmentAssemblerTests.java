@@ -8,6 +8,7 @@ import com.agent.platform.ordercare.incident.model.EvidenceRecord;
 import com.agent.platform.ordercare.incident.model.EvidenceStatus;
 import com.agent.platform.ordercare.incident.model.EvidenceSubtype;
 import com.agent.platform.ordercare.incident.model.IncidentOutcome;
+import com.agent.platform.ordercare.incident.model.IncidentRiskLevel;
 import com.agent.platform.ordercare.incident.model.IncidentSnapshot;
 import com.agent.platform.ordercare.incident.model.ReviewerAssessmentDraft;
 import org.junit.jupiter.api.Test;
@@ -66,6 +67,43 @@ class IncidentAssessmentAssemblerTests {
                 () -> assembler.assemble(snapshot(), List.of(evidence()), List.of(), List.of(), empty));
 
         assertEquals(true, error.getMessage().contains("at least one accepted FACT"));
+    }
+
+    @Test
+    void allowsReadOnlyReplayImpactAnalysisAndRaisesRiskWhenRootCauseExists() {
+        ReviewerAssessmentDraft draft = new ReviewerAssessmentDraft(
+                "reviewer-assessment-v1",
+                List.of(new ReviewerAssessmentDraft.ConfirmedFactDraft(
+                        EvidenceSubtype.ORDER_STATUS_SET, "订单终态事实已确认", List.of("ev-order"))),
+                List.of(new ReviewerAssessmentDraft.RootCauseDraft(
+                        "死信队列无活跃消费者", List.of("ev-order"), List.of())),
+                List.of(new ReviewerAssessmentDraft.RecommendationDraft(
+                        "核查消费者缺失原因，并评估恢复消费者后消息重放的影响",
+                        List.of("ev-order"), List.of())),
+                null, List.of());
+
+        var assessment = assembler.assemble(
+                snapshot(), List.of(evidence()), List.of(), List.of(), draft);
+
+        assertEquals(IncidentOutcome.ASSESSED, assessment.outcome());
+        assertEquals(IncidentRiskLevel.MEDIUM, assessment.riskLevel());
+        assertEquals(1, assessment.rootCauseCandidates().size());
+        assertEquals(1, assessment.recommendations().size());
+    }
+
+    @Test
+    void rejectsRecommendationThatRequestsMessageReplay() {
+        ReviewerAssessmentDraft draft = new ReviewerAssessmentDraft(
+                "reviewer-assessment-v1",
+                List.of(new ReviewerAssessmentDraft.ConfirmedFactDraft(
+                        EvidenceSubtype.ORDER_STATUS_SET, "订单终态事实已确认", List.of("ev-order"))),
+                List.of(),
+                List.of(new ReviewerAssessmentDraft.RecommendationDraft(
+                        "建议立即重放死信消息", List.of("ev-order"), List.of())),
+                null, List.of());
+
+        assertThrows(IncidentAssessmentValidationException.class, () -> assembler.assemble(
+                snapshot(), List.of(evidence()), List.of(), List.of(), draft));
     }
 
     private IncidentSnapshot snapshot() {

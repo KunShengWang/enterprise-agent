@@ -37,4 +37,33 @@ class IncidentExecutionProfileFactoryTests {
         assertEquals(withMq.allowedCapabilities().size(), withMq.limits().maxToolCalls());
         assertTrue(withMq.systemPrompt().contains("REVIEW_READY"));
     }
+
+    @Test
+    void commanderToolsDeclareNonOverlappingRuntimePhases() {
+        var definitions = new IncidentToolCatalog().definitions();
+        var order = definitions.stream()
+                .filter(item -> IncidentToolCatalog.DELEGATE_ORDER_ANALYST.equals(item.name()))
+                .findFirst().orElseThrow();
+        var reviewer = definitions.stream()
+                .filter(item -> IncidentToolCatalog.REVIEW_INCIDENT_EVIDENCE.equals(item.name()))
+                .findFirst().orElseThrow();
+
+        assertEquals(true, order.metadata().get("initialOnly"));
+        assertEquals("REVIEW_READY", reviewer.metadata().get("requiredFollowUpType"));
+        assertEquals("REVIEWING", reviewer.metadata().get("stateGate"));
+    }
+
+    @Test
+    void specialistFactToolsAreSingleUseCapabilities() {
+        var definitions = new IncidentToolCatalog().definitions();
+        for (String name : java.util.List.of(
+                IncidentToolCatalog.ORDER_FACTS,
+                IncidentToolCatalog.INVENTORY_FACTS,
+                IncidentToolCatalog.MQ_FACTS)) {
+            var definition = definitions.stream()
+                    .filter(item -> name.equals(item.name()))
+                    .findFirst().orElseThrow();
+            assertEquals(true, definition.metadata().get("singleUse"), name);
+        }
+    }
 }

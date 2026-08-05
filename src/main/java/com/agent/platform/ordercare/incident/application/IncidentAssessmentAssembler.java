@@ -22,13 +22,18 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Component
 public class IncidentAssessmentAssembler {
 
-    private static final List<String> FORBIDDEN_ACTIONS = List.of(
-            "execute", "replay", "update", "delete", "approve", "force",
-            "执行", "重放", "更新", "删除", "审批", "强制");
+    private static final List<Pattern> WRITE_INTENT_PATTERNS = List.of(
+            Pattern.compile("^(?:请)?(?:立即|直接|自动)?(?:重放|更新|删除|审批|强制)"),
+            Pattern.compile("(?:建议|应当|需要|必须|立即|直接|自动|执行|触发|开始|进行|强制)"
+                    + "[^，。；;]{0,24}(?:重放|更新|删除|审批)"),
+            Pattern.compile("^(?:please\\s+)?(?:replay|update|delete|approve|force)\\b"),
+            Pattern.compile("\\b(?:should|must|need to|execute|perform|trigger|start|force)\\b"
+                    + ".{0,40}\\b(?:replay|update|delete|approve)\\b"));
 
     public IncidentAssessment assemble(IncidentSnapshot snapshot,
                                        List<EvidenceRecord> evidence,
@@ -96,7 +101,7 @@ public class IncidentAssessmentAssembler {
             String normalizedAction = recommendation.action().toLowerCase(Locale.ROOT);
             if (recommendation.action().isBlank()
                     || (evidenceReferences.isEmpty() && recommendation.conflictIds().isEmpty())
-                    || FORBIDDEN_ACTIONS.stream().anyMatch(normalizedAction::contains)) {
+                    || containsWriteIntent(normalizedAction)) {
                 errors.add("recommendation must be referenced and read-only in Phase 1");
                 continue;
             }
@@ -127,14 +132,19 @@ public class IncidentAssessmentAssembler {
         IncidentOutcome outcome = highOpen
                 ? IncidentOutcome.MANUAL_REVIEW
                 : safeGaps.isEmpty() ? IncidentOutcome.ASSESSED : IncidentOutcome.PARTIAL;
+        boolean hasInvestigativeFinding = !rootCauses.isEmpty() || !recommendations.isEmpty();
         IncidentRiskLevel risk = highOpen
                 ? IncidentRiskLevel.HIGH
-                : assessmentConflicts.isEmpty() && safeGaps.isEmpty()
+                : assessmentConflicts.isEmpty() && safeGaps.isEmpty() && !hasInvestigativeFinding
                 ? IncidentRiskLevel.LOW
                 : IncidentRiskLevel.MEDIUM;
         return new IncidentAssessment(
                 "incident-assessment-v1", snapshot.incidentId(), snapshot.snapshotId(), outcome, risk,
                 confirmedFacts, assessmentConflicts, rootCauses, recommendations, safeGaps, Instant.now());
+    }
+
+    private boolean containsWriteIntent(String action) {
+        return WRITE_INTENT_PATTERNS.stream().anyMatch(pattern -> pattern.matcher(action).find());
     }
 
     private List<EvidenceRecord> validEvidence(List<String> ids,

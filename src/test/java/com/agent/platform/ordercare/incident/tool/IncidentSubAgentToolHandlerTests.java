@@ -131,6 +131,15 @@ class IncidentSubAgentToolHandlerTests {
         ToolCallResult allowed = handler.execute(request, context);
         assertTrue(allowed.success());
         assertEquals("reviewer-run-1", allowed.metadata().get("reviewerRunId"));
+
+        when(reviewers.review(eq(reviewing), any(), any(), any())).thenReturn(
+                new IncidentReviewerAgentService.ReviewAgentOutcome(
+                        "reviewer-run-2", draft, IncidentBudgetReservation.degraded("reviewer"), false,
+                        List.of("recommendation must be referenced and read-only in Phase 1")));
+        ToolCallResult invalid = handler.execute(request, context);
+        assertEquals(false, invalid.success());
+        assertEquals("REVIEWER_OUTPUT_INVALID", invalid.metadata().get("errorCode"));
+        assertEquals("reviewer-run-2", invalid.metadata().get("reviewerRunId"));
     }
 
     @Test

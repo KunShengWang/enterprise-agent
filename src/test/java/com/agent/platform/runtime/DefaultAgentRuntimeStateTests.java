@@ -703,7 +703,7 @@ class DefaultAgentRuntimeStateTests {
         private DefaultAgentRuntime runtime() {
             return new DefaultAgentRuntime(
                     properties, timelineStore, runStore, toolExecutionStore, contextManager, modelGateway,
-                    capabilityRegistry, toolRuntime, guardrailService, approvalService,
+                    capabilityRegistry, toolRuntime, guardrailService, List.of(), approvalService,
                     new ConservativeTokenEstimator(), runControlStore, memoryService,
                     new ConfiguredLlmCostCalculator(properties), new ToolResultProjector(properties)
             );
