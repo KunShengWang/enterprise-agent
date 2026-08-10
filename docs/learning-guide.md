@@ -1,129 +1,201 @@
-# 学习顺序
+# 学习顺序（面试优先）
 
-你昨天学习的旧 `V1AgentExecutor.execute()` 已经删除。那段代码仍帮助你理解过“输入到回答”的业务步骤，但不要继续背它的固定分支；新版需要学习的是 Runtime 如何维持循环不变量。
+> 当前实现基线：`b6207a4`。
 
-## 第一阶段：只看主循环
+这个项目类很多，不建议按包逐个阅读。面试准备只需要先掌握五条主线，再根据追问补 Store、SQL 和测试。
 
-按下面顺序阅读：
+## 1. 第一主线：单 Agent Runtime
 
-1. `agent/RuntimeAgentExecutor.java`
-   - 同步 API 只是适配器。
-2. `runtime/AgentRuntime.java`
-   - 先看 Runtime 对外契约：run、resume、cancel。
-3. `runtime/DefaultAgentRuntime.java`
-   - 重点读 `run(...)`、`executeLoop(...)`、`finish(...)`。
-4. `runtime/AgentRunBudget.java`
-   - 理解每轮前、模型前、工具前为什么都检查停止条件。
-5. `runtime/AgentStopReason.java`
-   - 不要只记成功/失败，要能解释每种终止原因。
+目标：能独立讲清 Model–Tool Loop 与可靠性边界。
 
-第一阶段你应能回答：
+阅读顺序：
 
-- 模型什么时候再次调用？
-- ToolResult 怎样返回模型？
-- 为什么模型不能直接绕过审批？
-- 达到最大轮次、超时、取消和上下文溢出时分别发生什么？
-- 为什么审批恢复必须使用原 Profile 和累计 BudgetSnapshot，同时冻结审批等待期间的执行时长？
-- 为什么工具执行检查点不能直接重放，以及何时可以复用 `ToolExecutionStore` 的确定结果继续循环？
+1. `web/AgentController.java`：直接 Runtime API；
+2. `runtime/AgentRuntime.java`：run/resume/cancel 契约；
+3. `runtime/DefaultAgentRuntime.java`：`run`、`executeLoop`、恢复分支；
+4. `runtime/AgentRunRecord.java`：权威 Run 快照；
+5. `runtime/AgentRunBudget.java`：模型、工具、Token、成本和时间预算；
+6. `runtime/JdbcAgentRuntimeStore.java`：Checkpoint、Tool Claim 和原子恢复。
 
-## 第二阶段：消息时间线和 Context
-
-1. `runtime/AgentMessage.java`、`AgentMessageType.java`
-2. `runtime/JdbcAgentTimelineStore.java`
-3. `runtime/DefaultAgentContextManager.java`
-4. `memory/LlmConversationSummarizer.java`
-5. `memory/RuleBasedConversationSummarizer.java`
-
-学习重点：
-
-- 数据库时间线和“下一轮发给模型的上下文”不是同一个东西。
-- 压缩只创建新的 `CONTEXT_SUMMARY`，不删除事实历史。
-- ToolCall 与 ToolResult 是一个不可拆分单元。
-- 模型拒绝超长上下文后，Runtime 只进行有限次数的压缩重试。
-
-## 第三阶段：模型协议和能力目录
-
-1. `runtime/JsonAgentModelGateway.java`
-2. `runtime/DefaultAgentCapabilityRegistry.java`
-3. `runtime/DefaultAgentCapabilityExecutor.java`
-4. `tool/LocalToolRegistry.java`
-
-区分三个概念：
-
-- Tool Definition：告诉模型“有什么能力、参数是什么”。
-- Tool Call：模型提出的请求，不代表已经执行。
-- Tool Result：Runtime 完成权限和执行后写回的结果。
-
-`knowledge_search` 和 `skill_catalog` 也被建模为能力，所以 RAG/Skill 不需要固定 if/else 主分支。
-
-## 第四阶段：权限、审批与幂等
-
-1. `runtime/DefaultAgentToolRuntime.java`
-2. `guardrail/DefaultToolPermissionPolicy.java`
-3. `guardrail/DefaultGuardrailService.java`
-4. `approval/LocalApprovalService.java`
-5. `runtime/JdbcAgentRuntimeStore.java`
-
-画出这条链：
+只需先掌握：
 
 ```text
-ToolCall
- -> Profile 白名单
- -> Tool Definition
- -> 参数校验
- -> allow / ask / deny
- -> 持久化执行声明
- -> 执行 / 等待审批 / 拒绝
- -> ToolResult
+Input Guardrail
+→ Session Lease + AgentRunRecord
+→ Context Projection / Compact
+→ Model
+→ final text 或 ToolCall
+→ ToolResult 回填
+→ 继续 Loop
+→ COMPLETED / PAUSED / WAITING_APPROVAL / FAILED / CANCELLED
 ```
 
-面试时重点解释：副作用执行出现网络超时，不一定等于执行失败；无法确认结果时进入人工核对，而不是无脑重试。
+面试重点：Checkpoint 不是保存线程栈；Session Lease 控制同一会话并发；Budget 是执行上限；恢复使用原 runId、Profile、预算和事件序号。
 
-## 第五阶段：RAG 与 Memory
+## 2. 第二主线：模型协议与工具安全
 
-RAG：
+目标：解释“LLM 只能提出工具请求，Java 才拥有执行权”。
 
-1. `rag/PgVectorRagService.java`
-2. `rag/PgVectorRagRepository.java`
-3. `rag/LlmRagReranker.java`
-4. `rag/JdbcRagCacheStore.java`
+阅读顺序：
 
-Memory：
+1. `runtime/AgentModelGatewayConfiguration.java`；
+2. `runtime/NativeToolCallingAgentModelGateway.java`；
+3. `runtime/DefaultAgentCapabilityRegistry.java`；
+4. `runtime/DefaultAgentToolRuntime.java`；
+5. `runtime/DefaultAgentCapabilityExecutor.java`；
+6. `approval/LocalApprovalService.java`；
+7. `tool/LocalToolRegistry.java`。
 
-1. `memory/LlmMemoryExtractor.java`
-2. `memory/JdbcMemoryService.java`
-3. 回到 `DefaultAgentContextManager.longTermMemoryContext(...)`
+记住一句话：
 
-必须分清：
+> Capability 决定有没有，Profile 决定能不能用，Visibility 决定当前阶段是否可见，Guardrail 决定这次能不能做，Approval 决定人是否同意，Tool Claim 决定是否已经做过。
 
-- 短期消息属于 Runtime Timeline；
-- 长期记忆必须经过结构化提取、置信度和脱敏；
-- 长期召回由 PostgreSQL pgvector 主导；
-- 历史记忆仍是不可信用户数据，不能覆盖系统权限。
+默认使用 Provider 原生 `tools/tool_calls`。Gateway 只转换协议，不调用工具；`JsonAgentModelGateway` 是兼容模式。
 
-## 第六阶段：Guardrail 与可靠性
+用 `floworder_recovery_execute` 准备一个完整案例：模型只传 proposalId，Java 恢复不可变 Preview，审批绑定版本/指纹/digest，审批后按原 actionRequestId 执行，网络超时先对账而不是换 ID 重试。
 
-1. `guardrail/DeterministicPromptInjectionSignalDetector.java`
-2. `guardrail/LlmPromptInjectionDetector.java`
-3. `guardrail/LayeredSensitiveDataFilter.java`
-4. `llm/SpringAiLlmService.java`
-5. `runtime/JdbcAgentRunControlStore.java`
+## 3. 第三主线：Unified Agent Workbench
 
-理解为什么：
+目标：理解单 Agent 上方为什么还需要产品控制面。
 
-- 正则适合识别手机号、密钥格式，但不适合单独判断用户意图；
-- Prompt Injection 规则只作为高召回信号，语义分类负责确认；
-- 模型调用需要有界线程池、真实超时取消、有限重试和熔断；
-- 本地取消句柄不是业务状态，取消事实必须落库。
+第一遍只看以下文件：
 
-## 第七阶段：SSE、Trace 与 Sub-Agent
+1. `workbench/model/AgentConversationTurn.java`；
+2. `workbench/model/AgentWorkItem.java`；
+3. `workbench/web/UnifiedWorkController.java` 的 `submitBlocking`；
+4. `workbench/application/UnifiedWorkIntakeService.java` 的 `accept`；
+5. `workbench/application/DefaultWorkCommandClassifier.java`；
+6. `workbench/application/RoutingCoordinator.java`；
+7. `workbench/application/LlmUnifiedTaskRouter.java`；
+8. `workbench/application/RoutePolicyValidator.java`；
+9. `workbench/dispatch/DispatchCoordinator.java`；
+10. `workbench/dispatch/GeneralAgentExecutionAdapter.java`。
 
-1. `stream/DefaultStreamingAgentExecutor.java`
-2. `trace/RuntimeTraceProjector.java`
-3. `multiagent/DefaultMultiAgentOrchestrator.java`
-4. `multiagent/SubAgentProfileFactory.java`
-5. `multiagent/SubAgentRunner.java`
+主链：
 
-额外观察 SSE 的 `sequence`、`heartbeat.lastPersistedSequence` 和 `stream_gap.replayRequired`，理解“实时通知”和“数据库事实源”之间的区别。
+```text
+用户输入先落库
+→ WorkCommand 还是新目标
+→ 新目标创建 WorkItem
+→ Router 建议 + Java 校验
+→ 必要时 Preview/Confirm
+→ DispatchAdapter
+→ WorkLink 关联底层 Run/Incident/Plan
+```
 
-最终你应能自己画出 [当前架构](architecture.md)，并用一次“高风险工具审批后恢复”的 Run 贯穿 Session、Message、Event、Approval、ToolExecution 和 Trace。
+Workbench 面试只需先讲四个工程点：
+
+- `Idempotency-Key` 防止重复输入和 WorkItem；
+- `dispatchRequestId` 防止重复创建底层执行；
+- `WorkControlState / WorkExecutionState / WorkOutcome` 分离控制、执行和结果；
+- Projector 将底层终态幂等收敛回 WorkItem。
+
+第二遍再看 `JdbcWorkbenchStore`、Routing/Dispatch Reconciler、Projection Cursor、lease/fencing。
+
+## 4. 第四主线：Incident Multi-Agent
+
+目标：说明它不是“多个模型自由聊天”，而是受控任务和证据协议。
+
+阅读顺序：
+
+1. `ordercare/incident/application/IncidentInvestigationOrchestrator.java`；
+2. `ordercare/incident/application/IncidentExecutionProfileFactory.java`；
+3. `ordercare/incident/tool/IncidentToolCatalog.java`；
+4. `ordercare/incident/tool/IncidentSubAgentToolHandler.java`；
+5. `ordercare/incident/application/IncidentSubAgentTaskService.java`；
+6. `ordercare/incident/application/IncidentTaskScheduler.java`；
+7. `ordercare/incident/application/IncidentReviewerAgentService.java`；
+8. `ordercare/incident/application/IncidentAssessmentAssembler.java`。
+
+主链：
+
+```text
+Commander Run
+→ delegate_order_analyst / delegate_inventory_analyst / delegate_mq_analyst
+→ 独立 Specialist child Run
+→ 结构化 Evidence
+→ Conflict Checker
+→ review_incident_evidence
+→ Reviewer Draft
+→ Java Assessment Assembler
+```
+
+重点：SubAgent Tool 必须只读、低风险、parallelSafe、singleUse；Reviewer 必须引用 Evidence/Conflict；Java 校验角色和证据覆盖；Phase 3 使用 Task lease/fencing 接管，不建设通用 Mailbox。
+
+## 5. 第五主线：Incident Scope Discovery 与 FlowOrder 恢复
+
+目标：把 Agent 基础设施连接到真实业务价值。
+
+### Scope Discovery
+
+阅读：
+
+- `workbench/application/DefaultIncidentScopeRoutePreflight.java`；
+- `ordercare/incident/scope/application/IncidentTimeRangeResolver.java`；
+- `ordercare/incident/scope/application/IncidentScopeDiscoveryCoordinator.java`；
+- `ordercare/incident/scope/persistence/JdbcIncidentScopeDiscoveryStore.java`；
+- `ordercare/incident/scope/client/FlowOrderScopeDiscoveryClient.java`。
+
+重点：模型理解现象，但不能猜内部 ID；Java 调用固定只读接口发现范围；Snapshot 绑定 version/fingerprint/TTL；用户显式确认后才进入已有 Incident Adapter。
+
+当前时间白名单是 `前天`、`昨晚`、`今天`、1～24 小时相对范围和 ISO 范围，不要表述为任意时间理解。
+
+### 受控恢复
+
+阅读：
+
+- `ordercare/tool/OrderCareRecoveryToolHandler.java`；
+- `ordercare/tool/OrderCareApprovalRequestPreparer.java`；
+- `ordercare/application/RecoveryConvergenceChecker.java`；
+- `ordercare/application/RecoveryOutcomeReconciler.java`；
+- `ordercare/tool/OrderCareUncertainExecutionResolver.java`。
+
+重点区分：
+
+```text
+ProposalStatus：预演/审批对象状态
+ActionStatus：命令提交状态
+CaseOutcome：最终业务结果
+```
+
+`SUBMITTED` 不等于 `RESOLVED`。
+
+## 6. 第六主线：事件、SSE 与前端
+
+只有需要讲可观测性时再深入：
+
+1. `stream/DefaultStreamingAgentExecutor.java`；
+2. `workbench/application/UnifiedWorkEventProjector.java`；
+3. `workbench/web/UnifiedWorkEventStreamService.java`；
+4. `workbench/presentation/PublicPresentationService.java`；
+5. `frontend/src/composables/useWorkbenchConversation.ts`；
+6. `frontend/src/components/ConversationItemRenderer.vue`；
+7. `frontend/src/components/ExecutionInspector.vue`。
+
+必须区分：
+
+- Runtime Event：Run 内部事实；
+- WorkEvent：统一任务投影；
+- PublicPresentation：用户可读安全契约；
+- `MODEL_DELTA`：Primary Run 实时正文；
+- heartbeat：传输层保活，不是持久化业务事件。
+
+## 7. 可以暂时不看的内容
+
+- 每条 JDBC SQL 和全部 DDL；
+- 所有 Controller 运维接口；
+- 前端 CSS；
+- 每个 Eval case；
+- 每个历史 Gap Matrix；
+- 未使用场景的全部 DTO。
+
+## 8. 面试学习验收
+
+每个主题只准备四项：
+
+1. 一张主流程图；
+2. 三个关键类；
+3. 两个故障场景；
+4. 一段 1～2 分钟回答。
+
+建议掌握比例：单 Agent 80%，工具安全 70%，Workbench 50%，Multi-Agent 50%，FlowOrder 业务闭环 70%，前端与全部 SQL 20%。

@@ -1,68 +1,126 @@
 # Enterprise Agent
 
-一个以“可解释、可恢复、可约束的 Agent Runtime”为中心的 Java 17 / Spring Boot 4 学习项目。
+一个以“可解释、可恢复、可约束”为核心的 Java 17 / Spring Boot 4.1 Agent 工程项目。项目已经从单一 Runtime 演进为三层结构：
 
-项目不再使用固定的 `Route -> RAG/Tool -> LLM` 业务流水线。模型在统一循环中决定返回最终文本或请求能力调用；Runtime 负责时间线、预算、权限、审批、工具执行、上下文压缩、终止原因和事件持久化。
+```text
+产品控制面：Unified Agent Workbench
+业务编排面：OrderCare Case / Incident Command / Recovery Plan
+执行面：DefaultAgentRuntime + Capability / Tool Runtime
+```
+
+当前稳定事实以已提交代码 `b6207a4` 为基线。文档类型和事实源规则见 [文档索引](docs/documentation-index.md)。
 
 ## 核心执行语义
 
+单 Agent Runtime 使用同一条持久化 Model–Tool Loop：
+
 ```text
 用户请求
-  -> 输入 Guardrail
-  -> PostgreSQL Session / Run / Message / Event
-  -> Context 投影（长期记忆 + 摘要 + 完整工具对 + 近期消息）
-  -> 模型返回 assistantText 或 toolCalls
-  -> Runtime 校验能力白名单、JSON Schema 和 Tool Policy
-  -> allow / ask / deny
-  -> 工具执行或等待人工审批
-  -> ToolResult 追加回同一消息时间线
-  -> 再次调用模型
-  -> 直到最终回答或显式停止原因
+→ 输入 Guardrail
+→ Session Lease / Run / Timeline / Budget
+→ Context 投影，必要时压缩
+→ Provider 原生流式模型调用
+→ assistantText 或 native tool_calls
+→ Capability / Profile / 阶段可见性 / Schema / Tool Policy
+→ allow / approval / deny
+→ ToolExecutionClaim 与 ToolHandler
+→ ToolResult 回填同一时间线
+→ 继续模型循环，直到明确终止原因
 ```
 
-同步接口和 SSE 接口都调用同一个 `AgentRuntime`。SSE 只是转发已落库的 Runtime 事件，不包含另一套简化 Agent 逻辑。
+默认模型协议是 `NativeToolCallingAgentModelGateway`。它只负责 Spring AI / Provider 消息和 `tools/tool_calls` 的转换，不执行工具；真正的权限、审批、预算、幂等和副作用控制仍由 Runtime 完成。`AGENT_MODEL_TOOL_CALLING_MODE=json` 只用于兼容旧协议或特定测试。
 
-## 当前工程能力
+## Unified Agent Workbench
 
-- 统一模型驱动 Agent Loop：最大轮次、模型/工具次数、Token、可配置价格成本和运行时长预算；Profile 与累计 Budget 随 Run 持久化。
-- 严格消息时间线：`USER -> ASSISTANT_TOOL_CALL -> TOOL_RESULT -> ASSISTANT_TEXT`，工具调用与结果不能拆对。
-- Context Budget：滚动摘要、完整工具单元裁剪、模型上下文溢出后的有限压缩重试。
-- Runtime Tool Policy：执行 Profile 白名单、allow/ask/deny、参数 Schema 校验、审批暂停/恢复、副作用幂等。
-- PostgreSQL 持久化：Run、Session、Message、Event、审批、工具执行、限流、Trace、Eval、Skill、RAG 缓存等均无生产 InMemory 实现。
-- RAG：真实 Embedding、pgvector、向量 + 关键词混合召回、模型语义重排、确定性降级、引用元数据、持久化 TTL 缓存。
-- Memory：Runtime 时间线负责短期上下文；结构化模型提取后的长期记忆使用 pgvector 召回；用户画像独立持久化。
-- Guardrail：输入规范化、确定性注入信号 + 模型语义确认、分层 DLP、输出脱敏、工具策略审计。
-- 可靠性：唯一执行租约、原子恢复抢占、同 Run 协作式暂停/Checkpoint 恢复、过期 RUNNING 检查点恢复、跨实例取消、有界模型线程池、超时重试、熔断和明确终止原因。
-- ToolResult 隔离：完整原文保存在工具执行记录，模型时间线只接收带哈希和 rawReference 的有界投影，并转义结构边界。
-- SSE 可靠性：持久化事件序号、心跳、背压缺口通知；客户端断开只请求暂停，重连后以同一 runId 和连续 sequence 恢复。
-- Sub-Agent：独立 Session、System Prompt、能力白名单、预算和父子 Run；只向协调者返回摘要与 childRunId。
-- AgentOps：Runtime 事件投影为 Trace / Eval / Replay，保留真实 Usage 或明确标记估算来源。
-- OrderCare M3：与 FlowOrder 联动完成异常订单诊断、不可变 Proposal、版本化审批、领域幂等 execute、确定性收敛、UNKNOWN 对账、Action 执行租约与崩溃恢复；覆盖响应丢失、进程重启和重复 resume，并通过 20/20 真实模型 Eval。
+统一入口不是直接调用单 Agent：
 
-## 当前业务主线：OrderCare
+```text
+POST /api/agent/conversations/{conversationId}/inputs
+→ 输入先落库
+→ WorkCommandClassifier：控制现有任务还是开始新目标
+→ AgentWorkItem
+→ UnifiedTaskRouter + Java RoutePolicyValidator
+→ Preview / Explicit Confirmation（危险路由）
+→ DispatchCoordinator
+→ ExecutionAdapter
+→ Run / Incident / Recovery Plan
+→ WorkLink + WorkEvent + PublicPresentation
+```
 
-项目不再以“通用 Agent 能力数量”作为完成标准，当前主线是：
+四个稳定执行目标：
 
-> 面向 FlowOrder 异常订单的智能诊断与受控恢复系统。
+- `GENERAL_AGENT`
+- `ORDERCARE_CASE`
+- `INCIDENT_INVESTIGATION`
+- `INCIDENT_RECOVERY_PLAN`
 
-M3 已通过并达到 **Interview Strong**：Agent 负责理解入口、选择诊断/知识/预演能力和解释结果；FlowOrder 负责交易事实、候选动作、Proposal、Action 租约与对账状态；人工审批具体预演版本；确定性 Java 代码执行有界收敛与未知结果恢复。`SUBMITTED` 与 `RESOLVED` 始终分开。
+Workbench 已覆盖输入幂等、三维 WorkItem 状态、路由与派发对账、跨源事件投影、SSE 断线重放、Primary Run 增量、执行树、统一命令控制、分层预算和多实例 claim/lease/fencing。
 
-详见 [OrderCare M3 故障正确性证据](docs/reports/ordercare/m3-fault-correctness.md)。M4 的可信身份、服务认证、版本化迁移、部署与告警尚未完成，因此仍不宣称生产级。
+## OrderCare 业务闭环
+
+项目的核心业务场景是 FlowOrder 异常订单诊断、事故调查和受控恢复：
+
+```text
+业务现象或明确标识
+→ Incident Scope Discovery / Case Inspect
+→ FlowOrder 权威只读事实
+→ Commander 调度 Order / Inventory / MQ Specialist
+→ 结构化 Evidence + Conflict
+→ Reviewer + Java Assessment Assembler
+→ 可选 Recovery Plan
+→ 不可变 Proposal
+→ 版本绑定人工审批
+→ 原 actionRequestId 幂等执行
+→ UNKNOWN 对账与确定性收敛
+```
+
+### 受控 Multi-Agent
+
+Commander 通过受控 SubAgent Tool 调度 Specialist，而不是让多个模型自由聊天：
+
+- SubAgent Tool 必须只读、低风险、`parallelSafe`、`singleUse`；
+- 每个 Specialist 使用独立 Run、Profile、工具白名单和预算；
+- Specialist 只提交结构化 Evidence；
+- Reviewer 必须引用有效 `evidenceId/conflictId`；
+- Java 校验角色覆盖、证据引用、冲突一致性和 Assessment Schema；
+- Phase 3 使用 PostgreSQL lease、heartbeat、stale scan 和 fencing token 处理多实例接管。
+
+### Incident Scope Discovery
+
+用户不必知道内部 requestId 或 queueName，可以输入：
+
+```text
+调查昨晚订单超时但库存未释放的问题。
+只调查并生成事故 Assessment，不执行恢复。
+```
+
+Java 会使用 FlowOrder 固定只读接口发现候选范围，生成带版本和 fingerprint 的 Preview，必须经过用户显式确认后才启动调查。模型不能生成或猜测内部标识。
+
+当前自动时间表达是有界白名单：`前天`、`昨晚`、`今天`、`最近/过去 N 小时（1～24）` 和不超过 24 小时的 ISO `start/end`；并非任意自然语言时间解析器。
+
+## 关键工程能力
+
+- Run Checkpoint、Session Lease、协作式暂停、同 Run 恢复和崩溃恢复；
+- Capability Registry、ExecutionProfile、Tool Guardrail、HITL 和 ToolExecutionClaim；
+- 写响应丢失后的原 Action 对账，区分 `SUBMITTED` 与 `RESOLVED`；
+- PostgreSQL Timeline、WorkItem、WorkEvent、Projection Cursor 和幂等状态推进；
+- Provider 原生 Tool Calling、正文 `MODEL_DELTA`、心跳、gap/replay 和 Child Run 隔离；
+- RAG、pgvector 长期记忆、Trace、Eval、Replay 和 PublicPresentation；
+- 事故级 Commander / Specialist / Reviewer / Planner 与结构化证据协议。
 
 ## 技术栈
 
 - Java 17
-- Spring Boot 4.1 / WebFlux
-- Spring AI 2.0 / DeepSeek ChatModel
+- Spring Boot 4.1.0 / WebFlux
+- Spring AI 2.0.0 / DeepSeek
 - PostgreSQL + pgvector
-- MCP stdio（可选）
-- Maven
+- FlowOrder：MySQL、RabbitMQ、Nacos（业务联调时）
+- Vue 3 + TypeScript + Vite
+- Maven / npm
 
 ## 快速启动
 
-前置条件：Java 17、PostgreSQL、已安装 pgvector 扩展。应用会按需创建业务表，但数据库账号必须有建表和 `CREATE EXTENSION vector` 权限。
-
-PowerShell：
+最小 Runtime 依赖 PostgreSQL；RAG/Memory 需要 pgvector；OrderCare 与事故场景还需要 FlowOrder 和对应中间件。
 
 ```powershell
 $env:DEEPSEEK_API_KEY="你的 DeepSeek Key"
@@ -71,65 +129,47 @@ $env:RAG_POSTGRES_URL="jdbc:postgresql://localhost:5432/enterprise_agent"
 $env:RAG_POSTGRES_USERNAME="postgres"
 $env:RAG_POSTGRES_PASSWORD="你的数据库密码"
 
-mvn clean spring-boot:run
+mvn.cmd spring-boot:run
 ```
 
-`MEMORY_POSTGRES_*` 和 `AGENT_STORAGE_POSTGRES_*` 未设置时会复用 `RAG_POSTGRES_*`。源码和 YAML 不提供默认密码。
-
-只验证 Spring 上下文时可使用 Mock 模型，但 Runtime 仍需要 PostgreSQL：
+完整 Unified Workbench 本地开关见 [构建与运行](docs/build-and-run.md)。后端默认端口为 `8083`，前端开发端口为 `5173`。
 
 ```powershell
-$env:ENTERPRISE_AGENT_MOCK_MODE="true"
-$env:DEEPSEEK_API_KEY="test-key"
-$env:EMBEDDING_API_KEY="test-key"
-mvn clean test
+cd frontend
+npm install
+npm run dev
 ```
 
-迁移自旧版代码后必须执行 `mvn clean`，否则 `target/classes` 可能保留已经删除的旧 Bean 类。
+浏览器访问 `http://127.0.0.1:5173/`。`/` 是唯一普通任务入口；Run 历史、审批、事故和 API Lab 是高级观测入口。
 
-## 最小调用
+## API 入口
 
-```powershell
-$body = @{
-  conversationId = "demo-session-1"
-  userId = "demo-user"
-  question = "请诊断 requestId=ORDERCARE-M05-REQUEST；符合条件时创建预演并请求审批，审批后执行并验证收敛"
-  metadata = @{}
-  scenarioId = "ordercare-floworder-v1"
-} | ConvertTo-Json
+推荐使用统一输入：
 
-Invoke-RestMethod `
-  -Method Post `
-  -Uri http://localhost:8083/api/agent/runs `
-  -ContentType "application/json" `
-  -Body $body
+```http
+POST /api/agent/conversations/{conversationId}/inputs
+Idempotency-Key: <clientInputId>
+Content-Type: application/json
+
+{"content":"介绍 Spring Boot IoC","metadata":{}}
 ```
 
-SSE Runtime 事件：
-
-```powershell
-curl.exe -N -X POST "http://localhost:8083/api/agent/runs" `
-  -H "Accept: text/event-stream" `
-  -H "Content-Type: application/json" `
-  -d '{"conversationId":"demo-sse-1","userId":"demo-user","question":"查询工单 T1001 的状态","metadata":{}}'
-```
+`POST /api/agent/runs` 仍保留为直接学习/调试单 Agent Runtime 的入口，不代表统一产品入口。详见 [API 使用指南](docs/api-guide.md)。
 
 ## 文档入口
 
-- [项目总蓝图：OrderCare Incident Agent](docs/enterprise-agent-master-blueprint.md)
-- [OrderCare 实施状态、学习地图与中间件清单](docs/ordercare-implementation-status.md)
-- [OrderCare M2 受控恢复证据](docs/reports/ordercare/m2-controlled-recovery.md)
-- [OrderCare M3 故障正确性与 20 条 Eval 证据](docs/reports/ordercare/m3-fault-correctness.md)
-- [OrderCare × FlowOrder 早期设计记录（已被 V1.1 替代）](docs/ordercare-floworder-integration-design.md)
+- [文档索引与事实源规则](docs/documentation-index.md)
 - [当前架构](docs/architecture.md)
 - [构建与运行](docs/build-and-run.md)
-- [API 使用](docs/api-guide.md)
-- [Vue Agent 学习控制台](docs/frontend-learning-console.md)
+- [API 使用指南](docs/api-guide.md)
 - [学习顺序](docs/learning-guide.md)
 - [面试讲法](docs/interview-guide.md)
-- [设计决策](docs/design-decisions.md)
-- [仍然存在的边界](docs/remaining-gaps.md)
+- [Unified Agent Workbench 前端](docs/frontend-learning-console.md)
+- [当前边界](docs/remaining-gaps.md)
+- [Incident Scope Discovery Evidence](docs/reports/incident-scope-discovery-v1-evidence.md)
+- [Unified Workbench M3-D Evidence](docs/reports/unified-agent-workbench-m3-d-evidence.md)
+- [Incident Command Phase 3 Evidence](docs/reports/ordercare/incident-command-phase3-evidence.md)
 
 ## 重要边界
 
-这是一个有真实工程深度的面试学习项目，不应描述成 Claude Code 或 OpenClaw 的等价实现。它尚未提供操作系统级 Sandbox、管理 API 身份认证、分布式任务队列和不同模型 Provider 的原生 Tool Calling 适配；模型正文已接入 Provider 原生流并由 Runtime 发布受 Guardrail 约束的 `MODEL_DELTA`。详见 [仍然存在的边界](docs/remaining-gaps.md)。
+这是有真实工程深度的学习与面试项目，但不能宣称已经具备完整生产平台能力。当前仍缺少内建生产认证授权、OS/容器级 Sandbox、Flyway/Liquibase 迁移治理、正式密钥轮换、外部告警与完整容量/SLO 证据。详见 [仍然存在的边界](docs/remaining-gaps.md)。

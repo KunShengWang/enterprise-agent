@@ -1,24 +1,24 @@
-# Vue Agent 学习控制台
+# Unified Agent Workbench 前端
 
-## 目的
+> 文件名为历史兼容路径；当前前端已经不是旧“Vue 学习控制台”。`/` 是统一任务入口，Run 历史和事故页面降级为高级观测入口。
 
-这个前端不是面向最终用户的聊天壳，而是用来学习后端的 Runtime Console。它把散落在 Controller、Store 和 Runtime 中的状态投影到一个页面中，帮助你回答：
+## 1. 页面入口
 
-- 一个请求怎样进入统一 Agent Runtime？
-- 上下文、模型、工具、权限和审批按照什么顺序发生？
-- SSE 实时事件与 PostgreSQL 持久化记录是什么关系？
-- Run 为什么暂停、恢复、失败或进入人工复核？
-- RAG、Memory、Skill、Trace 和 Eval 在主循环之外怎样独立验证？
+| 路由 | 用途 |
+|---|---|
+| `/` | Unified Agent Workbench，普通用户唯一任务入口 |
+| `/workbench`、`/runtime` | 重定向到 `/` |
+| `/runs` | Run 历史与回放，开发调试 |
+| `/approvals` | 人工审批中心 |
+| `/incident-command` | 事故调查高级视图 |
+| `/capabilities` | Tool / Skill 能力地图 |
+| `/knowledge` | RAG / Memory 实验室 |
+| `/observability` | Trace / Eval / AgentOps |
+| `/api-lab` | Controller 调试 |
 
-## 启动
+## 2. 启动
 
-先启动 PostgreSQL/pgvector 和 Spring Boot 后端，确认：
-
-```text
-GET http://localhost:8083/api/agent/health
-```
-
-然后启动前端：
+后端必须启动在 `8083`，并开启 Workbench Web/Routing/Dispatch/Projection。详见 [构建与运行](build-and-run.md)。
 
 ```powershell
 cd frontend
@@ -26,110 +26,110 @@ npm install
 npm run dev
 ```
 
-浏览器访问：
+访问：`http://127.0.0.1:5173/`。Vite 将 `/api` 代理到 `http://localhost:8083`。
+
+## 3. 当前页面结构
 
 ```text
-http://127.0.0.1:5173
+App
+└─ UnifiedWorkbench
+   ├─ WorkbenchTaskSidebar
+   │  ├─ 新建任务
+   │  ├─ 搜索
+   │  └─ Conversation / WorkItem 历史
+   ├─ WorkbenchConversationPanel
+   │  ├─ ConversationTurnSection
+   │  ├─ ConversationItemRenderer
+   │  └─ WorkbenchComposer
+   └─ ExecutionInspector
+      ├─ 概览
+      ├─ 活动
+      ├─ Agents
+      ├─ 工具
+      ├─ 证据
+      └─ Diagnostics / EventPayloadDrawer
 ```
 
-Vite 会把 `/api` 请求代理到 `http://localhost:8083`，开发时不需要修改后端 CORS。
+中间时间线按 WorkItem/Turn 展示用户可读内容；右侧 Inspector 展示技术事件。点击中间执行记录默认展开业务语义详情，“在检查器中打开”才定位原始技术事件。
 
-生产构建校验：
+## 4. 数据源
+
+```text
+agent_work_input / AgentConversationTurn
+→ 用户消息
+
+AgentWorkItem + RouteDecision
+→ 标题、三维状态、任务理解与确认卡
+
+PublicPresentation
+→ 用户可读执行摘要、工具活动、Agent 调度、错误和最终结果
+
+Primary Run MODEL_DELTA
+→ 实时回答 buffer
+
+WorkEvent + Runtime Event + Trace
+→ Execution Inspector
+
+Execution Tree + Incident Aggregate
+→ Agents / Evidence / Conflict / Assessment
+```
+
+前端不维护第二套业务状态机。terminal Presentation/Runtime Event 到达后会重新读取权威 WorkItem Detail，使左侧、顶部和 Inspector 最终一致。
+
+## 5. 流式回答
+
+Workbench 同时使用：
+
+- WorkItem 统一事件流：产品状态、路由、工具、审批和终态；
+- PublicPresentation 流：安全用户可读内容；
+- Primary Run Runtime Event：真实 `MODEL_DELTA`。
+
+Live buffer 只接受 active Primary Run；Child Run delta 不拼入主回答。完成后以持久化最终消息校正 live buffer，只保留一条最终回答。断线重连使用复合 cursor 和 eventId 去重。
+
+## 6. Markdown
+
+最终回答使用：
+
+- `marked`；
+- `marked-highlight` + `highlight.js`；
+- `DOMPurify`；
+- Markdown normalizer。
+
+支持标题、列表、引用、GFM 表格、代码块和复制。ToolCall Envelope、原始 Tool JSON 和 hidden reasoning 不进入最终回答。
+
+## 7. Preview、Approval 和 Incident
+
+Incident Scope Preview 展示：
+
+- 绝对时间范围和时区；
+- anomaly type、候选数量、requestId 和权威 queue；
+- 数据源健康、截断提示和 Specialist 组合；
+- 默认折叠的安全候选详情；
+- 调整、确认启动和取消操作。
+
+Assessment 仍显示在最终回答区域；Specialist 记录的业务详情可以在中间折叠展开，原始 payload 留在 Inspector。
+
+## 8. 终止与后续输入
+
+- Composer 在请求提交后立即切换为终止按钮，不等待第一个 delta；
+- WorkItem `CANCEL_ACTIVE_WORK` 与 Runtime cancel 使用明确命令，不把文本“终止任务”当普通新目标；
+- 已完成 WorkItem 后的普通追问会在同一 Conversation 中创建新的 WorkItem/Turn，并通过最近已完成轮次构造受控上下文；
+- 切换 Turn 时，流式事件和折叠状态必须按 WorkItem 隔离，不能更新错误任务。
+
+## 9. 前端验证
 
 ```powershell
 cd frontend
+npm test
+npx.cmd vue-tsc -b
 npm run build
 ```
 
-## 推荐学习顺序
+`npm test` 当前运行 conversation projection、P3～P6、turn history 等 smoke 脚本。它是契约测试，不替代真实浏览器验收。
 
-### 1. Agent 运行台
+## 10. 已知边界
 
-发起一个普通问题，观察：
-
-```text
-RUN_STARTED
--> CONTEXT_PREPARED / CONTEXT_COMPACTED
--> MODEL_STARTED
--> MODEL_COMPLETED
--> TOOL_REQUESTED（可选）
--> POLICY_DECIDED（可选）
--> APPROVAL_REQUIRED（可选）
--> TOOL_COMPLETED（可选）
--> 再次进入 CONTEXT 与 MODEL
--> RUN_COMPLETED / RUN_FAILED / RUN_CANCELLED
-```
-
-页面首次执行使用 `POST /api/agent/runs` 并发送 `Accept: text/event-stream`；审批后使用 `POST /api/agent/runs/{runId}/resume/events`。两条接口都通过 `fetch + ReadableStream` 解析 POST SSE，并汇入同一个 Run 工作区和同一条持久化 `sequence` 时间线。`POST /api/agent/runs/events` 仍保留为兼容别名。
-
-`JsonAgentModelGateway` 现在直接消费 Provider 的流式响应：最终回答以正文增量进入 Runtime，ToolCall 才使用结构化 JSON，工具参数不会被投影成回答。Runtime 对细粒度 chunk 做滚动输出 Guardrail 和合并后发布持久化 `MODEL_DELTA`，`RUN_COMPLETED` 再以完整 Guardrail 处理后的文本校正最终答案；前端没有使用打字机动画伪装流式。
-
-运行台 URL 会保存 `runId`。刷新页面或从 Run 历史、审批中心进入时，前端会先读取 `AgentRunRecord + AgentEvent` 恢复工作区；若状态为 `WAITING_APPROVAL`，可直接在右侧审批卡片中决定并继续流式执行；若状态为 `PAUSED`，可以点击按钮或使用“刚才暂停了任务，现在继续之前的任务、接着做、恢复一下”等自然表达恢复同一 Run。输入其他需求时，运行台会先安全结束旧 Run，再在当前会话创建新 Run；输入“取消、算了、不做了”或点击放弃按钮则只结束旧 Run。同时包含继续意图和新约束的句子不会自动取消旧 Run，界面会要求用户选择“仅继续原任务”或“作为新需求提交”。
-
-使用 `ordercare-floworder-v1` 场景时，同一工作区还会投影 Case、Proposal、Approval、Action 和 Convergence。M3 故障结果会显示 `responseLost`、`reconciled`、对账次数、是否按原 ID 补发以及 `recoveredAfterCrash`；这些字段来自 ToolResult/FlowOrder 权威状态，不由前端猜测。
-
-### 2. Run 历史与回放
-
-选择刚才的 Run，对照以下三类数据：
-
-- `AgentRunRecord`：当前状态、阶段、预算、待审批 ToolCall 和最终结果。
-- `AgentEvent`：按 sequence 排序的事实时间线。
-- `ToolExecutionRecord`：工具副作用的幂等执行状态。
-
-这一步对应后端的 `AgentRunStore`、`AgentTimelineStore` 和 `ToolExecutionStore`。
-
-### 3. 审批中心
-
-使用运行台中的“触发审批”示例，观察高风险 ToolCall 如何暂停。审批中心只负责定位待办和查看审计信息：
-
-1. 查看工具名、参数、原因与有效期。
-2. 点击“进入运行台处理”回到对应 `runId`。
-3. 在运行台填写审批人与理由，并批准或拒绝。
-4. 前端调用 `/runs/{runId}/resume/events`，继续接收审批后的工具与模型事件。
-5. 刷新页面或回到 Run 历史，确认预算、Profile 和事件序号连续。
-
-### 4. 能力地图
-
-- Tool 是模型可请求的结构化能力，包含名称、描述、风险和 inputSchema。
-- Skill 是注入上下文的方法说明，不等同于可执行 Tool。
-- 工具运行记录和统计是执行证据，不是注册表定义。
-
-### 5. RAG 与 Memory
-
-- RAG 实验绕过 Agent Loop，直接验证检索、阈值、TopK、Rerank 和 Cache。
-- Memory 实验按 conversationId、userId 和 query 召回长期记忆，并可查看结构化 UserProfile。
-
-### 6. Trace、Eval 与 AgentOps
-
-- Trace：一次 Run 的 Span、事件、Token、成本和耗时。
-- Replay：根据持久化事件重建执行过程。
-- Eval：回归用例、对抗用例以及结果指标。
-- AgentOps：聚合 Trace、RAG、Tool、Cache 和 Eval 的工程证据。
-
-### 7. 接口实验室
-
-接口实验室收录当前所有 Controller 路由，可以编辑 Path、Query 与 JSON Body，并查看原始 `ApiResponse` 或 SSE。会创建 Run、调用模型、修改或删除数据的接口必须先勾选副作用确认。
-
-## 前端目录
-
-```text
-frontend/src
-├─ api
-│  ├─ http.ts          统一 ApiResponse 与错误处理
-│  ├─ stream.ts        POST SSE 解析器
-│  ├─ agent.ts         业务 API 封装
-│  └─ catalog.ts       全量接口目录
-├─ composables
-│  └─ useAgentStream.ts 运行台状态与事件收敛
-├─ components          时间线、状态、JSON 与页面说明
-├─ views               七个学习模块页面
-├─ router.ts
-└─ styles.css
-```
-
-## 常见错误
-
-- `Failed to initialize rate limit schema`：通常是 PostgreSQL 未启动，或 `RAG_POSTGRES_PASSWORD` 没有被当前 Java 进程读取。
-- 健康检查成功但 Run 失败：健康接口不访问数据库和模型，应继续查看页面错误或后端异常日志。
-- RAG 返回 401：Embedding API Key 无效；Agent Mock 模式不代表外部 Embedding 自动切换为 Mock。
-- 页面显示后端未连接：确认 8080 后端已启动，并使用 `npm run dev` 的 5173 地址访问。
+- 本地前端没有生产登录/租户切换；
+- 浏览器人工视觉验收的历史证据并不覆盖每个后续提交；
+- Run/Incident 高级页面仍存在，是调试视图，不应作为普通入口；
+- Vite `ECONNRESET` 只表示 SSE 连接被关闭，业务根因要查 WorkItem、Run 和后端日志。

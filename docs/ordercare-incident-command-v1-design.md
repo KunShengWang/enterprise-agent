@@ -9,6 +9,8 @@
 > 更新日期：2026-07-19 CST
 >
 > 代码仓库：`enterprise-agent` + `floworder`
+>
+> 实现后补充（2026-08-10）：正文保留冻结时的分阶段门禁，因此“只有 Phase 1 允许编码”等句子是历史执行约束，不是当前完成度。Phase 1～3 已完成；后续又实现了 Incident Scope Discovery、Provider 原生 Tool Calling、受控 `delegate_*_analyst` / `review_incident_evidence` SubAgent Tool 和更严格的 Reviewer Evidence 覆盖校验。当前事实见 [实施状态](ordercare-implementation-status.md) 和 [文档索引](documentation-index.md)，不回写正文的历史阶段边界。
 
 ## 1. 文档定位与结论
 

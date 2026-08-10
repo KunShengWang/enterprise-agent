@@ -1,18 +1,20 @@
 # 后续业务场景待决策清单
 
-> 更新时间：2026-07-19
+> 更新时间：2026-08-10
 > 本文只记录可能的后续方向，不代表已经进入实施计划、当前里程碑或简历完成范围。
+
+> 状态修正：Incident Command 已不是候选 Backlog，Phase 1～3、受控 SubAgent Tool 和 Scope Discovery 均已有实现；本节保留为演进记录。当前真正待决策的业务场景是 FlowOrder 预约购买助手，生产认证/迁移/告警属于工程硬化而不是新业务场景。
 
 ## 1. OrderCare 事故指挥 Agent Team
 
 - 候选场景 ID：`ordercare-incident-command-v1`
-- 当前状态：`PHASE_1_IMPLEMENTED / PHASE_2_IMPLEMENTED / PHASE_3_RELIABILITY_KERNEL_IMPLEMENTED`
+- 当前状态：`IMPLEMENTED / SUB_AGENT_TOOL_CALLING_ENABLED / SCOPE_DISCOVERY_INTEGRATED`
 - 当前设计：[OrderCare Incident Command V1：事故调查与受控恢复 Multi-Agent 设计](ordercare-incident-command-v1-design.md)
-- 决策：V1.5 已完成 Phase 1 只读调查、Phase 2 受控 Recovery Planner 和 Phase 3 多实例可靠性内核。Task/Recovery Item 具备 PostgreSQL lease、heartbeat、stale scan、崩溃接管、fencing token 和 kill switch；仍不增加批量写接口。告警平台、统一认证和完整租户治理保留为外部部署扩展。
+- 决策：V1.5 已完成 Phase 1 只读调查、Phase 2 受控 Recovery Planner 和 Phase 3 多实例可靠性内核。后续实现把 Commander/Specialist/Reviewer 接入 Provider 原生 Tool Calling 和受控 SubAgent Tool；Scope Discovery 允许从有界业务现象发现候选并显式确认。Task/Recovery Item 具备 PostgreSQL lease、heartbeat、stale scan、崩溃接管、fencing token 和 kill switch；仍不增加批量写接口。告警平台、统一认证和完整租户治理保留为外部部署扩展。
 
 目标场景：当大量订单超时、库存释放死信堆积或消息消费异常时，由 Incident Commander 动态委派订单、MQ、库存和 SOP Specialist 并行调查，通过持久化结构化消息汇总证据，由 Reviewer 检查冲突并提出受控处置建议。
 
-若启动，最低边界包括：
+已落地并继续保持的边界包括：
 
 1. 主 Agent 动态委派，而不是固定角色 Prompt 拼接；
 2. 子 Agent 具备独立 Run、上下文、Profile、工具白名单和预算；

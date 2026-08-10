@@ -2,9 +2,11 @@
 
 > 文档状态：Blueprint V0.2.3 / FINAL
 > 更新时间：2026-07-19 CST
-> 当前阶段：仅设计，不进入功能编码
+> 冻结时阶段：仅设计，不进入功能编码
 > 上位设计：[enterprise-agent-master-blueprint.md](./enterprise-agent-master-blueprint.md)
 > 既有专项设计：[ordercare-incident-command-v1-design.md](./ordercare-incident-command-v1-design.md)
+>
+> 实现后补充（2026-08-10）：该“仅设计”门禁已经由后续 M1～M3 checkpoint 完成并解除。统一输入、四目标路由、Preview/Confirm、幂等 Dispatch、WorkEvent/SSE、执行树、命令、预算和多实例控制均已有实现；后续 PublicPresentation、统一前端和 Scope Discovery 属于蓝图之后的产品迭代。当前事实见 [文档索引](documentation-index.md) 和 [M3-D Evidence](reports/unified-agent-workbench-m3-d-evidence.md)。正文保留冻结设计，不把后续实现伪装成当时已经存在。
 
 ## 1. 文档定位与结论
 

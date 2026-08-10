@@ -1,8 +1,8 @@
 # OrderCare 实施状态与学习地图
 
-> 更新时间：2026-07-18
-> 当前阶段：M3 `PASSED`（Interview Strong）
-> 下一阶段：M4 安全部署；不作为当前简历主闭环的完成前提
+> 更新时间：2026-08-10
+> 稳定实现基线：`b6207a4`
+> 当前结论：单案例 Recovery M0～M3、Incident Command Phase 1～3、Unified Workbench M1～M3、Incident Scope Discovery 均已有实现和阶段证据；Production Hardening 仍未完成
 
 ## 1. 文档用途
 
@@ -17,7 +17,9 @@
 | M1 只读智能诊断 | `PASSED` | 稳定 Case 契约、7 类诊断、统一 SSE Run、8/8 真实模型 Eval | Proposal/Action 双标识与不可变预演 |
 | M2 受控恢复闭环 | `PASSED` | 不可变 Proposal、版本审批、同 Run 恢复、领域幂等、确定性收敛、真实 RabbitMQ E2E、10/10 模型 Eval | M3 UNKNOWN 对账与崩溃恢复 |
 | M3 故障正确性 | `PASSED` | 原 Action 对账、EXECUTING 租约、响应丢失、崩溃检查点恢复、重复 resume、20/20 真实模型 Eval、跨表 Trace 证据 | 保持故障证据可重复 |
-| M4 安全部署 | `NOT_STARTED` | FlowOrder 管理接口默认关闭 | 服务认证、用户身份、迁移脚本、部署边界 |
+| Production Hardening | `NOT_STARTED` | 本地 Feature Flag、租户隔离和内部 Scope token 已存在 | 正式认证授权、mTLS/密钥轮换、迁移脚本、告警、容量与部署边界 |
+
+> 名称说明：早期恢复蓝图中的“M4 安全部署”与后来的独立里程碑“M4 Incident Scope Discovery”不是同一个阶段。本文不再用 M4 指代部署硬化。
 
 ## 3. M0.5 放行证据
 
@@ -314,7 +316,7 @@ M1 只能表述为“实现异常订单智能诊断”，没有 Proposal、审�
 - [x] 20 条真实模型 Eval 达到 20/20，工具精确率与 groundedness 均为 100%。
 - [x] 工作台展示 responseLost、reconciled、reconciliation attempts 和 recoveredAfterCrash。
 
-当前可以表述为“支持副作用结果未知、进程崩溃和重复恢复场景下的幂等对账与故障恢复”。M4 未完成前，仍不能宣称生产级安全、线上规模或完整 SLO。
+当前可以表述为“支持副作用结果未知、进程崩溃和重复恢复场景下的幂等对账与故障恢复”。Production Hardening 未完成前，仍不能宣称生产级安全、线上规模或完整 SLO。
 
 ## 13. Incident Command Phase 1（独立事故级 Multi-Agent 场景）
 
@@ -364,3 +366,59 @@ Phase 2 不把 Incident 从 `ASSESSED` 重新打开；Recovery Plan 是独立聚
 Phase 3 没有修改 `DefaultAgentRuntime.run()`，也没有建设通用 Agent Mailbox、批量写接口或第二套 FlowOrder 状态机。外部告警平台、统一身份认证、完整租户隔离和任意复杂 DAG 不属于本地可靠性内核完成声明。
 
 权威证据：[Incident Command Phase 3 报告](reports/ordercare/incident-command-phase3-evidence.md)。
+
+## 16. Unified Agent Workbench（M1～M3）
+
+| 能力 | 状态 | 当前事实 |
+|---|---|---|
+| 统一输入 | `IMPLEMENTED` | `AgentConversationTurn` 先落库，再区分 WorkCommand 和新目标；Idempotency-Key 防重复输入 |
+| WorkItem | `IMPLEMENTED` | 控制、执行、结果三维状态；Conversation Focus 与 WorkItem 历史 |
+| 路由 | `IMPLEMENTED` | 模型建议 + Java RoutePolicyValidator；四个稳定 ExecutionTarget |
+| 危险确认 | `IMPLEMENTED` | Incident Preview 绑定版本、validatedInputDigest、scopeDigest 与显式确认 |
+| 派发可靠性 | `IMPLEMENTED` | 稳定 dispatchRequestId、四类 Adapter、WorkLink 与崩溃 reconciliation |
+| 统一事件 | `IMPLEMENTED` | Runtime/Incident/Plan 跨源 WorkEvent、复合 cursor、Primary Run delta、Child Run 隔离 |
+| 命令与预算 | `IMPLEMENTED` | pause/resume/cancel/abandon/add-input；分层预算与 fail-closed |
+| 多实例控制 | `IMPLEMENTED` | Routing/Dispatch/Projector claim、lease、heartbeat、stale takeover 和 fencing |
+
+冻结蓝图 M0～M3-D 的权威结论见 [Unified Workbench M3-D Evidence](reports/unified-agent-workbench-m3-d-evidence.md)。后续 PublicPresentation、前端 P3～P6 和 Turn History 属于独立产品迭代，不应回写成早期 M1/M2 当时已存在。
+
+## 17. Incident Scope Discovery V1
+
+状态：`IMPLEMENTED / AUTOMATED_AND_CROSS_SERVICE_EVIDENCE_PASSED / MANUAL_BROWSER_EVIDENCE_BOUNDARY`
+
+当前能力：
+
+- 用户只提供受支持业务现象与时间/业务锚点，Java 通过 FlowOrder 固定只读 API 发现候选；
+- 候选覆盖 requestId、orderNo、deductNo、deadLetterId 和权威 queueName；
+- Snapshot 持久化 version、candidateFingerprint、TTL、claim/lease/fencing 和确认事实；
+- Preview/Confirmation 绑定 Snapshot，不增加第五个 ExecutionTarget，最终复用 `INCIDENT_INVESTIGATION`；
+- 没有权威队列时只运行 Order/Inventory Specialist；有权威队列时增加 MQ Specialist；
+- Discovery 和 Investigation 均不自动执行 Recovery。
+
+当前时间表达仅支持 `前天`、`昨晚`、`今天`、`最近/过去 N 小时（1～24）` 和不超过 24 小时的 ISO `start/end`。它不是任意自然语言时间解析器。
+
+权威证据：[Incident Scope Discovery V1 Evidence](reports/incident-scope-discovery-v1-evidence.md)。
+
+## 18. 原生 Tool Calling 与受控 SubAgent Tool
+
+`b6207a4` 已将默认模型协议升级为 `NativeToolCallingAgentModelGateway`：
+
+- Provider 原生 `tools/tool_calls` 与流式参数分片；
+- Assistant ToolCall / ToolResponse 历史回放；
+- ToolCall 内容与公开正文隔离；
+- `AGENT_MODEL_TOOL_CALLING_MODE=json` 仅作兼容；
+- Gateway 不执行工具，Capability/Profile/Visibility/Guardrail/Approval/Claim 仍由 Runtime 控制。
+
+Incident Commander 使用 `delegate_order_analyst`、`delegate_inventory_analyst`、`delegate_mq_analyst` 受控调用 Specialist；Reviewer 通过 `review_incident_evidence` 汇总。只有只读、低风险、parallelSafe、singleUse 的 SubAgent Tool 才允许 Runtime 有界并行。
+
+Reviewer 输出需要覆盖已接受的 EvidenceSubtype 并引用有效 Evidence/Conflict；Java Assembler 拒绝无引用、覆盖不足或与确定性冲突结果不一致的结论。`b6207a4` 提交记录的默认 Maven 回归为 352 tests、0 failures、0 errors、11 skipped。
+
+## 19. 当前未完成项
+
+- 内建生产身份认证、正式多租户管理和服务间 mTLS/凭证轮换；
+- Flyway/Liquibase、回滚和旧 JSON 数据迁移；
+- OS/容器级 Sandbox；
+- 外部告警、排班和升级平台；
+- 任意自然语言时间、任意异常类型和无限事故范围；
+- 通用 Agent Mailbox、任意 DAG 和自动批量恢复；
+- 长期容量、网络分区、灾备和生产 SLO 证据。

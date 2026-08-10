@@ -2,7 +2,7 @@
 
 ## 30 秒项目定位
 
-> 我基于自研 Java Agent Runtime 做了异常订单诊断与受控恢复项目 OrderCare。Agent 从自然语言定位 FlowOrder 案例并解释权威事实和 SOP；恢复通过不可变 Proposal、版本化人工审批和 actionRequestId 领域幂等执行。写响应丢失或进程在 EXECUTING_TOOL 崩溃时，Java 协调器查询原 Action，并结合 FlowOrder 执行租约和业务回查恢复，不生成第二个副作用命令。项目已通过真实 PostgreSQL、MySQL、RabbitMQ 故障 E2E 和 20/20 真实模型 Eval，达到 Interview Strong，但不夸大为生产级。
+> 我基于自研 Java Agent Runtime 做了 Enterprise Agent / OrderCare 项目。底层 Runtime 使用 Provider 原生 Tool Calling，并通过 Checkpoint、Session Lease、预算、Guardrail、HITL 和 Tool Claim 控制执行；上层 Unified Workbench 把自然语言输入持久化为 WorkItem，安全路由到 General、OrderCare 或 Incident。事故场景由 Commander 通过受控 SubAgent Tool 调度订单、库存和 MQ Specialist，Reviewer 基于结构化 Evidence 生成 Assessment；恢复继续由不可变 Proposal、版本审批、actionRequestId 幂等和 UNKNOWN 对账控制。项目有真实 PostgreSQL、MySQL、RabbitMQ、FlowOrder 和模型证据，但不夸大为生产级通用平台。
 
 不要说“对标或复刻 Claude Code”。更准确的说法是：参考成熟 Agent 的 Runtime 不变量，在有限业务场景中自行实现并理解取舍。
 
@@ -37,7 +37,7 @@ M3 证据：7 类确定性诊断、Proposal 过期/漂移门禁、审批原参�
 - 新 Runtime 每轮都从同一时间线构造 Context，模型可以调用工具、收到失败/拒绝结果后再规划。
 - Route 可以作为提示或能力，但不能成为控制模型与工具交互的唯一状态机。
 
-证据类：`DefaultAgentRuntime.executeLoop`、`JsonAgentModelGateway`。
+证据类：`DefaultAgentRuntime.executeLoop`、`AgentModelGatewayConfiguration`、`NativeToolCallingAgentModelGateway`。
 
 ## 故事二：同步和 SSE 为什么必须统一
 
@@ -50,7 +50,7 @@ M3 证据：7 类确定性诊断、Proposal 过期/漂移门禁、审批原参�
 - 客户端断开时 SSE 请求协作式暂停，状态按 `PAUSE_REQUESTED -> PAUSED` 落 PostgreSQL；显式取消仍是不可恢复终态。
 - 用户输入“继续”调用同一 `runId` 的恢复 API，通过原子 claim 延续原事件 sequence、Profile 和累计预算，不创建第二个 Run。
 
-边界：当前 SSE 是事件级，不是逐 Token 结构化输出。
+边界：正文使用 Provider 原生流并发布受 Guardrail 约束的 `MODEL_DELTA`；ToolCall 名称和参数分片在 Gateway 内聚合，不作为用户正文展示。SSE 仍是应用事件协议，不承诺逐 Token 原样透传。
 
 ## 故事三：上下文压缩如何保证工具语义
 
@@ -122,17 +122,43 @@ M3 证据：7 类确定性诊断、Proposal 过期/漂移门禁、审批原参�
 回答要点：
 
 - 每个子 Agent 使用独立 Session、Run、System Prompt、能力白名单和预算。
-- Planner 无工具；RAG Specialist 只有 `knowledge_search`；工单 Specialist 只有只读 `ticket_status`；Reviewer 无工具。
-- 子 Agent 禁止写长期记忆，主协调者只收到摘要与 childRunId。
-- Specialist 使用有界线程池并行，但不是跨节点调度。
+- Incident Commander 只看到受控的 `delegate_*_analyst` Tool；Specialist 只看到自己的 FlowOrder 只读事实能力；Reviewer 通过 `review_incident_evidence` 获取持久化证据。
+- SubAgent Tool 必须只读、低风险、`parallelSafe`、`singleUse`；Runtime 只对满足全部条件的批次做有界并行。
+- Specialist 输出结构化 Evidence，Reviewer 必须引用 evidenceId/conflictId，Java Assembler 校验证据覆盖和冲突一致性。
+- Incident Task/Recovery Item 有 PostgreSQL lease/fencing；Runtime 并行批次仍是单进程线程池，不是通用跨节点 Agent Mailbox。
+
+## 故事九：为什么需要 Unified Workbench
+
+问题：既然已经有 `POST /api/agent/runs`，为什么还要 WorkItem？
+
+回答要点：
+
+- Run 解决“一次 Agent 怎么执行”，WorkItem 解决“用户目标是什么、由谁执行、怎么统一控制和展示”；
+- 用户输入先落库，再区分继续/终止/补充信息与新目标，避免输入丢失和每句话都创建新任务；
+- Router 只给出建议，Java Validator 根据风险、标识来源和确认策略裁决；
+- `dispatchRequestId` 处理目标已创建但 WorkLink 未落库的崩溃窗口；
+- Runtime/Incident/Recovery Plan 的终态通过 Projector 幂等收敛到 WorkItem；
+- 控制、执行、结果分成 `WorkControlState / WorkExecutionState / WorkOutcome`，避免“最终回答已存在但页面仍显示运行中”。
+
+## 故事十：事故范围为什么不能让模型猜 ID
+
+问题：用户只说“昨晚库存未释放”，系统怎么启动调查？
+
+回答要点：
+
+- 模型只识别业务现象和公开条件，不生成 requestId、deadLetterId 或 queueName；
+- Java 解析有限时间白名单，通过 FlowOrder 固定只读 Scope API 查询候选；
+- 候选带来源和 relation quality，Snapshot 持久化 version、fingerprint、TTL 和确认事实；
+- 用户确认具体 Preview 后复用现有 Incident Adapter，不新增第五个 ExecutionTarget；
+- 没有权威队列时不启动 MQ Specialist，也不把 RabbitMQ backlog 与事故业务数量强行等值比较。
 
 ## 面试时主动承认的边界
 
 - 没有 OS 级 Sandbox；文件根目录和网络 Host Policy 不是容器隔离。
 - 没有内建身份认证和租户管理后台，管理 API 需要外部网关保护。
-- 模型工具协议目前是 JSON Gateway，不是各 Provider 原生 Tool Calling Adapter。
-- SSE 是 Runtime 事件级，未实现结构化 JSON 的逐 Token 增量解析。
-- 默认测试共 64 条，另有真实 PostgreSQL 故障 E2E、FlowOrder 真实 MQ E2E 和 20 条模型 Eval；仍不应声称覆盖所有多实例、容量与安全场景。
+- 默认已有 DeepSeek/Spring AI 原生 Tool Calling，但还不是多 Provider 完整适配矩阵；JSON Gateway 只作兼容。
+- SSE 支持真实正文增量、复合 cursor 和 replay，但仍需客户端去重；不会公开模型 hidden reasoning。
+- `b6207a4` 提交记录的默认 Maven 回归为 352 tests、0 failures、0 errors、11 skipped；外部 opt-in E2E 和模型 Eval 必须分别说明，仍不应声称覆盖所有多实例、容量与安全场景。
 - PDF/DOCX 等二进制文档解析尚未实现。
 
 主动说清边界通常比堆叠“大厂级、生产级、全链路”更可信。

@@ -1,46 +1,87 @@
 # 仍然存在的边界
 
-这份清单用于约束简历和面试表述，不是继续无止境堆功能的任务列表。
+> 当前实现基线：`b6207a4`，核对日期：2026-08-10。
 
-尚未决定是否实施的 Purchase Assistant 与事故指挥 Agent Team，统一记录在[后续业务场景待决策清单](future-scenario-backlog.md)，不属于当前完成范围。
+这份清单约束简历和面试表述，不是要求继续无限扩展功能。
 
-## 高优先级但不属于本轮 Runtime 重构
+## 1. 生产身份与授权
 
-1. 身份认证与管理 API 授权
-   - 当前没有 Spring Security、OAuth2 或租户管理后台。
-   - Tool Runtime 能识别 metadata 中的角色/tenant，但 HTTP metadata 仍需可信网关签发，不能直接信任公网请求体。
+- Workbench 已从服务端 Principal 获取 tenant/principal/roles，并在 Store 层做租户与所有权隔离；
+- 本地 `LocalWorkbenchPrincipalProvider` 仍是开发演示身份，不是 Spring Security/OAuth2；
+- 管理 Controller、Approval、Incident 运维和 API Lab 仍需可信网关或正式认证授权；
+- 内部 Scope Discovery token 是固定服务间共享秘密，不是完整的 mTLS、轮换、审计和最小权限方案。
 
-2. 真正执行隔离
-   - 当前提供文件根目录、网络 Host 白名单和 MCP 进程边界。
-   - 这不是 OS/容器 Sandbox；Shell、文件和网络高风险能力若扩展，需容器、seccomp、低权限用户和出站网络隔离。
+因此不能宣称“已完成生产级认证、租户治理和零信任服务认证”。
 
-3. 数据库迁移治理
-   - 代码使用 `CREATE TABLE IF NOT EXISTS` 便于学习启动。
-   - 正式部署应使用 Flyway/Liquibase、版本化 DDL、回滚方案和旧 `record_json` 数据迁移。
+## 2. 执行隔离
 
-## 已知技术边界
+- Capability/Profile/Host/路径白名单是应用层限制；
+- 当前没有 OS/容器级 Sandbox、seccomp、低权限容器和正式出站网络隔离；
+- 项目没有向 General Agent 暴露任意 SQL、任意 URL 或恢复管理写工具，但这不等于未来新增 Shell/File/Network Tool 后自动安全。
 
-- `JsonAgentModelGateway` 使用提示词约束的 JSON ToolCall 协议；还没有针对不同模型 Provider 的原生 Tool Calling Adapter。
-- `MODEL_DELTA` 已接入 Provider 原生流并经过滚动脱敏和事件聚合，但当前 ToolCall 仍使用提示词约束 JSON，而不是不同 Provider 的原生 Tool Calling Adapter；极长且跨越 Guardrail 保留窗口的敏感标识仍应由上游数据最小化共同防护。
-- Token/Usage 优先采用 Provider 返回值，无法取得时使用估算并标记 source；成本按运维配置价格估算，默认关闭，仍不是财务账单。
-- Sub-Agent 并行使用单进程有界线程池，没有消息队列、跨节点调度、优先级和长期任务接管。
-- RAG 文档加载仅支持 UTF-8 文本格式，未接入 PDF/DOCX/PPTX OCR 和复杂表格解析。
-- RAG 语义重排调用通用 ChatModel，不是专用 cross-encoder；成本和延迟需要基于真实数据评测。
-- Prompt Injection 语义分类与主模型共用 LLM Service，尚未使用独立安全模型或外部内容安全服务。
-- PostgreSQL RAG 缓存提供 TTL 和容量裁剪，但没有 Redis 的高吞吐与主动广播失效能力。
-- 运行台已展示 OrderCare 案例、Proposal、审批、UNKNOWN 对账和崩溃恢复结果，但还没有生产级身份认证、租户隔离和运维告警大盘。
+## 3. 数据库迁移与运维
 
-## 证据边界
+- 当前使用 `CREATE TABLE IF NOT EXISTS` 和启动初始化器方便学习与测试；
+- 正式部署缺 Flyway/Liquibase 版本、回滚、旧 JSON 数据迁移、蓝绿兼容和 schema owner 治理；
+- 缺少正式备份恢复演练、容量规划、数据保留/删除策略和密钥轮换。
 
-- 已验证 `mvn clean test`、Spring Context 启动和现有测试通过。
-- 最终 HTTP 冒烟以 Mock ChatModel 验证 Runtime/数据库/同步/SSE 连接，不代表真实 DeepSeek ToolCall 质量。
-- 当前 64 条 enterprise-agent 默认测试（7 个外部 E2E 默认跳过）覆盖 Spring Context、预算/Profile 续接、审批并发、原子恢复、SSE、ToolResult 边界和 OrderCare M3；另有真实 PostgreSQL 响应丢失/崩溃恢复、FlowOrder 真实 RabbitMQ E2E 和 20/20 真实模型 Eval。仍缺真实多节点并发抢租约、长时间容量、网络分区和上下文溢出系统测试，因此不要声称“完善的测试体系”。
+## 4. 模型协议与 Guardrail
 
-## 可以继续做，但只有拿到证据后再写简历
+- 默认已经是 Provider 原生 `tools/tool_calls`，旧“只有 JSON ToolCall”结论已过期；
+- 当前原生网关围绕 Spring AI 2.0 / DeepSeek 实现，不等于已经拥有 OpenAI、Anthropic、Gemini 等多 Provider 完整适配矩阵；
+- `JsonAgentModelGateway` 仍是兼容模式，需要继续防止 malformed ToolCall 和协议 Envelope 泄漏；
+- 流式输出使用 holdback 和滚动 Guardrail，但任何有限窗口策略都应配合上游数据最小化，不能承诺绝对阻止所有跨 chunk 敏感组合；
+- Prompt Injection 检测仍依赖确定性信号与模型语义判断，没有独立安全模型或外部内容安全服务。
 
-- Testcontainers + PostgreSQL/pgvector 集成测试；
-- 多实例 Session Lease 竞争验证；
-- 多节点 FlowOrder Action 租约竞争与网络分区验证；
-- 长上下文压缩质量 Eval；
-- 真实模型下 ToolCall 成功率、RAG Recall@K、重排增益、P95 延迟和成本；
-- 容器 Sandbox 与可信身份边界。
+## 5. Agent 与 Workflow 边界
+
+- 单 Agent Model–Tool Loop、受控 SubAgent Tool 和 Incident 编排已经存在；
+- 严格副作用链仍应由 Java 状态机控制，不应让模型自由决定 `preview → approval → execute → reconcile` 顺序；
+- 当前不是通用 BPMN、任意 DAG、通用 Agent Mailbox 或跨组织 Agent 通信平台；
+- Runtime 的并行 SubAgent batch 使用单进程有界线程池；Incident Task/Recovery Item 虽有 PostgreSQL lease/fencing，但不等于所有 Agent 调度都已跨节点队列化。
+
+## 6. Incident Scope Discovery
+
+- 自动时间表达是有限白名单：`前天`、`昨晚`、`今天`、1～24 小时相对范围、ISO start/end；
+- `昨天`、`本周`、`上个月`、节假日、模糊班次等当前不应宣称自动解析；
+- 自动范围最大 24 小时、候选最大 100，超出应澄清或缩小范围；
+- 只覆盖当前明确建模的异常类型，不是任意 FlowOrder 事故搜索；
+- queueName 只有从持久化死信/权威映射解析时才可信，不能把 RabbitMQ 队列总数与事故 requestId 数直接等值比较；
+- 人工浏览器视觉验收曾受本地浏览器运行时故障阻塞，不能把 build/smoke 描述成完整人工 UX 证据。
+
+## 7. Multi-Agent 与 Reviewer
+
+- Commander/Specialist/Reviewer 已使用受控 Tool Calling 和结构化 Evidence；
+- Reviewer 仍是概率模型，Java 校验 Schema、引用和覆盖，但不能证明根因一定正确；
+- 当前领域角色和 ComparisonRule 是固定业务设计，不是通用自治团队；
+- 外部告警平台、排班、升级通知和跨系统 Incident 生命周期尚未接入；
+- Recovery Plan 逐项执行，不提供自动批量恢复写接口。
+
+## 8. RAG 与 Memory
+
+- 文档加载以 UTF-8 文本为主，未提供 PDF/DOCX/PPTX OCR、复杂表格和版面理解；
+- rerank 使用通用 ChatModel，不是专用 cross-encoder；
+- PostgreSQL 缓存有 TTL/容量裁剪，但没有 Redis 高吞吐与主动广播失效；
+- 长期记忆是有损结构化提取，仍需要隐私策略、删除权、保留期和质量 Eval。
+
+## 9. 测试与证据边界
+
+- `b6207a4` 提交记录的默认 Maven 回归为 352 tests、0 failures、0 errors、11 skipped；这是该 checkpoint 的证据，不代表当前未提交工作区已重新通过；
+- 外部 PostgreSQL/MySQL/RabbitMQ/FlowOrder/真实模型测试中有 opt-in 套件，默认跳过不能算本次执行；
+- 已有真实故障 E2E、路由 Eval、Incident Phase 3 和 Scope Discovery 证据，但仍缺长时间 soak、网络分区、容量上限、P95/P99、灾备和正式安全渗透测试；
+- 真实模型 Eval 通过不意味着模型确定性，危险路径必须继续 Java fail-closed。
+
+## 10. 可以使用与禁止使用的表述
+
+可以说：
+
+> 实现了持久化 Agent Runtime、受控 Tool Calling、HITL、幂等与故障对账，并通过 Unified Workbench 编排 General、OrderCare 和事故 Multi-Agent 场景。
+
+不要说：
+
+- “生产级通用 Agent 平台”；
+- “完全复刻 Codex/Claude Code”；
+- “支持任意自然语言时间和任意事故”；
+- “多 Agent 可以自由通信并自动处理所有故障”；
+- “HTTP 超时后保证没有产生副作用”；
+- “测试覆盖了所有多实例、容量和安全场景”。

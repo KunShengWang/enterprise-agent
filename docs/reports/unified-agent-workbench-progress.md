@@ -1,6 +1,8 @@
 # Unified Agent Workbench V1 — 实施进度
 
 > 更新时间：2026-07-20 CST
+>
+> 历史报告说明（2026-08-10 补充）：本文件冻结在 M3-D 当时，末尾“下一步创建 checkpoint”已经被后续提交完成，不再代表当前待办。后续实现包括 Observability Repair、PublicPresentation、前端 P3～P6、Turn History 和 Incident Scope Discovery；当前入口请看 [文档索引](../documentation-index.md) 与 [M3-D Evidence](unified-agent-workbench-m3-d-evidence.md)。下表的测试数字保持原样，作为当时证据，不回写后续测试数量。
 
 | 里程碑 | 状态 | Checkpoint | 测试 | 说明 |
 |---|---|---|---|---|

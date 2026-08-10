@@ -1,123 +1,233 @@
 # 当前架构
 
-## 1. 组件关系
+> 实现基线：`b6207a4`，核对日期：2026-08-10。
+
+## 1. 三个平面
 
 ```mermaid
-flowchart LR
-    HTTP["AgentController"] --> Sync["RuntimeAgentExecutor"]
-    HTTP --> SSE["DefaultStreamingAgentExecutor"]
-    Sync --> Runtime["DefaultAgentRuntime"]
-    SSE --> Runtime
+flowchart TB
+    UI["Unified Agent Workbench"] --> WC["UnifiedWorkController"]
+    WC --> IN["Input persistence + WorkCommandClassifier"]
+    IN --> WI["AgentWorkItem"]
+    WI --> RT["UnifiedTaskRouter + Java Validator"]
+    RT --> CF["Preview / Confirmation"]
+    CF --> DP["DispatchCoordinator"]
 
-    Runtime --> Context["DefaultAgentContextManager"]
-    Runtime --> Model["JsonAgentModelGateway"]
-    Runtime --> Cap["Capability Registry"]
-    Runtime --> ToolRuntime["DefaultAgentToolRuntime"]
-    Runtime --> Guard["Guardrail / Tool Policy"]
-    Runtime --> Control["Run Control / Lease / Cancel"]
+    DP --> GA["GENERAL_AGENT adapter"]
+    DP --> OC["ORDERCARE_CASE adapter"]
+    DP --> II["INCIDENT_INVESTIGATION adapter"]
+    DP --> RP["INCIDENT_RECOVERY_PLAN adapter"]
 
-    Context --> Timeline["PostgreSQL Message Timeline"]
-    Context --> Memory["pgvector Long-term Memory"]
-    Cap --> RAG["knowledge_search"]
-    Cap --> Skill["skill_catalog"]
-    Cap --> Tools["Local Tools / MCP"]
-    ToolRuntime --> Approval["Approval + Idempotency"]
+    GA --> AR["DefaultAgentRuntime"]
+    OC --> AR
+    II --> IC["Incident Commander / Specialists / Reviewer"]
+    RP --> PL["Recovery Planner / Approval / Reconciliation"]
+    IC --> AR
+    PL --> AR
 
-    Runtime --> Events["PostgreSQL Agent Events"]
-    Events --> Ops["Trace / Eval / Replay"]
-    Runtime --> Sub["Isolated Sub-Agent Runtime"]
+    AR --> EV["Runtime Event / Timeline"]
+    IC --> IE["Incident Event / Evidence"]
+    PL --> PE["Recovery Plan Event"]
+    EV --> PJ["UnifiedWorkEventProjector"]
+    IE --> PJ
+    PE --> PJ
+    PJ --> WE["WorkEvent + WorkItem terminal state"]
+    WE --> PP["PublicPresentation"]
+    PP --> UI
 ```
 
-核心依赖方向是 Controller/Adapter -> Runtime -> Port/Store。HTTP、SSE、RAG、MCP 和 Sub-Agent 都不能各自创建一套执行语义。
+- **产品控制面**：持久化输入、识别命令、新建 WorkItem、路由、确认、派发、命令控制和统一展示。
+- **业务编排面**：OrderCare Case、Incident Command、Recovery Plan 和 Scope Discovery 的领域状态机。
+- **执行面**：单 Run 的模型、上下文、工具、审批、预算、Checkpoint 与恢复。
 
-## 2. Agent Loop
+## 2. Unified Workbench 主链
+
+统一入口是：
+
+```http
+POST /api/agent/conversations/{conversationId}/inputs
+Idempotency-Key: <clientInputId>
+```
 
 ```mermaid
 sequenceDiagram
     participant C as Client
-    participant R as AgentRuntime
-    participant DB as PostgreSQL Timeline
-    participant M as Model Gateway
-    participant P as Tool Policy
-    participant T as Tool Runtime
+    participant U as UnifiedWorkController
+    participant I as UnifiedWorkIntakeService
+    participant R as RoutingCoordinator
+    participant D as DispatchCoordinator
+    participant A as ExecutionAdapter
+    participant P as Projector
+
+    C->>U: content + Idempotency-Key
+    U->>I: accept authenticated input
+    I->>I: persist AgentConversationTurn
+    I->>I: classify WorkCommand or new goal
+    alt command
+        I-->>U: commandOnly
+        U->>U: WorkCommandHandler
+    else new goal
+        I->>I: create AgentWorkItem(ROUTING)
+        U-->>C: 202 + inputId + workItemId
+        U->>R: async route
+        R->>R: model suggestion + Java validation
+        alt confirmation required
+            R->>R: persist immutable RoutePreview
+        else ready
+            R->>D: dispatch with stable dispatchRequestId
+            D->>A: create or recover target
+            A-->>D: runId / incidentId / planId
+            D->>D: persist PRIMARY WorkLink
+        end
+        P->>P: project source events and terminal state
+    end
+```
+
+`AgentConversationTurn` 是用户输入事实；`AgentWorkItem` 是稳定用户目标。继续、暂停、取消、放弃和补充输入不会创建新的 WorkItem。
+
+WorkItem 的状态分成三个维度：
+
+| 维度 | 含义 | 示例 |
+|---|---|---|
+| `WorkControlState` | 控制面推进到哪里 | `ROUTING / WAITING_CONFIRMATION / DISPATCHED / CLOSED` |
+| `WorkExecutionState` | 底层执行状态 | `RUNNING / WAITING_APPROVAL / COMPLETED / FAILED` |
+| `WorkOutcome` | 产品或业务结果 | `ANSWERED / ASSESSED / RESOLVED / MANUAL_REVIEW` |
+
+## 3. 单 Agent Runtime
+
+`AgentController` 的同步和 SSE 接口，以及 General/OrderCare Adapter，最终复用同一个 `DefaultAgentRuntime`。
+
+```mermaid
+sequenceDiagram
+    participant C as Adapter
+    participant R as DefaultAgentRuntime
+    participant DB as PostgreSQL
+    participant M as AgentModelGateway
+    participant G as Guardrail
+    participant T as DefaultAgentToolRuntime
 
     C->>R: AgentRequest
-    R->>DB: open session / create run / append USER
+    R->>DB: lease + AgentRunRecord + USER
     loop bounded turns
-        R->>DB: load ordered messages and context summary
-        R->>M: messages + capability definitions
-        M-->>R: assistantText or toolCalls
-        alt final answer
-            R->>DB: append ASSISTANT_TEXT and final event
-            R-->>C: completed
+        R->>DB: checkpoint CONTEXT_PREPARATION
+        R->>R: project/compact context
+        R->>DB: checkpoint MODEL_CALL
+        R->>M: messages + visible capability definitions
+        M-->>R: assistantText or native tool_calls
+        alt final text
+            R->>G: output guardrail
+            R->>DB: ASSISTANT_TEXT + terminal state
         else tool calls
-            R->>DB: append ASSISTANT_TOOL_CALL
-            R->>P: profile + tenant + tool + arguments
-            alt ask
-                R->>DB: persist approval and waiting state
-                R-->>C: WAITING_APPROVAL
-            else deny
-                R->>DB: append rejected TOOL_RESULT
-            else allow
-                R->>T: claim idempotency key and execute
-                T-->>R: ToolCallResult
-                R->>DB: append paired TOOL_RESULT
-            end
+            R->>DB: ASSISTANT_TOOL_CALL + EXECUTING_TOOL checkpoint
+            R->>R: capability/profile/phase/schema checks
+            R->>T: policy + approval + claim + execute
+            T-->>R: ToolCallResult
+            R->>DB: paired TOOL_RESULT
         end
     end
 ```
 
-模型只负责“下一步是什么”。能否执行、何时终止、如何恢复、是否重复执行副作用，都由 Runtime 决定。
+模型只提出下一步；Java 决定工具是否存在、当前 Profile 是否授权、当前阶段是否可见、是否需要审批、是否已经执行过以及何时停止。
 
-## 3. 消息与上下文
+## 4. 模型协议
 
-`agent_message` 是完整事实时间线。`DefaultAgentContextManager` 只生成下一轮模型投影，不删除历史：
+默认网关为 `NativeToolCallingAgentModelGateway`：
 
-1. 找到最新 `CONTEXT_SUMMARY` 及其 `coversThroughSequence`。
-2. 将工具调用和工具结果组合为不可拆分单元。
-3. 按 Token 预算从后向前选择完整近期单元。
-4. 超预算时，对更早的完整单元生成滚动摘要并持久化。
-5. 加入 pgvector 长期记忆，但明确标记为不可信历史用户数据。
-6. Provider 返回上下文溢出时，缩小预算再压缩一次；仍失败则以 `CONTEXT_OVERFLOW` 终止。
+- 使用 Spring AI `ChatResponse` 和 Provider 原生 `tools/tool_calls`；
+- 流式聚合 ToolCall 名称与参数分片；
+- 将持久化 `ASSISTANT_TOOL_CALL / TOOL_RESULT` 重建为 Provider Assistant/ToolResponse 消息；
+- ToolCall 不进入用户正文 `MODEL_DELTA`；
+- `reasoningContent` 只作为内部 Provider 协议元数据，不投影为公开 Chain of Thought；
+- Gateway 不调用 ToolCallback 的执行函数，避免形成第二套工具循环。
 
-## 4. Tool Runtime
+`JsonAgentModelGateway` 是兼容模式，不再是默认生产路径。
 
-能力目录包含：
+## 5. Capability 与 Tool Runtime
 
-- `knowledge_search`：RAG 只读能力；
-- `skill_catalog`：只读技能指导，不授予工具权限；
-- 本地工单工具；
-- 可选 MCP 工具。
+```text
+LLM ToolCall
+→ Capability 是否注册
+→ ExecutionProfile 是否授权
+→ AgentCapabilityVisibilityPolicy 是否允许当前阶段使用
+→ JSON Schema / 参数边界
+→ Tool Guardrail：ALLOW / REQUIRE_APPROVAL / BLOCK
+→ ToolExecutionClaim
+→ AgentCapabilityExecutor / ToolHandler
+→ ToolExecutionRecord + ToolResult
+```
 
-执行前依次经过 Profile 白名单、能力存在性、JSON Schema 参数校验、Tool Policy 和审批。模型返回的 ToolCall ID 只作为追踪信息，Runtime 会为每次工具请求生成全局执行 ID，并用它作为时间线配对键和持久化幂等键；存储层同时拒绝跨 Run 复用同一执行 ID。不确定副作用不会盲目重试，而是进入 `MANUAL_REVIEW`。
+高风险审批不会阻塞线程。Runtime 保存 `ApprovalRecord + pendingToolCall + BudgetSnapshot`，进入 `WAITING_APPROVAL` 后释放线程和模型连接；用户决定后通过 Resume 恢复原 Run。
 
-## 5. 同步与 SSE
+Tool Claim 解决“是否已经执行过”，Approval 解决“是否允许执行”，二者不能互相替代。
 
-`RuntimeAgentExecutor` 收集 Runtime 结果并投影为同步 `AgentResponse`。`DefaultStreamingAgentExecutor` 将相同 Runtime 发出的事件转成 SSE。客户端断开时只发起协作式暂停；显式 cancel API 才表示永久取消。
+## 6. Incident Command 与受控 SubAgent
 
-当前 SSE 同时承载 Runtime 生命周期事件和模型正文增量。Provider chunk 先经过滚动输出 Guardrail，再按最小字符数合并为持久化 `MODEL_DELTA`，避免逐 Token 写数据库；ToolCall JSON 不会作为回答增量发送。持久事件携带数据库 `sequence`，长调用期间发送不落库的心跳并附带最后序号；背压缓冲溢出时发送 `stream_gap/replayRequired` 后结束连接，不再静默丢弃事件。
+```mermaid
+flowchart LR
+    C["Commander Run"] --> O["delegate_order_analyst"]
+    C --> I["delegate_inventory_analyst"]
+    C --> M["delegate_mq_analyst"]
+    O --> OE["Order Evidence"]
+    I --> IE["Inventory Evidence"]
+    M --> ME["MQ / Dead-letter Evidence"]
+    OE --> R["review_incident_evidence"]
+    IE --> R
+    ME --> R
+    R --> A["IncidentAssessment"]
+```
 
-## 6. 恢复检查点
+SubAgent 调度仍然经过 Runtime ToolCall 链路。只有显式声明为只读、低风险、`parallelSafe` 且 `singleUse` 的 SubAgent Tool 才允许有界并行。每个 Specialist 有独立 childRunId、Profile、预算和只读工具白名单。
 
-Run 持久化原始 `AgentExecutionProfile`、累计 `BudgetSnapshot`、当前 Phase、pending ToolCall 和已完成结果。进入人工审批时会冻结剩余 Agent 执行时长，审批等待时间不计入 Run 执行预算；Approval 使用独立的可配置有效期（默认 24 小时）。审批决定通过数据库同时检查 `status=REQUESTED` 与 `expiresAt>decisionTime`，过期迁移检查 `status=REQUESTED` 与 `expiresAt<=checkedAt`，因此并发批准、拒绝和过期不会互相覆盖，也不存在“读取时有效、更新时已过期”仍批准成功的窗口。审批恢复采用数据库原子 claim；普通未处理异常收敛为 `FAILED/INTERNAL_ERROR`。进程直接退出后，新的执行尝试只能在旧租约过期后接管。
+Reviewer 不是自由文本汇总器：它输出强类型 Assessment 草稿，Java 验证 EvidenceSubtype 覆盖、evidenceId/conflictId 引用、冲突一致性和只读建议边界。
 
-用户中断采用 `RUNNING -> PAUSE_REQUESTED -> PAUSED -> RUNNING`。暂停请求和预算冻结都持久化；恢复通过数据库行锁原子 claim `PAUSED`，保持原 `runId`、会话、事件 sequence、权限和累计预算。模型调用不能从供应商内部 token 精确续跑，因此从完整消息边界重做本轮决策；工具阶段则依靠 pending ToolCall 与 ToolExecutionStore 对账，避免重复副作用。
+Incident Task/Recovery Item 的 Phase 3 可靠性由 PostgreSQL lease、heartbeat、stale scan 和 fencing token 提供；这不等于建设了通用 Agent Mailbox 或任意 DAG 平台。
 
-暂停后提交新需求不会复用旧 Checkpoint：Runtime 先将旧 Run 永久收敛为取消状态，再创建新 Run。若旧 Run 停在已经写入 `ASSISTANT_TOOL_CALL` 的工具阶段，取消路径会补写确定的持久化结果，或写入明确的 `RUN_ABANDONED/outcomeKnown=false` 终态 ToolResult；它只闭合消息协议，不重试未知副作用。这样同一会话的新 Run 不会读到孤立 ToolCall。
+## 7. Incident Scope Discovery
 
-若中断点为 `EXECUTING_TOOL`，Runtime 会按 pending `requestId` 查询 `ToolExecutionStore`：确定的 `SUCCEEDED/FAILED` 结果直接复用；`RUNNING` 结果先交给匹配的 `UncertainToolExecutionResolver`。OrderCare resolver 使用原 Proposal、审批参数和 actionRequestId 调用确定性对账，解析为确定结果后再补写原 ToolResult 并继续 Agent Loop；没有 resolver、记录不匹配或仍无法证明时才进入人工核对。时间线已有同一 ToolResult 时不会重复追加。
+```text
+业务现象 + 时间/订单/扣减/死信锚点
+→ Java 解析受支持条件
+→ FlowOrder 固定只读 Scope API
+→ 候选 requestId/orderNo/deductNo/deadLetterId/queueName
+→ IncidentScopeSnapshot(version + fingerprint + TTL)
+→ Preview
+→ Explicit Confirmation
+→ 复用 INCIDENT_INVESTIGATION Adapter
+```
 
-审批的单条与列表 HTTP 查询统一经过 `ApprovalService`，不会绕过上述过期迁移直接暴露存储层的陈旧 `REQUESTED` 状态。
+模型不获得任意 SQL、任意 URL 或内部标识生成工具。当前 Java 时间解析只支持明确白名单，最多自动发现 24 小时范围。没有权威 queueName 时只启动 Order/Inventory Specialist；只有持久化死信解析出权威队列时才增加 MQ Specialist。
 
-## 7. Sub-Agent
+## 8. WorkEvent、SSE 与前端
 
-Planner、Specialist、Reviewer 都通过同一个 Runtime 运行，但使用独立 `AgentExecutionProfile`：
+底层权威源包括 Runtime、Incident 和 Recovery Plan。`UnifiedWorkEventProjector` 使用 source cursor、claim/lease/fencing 和 sourceSequence 幂等投影到 WorkEvent；WorkItem 的统一 sequence 是产品展示顺序，不伪装成跨 Store 的全局真实时间。
 
-- 独立 Session 和 child Run；
-- 独立 System Prompt；
-- 独立工具白名单；
-- 独立模型/工具/Token/时间预算；
-- 禁用长期记忆写入；
-- 主协调者只接收摘要和 childRunId。
+`PublicPresentation` 是用户可读、安全投影，前端中间时间线消费它；原始 WorkEvent 和 Trace 进入右侧 Inspector。
 
-这实现了上下文与权限隔离，但还不是跨进程分布式调度。
+统一 SSE 支持：
+
+- WorkEvent cursor；
+- Primary Run `MODEL_DELTA` cursor；
+- eventId 去重与断线 replay；
+- Child Run delta 隔离；
+- heartbeat/gap；
+- terminal event 后重新读取权威 WorkItem Detail。
+
+## 9. 持久化与恢复边界
+
+- Run Checkpoint 恢复的是业务阶段，不是 Java 调用栈；
+- Dispatch Reconciliation 处理“目标已创建、WorkLink 未写入”的崩溃窗口；
+- Terminal Projector 处理“底层已结束、WorkItem 仍 RUNNING”的收敛；
+- Tool Reconciliation 处理“副作用可能发生、调用方没收到响应”的 UNKNOWN；
+- Snapshot/Preview/Approval 都绑定版本与摘要，状态漂移后必须重新确认；
+- 所有自主执行都有模型、Token、工具、费用和时间上限。
+
+## 10. 不属于当前架构的能力
+
+- 内建生产身份认证和租户管理后台；
+- OS/容器级 Sandbox；
+- 通用分布式 Agent Mailbox 或任意工作流平台；
+- 任意 SQL/URL Tool；
+- 自动批量恢复；
+- 完整生产迁移、密钥轮换、告警和容量 SLO。
+
+详细边界见 [remaining-gaps.md](remaining-gaps.md)。

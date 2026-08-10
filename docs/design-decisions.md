@@ -94,4 +94,4 @@
 
 约束：能力名称必须全局唯一；内建能力、业务 Contributor 和 MCP 发现结果发生同名冲突时启动或调用应明确失败，不能把歧义目录交给模型。
 
-演进：接入 Provider 原生 Tool Calling 时，在 `AgentModelGateway` 增加定义适配器，将领域 `ToolDefinition` 转换为 Spring AI/Provider 的工具 Schema，并把模型返回的 ToolCall 交还 `AgentToolRuntime`。适配器只负责协议转换，不直接产生业务副作用。参考 [Spring AI Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)。
+实现状态（2026-08-10）：该演进已经由 `AgentModelGatewayConfiguration + NativeToolCallingAgentModelGateway` 落地并成为默认模式。网关把领域 `ToolDefinition` 转换为 Spring AI/DeepSeek 原生工具 Schema，聚合流式 ToolCall 分片，并把结果交回 `DefaultAgentRuntime / AgentToolRuntime`；Schema-only `ToolCallback` 的 `call()` 不执行任何业务逻辑。`AGENT_MODEL_TOOL_CALLING_MODE=json` 仅保留兼容路径。参考 [Spring AI Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)。

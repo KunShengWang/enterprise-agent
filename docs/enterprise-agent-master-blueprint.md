@@ -1,8 +1,8 @@
 # Enterprise Agent 项目总蓝图：OrderCare Incident Agent
 
-> 状态：项目级实施蓝图；按阶段验收，不代表全部已实现
-> 版本：Blueprint V1.7
-> 更新日期：2026-07-19 CST
+> 状态：项目级冻结蓝图 + 实现后补充；设计目标与当前事实必须结合实施状态/Evidence 阅读
+> 版本：Blueprint V1.8
+> 更新日期：2026-08-10 CST
 > 主仓库：`enterprise-agent`
 > 业务系统：`floworder`
 
@@ -20,12 +20,16 @@
 实际完成度、当前门禁和证据入口统一记录在
 [OrderCare 实施状态与学习地图](ordercare-implementation-status.md)。蓝图描述目标状态，实施状态文档描述当前事实，二者不能混用。
 
-> 2026-07-17 实施结论：M0～M3 已通过，达到 Interview Strong；M4 安全部署仍未完成。故障注入、真实模型 Eval 和 Trace 证据见 [M3 报告](reports/ordercare/m3-fault-correctness.md)。
+> 2026-07-17 实施结论：M0～M3 已通过，达到 Interview Strong；Production Hardening 仍未完成。故障注入、真实模型 Eval 和 Trace 证据见 [M3 报告](reports/ordercare/m3-fault-correctness.md)。
 
 > 2026-07-18 20:22 CST 结论：独立场景 [OrderCare Incident Command V1.3](ordercare-incident-command-v1-design.md) 已冻结 M0 并完成 M1-A～M1-E。M1-C 同 childRunId Runtime 门禁已通过；Phase 1 已实现受限 Commander、最多三个并行 Specialist、结构化 Evidence、显式跨 subtype ComparisonRule、一次定向补证、强类型 Assessment、synthetic coordinator Trace、三条纵向 E2E、10 条核心 Eval 和单窗口工作台。Task 当前仍只实现 version CAS、幂等防重、单实例调度保护和一次有界重试，不宣称多实例 lease 恢复、通用 Mailbox 或自动批量恢复。证据见 [Phase 1 报告](reports/ordercare/incident-command-phase1-evidence.md)。
 
 > 2026-07-19 结论：Incident Command V1.4 的 Phase 2 Recovery Planner 已完成并通过外部门禁。它使用独立 Planner Run 输出最多 5 个带 Evidence 引用的 `ProposalRequest`，Java 对 Assessment、开放冲突、证据缺口、scopeHash、目标范围和动作类型 fail closed；FlowOrder 继续逐项生成不可变 Proposal；Recovery Plan 逐项创建 Approval、CAS claim、执行原 `actionRequestId`、UNKNOWN 对账和确定性收敛。未增加 FlowOrder 批量写接口，Specialist/Reviewer 权限保持只读，`DefaultAgentRuntime.run()` 未加入事故恢复分支。真实 PostgreSQL requestKey 幂等/version CAS 门禁 1/1 通过，Phase 1 三场景与 Phase 2 完整 Runtime 纵向 E2E 4/4 通过。证据见 [Phase 2 报告](reports/ordercare/incident-command-phase2-evidence.md)。
 > 2026-07-19 Phase 3 结论：Incident Command V1.5 已实现多实例可靠性内核。Task 与 Recovery Item 使用 PostgreSQL lease、heartbeat、stale scan 和单调 fencing token；旧实例迟到提交会被拒绝，恢复项接管只协调原 actionRequestId，Task 接管完成后可从持久化 Incident 检查点继续冲突检查和 Reviewer。提供 kill switch、手动扫描和状态接口。真实 PostgreSQL 双 owner 接管、旧 token 拒绝及开启 Phase 3 的 4 条 Runtime E2E 已通过。外部告警、统一认证和完整租户治理不在本地实现范围。证据见 [Phase 3 报告](reports/ordercare/incident-command-phase3-evidence.md)。
+
+> 2026-07-20～2026-08-05 实现后补充：独立 [Unified Agent Workbench V1](unified-agent-workbench-v1-design.md) 已完成 M1～M3，统一输入、WorkItem、四目标路由、Preview/Confirm、幂等 Dispatch、WorkLink、跨源事件投影、SSE/Replay、执行树、命令、分层预算和多实例 fencing 已落地；后续 PublicPresentation 和统一三栏前端完成独立 P0～P6 实现 checkpoint。Incident Scope Discovery V1 已在不增加第五个 ExecutionTarget 的前提下接入 FlowOrder 固定只读发现、Snapshot 和确认链路。随后默认模型协议升级为 Provider 原生 Tool Calling，Incident Commander/Reviewer 改为受控 SubAgent Tool 链路并强化 Evidence 引用校验。当前稳定实现基线为 `b6207a4`，详见 [文档索引](documentation-index.md)、[实施状态](ordercare-implementation-status.md) 和 [Scope Discovery Evidence](reports/incident-scope-discovery-v1-evidence.md)。
+
+> 名称修正：本蓝图早期第 14 节的“M4 安全与部署边界”与后续独立里程碑“M4 Incident Scope Discovery”不是同一个阶段。为避免混淆，安全、认证、迁移和部署工作统一称为 `Production Hardening`，仍未完成。
 
 已有的 [OrderCare × FlowOrder 异常订单恢复闭环设计稿](ordercare-floworder-integration-design.md) 作为早期业务子设计保留。若两份文档冲突，以本总蓝图为准；原子设计中的“模型循环回查”和“5 个模型可见工具”不再作为实施方案。
 
@@ -786,14 +790,14 @@ M2 是 **Resume Ready**：可以保守表述为“实现异常订单诊断与人
 
 M3 是 **Interview Strong**。完成后，才能重点讲“支持副作用未知、进程崩溃和重复恢复场景下的幂等与故障恢复”。
 
-### M4：安全与部署边界
+### Production Hardening：安全与部署边界（早期编号 M4）
 
 - 用户认证、服务认证和最小权限。
 - 版本化数据库迁移。
 - 管理接口隔离、密钥治理、审计保留。
 - 容量测试、告警和 kill switch。
 
-M4 未完成前，不宣称生产级安全或线上规模。
+Production Hardening 未完成前，不宣称生产级安全或线上规模。
 
 ## 21. 推荐代码落点
 

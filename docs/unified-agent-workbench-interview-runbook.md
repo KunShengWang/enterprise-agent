@@ -4,13 +4,13 @@
 
 启动 PostgreSQL、FlowOrder、RabbitMQ 后，在 `enterprise-agent` 进程中启用 Workbench、Incident Command、Recovery Planner 和 Phase 3。生产副作用 kill switch 必须按演示目标显式设置；只读调查不需要打开恢复执行。
 
-统一页面使用 `http://localhost:5173/workbench`，后端默认使用用户当前配置的 `8083`。
+统一页面使用 `http://127.0.0.1:5173/`；`/workbench` 和 `/runtime` 会重定向到 `/`。后端默认使用 `8083`。
 
 ## 2. 推荐演示顺序
 
 1. 普通知识目标：`解释 Java CAS、ABA 与幂等的关系`，展示 Router 选择 General Agent。
 2. 单订单诊断：`诊断 requestId=ORDERCARE-M05-REQUEST`，展示强类型标识与 OrderCare Run。
-3. Multi-Agent 调查：输入明确 batch/requestIds 与 queueName，展示 Preview，确认后观察 Commander、Specialist、Reviewer 和 Evidence。
+3. Multi-Agent 调查：优先输入“调查昨晚订单超时但库存未释放的问题，只调查并生成 Assessment，不执行恢复”，展示 Scope Discovery、Preview、显式确认、Commander、Specialist、Reviewer 和 Evidence；也可用明确 requestIds 演示原直达路径。
 4. 恢复计划：在已 `ASSESSED` 事故后输入“基于刚才事故生成受控恢复计划”，展示新的子 WorkItem、Proposal 和审批边界。
 5. 故障证据：展示相同 dispatchRequestId 不重复创建目标、旧 fencing token 被拒绝、Projector 从 cursor 恢复。
 6. 预算证据：展示 WorkItem/Incident 子账户和耗尽后不再创建新 Run。
