@@ -64,7 +64,7 @@ public class DispatchCoordinator {
         DispatchClaim claim = claimed.get();
         // 租约续约心跳
         ScheduledFuture<?> heartbeat = startHeartbeat(claim);
-        // 寻找 agent 执行适配器
+        // 寻找 routing.route() 落库的 agent 执行适配器
         ExecutionAdapter adapter = adapters.require(claim.request().targetId());
         BudgetReservationHandle budget;
         try {

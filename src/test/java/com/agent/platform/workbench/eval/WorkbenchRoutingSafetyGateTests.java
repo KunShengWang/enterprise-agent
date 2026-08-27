@@ -107,6 +107,19 @@ class WorkbenchRoutingSafetyGateTests {
         assertNull(validation.validatedInput());
     }
 
+    @Test
+    void boundedSingleCaseCannotBeUpgradedToIncidentInvestigation() {
+        String goal = "请处理唯一 OrderCare 单案例 requestId=ORDERCARE-M05-REQUEST，"
+                + "满足安全条件时预演、审批、执行并验证收敛";
+        var validation = validator().validate(new ExecutionDecision(
+                        "INCIDENT_INVESTIGATION", .99, "wrong upgrade",
+                        Map.of("requestIds", List.of("ORDERCARE-M05-REQUEST")), List.of(), ""),
+                context(goal));
+
+        assertEquals(RouteDisposition.REQUIRE_CLARIFICATION, validation.disposition());
+        assertNull(validation.validatedInput());
+    }
+
     private RoutePolicyValidator validator() {
         return new RoutePolicyValidator(registry(), new WorkbenchRoutingProperties(), objectMapper);
     }

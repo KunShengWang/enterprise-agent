@@ -4,6 +4,7 @@ import com.agent.platform.config.AgentProperties;
 import com.agent.platform.llm.LlmService;
 import com.agent.platform.llm.NativeChatModelClient;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.ai.model.deepseek.autoconfigure.DeepSeekChatProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import tools.jackson.databind.ObjectMapper;
@@ -18,7 +19,8 @@ public class AgentModelGatewayConfiguration {
     public AgentModelGateway agentModelGateway(AgentProperties properties,
                                                LlmService llmService,
                                                ObjectMapper objectMapper,
-                                               ObjectProvider<NativeChatModelClient> nativeClientProvider) {
+                                               ObjectProvider<NativeChatModelClient> nativeClientProvider,
+                                               DeepSeekChatProperties deepSeekChatProperties) {
         if (properties.isMockMode()
                 || properties.getModelToolCallingMode() == AgentProperties.ModelToolCallingMode.JSON) {
             return new JsonAgentModelGateway(llmService, objectMapper);
@@ -30,6 +32,7 @@ public class AgentModelGatewayConfiguration {
                             + "set enterprise-agent.model-tool-calling-mode=json only for explicit compatibility mode"
             );
         }
-        return new NativeToolCallingAgentModelGateway(nativeClient, objectMapper);
+        return new NativeToolCallingAgentModelGateway(
+                nativeClient, objectMapper, deepSeekChatProperties.toOptions());
     }
 }

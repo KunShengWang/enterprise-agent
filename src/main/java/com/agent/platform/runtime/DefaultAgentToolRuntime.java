@@ -84,19 +84,26 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         ToolCallRequest request = new ToolCallRequest(toolCall.toolName(), toolCall.toolCallId(), toolCall.arguments());
         // 把当前 Agent Run、会话、用户、租户、角色和请求属性封装成统一的工具策略上下文，供后续 Guardrail 权限判断和审批请求绑定使用
         ToolPolicyContext policyContext = ToolPolicyContext.from(runId, sessionId, userId, attributes);
+
         // 工具调用审查
         GuardrailDecision policy = guardrailService.checkToolCall(definition, request, policyContext);
+
+        // 工具不能执行被阻塞
         if (policy.action() == GuardrailAction.BLOCK) {
             return denied(request, policy);
         }
+
+        // 需要审批的工具，会重写关键参数并落库
         if (policy.action() == GuardrailAction.REQUIRE_APPROVAL) {
             String approvalId = UUID.randomUUID().toString();
+            // 重写参数，用服务端可信事实替换模型提供的参数
             ToolCallRequest approvalBoundRequest = prepareApprovalRequest(
                     approvalId,
                     request,
                     policyContext
             );
             // TODO 不能像 codex 一样在执行的过程中让用户批准吗？
+            // 审批请求入库
             approvalService.requestApproval(new ApprovalRequest(
                     approvalId,
                     runId,
@@ -115,16 +122,32 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                     false
             );
         }
+
+        // 工具执行
         return executeClaimed(runId, request, policy.action(), policy.reason(), executionContext(policyContext));
     }
 
+    /**
+     * "tool_calls"[
+     *     {
+     *         "index": 0,
+     *         "id": "call_00_MTxLsJ5lBGZ3YJyODvj54987",
+     *         "type": "function",
+     *         "function": {
+     *             "name": "floworder_recovery_execute",
+     *             "arguments": "{"proposalId": "prop-895558aa-7474-3366-9f0b-41617364653f"}"
+     *         }
+     *     }
+     * ]
+     * LLM 调用工具会给参数 proposalId，防止幻觉会用服务端可信事实替换模型提供的参数，主要是替换 arguments 这一部分
+     */
     private ToolCallRequest prepareApprovalRequest(String approvalId,
                                                    ToolCallRequest request,
                                                    ToolPolicyContext context) {
         ToolCallRequest prepared = request;
-        for (ApprovalToolCallRequestPreparer preparer : approvalRequestPreparers) {
-            if (preparer.supports(prepared.toolName())) {
-                prepared = preparer.prepare(approvalId, prepared, context);
+        for (ApprovalToolCallRequestPreparer preparer : approvalRequestPreparers) {// 遍历扩展点
+            if (preparer.supports(prepared.toolName())) {// 找到支持这个工具的 preparer
+                prepared = preparer.prepare(approvalId, prepared, context); // 用服务端事实重写
             }
         }
         return prepared;
@@ -278,7 +301,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
             try {
                 // 工具执行
                 lastResult = capabilityExecutor instanceof ContextualAgentCapabilityExecutor contextual
-                        ? contextual.execute(request, executionContext)// 带上下文执行
+                        ? contextual.execute(request, executionContext)// 带上下文执行（走这个）
                         : capabilityExecutor.execute(request);// 普通执行
             }
             catch (RuntimeException exception) {
@@ -295,10 +318,12 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                     || !retryable(lastResult) // ② 失败了但不可重试（如权限不足）→ 重试也没用
                     || attempt >= maxAttempts // ③ 重试次数用完了 → 不能再试了
             ) {
+                // 由于条件 ③（attempt >= maxAttempts）在最后一次循环必然成立，所以理论上这个方法一定会在循环内 return——不会走到循环外
                 return withAttemptMetadata(lastResult, attempt);
             }
             sleepBackoff(attempt);// 指数退避
         }
+        // 理论不可达
         return lastResult == null
                 ? new ToolCallResult(request.toolName(), false, "", "capability returned no result", Map.of())
                 : lastResult;

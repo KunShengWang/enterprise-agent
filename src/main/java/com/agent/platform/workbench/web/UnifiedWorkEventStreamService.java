@@ -51,13 +51,18 @@ public class UnifiedWorkEventStreamService {
         AtomicLong workCursor = new AtomicLong(initialCursor.workSequence());
         AtomicLong runCursor = new AtomicLong(initialCursor.primaryRunSequence());
         AtomicLong polls = new AtomicLong();
+        // 实现"无限轮询的 SSE 事件流"，每隔 pollInterval 毫秒拉取一批新事件，展平后逐个推给客户端；出错也不中断连接。
         return Flux.defer(() -> Mono.fromCallable(() -> poll(
                                 principal, workItemId, workCursor, runCursor, polls.incrementAndGet()))
                         .subscribeOn(Schedulers.boundedElastic()))
+                // 等 pollInterval 后再来一轮
                 .repeatWhen(completed -> completed.delayElements(
                         Duration.ofMillis(properties.getPollIntervalMillis())))
+                // poll 返回 List<UnifiedWorkStreamItem>（一批事件）。flatMapIterable 把集合展平成流中的一个个元素：List[A, B, C]  →  A → B → C（流中的单个事件）
                 .flatMapIterable(items -> items)
+                // 每个事件包装成 SSE 协议对象
                 .map(this::sse)
+                // 如果某次 poll 抛异常（如数据库临时不可用），不中断整个 SSE 流，而是发一个 sync-error 事件告知客户端"暂时不可用"——连接保持不断，下一轮轮询继续
                 .onErrorResume(error -> {
                     UnifiedWorkStreamCursor cursor = new UnifiedWorkStreamCursor(
                             workCursor.get(), runCursor.get());
@@ -75,6 +80,7 @@ public class UnifiedWorkEventStreamService {
                                      AtomicLong workCursor,
                                      AtomicLong runCursor,
                                      long pollNumber) {
+        // 拉 WorkItem 自身事件（WorkEvent）→ 从 agent_work_event 表
         AgentWorkItem workItem = workbenchStore.findWorkItem(principal, workItemId)
                 .orElseThrow(() -> new WorkbenchNotFoundException("work item not found"));
         List<UnifiedWorkStreamItem> items = new ArrayList<>();

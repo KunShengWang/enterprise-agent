@@ -254,6 +254,25 @@ class PublicPresentationServiceTests {
     }
 
     @Test
+    void clarificationFallsBackToMappedServerValidationReason() {
+        Fixture fixture = fixture(List.of(event(3, WorkEventType.CLARIFICATION_REQUIRED, "WAITING_INPUT",
+                Map.of())));
+        fixture.routingDecision = routing(
+                Map.of("targetId", "INCIDENT_INVESTIGATION", "missingInputs", List.of(),
+                        "userFacingSummary", "需要补充事故范围。"),
+                Map.of("disposition", "REQUIRE_CLARIFICATION", "reasons",
+                        List.of("requestIds or discoverable business conditions are required")));
+        fixture.stub();
+
+        PublicPresentation clarification = fixture.service.publicTimeline(principal, "work-1", -1, 100)
+                .stream().filter(item -> item.kind() == PublicPresentationKind.WAITING_FOR_USER)
+                .findFirst().orElseThrow();
+
+        assertEquals(List.of("请补充事故调查范围：多个 requestId，或时间范围与明确异常现象"),
+                clarification.steps());
+    }
+
+    @Test
     void rejectedWorkCommandUsesItsOwnSafeCodeAndDoesNotPretendRunFailed() {
         Fixture fixture = fixture(List.of(event(6, WorkEventType.WORK_COMMAND_REJECTED, "REJECTED",
                 Map.of("command", "ADD_INPUT_TO_ACTIVE_WORK", "code", "UNSUPPORTED_FOR_TARGET"))));
@@ -330,10 +349,15 @@ class PublicPresentationServiceTests {
     }
 
     private RoutingDecisionRecord routing(Map<String, Object> decision) {
+        return routing(decision,
+                Map.of("disposition", "AUTO_DISPATCH", "reasons", List.of("internal validation")));
+    }
+
+    private RoutingDecisionRecord routing(Map<String, Object> decision, Map<String, Object> validation) {
         Instant now = Instant.now();
         return new RoutingDecisionRecord("decision", "work-1", "route", 1, DecisionStatus.EFFECTIVE,
                 "model", "catalog", "prompt-digest", "raw-digest", decision,
-                Map.of("disposition", "AUTO_DISPATCH", "reasons", List.of("internal validation")),
+                validation,
                 10, 5, 20, "", "", "trace", now, now);
     }
 

@@ -7,6 +7,7 @@ import com.agent.platform.ordercare.model.OrderCareProposalExecuteCommand;
 import com.agent.platform.ordercare.model.OrderCareRecoveryProposal;
 import com.agent.platform.ordercare.model.OrderCareActionReconcileCommand;
 import com.agent.platform.ordercare.model.OrderCareRecoveryAction;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
@@ -22,6 +23,7 @@ import java.time.Duration;
 import java.util.Map;
 
 @Component
+@Slf4j
 public class HttpFlowOrderClient implements FlowOrderClient {
 
     private static final String INSPECT_PATH = "/internal/recovery/cases/inspect";
@@ -47,6 +49,9 @@ public class HttpFlowOrderClient implements FlowOrderClient {
         this.httpClient = httpClient;
     }
 
+    /**
+     * floworder_case_inspect 工具
+     */
     @Override
     public OrderCareCaseSnapshot inspectCase(String identifierType,
                                              String identifierValue,
@@ -59,6 +64,7 @@ public class HttpFlowOrderClient implements FlowOrderClient {
                         inspectRequest(identifierType, identifierValue, traceId),
                         HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
                 );
+                log.info("floworder_case_inspect 工具的 response : {}" , response);
                 if (response.statusCode() == 502 || response.statusCode() == 503) {
                     lastFailure = new FlowOrderApiException(
                             "FlowOrder inspect temporarily unavailable: HTTP " + response.statusCode(),

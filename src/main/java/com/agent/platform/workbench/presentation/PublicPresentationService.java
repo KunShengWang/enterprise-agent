@@ -98,6 +98,10 @@ public class PublicPresentationService {
         if (event.eventType() == WorkEventType.ROUTING_DECIDED) {
             String targetId = work.activeExecutionTarget();
             if (targetId == null || targetId.isBlank()) targetId = text(event.payload().get("targetId"));
+            if (targetId.isBlank() && routing != null
+                    && "REQUIRE_CLARIFICATION".equals(text(routing.validation().get("disposition")))) {
+                return result;
+            }
             PublicExecutionCatalog.Definition definition = executionCatalog.definition(targetId);
             String summary = publicRoutingSummary(routing, definition.label());
             result.add(item(work, event, 0, PublicPresentationKind.TASK_UNDERSTANDING,
@@ -594,20 +598,29 @@ public class PublicPresentationService {
 
     private List<String> clarificationPrompts(RoutingDecisionRecord routing) {
         Object value = routing == null ? null : routing.decision().get("missingInputs");
-        if (!(value instanceof List<?> missingInputs)) {
-            return List.of("请说明需要调查的业务范围和相关业务标识。");
+        if (value instanceof List<?> missingInputs) {
+            List<String> prompts = missingInputs.stream()
+                    .map(this::text)
+                    .map(String::trim)
+                    .filter(input -> !input.isBlank())
+                    .map(this::clarificationPrompt)
+                    .distinct()
+                    .limit(10)
+                    .toList();
+            if (!prompts.isEmpty()) return prompts;
         }
-        List<String> prompts = missingInputs.stream()
-                .map(this::text)
-                .map(String::trim)
-                .filter(input -> !input.isBlank())
-                .map(this::clarificationPrompt)
-                .distinct()
-                .limit(10)
-                .toList();
-        return prompts.isEmpty()
-                ? List.of("请说明需要调查的业务范围和相关业务标识。")
-                : prompts;
+        Object reasons = routing == null ? null : routing.validation().get("reasons");
+        if (reasons instanceof List<?> validationReasons) {
+            List<String> prompts = validationReasons.stream()
+                    .map(this::text)
+                    .map(this::validationClarificationPrompt)
+                    .filter(prompt -> !prompt.isBlank())
+                    .distinct()
+                    .limit(10)
+                    .toList();
+            if (!prompts.isEmpty()) return prompts;
+        }
+        return List.of("请说明需要处理的是唯一 OrderCare 单案例，还是批量或多案例事故调查，并提供对应业务标识。");
     }
 
     private String clarificationPrompt(String input) {
@@ -620,8 +633,22 @@ public class PublicPresentationService {
             case "orderNo" -> "订单号（orderNo）";
             case "deductNo" -> "库存扣减号（deductNo）";
             case "incidentId" -> "事故 ID（incidentId）";
+            case "executionScope" -> "请明确选择：唯一 OrderCare 单案例，或批量/多案例事故调查";
             default -> "必填信息：" + input;
         };
+    }
+
+    private String validationClarificationPrompt(String reason) {
+        if (reason.contains("唯一单案例") && reason.contains("事故调查")) {
+            return "请明确选择：唯一 OrderCare 单案例，或批量/多案例事故调查";
+        }
+        if (reason.contains("requestIds or discoverable business conditions")) {
+            return "请补充事故调查范围：多个 requestId，或时间范围与明确异常现象";
+        }
+        if (reason.contains("exactly one requestId, orderNo or deductNo")) {
+            return "请只提供一个单案例标识：requestId、orderNo 或 deductNo";
+        }
+        return "";
     }
 
     private boolean safePublicText(String value) {

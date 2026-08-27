@@ -43,6 +43,7 @@ public class IncidentSnapshotFactory {
         if (request.scopeSnapshotId().isBlank() && !properties.getAllowedQueues().containsAll(queues)) {
             throw new IllegalArgumentException("queueNames contain a queue outside the server whitelist");
         }
+
         Instant startedAt = Instant.now();
         String snapshotId = "snap-" + UUID.randomUUID();
         String scopeHash = sha256(Map.of(

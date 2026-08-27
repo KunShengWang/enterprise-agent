@@ -100,8 +100,14 @@ public class RoutePolicyValidator {
         }
 
         ExecutionTargetId targetId = target.targetId();
-        if (targetId == ExecutionTargetId.ORDERCARE_CASE && requestsIncidentScope(context.originalGoal())) {
+        ExecutionTargetCandidateResolver.ScopeEvidence scope =
+                ExecutionTargetCandidateResolver.analyze(context.originalGoal());
+        if (targetId == ExecutionTargetId.ORDERCARE_CASE
+                && (requestsIncidentScope(context.originalGoal()) || scope.incidentScope())) {
             return clarified("incident or batch scope cannot be downgraded to one OrderCare case");
+        }
+        if (targetId == ExecutionTargetId.INCIDENT_INVESTIGATION && scope.boundedSingleCase()) {
+            return clarified("one bounded OrderCare case cannot be upgraded to incident investigation");
         }
         List<String> reasons = new ArrayList<>();
         RouteDisposition disposition;

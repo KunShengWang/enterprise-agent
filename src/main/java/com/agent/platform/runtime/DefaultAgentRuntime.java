@@ -162,7 +162,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             AgentRunRecord createdRun = AgentRunRecord.create(
                     runId, runId, sessionId, originalRequest, profile, budget.snapshot()
             );
-            // runUntilInputCheckpoint 启动时 set(1)，所以这里读到 1 说明"当前 Run 是续跑模式"
+            // runUntilInputCheckpoint 启动时 set(1)，所以这里读到 1 说明"当前 Run 是续跑模式"，它是"被上层编排器调用的子任务"，不会"一次跑到底"，而是"暂停 → 等输入 → 恢复"
             int maxFollowUps = requestedInputCheckpoints.get();
             if (maxFollowUps > 0) {
                 // 前置校验
@@ -688,6 +688,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                         toolResults, usedTools, usedRag, false, budget, listener
                 );
             }
+
             // 查看是否有 agent 的取消请求，有取消请求的话就不往下执行了
             synchronizeCancellation(runId, budget);
             // ③ 暂停
@@ -701,9 +702,11 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                         toolResults, usedTools, usedRag, budget, listener);
             }
             budget.recordTurnStarted();
+
             // 把 Agent 执行过程中的"当前快照"持久化到数据库，保证中断后可以恢复，也可以从外部监控当前执行进度
             checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
                     toolResults, usedTools, usedRag, budget);
+
             // 计算上下文消息预算
             long contextTokenBudget = contextMessageBudget(profile);
             // 从数据库中加载消息 AgentMessage 并做处理
@@ -714,7 +717,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     contextTokenBudget
             );
             if (context.omittedMessages() > 0) {
-                // 上下文压缩
+                // TODO 上下文压缩
                 context = contextManager.compact(
                         sessionId, userId, runId, request.question(), contextTokenBudget, "context_budget"
                 );
@@ -735,6 +738,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                         toolResults, usedTools, usedRag, false, budget, listener
                 );
             }
+
             // 查看是否有 agent 的取消请求
             synchronizeCancellation(runId, budget);
             if (budget.pauseRequested()) {
@@ -747,10 +751,14 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                         toolResults, usedTools, usedRag, budget, listener);
             }
 
+            // 往前端推送消息
             publish(sessionId, userId, runId, AgentEventType.MODEL_STARTED,
                     "model turn started", Map.of("turn", budget.snapshot().turns()), listener);
+            // 保存状态
             checkpoint(runId, AgentRunPhase.MODEL_CALL, null,
                     toolResults, usedTools, usedRag, budget);
+
+            // LLM 调用
             AgentModelTurn modelTurn;
             StreamingModelDeltaPublisher modelDeltaPublisher;
             int modelProtocolRetries = 0;
@@ -769,6 +777,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                             sessionId,
                             profile.systemPrompt(),
                             context.messages(),
+                            // 发给 LLM 前过滤，保存 agent 白名单工具和当前阶段可见工具
                             capabilitiesFor(profile, request.metadata(), usedTools),
                             request.metadata()
                     ), modelDeltaPublisher::accept);
@@ -873,13 +882,17 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     );
                 }
             }
+
             //  LLM 调用了多少 token
             LlmUsage effectiveUsage = effectiveUsage(modelTurn, context);
             //  LLM 调用花了多少钱
             double modelCallCost = costCalculator.estimate(effectiveUsage);
             budget.recordModelCall(effectiveUsage, modelCallCost);
+
+            // 保存状态
             checkpoint(runId, AgentRunPhase.MODEL_CALL, null,
                     toolResults, usedTools, usedRag, budget);
+            // 往前端推送消息
             publish(sessionId, userId, runId, AgentEventType.MODEL_COMPLETED,
                     "model turn completed",
                     Map.of(
@@ -892,6 +905,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     ),
                     listener);
 
+            // 查看是否有 agent 的取消请求
             synchronizeCancellation(runId, budget);
             if (budget.pauseRequested()) {
                 return pauseAtCheckpoint(runId, sessionId, userId, budget, listener);
@@ -901,6 +915,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 return finishBudgetStop(request, runId, sessionId, userId, asynchronousStop.get(),
                         toolResults, usedTools, usedRag, budget, listener);
             }
+
             // ② 正常完成（LLM 不再要调工具）
             // 本次 LLM 调用没有返回工具调用，直接对本地 LLM 答案做护栏输出并添加 LLM 返回消息，然后返回结果
             if (!modelTurn.hasToolCalls()) {
@@ -927,6 +942,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     modelTurn.toolCalls(), profile, request.metadata(), usedTools)) {
                 AgentRuntimeResult terminal = executeParallelSubAgentBatch(
                         request, runId, sessionId, userId, profile, modelTurn.toolCalls(),
+                        modelTurn.reasoningContent(),
                         toolResults, usedTools, usedRag, budget, listener);
                 if (terminal != null) {
                     return terminal;
@@ -934,7 +950,9 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 continue;
             }
 
+            // 普通工具调用
             for (AgentToolCall rawCall : modelTurn.toolCalls()) {
+                // 判断 agent 是否暂停
                 synchronizeCancellation(runId, budget);
                 if (budget.pauseRequested()) {
                     return pauseAtCheckpoint(runId, sessionId, userId, budget, listener);
@@ -944,6 +962,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     return finishBudgetStop(request, runId, sessionId, userId, toolStop.get(),
                             toolResults, usedTools, usedRag, budget, listener);
                 }
+
                 String modelToolCallId = rawCall.toolCallId();       // DeepSeek 返回的原始 ID，如 "call_abc123"
                 AgentToolCall call = assignExecutionId(rawCall);     // 项目自己的 UUID，如 "f3a8-4b12-..."
                 ToolCallRequest checkpointCall = new ToolCallRequest(
@@ -957,7 +976,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                                 call.toolCallId(),
                                 call.toolName(),
                                 call.arguments(),
-                                Map.of("reason", call.reason(), "modelToolCallId", modelToolCallId),
+                                providerToolCallMetadata(call, modelToolCallId, modelTurn.reasoningContent()),
                                 tokenEstimator.estimate(String.valueOf(call.arguments()))
                         )
                 ));
@@ -971,22 +990,28 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                         ),
                         listener);
 
+                // 工具执行前的校验
+                // 工具是否在 Profile 白名单里
                 boolean capabilityAllowed = profile.allows(call.toolName());
+                // 工具是否注册过（是已知能力，还是模型编的）
                 Optional<ToolDefinition> registeredDefinition = capabilityAllowed
                         ? capabilityRegistry.findCapability(call.toolName())// 根据工具名称查询执行的工具
                         : Optional.empty();
+                // 工具是否在当前阶段可见（阶段门禁）
                 boolean phaseVisible = registeredDefinition
                         .map(item -> AgentCapabilityVisibilityPolicy.visible(item, request.metadata()))
                         .orElse(false);
                 Optional<ToolDefinition> definition = phaseVisible
                         ? registeredDefinition
                         : Optional.empty();
+
+                // 精确分类三种失败原因（fail-fast 定位）
                 if (definition.isEmpty()) {
                     String errorType = !capabilityAllowed
-                            ? "CAPABILITY_NOT_ALLOWED"
+                            ? "CAPABILITY_NOT_ALLOWED"// 白名单外（越权）
                             : registeredDefinition.isEmpty()
-                            ? "UNKNOWN_CAPABILITY"
-                            : "CAPABILITY_NOT_AVAILABLE_IN_PHASE";
+                            ? "UNKNOWN_CAPABILITY" // 不存在（幻觉）
+                            : "CAPABILITY_NOT_AVAILABLE_IN_PHASE"; // 阶段不可见
                     String errorMessage = !capabilityAllowed
                             ? "capability is not allowed by execution profile: " + call.toolName()
                             : registeredDefinition.isEmpty()
@@ -996,19 +1021,28 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                             call.toolName(), false, "", errorMessage,
                             Map.of("errorType", errorType, "profile", profile.name())
                     );
+                    // 把失败结果追加回时间线
                     ToolCallResult projectedUnknown = appendToolResult(
                             sessionId, userId, runId, call.toolCallId(), unknown, false
                     );
+                    // 加入结果列表
                     toolResults.add(projectedUnknown);
+                    // 记录工具调用次数
                     budget.recordToolCall();
+                    // 持久化检查点
                     checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
                             toolResults, usedTools, usedRag, budget);
+                    // 发布事件
                     publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
                             "unknown capability returned to model", toolResultPayload(call.toolCallId(), unknown), listener);
+                    // 继续处理下一个工具调用
                     continue;
                 }
+
+                // singleUse 重复检查，singleUse 工具同一 Run 只能用一次——专家工具
                 if (Boolean.TRUE.equals(definition.get().metadata().get("singleUse"))
                         && usedTools.contains(call.toolName())) {
+                    // singleUse 工具本 Run 已经用过 → 拒绝
                     ToolCallResult duplicate = new ToolCallResult(
                             call.toolName(), false, "",
                             "single-use capability has already been called in this parent run",
@@ -1027,6 +1061,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                             toolResultPayload(call.toolCallId(), duplicate), listener);
                     continue;
                 }
+
                 // 工具调用
                 AgentToolRuntimeResult execution = toolRuntime.execute(
                         runId,
@@ -1044,6 +1079,8 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                                 "action", execution.policyAction() == null ? "UNKNOWN" : execution.policyAction().name()
                         ),
                         listener);
+
+                // 工具处于等待批准状态
                 if (execution.status() == AgentToolExecutionStatus.WAITING_APPROVAL) {
                     // ① 冻结 deadline（暂停计时）
                     budget.pauseExecution();
@@ -1080,6 +1117,8 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                             timelineStore.loadEvents(runId, MAX_RETURNED_EVENTS)
                     );
                 }
+
+                // 工具处于人工审核状态
                 if (execution.status() == AgentToolExecutionStatus.MANUAL_REVIEW) {
                     ToolCallRequest reviewRequest = execution.request() == null
                             ? new ToolCallRequest(call.toolName(), call.toolCallId(), call.arguments())
@@ -1120,6 +1159,9 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         }
     }
 
+    /**
+     * 判断这一批工具调用是否满足并行执行的所有安全条件
+     */
     private boolean parallelSafeSubAgentBatch(List<AgentToolCall> rawCalls,
                                                AgentExecutionProfile profile,
                                                Map<String, Object> requestMetadata,
@@ -1159,6 +1201,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                                                             String userId,
                                                             AgentExecutionProfile profile,
                                                             List<AgentToolCall> rawCalls,
+                                                            String reasoningContent,
                                                             List<ToolCallResult> toolResults,
                                                             List<String> usedTools,
                                                             boolean usedRag,
@@ -1185,7 +1228,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             timelineStore.appendMessages(sessionId, userId, runId, List.of(
                     AgentMessageDraft.toolCall(
                             call.toolCallId(), call.toolName(), call.arguments(),
-                            Map.of("reason", call.reason(), "modelToolCallId", modelToolCallId),
+                            providerToolCallMetadata(call, modelToolCallId, reasoningContent),
                             tokenEstimator.estimate(String.valueOf(call.arguments())))));
             // 推送事件
             publish(sessionId, userId, runId, AgentEventType.TOOL_REQUESTED,
@@ -1605,6 +1648,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                                                  AgentEventListener listener) {
         budget.pauseExecution();
         AgentRunBudgetSnapshot pausedBudget = budget.snapshot();
+        // 因为暂停是通过其他接口然后把暂停标志持久化到数据库，agent 运行过程中是分阶段检查暂停标志的，当 agent 检查到暂停标志的时候 agent 可以已经执行结束了。所以这里面存在时间差
         AgentRunRecord paused = runStore.update(runId, current -> {
             // ① 已经结束了（COMPLETED/FAILED/BLOCKED）→ 不暂停，原样返回
             // ② 正在等审批 → 不暂停，原样返回
@@ -1951,6 +1995,18 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         );
     }
 
+    private Map<String, Object> providerToolCallMetadata(AgentToolCall call,
+                                                         String modelToolCallId,
+                                                         String reasoningContent) {
+        LinkedHashMap<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("reason", call.reason());
+        metadata.put(AgentProviderMetadata.MODEL_TOOL_CALL_ID, modelToolCallId);
+        if (reasoningContent != null && !reasoningContent.isBlank()) {
+            metadata.put(AgentProviderMetadata.REASONING_CONTENT, reasoningContent);
+        }
+        return Map.copyOf(metadata);
+    }
+
     private LlmUsage effectiveUsage(AgentModelTurn turn, AgentContextView context) {
         // ① API 返回了真实 token 数 → 直接用
         if (turn.usage() != null && turn.usage().hasTokenUsage()) {
@@ -1996,6 +2052,9 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 .toList();
     }
 
+    /**
+     * 发给 LLM 前过滤，保存 agent 白名单工具和当前阶段可见工具
+     */
     private List<ToolDefinition> capabilitiesFor(AgentExecutionProfile profile,
                                                   Map<String, Object> requestMetadata,
                                                   List<String> usedTools) {

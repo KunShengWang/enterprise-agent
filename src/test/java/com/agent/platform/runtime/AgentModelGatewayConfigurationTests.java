@@ -4,6 +4,7 @@ import com.agent.platform.config.AgentProperties;
 import com.agent.platform.llm.LlmService;
 import com.agent.platform.llm.NativeChatModelClient;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.model.deepseek.autoconfigure.DeepSeekChatProperties;
 import org.springframework.beans.factory.ObjectProvider;
 import tools.jackson.databind.ObjectMapper;
 
@@ -20,7 +21,7 @@ class AgentModelGatewayConfigurationTests {
         ObjectProvider<NativeChatModelClient> provider = provider(nativeClient);
 
         AgentModelGateway gateway = new AgentModelGatewayConfiguration().agentModelGateway(
-                properties, mock(LlmService.class), new ObjectMapper(), provider);
+                properties, mock(LlmService.class), new ObjectMapper(), provider, deepSeekProperties());
 
         assertInstanceOf(NativeToolCallingAgentModelGateway.class, gateway);
     }
@@ -31,7 +32,7 @@ class AgentModelGatewayConfigurationTests {
         properties.setModelToolCallingMode(AgentProperties.ModelToolCallingMode.JSON);
 
         AgentModelGateway gateway = new AgentModelGatewayConfiguration().agentModelGateway(
-                properties, mock(LlmService.class), new ObjectMapper(), provider(null));
+                properties, mock(LlmService.class), new ObjectMapper(), provider(null), deepSeekProperties());
 
         assertInstanceOf(JsonAgentModelGateway.class, gateway);
     }
@@ -42,7 +43,7 @@ class AgentModelGatewayConfigurationTests {
         properties.setMockMode(true);
 
         AgentModelGateway gateway = new AgentModelGatewayConfiguration().agentModelGateway(
-                properties, mock(LlmService.class), new ObjectMapper(), provider(null));
+                properties, mock(LlmService.class), new ObjectMapper(), provider(null), deepSeekProperties());
 
         assertInstanceOf(JsonAgentModelGateway.class, gateway);
     }
@@ -52,5 +53,13 @@ class AgentModelGatewayConfigurationTests {
         ObjectProvider<NativeChatModelClient> provider = mock(ObjectProvider.class);
         when(provider.getIfAvailable()).thenReturn(client);
         return provider;
+    }
+
+    private DeepSeekChatProperties deepSeekProperties() {
+        DeepSeekChatProperties properties = new DeepSeekChatProperties();
+        properties.setModel("deepseek-chat");
+        properties.setTemperature(0.2);
+        properties.setMaxTokens(4096);
+        return properties;
     }
 }

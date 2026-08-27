@@ -55,8 +55,10 @@ public class LocalApprovalService implements ApprovalService {
 
     @Override
     public ApprovalDecision decide(String approvalId, boolean approved, String reviewer, String reason) {
+        // 按 approvalId 找审批记录
         ApprovalRecord current = find(approvalId)
                 .orElseThrow(() -> new IllegalArgumentException("approval request not found: " + approvalId));
+        // 计算目标状态
         ApprovalStatus targetStatus = approved ? ApprovalStatus.APPROVED : ApprovalStatus.REJECTED;
         if (current.status() != ApprovalStatus.REQUESTED) {
             if (current.status() == targetStatus) {
@@ -86,14 +88,17 @@ public class LocalApprovalService implements ApprovalService {
                 current.expiresAt(),
                 decidedAt
         );
+        // 并发安全落库（关键）
         if (!approvalStore.decideIfRequestedAndNotExpired(current.approvalId(), decided, decidedAt)) {
             ApprovalRecord winner = find(current.approvalId())
                     .orElseThrow(() -> new IllegalStateException(
                             "approval disappeared during decision: " + current.approvalId()
                     ));
+            // 幂等，状态已经是目标状态 → 直接返回已有决策，不重复处理
             if (winner.status() == targetStatus) {
                 return toDecision(winner);
             }
+            // 冲突
             throw new IllegalArgumentException(
                     "approval already decided as " + winner.status() + ": " + current.approvalId()
             );

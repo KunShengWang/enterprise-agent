@@ -80,6 +80,7 @@ public class DefaultToolPermissionPolicy implements ToolPermissionPolicy {
         if (toolDefinition.riskLevel() == ToolRiskLevel.HIGH) {
             return ask("high risk capability requires approval: " + toolName);
         }
+        // 系统文件操作
         if (isFilesystemWrite(toolDefinition, request)) {
             return ask("filesystem mutation requires approval: " + toolName);
         }

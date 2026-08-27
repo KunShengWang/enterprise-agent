@@ -470,6 +470,7 @@ public class JdbcRoutingStore implements RoutingStore {
                                                  RoutingAttempt attempt,
                                                  RouterModelResult modelResult,
                                                  RouteValidationResult validation) {
+        // 参数校验
         requirePrincipal(principal);
         if (attempt == null || modelResult == null || validation == null) {
             throw new IllegalArgumentException("attempt, modelResult and validation are required");
@@ -1289,6 +1290,10 @@ public class JdbcRoutingStore implements RoutingStore {
         return DriverManager.getConnection(properties.getDatasource().getUrl(),
                 properties.getDatasource().getUsername(), properties.getDatasource().getPassword());
     }
+
+    /**
+     * 参数校验
+     */
     private void requirePrincipal(AuthenticatedPrincipal principal) {
         if (principal == null) throw new IllegalArgumentException("authenticated principal is required");
     }

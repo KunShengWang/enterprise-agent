@@ -13,6 +13,7 @@ import org.springframework.ai.chat.metadata.ChatResponseMetadata;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.deepseek.DeepSeekAssistantMessage;
 import org.springframework.ai.deepseek.DeepSeekChatOptions;
 import org.springframework.ai.tool.ToolCallback;
 import tools.jackson.databind.ObjectMapper;
@@ -39,11 +40,14 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
 
     private final NativeChatModelClient nativeClient;
     private final ObjectMapper objectMapper;
+    private final DeepSeekChatOptions configuredOptions;
 
     public NativeToolCallingAgentModelGateway(NativeChatModelClient nativeClient,
-                                              ObjectMapper objectMapper) {
+                                              ObjectMapper objectMapper,
+                                              DeepSeekChatOptions configuredOptions) {
         this.nativeClient = nativeClient;
         this.objectMapper = objectMapper;
+        this.configuredOptions = configuredOptions;
     }
 
     @Override
@@ -56,19 +60,25 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
     @Override
     public AgentModelTurn nextTurn(AgentModelRequest request, AgentModelDeltaListener deltaListener) {
         AgentModelDeltaListener listener = deltaListener == null ? NOOP_LISTENER : deltaListener;
+        // 把请求中的工具都注册进双向映射表 ProviderToolNames
         ProviderToolNames toolNames = ProviderToolNames.from(request);
         NativeStreamAccumulator accumulator = new NativeStreamAccumulator(request, toolNames, listener);
-        nativeClient.streamNative(toPrompt(request, toolNames))
-                .doOnNext(accumulator::accept)
-                .blockLast();
-        return accumulator.complete();
+        nativeClient.streamNative(toPrompt(request, toolNames))// 发起流式请求，返回 Reactor 的 Flux<ChatResponse>——模型的输出不是一次性返回，而是以多个 chunk（ChatResponse） 分片到达（SSE 流）。
+                .doOnNext(accumulator::accept)// 逐块累加，每个到达的 chunk 交给 NativeStreamAccumulator.accept() 处理——把碎片攒起来。
+                .blockLast();// 阻塞等待流结束
+        return accumulator.complete();// 组装完整结果，把累积的文本、工具调用、token 用量、结束原因组装成 AgentModelTurn 返回。
     }
 
+    /**
+     * 把消息和工具转为框架需要的 Prompt 形式
+     */
     private Prompt toPrompt(AgentModelRequest request, ProviderToolNames toolNames) {
+        // 把消息转为 spring ai 需要的消息
         List<Message> messages = toSpringMessages(request, toolNames);
         if (request.tools().isEmpty()) {
             return new Prompt(messages);
         }
+        // 把内部工具定义转成 Spring AI 需要的 ToolCallback，告诉模型"有哪些工具可用"，但工具的真正执行由 Runtime 负责，绝不交给 Spring AI 框架。
         List<ToolCallback> callbacks = request.tools().stream()
                 .map(tool -> new SchemaOnlyToolCallback(tool, toolNames.providerName(tool.name())))
                 .map(ToolCallback.class::cast)
@@ -76,14 +86,15 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
         // DeepSeekChatModel 2.0.0 会在 createRequest() 中把 Prompt options 强制转换为
         // DeepSeekChatOptions。若使用通用 DefaultToolCallingChatOptions，请求会在真正发送 HTTP
         // 之前因 ClassCastException 失败，Runtime 最终只能看到 MODEL_CALL_FAILED。
-        DeepSeekChatOptions options = DeepSeekChatOptions.builder()
-                .toolCallbacks(callbacks)
-                .build();
+        DeepSeekChatOptions.Builder optionsBuilder = configuredOptions.mutate();
+        optionsBuilder.toolCallbacks(callbacks);
+        DeepSeekChatOptions options = optionsBuilder.build();
         return new Prompt(messages, options);
     }
 
     private List<Message> toSpringMessages(AgentModelRequest request, ProviderToolNames toolNames) {
         List<Message> messages = new ArrayList<>();
+        Map<String, String> providerToolCallIdsByRuntime = new LinkedHashMap<>();
         String systemPrompt = nativeSystemPrompt(request);
         if (!systemPrompt.isBlank()) {
             messages.add(new SystemMessage(systemPrompt));
@@ -110,8 +121,10 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
                     messages.add(new UserMessage(contextSummaryContent(message)));
                     index++;
                 }
-                case ASSISTANT_TOOL_CALL -> index = appendAssistantToolCalls(source, index, messages, toolNames);
-                case TOOL_RESULT -> index = appendToolResponses(source, index, messages, toolNames);
+                case ASSISTANT_TOOL_CALL -> index = appendAssistantToolCalls(
+                        source, index, messages, toolNames, providerToolCallIdsByRuntime);
+                case TOOL_RESULT -> index = appendToolResponses(
+                        source, index, messages, toolNames, providerToolCallIdsByRuntime);
             }
         }
         return List.copyOf(messages);
@@ -120,36 +133,48 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
     private int appendAssistantToolCalls(List<AgentMessage> source,
                                          int start,
                                          List<Message> target,
-                                         ProviderToolNames toolNames) {
+                                         ProviderToolNames toolNames,
+                                         Map<String, String> providerToolCallIdsByRuntime) {
         List<AssistantMessage.ToolCall> toolCalls = new ArrayList<>();
+        String reasoningContent = "";
         int index = start;
         while (index < source.size() && source.get(index).type() == AgentMessageType.ASSISTANT_TOOL_CALL) {
             AgentMessage message = source.get(index);
+            String providerToolCallId = providerToolCallId(message);
+            providerToolCallIdsByRuntime.put(message.toolCallId(), providerToolCallId);
             toolCalls.add(new AssistantMessage.ToolCall(
-                    message.toolCallId(),
+                    providerToolCallId,
                     "function",
                     toolNames.providerName(message.toolName()),
                     toJson(message.arguments())
             ));
+            if (reasoningContent.isBlank()) {
+                reasoningContent = stringValue(message.metadata().get(AgentProviderMetadata.REASONING_CONTENT));
+            }
             index++;
         }
-        target.add(AssistantMessage.builder()
-                .content("")
-                .toolCalls(List.copyOf(toolCalls))
-                .build());
+        DeepSeekAssistantMessage.Builder builder = DeepSeekAssistantMessage.builder();
+        builder.content("");
+        if (!reasoningContent.isBlank()) {
+            builder.reasoningContent(reasoningContent);
+        }
+        builder.toolCalls(List.copyOf(toolCalls));
+        target.add(builder.build());
         return index;
     }
 
     private int appendToolResponses(List<AgentMessage> source,
                                     int start,
                                     List<Message> target,
-                                    ProviderToolNames toolNames) {
+                                    ProviderToolNames toolNames,
+                                    Map<String, String> providerToolCallIdsByRuntime) {
         List<ToolResponseMessage.ToolResponse> responses = new ArrayList<>();
         int index = start;
         while (index < source.size() && source.get(index).type() == AgentMessageType.TOOL_RESULT) {
             AgentMessage message = source.get(index);
             responses.add(new ToolResponseMessage.ToolResponse(
-                    message.toolCallId(),
+                    providerToolCallIdsByRuntime.getOrDefault(
+                            message.toolCallId(), message.toolCallId()),
                     toolNames.providerName(message.toolName()),
                     toolResultJson(message)
             ));
@@ -159,6 +184,11 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
                 .responses(List.copyOf(responses))
                 .build());
         return index;
+    }
+
+    private String providerToolCallId(AgentMessage message) {
+        String providerId = stringValue(message.metadata().get(AgentProviderMetadata.MODEL_TOOL_CALL_ID)).trim();
+        return providerId.isBlank() ? message.toolCallId() : providerId;
     }
 
     private String nativeSystemPrompt(AgentModelRequest request) {
@@ -205,6 +235,7 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
         }
         AssistantMessage output = response.getResult().getOutput();
         String assistantText = output.getText() == null ? "" : output.getText();
+        String reasoningContent = reasoningContent(output);
         List<AgentToolCall> toolCalls = toAgentToolCalls(output.getToolCalls(), toolNames);
         validateTurn(request, assistantText, toolCalls);
         return new AgentModelTurn(
@@ -212,8 +243,17 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
                 toolCalls,
                 rawResponse(assistantText, toolCalls),
                 usage(response),
-                normalizedFinishReason(finishReason, request.tools().isEmpty(), toolCalls)
+                normalizedFinishReason(finishReason, request.tools().isEmpty(), toolCalls),
+                reasoningContent
         );
+    }
+
+    private String reasoningContent(AssistantMessage output) {
+        if (output instanceof DeepSeekAssistantMessage deepSeekAssistantMessage) {
+            String reasoning = deepSeekAssistantMessage.getReasoningContent();
+            return reasoning == null ? "" : reasoning;
+        }
+        return "";
     }
 
     private List<AgentToolCall> toAgentToolCalls(List<AssistantMessage.ToolCall> nativeCalls,
@@ -366,6 +406,7 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
         private final ProviderToolNames toolNames;
         private final AgentModelDeltaListener listener;
         private final StringBuilder assistantText = new StringBuilder();
+        private final StringBuilder reasoningContent = new StringBuilder();
         private final LinkedHashMap<String, MutableToolCall> calls = new LinkedHashMap<>();
         private final List<String> callKeysByIndex = new ArrayList<>();
         private LlmUsage latestUsage = new LlmUsage(0, 0, 0, 0, 0, "", "spring-ai-no-usage");
@@ -382,10 +423,12 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
 
         private void accept(ChatResponse response) {
             responseCount++;
+            // 只采纳带真实用量的 chunk，没有的全部标记为 0
             LlmUsage chunkUsage = usage(response);
             if (chunkUsage.totalTokens() > 0 || latestUsage.totalTokens() == 0) {
                 latestUsage = chunkUsage;
             }
+            // chunk 结束原因
             String chunkFinishReason = finishReason(response);
             if (!"unknown".equalsIgnoreCase(chunkFinishReason)) {
                 latestFinishReason = chunkFinishReason;
@@ -393,24 +436,37 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
             if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
                 return;
             }
+            // LLM 输出结果
             AssistantMessage output = response.getResult().getOutput();
+            String reasoning = reasoningContent(output);
+            if (!reasoning.isEmpty()) {
+                reasoningContent.append(reasoning);
+            }
             String text = output.getText();
             if (text != null && !text.isEmpty()) {
                 assistantText.append(text);
+                // 没有工具时，模型的文本增量就是面向用户的最终回答，应该实时推送，在前端显示打字机的效果；有工具时则不是
                 if (request.tools().isEmpty()) {
                     listener.onDelta(text);
                 }
             }
+            // 把流式工具调用碎片拼成完整的工具调用
             mergeCalls(output.getToolCalls());
         }
 
+        /**
+         * 把流式工具调用碎片拼成完整的工具调用
+         */
         private void mergeCalls(List<AssistantMessage.ToolCall> fragments) {
             if (fragments == null) return;
             for (int index = 0; index < fragments.size(); index++) {
                 AssistantMessage.ToolCall fragment = fragments.get(index);
                 if (fragment == null) continue;
+                // 确定"碎片属于哪个工具调用"
                 String key = callKey(fragment, index);
+                // 归并，同一个 key 的第一个碎片创建 MutableToolCall，后续碎片复用同一个对象累积。
                 MutableToolCall call = calls.computeIfAbsent(key, ignored -> new MutableToolCall());
+                // 增量拼接
                 call.merge(fragment);
             }
         }
@@ -420,40 +476,48 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
             while (callKeysByIndex.size() <= index) callKeysByIndex.add("");
             String existing = callKeysByIndex.get(index);
             if (!providerId.isBlank()) {
+                // 处理 index 漂移：同一个 id 之前在别的 index 出现过 → 迁移 pending
                 if (!existing.isBlank() && !existing.equals(providerId) && calls.containsKey(existing)) {
                     MutableToolCall pending = calls.remove(existing);
-                    calls.put(providerId, pending);
+                    calls.put(providerId, pending);// 把旧 key 的内容迁到新 id 下
                 }
                 callKeysByIndex.set(index, providerId);
-                return providerId;
+                return providerId;// 有 id → 用 id 做 key
             }
-            if (!existing.isBlank()) return existing;
-            String generated = "stream-call-" + index;
+            if (!existing.isBlank()) return existing;// 无 id 但之前见过 → 沿用
+            String generated = "stream-call-" + index;// 兜底 key
             callKeysByIndex.set(index, generated);
             return generated;
         }
 
         private AgentModelTurn complete() {
+            // 空响应检查（fail-fast）
             if (responseCount == 0) {
                 throw protocolFailure("Provider 没有返回任何响应分片", null);
             }
+            // 截断检查（fail-fast），判断 finishReason 是否为长度截断
             if (truncated(latestFinishReason)) {
                 throw truncatedFailure();
             }
+            // 组装工具调用，把累加的 MutableToolCall（流式碎片拼好的）转成 AgentToolCall，用 toolNames 把 provider 别名还原成内部真名。
             List<AgentToolCall> toolCalls = calls.entrySet().stream()
                     .map(entry -> entry.getValue().toAgentToolCall(entry.getKey(), toolNames))
                     .toList();
             String text = assistantText.toString();
+            // // 校验文本/工具调用合法性
             validateTurn(request, text, toolCalls);
-            if (toolCalls.isEmpty() && !request.tools().isEmpty() && !text.isBlank()) {
-                listener.onDelta(text);
+            if (toolCalls.isEmpty()// ① 这一轮模型没有调用任何工具
+                    && !request.tools().isEmpty()// ② 但请求里给了工具（模型本可以调）
+                    && !text.isBlank()) {// ③ 模型输出了非空文本
+                listener.onDelta(text);// 把完整文本推给前端
             }
             return new AgentModelTurn(
                     text,
                     toolCalls,
                     rawResponse(text, toolCalls),
                     latestUsage,
-                    normalizedFinishReason(latestFinishReason, request.tools().isEmpty(), toolCalls)
+                    normalizedFinishReason(latestFinishReason, request.tools().isEmpty(), toolCalls),
+                    reasoningContent.toString()
             );
         }
     }
@@ -497,19 +561,20 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
 
         private SchemaOnlyToolCallback(ToolDefinition source, String providerName) {
             this.definition = org.springframework.ai.tool.definition.ToolDefinition.builder()
-                    .name(providerName)
-                    .description(source.description())
-                    .inputSchema(source.inputSchema())
+                    .name(providerName)// 工具名（provider 别名）
+                    .description(source.description())// 描述
+                    .inputSchema(source.inputSchema())// 参数 Schema
                     .build();
         }
 
         @Override
         public org.springframework.ai.tool.definition.ToolDefinition getToolDefinition() {
-            return definition;
+            return definition;// 给模型看：只有定义（名字/描述/参数结构）
         }
 
         @Override
         public String call(String toolInput) {
+            // 禁止执行！
             throw new IllegalStateException(
                     "Provider tool callbacks are schema-only; DefaultAgentRuntime must execute the capability"
             );
@@ -531,6 +596,9 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
             this.runtimeByProvider = Map.copyOf(runtimeByProvider);
         }
 
+        /**
+         * 把这次请求涉及的所有工具名都注册进映射表——不仅当前可用的工具，还有历史消息里出现过的工具名（因为模型需要理解之前的 tool_call 引用）。返回一个不可变的 ProviderToolNames（双向映射）。
+         */
         private static ProviderToolNames from(AgentModelRequest request) {
             LinkedHashMap<String, String> providerByRuntime = new LinkedHashMap<>();
             LinkedHashMap<String, String> runtimeByProvider = new LinkedHashMap<>();
@@ -545,19 +613,30 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
             return new ProviderToolNames(providerByRuntime, runtimeByProvider);
         }
 
+        /**
+         * 工具名注册进双向映射表
+         * 某些模型提供商（如 OpenAI 兼容 API）要求函数名（function name）只能包含字母、数字、下划线、连字符（[A-Za-z0-9_-]），否则请求直接报错。但 MCP 工具名可能带点号（如 server.tool.name），需要变成 mcp_server_tool_a1b2c3d（别名）
+         */
         private static void register(String runtimeName,
                                      Map<String, String> providerByRuntime,
                                      Map<String, String> runtimeByProvider) {
+            // 工具名为空 || 已注册过直接跳过（幂等）
             if (runtimeName == null || runtimeName.isBlank() || providerByRuntime.containsKey(runtimeName)) return;
+
+            // 名称对 provider 安全 → 用原名；不安全（含点号等）→ 生成别名
             String providerName = providerSafe(runtimeName)
                     ? runtimeName
                     : alias(runtimeName);
+
+            // 防碰撞：别名已被别的工具占用 → 强制用带哈希的别名
             String existing = runtimeByProvider.get(providerName);
             if (existing != null && !existing.equals(runtimeName)) {
                 providerName = alias(runtimeName);
             }
-            providerByRuntime.put(runtimeName, providerName);
-            runtimeByProvider.put(providerName, runtimeName);
+
+            // 双向映射落表
+            providerByRuntime.put(runtimeName, providerName);// mcp.server.tool -> mcp_server_tool_a1b2c3d
+            runtimeByProvider.put(providerName, runtimeName);// mcp_server_tool_a1b2c3d -> mcp.server.tool
         }
 
         private String providerName(String runtimeName) {

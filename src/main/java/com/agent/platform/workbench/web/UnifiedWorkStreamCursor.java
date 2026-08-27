@@ -1,5 +1,9 @@
 package com.agent.platform.workbench.web;
 
+/**
+ * workSequence:      WorkItem 自身事件（WorkEvent）消费到的序号
+ * primaryRunSequence: 关联 Agent Run 的模型事件（MODEL_DELTA）消费到的序号
+ */
 public record UnifiedWorkStreamCursor(long workSequence, long primaryRunSequence) {
 
     public String encode() {

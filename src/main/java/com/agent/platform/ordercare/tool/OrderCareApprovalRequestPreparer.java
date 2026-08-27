@@ -28,6 +28,7 @@ public class OrderCareApprovalRequestPreparer implements ApprovalToolCallRequest
 
     @Override
     public boolean supports(String toolName) {
+        // floworder_recovery_execute 工具
         return OrderCareToolCatalog.RECOVERY_EXECUTE.equals(toolName);
     }
 
@@ -39,6 +40,7 @@ public class OrderCareApprovalRequestPreparer implements ApprovalToolCallRequest
         String proposalId = stringArgument(request.arguments(), "proposalId");
         // 检查这个 proposalId 是不是当前这次 Agent 运行自己创建的
         OrderCareProposalBinding binding = bindingStore.requireForRun(proposalId, context.runId());
+        // 调用 floworder 服务端接口获取真实数据
         OrderCareRecoveryProposal current = flowOrderClient.getProposal(proposalId, request.requestId());
         ensureSameImmutablePreview(binding.immutablePreview(), current);
         if (!"ACTIVE".equals(current.proposalStatus()) || !Boolean.TRUE.equals(current.canExecute())) {

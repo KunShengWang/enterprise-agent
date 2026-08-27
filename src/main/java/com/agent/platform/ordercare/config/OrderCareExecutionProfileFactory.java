@@ -47,7 +47,7 @@ public class OrderCareExecutionProfileFactory {
                         OrderCareToolCatalog.RECOVERY_PREVIEW,
                         OrderCareToolCatalog.RECOVERY_EXECUTE
                 ),
-                new AgentRunLimits(10, 8, 6, 16_000, 3_000, 0.30, 60_000),
+                new AgentRunLimits(10, 8, 6, 16_000, 3_000, 0.30, 36000_000),
                 false
         );
     }

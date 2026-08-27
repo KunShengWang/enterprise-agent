@@ -27,6 +27,7 @@ public class IncidentRecoveryPlanExecutionAdapter implements ExecutionAdapter {
     public DispatchResult dispatch(DispatchRequest request) {
         Optional<DispatchResult> existing = reconcile(request);
         if (existing.isPresent()) return existing.get();
+
         String incidentId = String.valueOf(request.validatedInput().typedPayload().getOrDefault("incidentId", "")).trim();
         if (incidentId.isBlank()) throw new IllegalArgumentException("validated incidentId is required");
         var started = launcher.start(

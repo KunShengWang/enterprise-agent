@@ -12,7 +12,7 @@ import java.util.ArrayList;
 @Component
 public class WorkbenchRoutingEvalSuite {
 
-    public static final String VERSION = "workbench-routing-m3-d-v2";
+    public static final String VERSION = "workbench-routing-m3-d-v3";
     private static final String FOCUS = "work-focus-001";
 
     public List<WorkbenchRoutingEvalCase> cases() {
@@ -49,6 +49,8 @@ public class WorkbenchRoutingEvalSuite {
                         RouteDisposition.AUTO_DISPATCH, false, "ordercare"),
                 route("route-ordercare-recovery", "请诊断 requestId=ORDERCARE-M05-REQUEST，如可安全恢复则创建预演并申请审批", ExecutionTargetId.ORDERCARE_CASE,
                         RouteDisposition.AUTO_DISPATCH, false, "ordercare"),
+                route("route-ordercare-complete-recovery", "请处理一个唯一的 OrderCare 单案例。案例标识：requestId=ORDERCARE-M05-REQUEST。请先查询订单、库存扣减和死信事实，并检索 OrderCare SOP；满足安全恢复条件时创建恢复预演并申请人工审批，审批后执行恢复并验证最终收敛。", ExecutionTargetId.ORDERCARE_CASE,
+                        RouteDisposition.AUTO_DISPATCH, false, "ordercare-boundary"),
                 route("route-ordercare-missing", "帮我看看这个异常订单为什么没释放库存", ExecutionTargetId.ORDERCARE_CASE,
                         RouteDisposition.REQUIRE_CLARIFICATION, true, "ambiguous"),
 

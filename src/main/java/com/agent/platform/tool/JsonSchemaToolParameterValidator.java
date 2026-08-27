@@ -24,11 +24,14 @@ public class JsonSchemaToolParameterValidator implements ToolParameterValidator 
             return ToolValidationResult.invalid("tool call request is missing");
         }
         try {
+            // 解析工具的 JSON Schema
             JsonNode schema = objectMapper.readTree(definition.inputSchema());
+            // 必填参数校验
             ToolValidationResult requiredResult = validateRequired(schema, request.arguments());
             if (!requiredResult.valid()) {
                 return requiredResult;
             }
+            // 工具参数校验
             return validateProperties(schema, request.arguments());
         }
         catch (Exception exception) {
@@ -36,7 +39,11 @@ public class JsonSchemaToolParameterValidator implements ToolParameterValidator 
         }
     }
 
+    /**
+     * 工具必填参数校验
+     */
     private ToolValidationResult validateRequired(JsonNode schema, Map<String, Object> arguments) {
+        // Schema 声明的必填字段
         JsonNode required = schema.path("required");
         if (!required.isArray()) {
             return ToolValidationResult.ok();
@@ -51,25 +58,33 @@ public class JsonSchemaToolParameterValidator implements ToolParameterValidator 
         return ToolValidationResult.ok();
     }
 
+    /**
+     * 工具参数校验
+     */
     private ToolValidationResult validateProperties(JsonNode schema, Map<String, Object> arguments) {
         JsonNode properties = schema.path("properties");
+        // Schema 没声明 properties → 跳过
         if (!properties.isObject()) {
             return ToolValidationResult.ok();
         }
+        // 遍历模型实际传的参数
         for (Map.Entry<String, Object> entry : arguments.entrySet()) {
+            // 在 Schema 里找该字段定义
             JsonNode property = properties.path(entry.getKey());
             if (property.isMissingNode()) {
-                continue;
+                continue;// Schema 没声明 → 不校验（放行）
             }
+            // 类型校验
             ToolValidationResult typeResult = validateType(
                     entry.getKey(), property.path("type").stringValue(""), entry.getValue()
             );
             if (!typeResult.valid()) {
-                return typeResult;
+                return typeResult;// 类型不对 → 失败
             }
+            // 枚举校验
             ToolValidationResult enumResult = validateEnum(entry.getKey(), property.path("enum"), entry.getValue());
             if (!enumResult.valid()) {
-                return enumResult;
+                return enumResult;// 不在枚举里 → 失败
             }
         }
         return ToolValidationResult.ok();

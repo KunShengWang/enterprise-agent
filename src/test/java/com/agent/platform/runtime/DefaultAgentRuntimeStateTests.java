@@ -18,6 +18,7 @@ import com.agent.platform.tool.ToolCallResult;
 import com.agent.platform.tool.ToolDefinition;
 import com.agent.platform.tool.ToolRiskLevel;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -41,6 +42,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -454,7 +456,8 @@ class DefaultAgentRuntimeStateTests {
                         List.of(
                                 new AgentToolCall("provider-1", order.name(), Map.of("objective", "orders"), "delegate"),
                                 new AgentToolCall("provider-2", inventory.name(), Map.of("objective", "inventory"), "delegate")),
-                        "", new LlmUsage(10, 5, 15, 0, 0, "test-model", "test"), "tool_calls");
+                        "", new LlmUsage(10, 5, 15, 0, 0, "test-model", "test"), "tool_calls",
+                        "delegate two specialists");
             }
             return finalTurn("joined");
         });
@@ -491,6 +494,20 @@ class DefaultAgentRuntimeStateTests {
         assertEquals(2, maxActive.get());
         assertEquals(2, fixture.persisted.get().toolResults().size());
         assertEquals(2, fixture.persisted.get().budgetSnapshot().toolCalls());
+        ArgumentCaptor<List<AgentMessageDraft>> draftsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(fixture.timelineStore, atLeastOnce()).appendMessages(
+                anyString(), anyString(), anyString(), draftsCaptor.capture());
+        List<AgentMessageDraft> toolCallDrafts = draftsCaptor.getAllValues().stream()
+                .flatMap(List::stream)
+                .filter(draft -> draft.type() == AgentMessageType.ASSISTANT_TOOL_CALL)
+                .toList();
+        assertEquals(2, toolCallDrafts.size());
+        assertEquals(Set.of("provider-1", "provider-2"), toolCallDrafts.stream()
+                .map(draft -> String.valueOf(draft.metadata().get(
+                        AgentProviderMetadata.MODEL_TOOL_CALL_ID)))
+                .collect(java.util.stream.Collectors.toSet()));
+        assertTrue(toolCallDrafts.stream().allMatch(draft -> "delegate two specialists".equals(
+                draft.metadata().get(AgentProviderMetadata.REASONING_CONTENT))));
     }
 
     private static ToolDefinition subAgentDefinition(String name) {

@@ -2,31 +2,3 @@
 2、agent_message：记录消息的信息，主要是消息所属的窗口、消息序号、消息类型、内容
 3、agent_runtime_event：记录事件的信息，主要是事件所属的窗口、事件序号、事件类型、内容
 4、agent_run_state：记录一次 agent 运行的状态，记录是正常停止还是因为什么原因停止
-
-
-单 Agent 执行流程：
-1、准备执行配置
-2、创建 AgentRunBudget agent 的运行预算。AgentRunBudget 负责限制一次 Run 的资源消耗，如：模型调用轮数、工具调用次数、Token 数量、成本、执行时间、重试次数。
-    预算会在多个关键节点检查：
-        开始执行前
-        → 每轮 Loop 前
-        → 调用模型前
-        → 执行工具前
-        → 重试前
-        → 调用完成后结算实际消耗
-3、获取 session 租约，保证同一个 session(窗口) 同一时间内只有一个 runId 在窗口内运行，防止消息污染
-3、创建 AgentRunRecord，用于记录 agent 的权威运行快照，主要记录：runId、conversationId、sessionId、Run 状态、当前执行阶段、当前待执行工具、Approval ID、已完成的工具结果、已使用工具、是否使用 RAG、Guardrail 状态、Resume 次数、预算快照、错误信息、版本号和更新时间
-    AgentRunState 表示整个 Run 的生命周期和控制状态；AgentRunPhase 表示 Run 当前位于哪个可恢复执行阶段，即中断恢复时从这个阶段恢复。
-4、往前端推送 agent 执行事件：agent run started
-5、输入护栏检查，过滤敏感词汇，必要时替换成安全问题
-6、将通过输入护栏后的用户消息写入 Conversation Timeline，并根据配置读取或更新长期记忆、用户画像等上下文来源
-7、执行 loop:
-    7.1、session 租约续约
-    7.2、查看是否有 agent 的取消请求，有取消请求的话需要更新数据库中 agent 的执行状态为 PAUSED，并往前端推送事件：agent run paused at durable checkpoint
-    7.3、checkpoint() 更新数据库 agent 的执行阶段 ，保证中断后从数据库存储的阶段继续执行
-    7.4、准备上下文，必要时对上下文进行压缩。往前端推送事件：context projected
-    7.5、在真正调用 LLM 之前在检查下时候有 agent 的请求取消消息
-    7.6、调用 LLM，采用流式返回的方式，但是流式返回也需要对 LLM 输出的消息进行输出护栏，检索敏感消息
-    7.7、LLM 调用完成之后，统计 token、花销；并checkpoint() 更新数据库 agent 的执行阶段、往前端推送事件：model turn completed
-    7.8、根据 LLM 输出的结果判断是结束 Loop 还是执行工具调用。执行工具调用需要把结果和 LLM 要执行的工具存储到数据库，使之上下文加载时加载到
-    7.9、回到 7.1 重复执行，直到 LLM 数据最终答案。

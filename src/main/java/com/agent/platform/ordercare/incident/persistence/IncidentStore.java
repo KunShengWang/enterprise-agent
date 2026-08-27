@@ -13,6 +13,9 @@ public interface IncidentStore {
 
     IncidentRecord create(IncidentRecord incident);
 
+    /**
+     * 幂等创建事件
+     */
     IncidentRecord createForDispatch(String dispatchRequestId, IncidentRecord incident);
 
     Optional<IncidentRecord> findByDispatchRequestId(String dispatchRequestId);

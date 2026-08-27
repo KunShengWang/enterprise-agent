@@ -2,6 +2,7 @@ package com.agent.platform.workbench.eval;
 
 import com.agent.platform.workbench.application.CommandClassificationRequest;
 import com.agent.platform.workbench.application.CommandClassifierResult;
+import com.agent.platform.workbench.application.ExecutionTargetCandidateResolver;
 import com.agent.platform.workbench.application.RoutePolicyValidator;
 import com.agent.platform.workbench.application.RouteValidationContext;
 import com.agent.platform.workbench.application.RouterModelResult;
@@ -39,15 +40,18 @@ public class WorkbenchRoutingEvalRunner {
     private final UnifiedTaskRouter taskRouter;
     private final ExecutionTargetRegistry targetRegistry;
     private final RoutePolicyValidator routePolicyValidator;
+    private final ExecutionTargetCandidateResolver candidateResolver;
 
     public WorkbenchRoutingEvalRunner(WorkCommandClassifier commandClassifier,
                                       UnifiedTaskRouter taskRouter,
                                       ExecutionTargetRegistry targetRegistry,
-                                      RoutePolicyValidator routePolicyValidator) {
+                                      RoutePolicyValidator routePolicyValidator,
+                                      ExecutionTargetCandidateResolver candidateResolver) {
         this.commandClassifier = commandClassifier;
         this.taskRouter = taskRouter;
         this.targetRegistry = targetRegistry;
         this.routePolicyValidator = routePolicyValidator;
+        this.candidateResolver = candidateResolver;
     }
 
     public WorkbenchRoutingEvalReport run(AuthenticatedPrincipal principal,
@@ -99,11 +103,26 @@ public class WorkbenchRoutingEvalRunner {
             AgentWorkItem workItem = work(principal, evalCase, index);
             String trustedSummary = evalCase.trustedIdentifiers().isEmpty()
                     ? "" : "server-resolved trusted identifiers=" + evalCase.trustedIdentifiers();
-            RouterModelResult model = taskRouter.route(new RoutingModelRequest(
-                    workItem, evalCase.input(), targetRegistry.enabledTargets(principal), trustedSummary));
-            RouteValidationResult validation = routePolicyValidator.validate(
-                    model.decision(), new RouteValidationContext(
-                            principal, workItem, evalCase.input(), evalCase.trustedIdentifiers(), Map.of()));
+            var candidates = candidateResolver.resolve(
+                    evalCase.input(), targetRegistry.enabledTargets(principal));
+            RouterModelResult model = candidates.deterministicResult().orElseGet(() ->
+                    taskRouter.route(new RoutingModelRequest(
+                            workItem, evalCase.input(), candidates.candidates(), trustedSummary)));
+            RouteValidationResult validation;
+            if (candidates.requiresClarification()) {
+                validation = new RouteValidationResult(RouteDisposition.REQUIRE_CLARIFICATION,
+                        null, List.of(candidates.clarificationReason()), "");
+            }
+            else if (!candidates.allows(model.decision().targetId())) {
+                validation = new RouteValidationResult(RouteDisposition.REJECT, null,
+                        List.of("model selected a target outside the server candidate set"),
+                        "TARGET_OUTSIDE_CANDIDATE_SET");
+            }
+            else {
+                validation = routePolicyValidator.validate(
+                        model.decision(), new RouteValidationContext(
+                                principal, workItem, evalCase.input(), evalCase.trustedIdentifiers(), Map.of()));
+            }
             String actualTarget = model.decision().targetId();
             boolean hiddenTarget = targetRegistry.findEnabled(principal, actualTarget).isEmpty();
             boolean sourceViolation = validation.validatedInput() != null

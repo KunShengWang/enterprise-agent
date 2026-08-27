@@ -14,6 +14,7 @@ import org.springframework.ai.chat.metadata.ChatResponseMetadata;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.deepseek.DeepSeekAssistantMessage;
 import org.springframework.ai.deepseek.DeepSeekChatOptions;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import reactor.core.publisher.Flux;
@@ -61,6 +62,9 @@ class NativeToolCallingAgentModelGatewayTests {
         DeepSeekChatOptions options = assertInstanceOf(
                 DeepSeekChatOptions.class, promptCaptor.getValue().getOptions());
         assertEquals(1, options.getToolCallbacks().size());
+        assertEquals("deepseek-chat", options.getModel());
+        assertEquals(0.2, options.getTemperature());
+        assertEquals(4096, options.getMaxTokens());
         assertEquals("ticket_status",
                 options.getToolCallbacks().get(0).getToolDefinition().name());
         assertTrue(options.getToolCallbacks().get(0).getToolDefinition().inputSchema().contains("required"));
@@ -76,7 +80,9 @@ class NativeToolCallingAgentModelGatewayTests {
         NativeToolCallingAgentModelGateway gateway = gateway(client);
         AgentMessage toolCall = message(
                 1, AgentMessageType.ASSISTANT_TOOL_CALL, "", "runtime-call-1", "ticket_status",
-                Map.of("id", "T1"), Map.of("modelToolCallId", "provider-call-1"));
+                Map.of("id", "T1"), Map.of(
+                        "modelToolCallId", "provider-call-1",
+                        "providerReasoningContent", "need ticket status"));
         AgentMessage toolResult = message(
                 2, AgentMessageType.TOOL_RESULT, "status=OPEN", "runtime-call-1", "ticket_status",
                 Map.of(), Map.of("success", true, "error", ""));
@@ -93,15 +99,43 @@ class NativeToolCallingAgentModelGatewayTests {
                 .filter(AssistantMessage::hasToolCalls)
                 .findFirst()
                 .orElseThrow();
-        assertEquals("runtime-call-1", assistant.getToolCalls().get(0).id());
+        DeepSeekAssistantMessage deepSeekAssistant = assertInstanceOf(
+                DeepSeekAssistantMessage.class, assistant);
+        assertEquals("need ticket status", deepSeekAssistant.getReasoningContent());
+        assertEquals("provider-call-1", assistant.getToolCalls().get(0).id());
         ToolResponseMessage toolResponse = messages.stream()
                 .filter(ToolResponseMessage.class::isInstance)
                 .map(ToolResponseMessage.class::cast)
                 .findFirst()
                 .orElseThrow();
-        assertEquals("runtime-call-1", toolResponse.getResponses().get(0).id());
+        assertEquals("provider-call-1", toolResponse.getResponses().get(0).id());
         assertTrue(toolResponse.getResponses().get(0).responseData().contains("status=OPEN"));
         assertTrue(toolResponse.getResponses().get(0).responseData().contains("success"));
+    }
+
+    @Test
+    void capturesStreamingReasoningContentForDurableToolCallReplay() {
+        NativeChatModelClient client = mock(NativeChatModelClient.class);
+        AssistantMessage.ToolCall nativeCall = new AssistantMessage.ToolCall(
+                "provider-call-1", "function", "ticket_status", "{\"id\":\"T1\"}"
+        );
+        DeepSeekAssistantMessage.Builder firstBuilder = DeepSeekAssistantMessage.builder();
+        firstBuilder.content("");
+        firstBuilder.reasoningContent("need ");
+        DeepSeekAssistantMessage first = firstBuilder.build();
+        DeepSeekAssistantMessage.Builder secondBuilder = DeepSeekAssistantMessage.builder();
+        secondBuilder.content("");
+        secondBuilder.reasoningContent("ticket status");
+        secondBuilder.toolCalls(List.of(nativeCall));
+        DeepSeekAssistantMessage second = secondBuilder.build();
+        ChatResponse firstChunk = response(first, "unknown");
+        ChatResponse secondChunk = response(second, "tool_calls");
+        when(client.streamNative(any(Prompt.class))).thenReturn(Flux.just(firstChunk, secondChunk));
+
+        AgentModelTurn turn = gateway(client).nextTurn(requestWithTool(List.of()), ignored -> { });
+
+        assertEquals("need ticket status", turn.reasoningContent());
+        assertEquals("provider-call-1", turn.toolCalls().get(0).toolCallId());
     }
 
     @Test
@@ -205,7 +239,12 @@ class NativeToolCallingAgentModelGatewayTests {
     }
 
     private NativeToolCallingAgentModelGateway gateway(NativeChatModelClient client) {
-        return new NativeToolCallingAgentModelGateway(client, new ObjectMapper());
+        DeepSeekChatOptions configuredOptions = DeepSeekChatOptions.builder()
+                .model("deepseek-chat")
+                .temperature(0.2)
+                .maxTokens(4096)
+                .build();
+        return new NativeToolCallingAgentModelGateway(client, new ObjectMapper(), configuredOptions);
     }
 
     private AgentModelRequest requestWithoutTools() {

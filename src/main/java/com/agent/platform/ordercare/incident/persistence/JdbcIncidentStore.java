@@ -96,11 +96,16 @@ public class JdbcIncidentStore implements IncidentStore,
         }
     }
 
+    /**
+     * 幂等创建事件
+     */
     @Override
     public IncidentRecord createForDispatch(String dispatchRequestId, IncidentRecord incident) {
+        // 参数校验
         validateIncident(incident);
         requireText(dispatchRequestId, "dispatchRequestId");
         ensureSchema();
+        // 幂等
         Optional<IncidentRecord> existing = findByDispatchRequestId(dispatchRequestId);
         if (existing.isPresent()) return sameDispatchScope(existing.get(), incident);
         try (Connection connection = openConnection();
@@ -112,6 +117,7 @@ public class JdbcIncidentStore implements IncidentStore,
                          next_event_sequence, version, created_at, updated_at, dispatch_request_id
                      ) VALUES (?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?, ?)
                      """)) {
+            // 给 ? 设置参数
             bindIncident(statement, incident);
             statement.setString(16, dispatchRequestId.trim());
             statement.executeUpdate();
@@ -1477,18 +1483,27 @@ public class JdbcIncidentStore implements IncidentStore,
         statement.setTimestamp(15, Timestamp.from(incident.updatedAt()));
     }
 
+    /**
+     * 参数校验
+     */
     private void validateIncident(IncidentRecord incident) {
-        Objects.requireNonNull(incident, "incident");
-        requireText(incident.incidentId(), "incidentId");
-        requireText(incident.conversationId(), "conversationId");
-        requireText(incident.scenarioId(), "scenarioId");
-        Objects.requireNonNull(incident.status(), "status");
-        Objects.requireNonNull(incident.snapshot(), "snapshot");
+        // 非空检查，关键字段必须有值，缺失直接抛异常。
+        Objects.requireNonNull(incident, "incident");           // 对象本身
+        requireText(incident.incidentId(), "incidentId");       // ID
+        requireText(incident.conversationId(), "conversationId");  // 会话
+        requireText(incident.scenarioId(), "scenarioId");       // 场景
+        Objects.requireNonNull(incident.status(), "status");    // 状态
+        Objects.requireNonNull(incident.snapshot(), "snapshot");// 快照
+
+        // 一致性检查（快照与主记录对齐）
+        // 主记录和快照必须是同一个 Incident（ID 一致），快照必须有 snapshotId 和 scopeHash（不可变事实的指纹）——防止"记录是 A 的、快照是 B 的"这种错配。
         if (!incident.incidentId().equals(incident.snapshot().incidentId())) {
             throw new IllegalArgumentException("snapshot incidentId mismatch");
         }
         requireText(incident.snapshot().snapshotId(), "snapshotId");
         requireText(incident.snapshot().scopeHash(), "scopeHash");
+
+        // 范围合法性检查（预算/序号/版本）
         if (incident.nextEventSequence() < 1 || incident.version() < 0) {
             throw new IllegalArgumentException("incident sequence/version must be non-negative");
         }

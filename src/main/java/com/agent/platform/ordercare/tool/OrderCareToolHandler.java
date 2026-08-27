@@ -33,6 +33,7 @@ public class OrderCareToolHandler implements ToolHandler {
         try {
             String identifierType = stringArgument(request, "identifierType");
             String identifierValue = stringArgument(request, "identifierValue");
+            // 远程调用 floworder 服务的接口
             OrderCareCaseSnapshot snapshot = inspector.inspect(
                     identifierType,
                     identifierValue,

@@ -17,6 +17,15 @@ OrderCare Agent 负责识别案例、汇总证据、解释诊断和提出建议�
 - `UNSUPPORTED_EVENT`：未支持的消息类型或未来事件。不得类比成已知事件，转人工调查。
 - `NO_RECOVERY_EVIDENCE`：没有关联死信、业务键无法关联或没有满足条件的候选动作。继续调查 Outbox、消费日志或转人工。
 
-## M1 限制
+## 当前能力与受控恢复流程
 
-M1 只有 `floworder_case_inspect` 和 `knowledge_search` 两项只读能力。没有 preview、execute、任意 URL、任意 SQL、force、IGNORE、订单取消或 Outbox 强制重试能力。诊断报告必须引用工具事实；没有证据时明确说明未知。
+OrderCare Agent 当前只允许使用以下四项注册能力：
+
+1. `floworder_case_inspect`：根据一个明确的 `requestId`、`orderNo`、`deductNo` 或 `deadLetterId` 查询订单、扣减、库存和死信事实。
+2. `knowledge_search`：检索适用的 OrderCare SOP。知识文档只能解释流程，不能替代 FlowOrder 实时事实。
+3. `floworder_recovery_preview`：只有当 FlowOrder 返回 `diagnosisCode=REPLAY_CANDIDATE`、`recoveryEligible=true` 且 `hardRisks` 为空时，才能创建不可变恢复预演。
+4. `floworder_recovery_execute`：只能使用当前 Run 中预演返回的 `proposalId` 申请执行。该工具属于高风险工具，Runtime 必须暂停并等待人工审批，审批通过后才能执行。
+
+标准顺序为：案例事实查询 → SOP 检索与诊断 → 恢复预演 → 人工审批 → 有界执行 → `actionRequestId` 对账与最终收敛验证。
+
+系统没有任意 URL、任意 SQL、`force`、`IGNORE`、伪造审批、订单取消或 Outbox 强制重试能力。`SUBMITTED` 只表示动作已可靠提交；只有确定性收敛检查返回 `convergence.status=RESOLVED`，才能说明扣减记录、库存和死信已经真正收敛。结果无法证明时必须返回 `UNKNOWN` 或 `MANUAL_REVIEW`，不能重新生成 ID 盲目重试。
