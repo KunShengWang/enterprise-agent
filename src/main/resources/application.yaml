@@ -129,6 +129,9 @@ enterprise-agent:
       url: ${MEMORY_POSTGRES_URL:${RAG_POSTGRES_URL:jdbc:postgresql://localhost:5432/enterprise_agent}}
       username: ${MEMORY_POSTGRES_USERNAME:${RAG_POSTGRES_USERNAME:postgres}}
       password: ${MEMORY_POSTGRES_PASSWORD:${RAG_POSTGRES_PASSWORD:}}
+  procurement:
+    data-dir: ${PROCUREMENT_DATA_DIR:data/procurement/aws-synthetic}
+    scenario-dir: ${PROCUREMENT_SCENARIO_DIR:data/procurement/scenarios}
   storage:
     datasource:
       url: ${AGENT_STORAGE_POSTGRES_URL:${RAG_POSTGRES_URL:jdbc:postgresql://localhost:5432/enterprise_agent}}
@@ -299,6 +302,12 @@ enterprise-agent:
         max-tool-calls: 20
         max-duration-millis: 300000
         max-estimated-cost: 10
+      procurement-sourcing:
+        max-model-calls: 10
+        max-tokens: 48000
+        max-tool-calls: 8
+        max-duration-millis: 240000
+        max-estimated-cost: 12
 llm:
   http-log:
     enabled: ${LLM_HTTP_LOG_ENABLED:true}

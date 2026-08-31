@@ -79,7 +79,7 @@ class M1BRoutingUnitTests {
 
         var targets = registry.enabledTargets(principal());
 
-        assertEquals(4, targets.size());
+        assertEquals(5, targets.size());
         var general = registry.findEnabled(principal(), ExecutionTargetId.GENERAL_AGENT.name()).orElseThrow();
         assertEquals("general-safe-v1", general.executionProfileId());
         assertFalse(general.supportedIntents().stream().anyMatch(value -> value.contains("INCIDENT")));

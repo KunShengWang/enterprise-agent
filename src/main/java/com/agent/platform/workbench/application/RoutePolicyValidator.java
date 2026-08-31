@@ -1,6 +1,7 @@
 package com.agent.platform.workbench.application;
 
 import com.agent.platform.config.WorkbenchRoutingProperties;
+import com.agent.platform.procurement.application.ProcurementCaseService;
 import com.agent.platform.workbench.model.ExecutionDecision;
 import com.agent.platform.workbench.model.IdentifierSource;
 import com.agent.platform.workbench.model.RouteDisposition;
@@ -11,6 +12,7 @@ import com.agent.platform.workbench.target.ExecutionTargetDefinition;
 import com.agent.platform.workbench.target.ExecutionTargetId;
 import com.agent.platform.workbench.target.ExecutionTargetRegistry;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
@@ -34,13 +36,23 @@ public class RoutePolicyValidator {
     private final ExecutionTargetRegistry targetRegistry;
     private final WorkbenchRoutingProperties properties;
     private final ObjectMapper objectMapper;
+    private final ProcurementCaseService procurementCaseService;
+
+    @Autowired
+    public RoutePolicyValidator(ExecutionTargetRegistry targetRegistry,
+                                WorkbenchRoutingProperties properties,
+                                ObjectMapper objectMapper,
+                                ProcurementCaseService procurementCaseService) {
+        this.targetRegistry = targetRegistry;
+        this.properties = properties;
+        this.objectMapper = objectMapper;
+        this.procurementCaseService = procurementCaseService;
+    }
 
     public RoutePolicyValidator(ExecutionTargetRegistry targetRegistry,
                                 WorkbenchRoutingProperties properties,
                                 ObjectMapper objectMapper) {
-        this.targetRegistry = targetRegistry;
-        this.properties = properties;
-        this.objectMapper = objectMapper;
+        this(targetRegistry, properties, objectMapper, null);
     }
 
     public RouteValidationResult validate(ExecutionDecision decision, RouteValidationContext context) {
@@ -150,6 +162,10 @@ public class RoutePolicyValidator {
                 disposition = RouteDisposition.REQUIRE_CONFIRMATION;
                 reasons.add("recovery planning requires an accessible ASSESSED parent incident");
             }
+            case PROCUREMENT_SOURCING -> {
+                disposition = RouteDisposition.AUTO_DISPATCH;
+                reasons.add("复杂采购使用只读寻源与证据工具，推荐不产生采购副作用");
+            }
             default -> { return rejected("TARGET_DISABLED", "target is unsupported"); }
         }
         String digest = digest(targetId.name(), typed);
@@ -157,6 +173,14 @@ public class RoutePolicyValidator {
                 disposition,
                 new ValidatedExecutionInput(targetId.name(), identifiers, typed, digest),
                 List.copyOf(reasons), "");
+    }
+
+    /** 在路由编排已得到目标后捕获 CaseState，避免 validate 成为带写入副作用的纯校验函数。 */
+    public void captureProcurementCase(ExecutionDecision decision, RouteValidationContext context) {
+        if (procurementCaseService == null || decision == null || context == null
+                || !ExecutionTargetId.PROCUREMENT_SOURCING.name().equals(decision.targetId())) return;
+        procurementCaseService.upsert(context.principal().tenantId(), context.workItem().conversationId(),
+                context.principal().principalId(), context.originalGoal(), context.workItem().sourceInputId());
     }
 
     private RouteValidationResult clarified(String reason) {

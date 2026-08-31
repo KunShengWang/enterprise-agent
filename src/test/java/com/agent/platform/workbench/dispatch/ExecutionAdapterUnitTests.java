@@ -67,10 +67,10 @@ class ExecutionAdapterUnitTests {
     }
 
     @Test
-    void registryRejectsAnyCatalogOtherThanTheFourFrozenAdapters() {
+    void registryRejectsAnyCatalogOtherThanTheRegisteredAdapters() {
         List<ExecutionAdapter> all = new ArrayList<>();
         for (ExecutionTargetId id : ExecutionTargetId.values()) all.add(fake(id));
-        assertEquals(4, new ExecutionAdapterRegistry(all).size());
+        assertEquals(5, new ExecutionAdapterRegistry(all).size());
         assertThrows(IllegalStateException.class,
                 () -> new ExecutionAdapterRegistry(all.subList(0, 3)));
         assertThrows(IllegalStateException.class,

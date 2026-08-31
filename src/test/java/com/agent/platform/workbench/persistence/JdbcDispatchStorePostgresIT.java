@@ -301,7 +301,7 @@ class JdbcDispatchStorePostgresIT {
         @Override public ExecutionTargetId targetId(){return targetId;}
         @Override public DispatchResult dispatch(DispatchRequest request){dispatchCalls.incrementAndGet();String id=targets.computeIfAbsent(request.dispatchRequestId(),key->targetId.name().toLowerCase()+"-"+UUID.randomUUID());return new DispatchResult(request.dispatchRequestId(),linkType(),id,true);}
         @Override public Optional<DispatchResult> reconcile(DispatchRequest request){reconcileCalls.incrementAndGet();return Optional.ofNullable(targets.get(request.dispatchRequestId())).map(id->new DispatchResult(request.dispatchRequestId(),linkType(),id,false));}
-        private WorkLinkType linkType(){return switch(targetId){case GENERAL_AGENT,ORDERCARE_CASE->WorkLinkType.RUN;case INCIDENT_INVESTIGATION->WorkLinkType.INCIDENT;case INCIDENT_RECOVERY_PLAN->WorkLinkType.RECOVERY_PLAN;};}
+        private WorkLinkType linkType(){return switch(targetId){case GENERAL_AGENT,ORDERCARE_CASE,PROCUREMENT_SOURCING->WorkLinkType.RUN;case INCIDENT_INVESTIGATION->WorkLinkType.INCIDENT;case INCIDENT_RECOVERY_PLAN->WorkLinkType.RECOVERY_PLAN;};}
     }
 
     private static final class Fixture {

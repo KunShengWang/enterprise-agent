@@ -19,7 +19,7 @@ public class ExecutionAdapterRegistry {
             }
         }
         if (indexed.size() != ExecutionTargetId.values().length) {
-            throw new IllegalStateException("all four frozen ExecutionAdapters must be registered; found "
+            throw new IllegalStateException("all ExecutionAdapters must be registered; found "
                     + indexed.keySet());
         }
         this.adapters = Map.copyOf(indexed);

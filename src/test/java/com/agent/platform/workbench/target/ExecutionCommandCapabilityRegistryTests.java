@@ -10,7 +10,7 @@ class ExecutionCommandCapabilityRegistryTests {
     private final ExecutionCommandCapabilityRegistry registry = new ExecutionCommandCapabilityRegistry();
 
     @Test
-    void frozenMatrixExposesRuntimeCommandsOnlyForGeneralAndOrderCare() {
+    void commandMatrixExposesRuntimeControlsForRunBackedTargets() {
         for (ExecutionTargetId target : ExecutionTargetId.values()) {
             ExecutionCommandCapabilities capabilities = registry.require(target);
             assertEquals(ExecutionCommandSupport.PRODUCT_ONLY,
@@ -19,6 +19,7 @@ class ExecutionCommandCapabilityRegistryTests {
                     capabilities.support(WorkCommandType.ADD_INPUT_TO_ACTIVE_WORK));
             ExecutionCommandSupport expected = target == ExecutionTargetId.GENERAL_AGENT
                     || target == ExecutionTargetId.ORDERCARE_CASE
+                    || target == ExecutionTargetId.PROCUREMENT_SOURCING
                     ? ExecutionCommandSupport.SUPPORTED_EXISTING_RUNTIME
                     : ExecutionCommandSupport.UNSUPPORTED;
             assertEquals(expected, capabilities.support(WorkCommandType.PAUSE_ACTIVE_WORK));

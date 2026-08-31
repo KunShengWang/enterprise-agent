@@ -20,7 +20,7 @@ function stateTone(item: WorkItem) {
 
 function targetLabel(target: string) {
   return ({ GENERAL_AGENT: 'General', ORDERCARE_CASE: 'OrderCare', INCIDENT_INVESTIGATION: 'Incident',
-    INCIDENT_RECOVERY_PLAN: 'Planner' } as Record<string, string>)[target] ?? target ?? 'Routing'
+    INCIDENT_RECOVERY_PLAN: 'Planner', PROCUREMENT_SOURCING: 'Procurement Sourcing' } as Record<string, string>)[target] ?? target ?? 'Routing'
 }
 
 function relativeTime(value: string) {

@@ -20,6 +20,9 @@ public class PublicExecutionCatalog {
             "INCIDENT_RECOVERY_PLAN", new Definition("Recovery Planner", List.of(
                     "加载已确认的事故证据", "生成受控恢复建议",
                     "校验建议与证据引用", "等待人工处置决策"))
+            ,"PROCUREMENT_SOURCING", new Definition("Procurement Sourcing Agent", List.of(
+                    "理解采购约束并在信息不足时澄清", "查询供应商报价与采购证据",
+                    "由 Java 执行预算、排除和硬约束过滤", "生成带证据引用的供应商推荐"))
     );
 
     public Definition definition(String targetId) {

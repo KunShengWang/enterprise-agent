@@ -115,7 +115,7 @@ const stopAvailable = computed(() => {
 
 function targetLabel(target: string) {
   return ({ GENERAL_AGENT: 'General', ORDERCARE_CASE: 'OrderCare', INCIDENT_INVESTIGATION: 'Incident',
-    INCIDENT_RECOVERY_PLAN: 'Planner' } as Record<string, string>)[target] ?? target ?? 'Routing'
+    INCIDENT_RECOVERY_PLAN: 'Planner', PROCUREMENT_SOURCING: 'Procurement Sourcing' } as Record<string, string>)[target] ?? target ?? 'Routing'
 }
 
 function stopWorkItemResources() {
@@ -361,7 +361,7 @@ async function terminateWhenRunnable(workItemId: string) {
         await refresh()
         return
       }
-      const runtimeTarget = ['GENERAL_AGENT', 'ORDERCARE_CASE'].includes(work.activeExecutionTarget)
+      const runtimeTarget = ['GENERAL_AGENT', 'ORDERCARE_CASE', 'PROCUREMENT_SOURCING'].includes(work.activeExecutionTarget)
       const cancellableRuntime = Boolean(work.activeRunId)
         || (runtimeTarget && Boolean(work.dispatchRequestId) && work.executionState === 'STARTING')
       if (cancellableRuntime && ['STARTING', 'RUNNING', 'PAUSED', 'WAITING_APPROVAL'].includes(work.executionState)) {

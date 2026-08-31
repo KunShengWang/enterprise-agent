@@ -83,7 +83,7 @@ class ExecutionTargetCandidateResolverTests {
         var resolution = resolver.resolve("解释 Java CAS", targets);
 
         assertTrue(resolution.deterministicResult().isEmpty());
-        assertEquals(4, resolution.candidates().size());
+        assertEquals(5, resolution.candidates().size());
         assertEquals("AMBIGUOUS_MODEL_ROUTING", resolution.policyReason());
     }
 

@@ -36,6 +36,7 @@ abstract class AbstractAgentRunExecutionAdapter implements ExecutionAdapter {
         metadata.put("executionTarget", targetId().name());
         metadata.put("validatedInputDigest", request.validatedInput().inputDigest());
         metadata.put("validatedInput", request.validatedInput().typedPayload());
+        metadata.putAll(additionalMetadata(request));
         try {
             // 启动 Agent Run
             AgentResponse response = executor.execute(new AgentRequest(
@@ -46,6 +47,10 @@ abstract class AbstractAgentRunExecutionAdapter implements ExecutionAdapter {
         catch (RuntimeException exception) {
             return reconcile(request).orElseThrow(() -> exception);
         }
+    }
+
+    protected Map<String, Object> additionalMetadata(DispatchRequest request) {
+        return Map.of();
     }
 
     @Override

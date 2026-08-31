@@ -167,6 +167,9 @@ public class RoutingCoordinator {
             failureInjector.afterModelResult(attempt, modelResult);
             // 校验决策合法性（防止越权路由到事故调查等）
             RouteValidationResult validation;
+            RouteValidationContext validationContext = new RouteValidationContext(
+                    principal, claimedWork, claimedWork.originalGoal(),
+                    context.trustedIdentifiers(), context.serverResolvedIdentifiers());
             if (candidates.requiresClarification()) {
                 validation = new RouteValidationResult(
                         RouteDisposition.REQUIRE_CLARIFICATION,
@@ -181,11 +184,10 @@ public class RoutingCoordinator {
             else {
                 validation = incidentScopePreflight
                         .resolve(principal, claimedWork, modelResult.decision(), context)
-                        .orElseGet(() -> validator.validate(
-                                modelResult.decision(),
-                                new RouteValidationContext(
-                                        principal, claimedWork, claimedWork.originalGoal(),
-                                        context.trustedIdentifiers(), context.serverResolvedIdentifiers())));
+                        .orElseGet(() -> validator.validate(modelResult.decision(), validationContext));
+            }
+            if (validation.disposition() != RouteDisposition.REJECT) {
+                validator.captureProcurementCase(modelResult.decision(), validationContext);
             }
             // 落库路由决策
             completed = routingStore.completeRouting(principal, attempt, modelResult, validation);

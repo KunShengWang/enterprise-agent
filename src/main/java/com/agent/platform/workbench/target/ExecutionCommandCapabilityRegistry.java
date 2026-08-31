@@ -23,6 +23,8 @@ public class ExecutionCommandCapabilityRegistry {
                 Set.of("NO_INCIDENT_LEVEL_COMMAND_SERVICE", "DO_NOT_BROADCAST_INPUT_TO_SPECIALISTS")));
         values.put(ExecutionTargetId.INCIDENT_RECOVERY_PLAN, unsupportedCapabilities(
                 Set.of("NO_PLAN_LEVEL_COMMAND_SERVICE", "CONTINUE_UNKNOWN_RECONCILIATION")));
+        values.put(ExecutionTargetId.PROCUREMENT_SOURCING, runtimeCapabilities(
+                Set.of("READ_ONLY_RECOMMENDATION", "NO_RFQ_NO_PO_NO_PROCUREMENT_SIDE_EFFECT")));
         capabilities = Map.copyOf(values);
     }
 

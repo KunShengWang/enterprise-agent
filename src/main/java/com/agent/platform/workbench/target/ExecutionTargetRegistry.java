@@ -67,6 +67,12 @@ public class ExecutionTargetRegistry {
                 Set.of("incidentId"), TargetRiskLevel.HIGH, TargetCostClass.HIGH,
                 "ordercare-incident-recovery-v1",
                 incidentProperties.isEnabled() && incidentProperties.isRecoveryPlannerEnabled() && incidentRole));
+        definitions.put(ExecutionTargetId.PROCUREMENT_SOURCING, new ExecutionTargetDefinition(
+                ExecutionTargetId.PROCUREMENT_SOURCING,
+                "复杂或非标准采购需求的供应商寻源、证据调查与推荐",
+                Set.of("PROCUREMENT_REQUIREMENT_UNDERSTANDING", "SUPPLIER_SOURCING", "SUPPLIER_EVALUATION"),
+                Set.of("productDescription"), TargetRiskLevel.LOW, TargetCostClass.LOW,
+                "procurement-sourcing-readonly-v1", true));
         return Map.copyOf(definitions);
     }
 }
