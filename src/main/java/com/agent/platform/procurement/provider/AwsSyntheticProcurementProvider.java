@@ -19,7 +19,6 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
@@ -69,10 +68,11 @@ public class AwsSyntheticProcurementProvider implements ProcurementDataProvider 
         List<SupplierCandidate> safeCandidates = candidates == null ? List.of() : candidates;
         Optional<JsonNode> scenario = scenario(state);
         if (scenario.isPresent()) {
+            String scenarioId = text(scenario.get(), "scenarioId");
             int quantity = state.quantity() == null ? 1 : state.quantity();
             return nodes(scenario.get().path("offers")).stream()
                     .filter(node -> safeCandidates.stream().anyMatch(c -> c.supplierId().equals(text(node, "supplierId"))))
-                    .map(node -> offer(node, quantity, state.currency())).toList();
+                    .map(node -> offer(node, quantity, state.currency(), scenarioId)).toList();
         }
         // 03_items.json 只有目录基准价，不是供应商报价；没有 supplier-specific quote 时必须返回空。
         return List.of();
@@ -112,13 +112,13 @@ public class AwsSyntheticProcurementProvider implements ProcurementDataProvider 
         return new SupplierCandidate(id, name, node.has("supplierId") ? "scenario-fixture" : AWS_SOURCE + ":01_suppliers.json");
     }
 
-    private SupplierOffer offer(JsonNode node, int quantity, String defaultCurrency) {
+    private SupplierOffer offer(JsonNode node, int quantity, String defaultCurrency, String scenarioId) {
         String source = text(node, "source").isBlank() ? "scenario-fixture" : text(node, "source");
         String productId = text(node, "productId");
         return new SupplierOffer(text(node, "supplierId"), text(node, "productId"), text(node, "productName"),
                 decimal(node, "unitPrice"), text(node, "currency").isBlank() ? defaultCurrency : text(node, "currency"), quantity, null, node.path("leadTimeDays").asInt(0),
                 text(node, "warranty"), object(node.path("specifications")), source, Instant.now(),
-                productId, "scenario:complex_workstation_01", SCENARIO_AS_OF, "");
+                productId, "scenario:" + (scenarioId.isBlank() ? "unknown" : scenarioId), SCENARIO_AS_OF, "");
     }
 
     private SupplierEvidence evidence(SupplierOffer offer, String type, String fact) {
@@ -138,7 +138,9 @@ public class AwsSyntheticProcurementProvider implements ProcurementDataProvider 
     private Optional<JsonNode> scenario(ProcurementCaseState state) {
         String text = normalized(state.productCategory() + " " + state.productDescription());
         if (!text.contains("cuda") && !text.contains("workstation") && !text.contains("工作站")) return Optional.empty();
-        Path path = Path.of(properties.getScenarioDir(), "complex_workstation_01.json");
+        String fileName = properties.getScenarioFile();
+        if (fileName == null || fileName.isBlank()) return Optional.empty();
+        Path path = Path.of(properties.getScenarioDir(), fileName);
         return Files.exists(path) ? Optional.of(read(path)) : Optional.empty();
     }
 

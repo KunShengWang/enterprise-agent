@@ -29,7 +29,13 @@ public class ProcurementSourcingExecutionAdapter extends AbstractAgentRunExecuti
     protected Map<String, Object> additionalMetadata(DispatchRequest request) {
         ProcurementCase value = caseStore.findByTenantUserAndConversationId(request.principal().tenantId(),
                 request.principal().principalId(), request.conversationId()).orElse(null);
-        return value == null ? Map.of() : Map.of("procurementCaseId", value.caseId(),
+        if (value == null) {
+            return Map.of("tenantId", request.principal().tenantId(),
+                    "authenticatedRoles", request.principal().roles());
+        }
+        return Map.of("tenantId", request.principal().tenantId(),
+                "authenticatedRoles", request.principal().roles(),
+                "procurementCaseId", value.caseId(),
                 "procurementCaseVersion", value.version(),
                 "procurementCaseStateDigest", digest(value.state().toString()),
                 "procurementCaseState", value.state());

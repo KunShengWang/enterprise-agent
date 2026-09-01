@@ -24,6 +24,7 @@ import tools.jackson.databind.JsonNode;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,8 +45,12 @@ class ProcurementSourcingMvpTests {
         assertEquals("procurement-sourcing-readonly-v1", target.executionProfileId());
         assertEquals(com.agent.platform.workbench.target.TargetRiskLevel.LOW, target.riskLevel());
         var profile = new ProcurementSourcingExecutionProfileFactory().createProfile();
-        assertEquals(java.util.Set.of(ProcurementToolCatalog.SUPPLIER_SEARCH, ProcurementToolCatalog.SUPPLIER_EVIDENCE,
-                "knowledge_search"), profile.allowedCapabilities());
+        assertEquals(java.util.Set.of(ProcurementToolCatalog.CASE_PATCH, ProcurementToolCatalog.SUPPLIER_SEARCH,
+                ProcurementToolCatalog.SUPPLIER_EVIDENCE, ProcurementToolCatalog.RECOMMENDATION_FINALIZE),
+                profile.allowedCapabilities());
+        assertTrue(new ProcurementToolCatalog().definitions().stream()
+                .filter(definition -> definition.name().equals(ProcurementToolCatalog.CASE_PATCH))
+                .findFirst().orElseThrow().inputSchema().contains("fieldsToClear"));
         assertFalse(profile.longTermMemoryEnabled());
     }
 
@@ -79,21 +84,23 @@ class ProcurementSourcingMvpTests {
     }
 
     @Test
-    void awsProviderUsesCanonicalModelsAndJavaCalculatesRecommendation() throws Exception {
+    void awsProviderUsesCanonicalModelsAndJavaCalculatesEligibility() throws Exception {
         ProcurementCaseState state = new ProcurementCaseState("计算工作站", "CUDA 开发工作站", 50,
                 new BigDecimal("600000"), "CNY", 21, Map.of("gpuMemoryMinGb", "24"),
                 Map.of("deliveryPriority", "HIGH"), java.util.Set.of("Supplier A"), java.util.List.of(), "SOURCING");
         var candidates = provider.searchSuppliers(state);
         var offers = provider.getSupplierOffers(state, candidates);
         var evaluation = new ProcurementDecisionEngine().evaluate(state, candidates, offers);
-        assertEquals("Supplier B", evaluation.recommendation().recommendedSupplier().supplierName());
+        assertTrue(evaluation.candidates().stream().anyMatch(candidate -> candidate.eligible()
+                && candidate.candidate().supplierName().equals("Supplier B")));
         assertEquals(new BigDecimal("550000"), offers.stream().filter(o -> o.supplierId().equals("supplier-b")).findFirst().orElseThrow().totalPrice());
-        assertTrue(evaluation.recommendation().rejectedCandidates().stream().anyMatch(c -> c.supplier().supplierName().equals("Supplier A")));
-        assertTrue(evaluation.recommendation().rejectedCandidates().stream().anyMatch(c -> c.supplier().supplierName().equals("Supplier C")
-                && c.reasons().stream().anyMatch(reason -> reason.contains("HARD_CONSTRAINT_FAILED"))));
+        assertTrue(evaluation.candidates().stream().anyMatch(c -> c.candidate().supplierName().equals("Supplier A")
+                && !c.eligible() && c.failures().contains("EXCLUDED_SUPPLIER")));
+        assertTrue(evaluation.candidates().stream().anyMatch(c -> c.candidate().supplierName().equals("Supplier C")
+                && !c.eligible() && c.failures().stream().anyMatch(reason -> reason.contains("HARD_CONSTRAINT_FAILED"))));
         var evidenceIds = evaluation.evidence().stream().map(SupplierEvidence::evidenceId).collect(java.util.stream.Collectors.toSet());
-        assertTrue(evidenceIds.containsAll(evaluation.recommendation().evidenceRefs()));
-        assertEquals(1, evaluation.recommendation().evidenceRefs().size());
+        assertTrue(evaluation.candidates().stream().flatMap(candidate -> candidate.evidenceRefs().stream())
+                .allMatch(evidenceIds::contains));
 
         ProcurementToolHandler handler = new ProcurementToolHandler(provider, mapper);
         var result = handler.execute(new ToolCallRequest(ProcurementToolCatalog.SUPPLIER_SEARCH, "call-1", Map.of(
@@ -102,9 +109,29 @@ class ProcurementSourcingMvpTests {
                 "excludedSuppliers", java.util.List.of("Supplier A"))), ToolExecutionContext.empty());
         assertTrue(result.success(), result.errorMessage());
         JsonNode json = mapper.readTree(result.content());
-        assertEquals("Supplier B", json.path("recommendation").path("recommendedSupplier").path("supplierName").asText());
+        assertFalse(json.path("recommendationAvailable").asBoolean());
+        assertEquals("Supplier B", json.path("eligibleSuppliers").get(0).path("supplierName").asText());
         assertTrue(result.content().contains("totalPrice"));
         assertFalse(result.content().contains("supplier_name"));
+    }
+
+    @Test
+    void configuredScenarioCanExposeMultipleEligibleSuppliersWithoutJavaRecommendation() throws Exception {
+        dataProperties.setScenarioFile("complex_workstation_multi_eligible_01.json");
+        ProcurementCaseState state = new ProcurementCaseState("计算工作站", "CUDA 开发工作站", 50,
+                new BigDecimal("600000"), "CNY", 21, Map.of("gpuMemoryMinGb", "24"),
+                Map.of("deliveryPriority", "HIGH"), Set.of(), java.util.List.of(), "SOURCING");
+        var candidates = provider.searchSuppliers(state);
+        var evaluation = new ProcurementDecisionEngine().evaluate(state, candidates, provider.getSupplierOffers(state, candidates));
+
+        assertEquals(Set.of("supplier-b", "supplier-d"), evaluation.candidates().stream()
+                .filter(ProcurementDecisionEngine.CandidateResult::eligible)
+                .map(candidate -> candidate.candidate().supplierId()).collect(java.util.stream.Collectors.toSet()));
+        ProcurementToolHandler handler = new ProcurementToolHandler(provider, mapper);
+        var result = handler.execute(new ToolCallRequest(ProcurementToolCatalog.SUPPLIER_SEARCH, "multi-eligible", Map.of(
+                "productDescription", "CUDA 开发工作站", "quantity", 50, "budget", 600000)), ToolExecutionContext.empty());
+        assertTrue(result.success(), result.errorMessage());
+        assertFalse(mapper.readTree(result.content()).path("recommendationAvailable").asBoolean());
     }
 
     @Test
@@ -113,10 +140,9 @@ class ProcurementSourcingMvpTests {
                 new BigDecimal("400000"), "CNY", 21, Map.of("gpuMemoryMinGb", "64"),
                 Map.of(), java.util.Set.of(), java.util.List.of(), "SOURCING");
         var candidates = provider.searchSuppliers(state);
-        var recommendation = new ProcurementDecisionEngine().evaluate(state, candidates,
-                provider.getSupplierOffers(state, candidates)).recommendation();
-        assertTrue(recommendation.recommendedSupplier() == null);
-        assertTrue(recommendation.uncertainties().contains("没有可推荐供应商"));
+        var evaluation = new ProcurementDecisionEngine().evaluate(state, candidates,
+                provider.getSupplierOffers(state, candidates));
+        assertTrue(evaluation.candidates().stream().noneMatch(ProcurementDecisionEngine.CandidateResult::eligible));
     }
 
     @Test
@@ -178,7 +204,8 @@ class ProcurementSourcingMvpTests {
                         Map.of("procurementCaseState", trusted)));
         assertTrue(result.success(), result.errorMessage());
         JsonNode json = mapper.readTree(result.content());
-        assertTrue(json.path("recommendation").path("recommendedSupplier").isNull());
+        assertFalse(json.path("recommendationAvailable").asBoolean());
+        assertTrue(json.path("eligibleSuppliers").size() > 0);
         for (JsonNode evaluation : json.path("evaluations")) {
             assertFalse(evaluation.path("failures").toString().contains("gpuMemoryMinGb"));
         }
@@ -195,8 +222,8 @@ class ProcurementSourcingMvpTests {
                 new ToolExecutionContext("run", "session", "buyer", "tenant", java.util.Set.of("USER"),
                         Map.of("procurementCaseState", trusted)));
         assertTrue(result.success(), result.errorMessage());
-        assertEquals("Supplier B", mapper.readTree(result.content()).path("recommendation")
-                .path("recommendedSupplier").path("supplierName").asText());
+        assertEquals("Supplier B", mapper.readTree(result.content()).path("eligibleSuppliers").get(0)
+                .path("supplierName").asText());
     }
 
     @Test
@@ -206,7 +233,7 @@ class ProcurementSourcingMvpTests {
                 java.util.Set.of(), java.util.List.of(), "SOURCING");
         var result = new ProcurementDecisionEngine().evaluate(state, provider.searchSuppliers(state),
                 provider.getSupplierOffers(state, provider.searchSuppliers(state)));
-        assertTrue(result.recommendation().recommendedSupplier() == null);
+        assertTrue(result.candidates().stream().noneMatch(ProcurementDecisionEngine.CandidateResult::eligible));
         assertTrue(result.candidates().stream().allMatch(c -> c.failures().stream()
                 .anyMatch(reason -> reason.contains("UNSUPPORTED_HARD_CONSTRAINT:iso9001"))));
     }
@@ -238,7 +265,7 @@ class ProcurementSourcingMvpTests {
                 java.util.List.of(), "SOURCING");
         var evaluation = new ProcurementDecisionEngine().evaluate(state, provider.searchSuppliers(state),
                 provider.getSupplierOffers(state, provider.searchSuppliers(state)));
-        assertTrue(evaluation.recommendation().recommendedSupplier() == null);
+        assertTrue(evaluation.candidates().stream().noneMatch(ProcurementDecisionEngine.CandidateResult::eligible));
         assertTrue(evaluation.candidates().stream().allMatch(candidate -> candidate.failures().stream()
                 .anyMatch(reason -> reason.equals("CURRENCY_MISMATCH"))));
     }

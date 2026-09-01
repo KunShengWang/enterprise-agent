@@ -1,6 +1,7 @@
 package com.agent.platform.procurement.application;
 
 import com.agent.platform.procurement.model.ProcurementCaseState;
+import com.agent.platform.procurement.model.ProcurementCasePatch;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -25,7 +26,16 @@ public class ProcurementCaseParser {
     private static final Pattern EXCLUDED = Pattern.compile("(?:不要|排除|不选)(?:供应商)?\\s*((?:Supplier\\s+)?[A-Za-z][A-Za-z0-9_-]{0,30})(?=[，。,;；]|$)", Pattern.CASE_INSENSITIVE);
 
     public ProcurementCaseState merge(ProcurementCaseState current, String message) {
-        ProcurementCaseState base = current == null ? ProcurementCaseState.empty() : current;
+        ProcurementCasePatch patch = toPatch(message);
+        return patch.hasChanges() ? new ProcurementCasePatchMerger().merge(current, patch)
+                : (current == null ? ProcurementCaseState.empty() : current);
+    }
+
+    /**
+     * 仅用于 deterministic fast-path 或离线 fixture，把简单可识别文本转换成 Agent 同形态 Patch。
+     * Workbench 生产路由不会调用它；复杂语义必须由模型提出 Patch。
+     */
+    public ProcurementCasePatch toPatch(String message) {
         String text = message == null ? "" : message.trim();
         Integer quantity = number(text, QUANTITY, 1);
         BigDecimal budget = budget(text);
@@ -34,31 +44,22 @@ public class ProcurementCaseParser {
             Integer weeks = number(text, WEEKS, 1);
             if (weeks != null) deliveryDays = weeks * 7;
         }
-        Map<String, String> hard = new LinkedHashMap<>(base.hardConstraints());
+        Map<String, String> hard = new LinkedHashMap<>();
         Matcher gpu = GPU.matcher(text);
         if (gpu.find()) hard.put("gpuMemoryMinGb", gpu.group(1));
-        Set<String> excluded = new LinkedHashSet<>(base.excludedSuppliers());
+        Set<String> excluded = new LinkedHashSet<>();
         Matcher excludedMatcher = EXCLUDED.matcher(text);
         while (excludedMatcher.find()) excluded.add(excludedMatcher.group(1).trim());
-        Map<String, String> preferences = new LinkedHashMap<>(base.preferences());
+        Map<String, String> preferences = new LinkedHashMap<>();
         String lower = text.toLowerCase(Locale.ROOT);
         if (lower.contains("交期") || lower.contains("到货") || lower.contains("延期")) preferences.put("deliveryPriority", "HIGH");
         if (lower.contains("稍微贵") || lower.contains("价格不是第一") || lower.contains("可以贵")) preferences.put("pricePriority", "MEDIUM");
-        String description = base.productDescription();
-        if (description.isBlank() && (lower.contains("采购") || lower.contains("需要"))) description = text;
-        String category = base.productCategory();
+        String description = (lower.contains("采购") || lower.contains("需要")) && !text.isBlank() ? text : null;
+        String category = null;
         if (lower.contains("工作站") || lower.contains("workstation")) category = "计算工作站";
-        else if (category.isBlank() && lower.contains("办公")) category = "办公用品";
-        Integer mergedQuantity = quantity == null ? base.quantity() : quantity;
-        BigDecimal mergedBudget = budget == null ? base.budget() : budget;
-        Integer mergedDelivery = deliveryDays == null ? base.requiredDeliveryDays() : deliveryDays;
-        List<String> missing = new ArrayList<>();
-        if (description.isBlank()) missing.add("productDescription");
-        if (mergedQuantity == null) missing.add("quantity");
-        if (mergedBudget == null) missing.add("budget");
-        String phase = missing.isEmpty() ? "SOURCING" : "REQUIREMENT_UNDERSTANDING";
-        return new ProcurementCaseState(category, description, mergedQuantity, mergedBudget, currency(text, base.currency()),
-                mergedDelivery, hard, preferences, excluded, missing, phase);
+        else if (lower.contains("办公")) category = "办公用品";
+        return new ProcurementCasePatch(category, description, quantity, budget, currency(text), deliveryDays,
+                hard, Set.of(), preferences, Set.of(), excluded, Set.of());
     }
 
     private BigDecimal budget(String text) {
@@ -88,7 +89,7 @@ public class ProcurementCaseParser {
         };
     }
 
-    private String currency(String text, String fallback) {
-        return text.contains("$") || text.toLowerCase(Locale.ROOT).contains("usd") ? "USD" : fallback;
+    private String currency(String text) {
+        return text.contains("$") || text.toLowerCase(Locale.ROOT).contains("usd") ? "USD" : null;
     }
 }

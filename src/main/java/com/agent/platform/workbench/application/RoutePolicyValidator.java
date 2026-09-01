@@ -175,12 +175,12 @@ public class RoutePolicyValidator {
                 List.copyOf(reasons), "");
     }
 
-    /** 在路由编排已得到目标后捕获 CaseState，避免 validate 成为带写入副作用的纯校验函数。 */
-    public void captureProcurementCase(ExecutionDecision decision, RouteValidationContext context) {
+    /** 路由只确保同一会话有一个空 Case，不替 Agent 解析或写入采购需求。 */
+    public void ensureProcurementCase(ExecutionDecision decision, RouteValidationContext context) {
         if (procurementCaseService == null || decision == null || context == null
                 || !ExecutionTargetId.PROCUREMENT_SOURCING.name().equals(decision.targetId())) return;
-        procurementCaseService.upsert(context.principal().tenantId(), context.workItem().conversationId(),
-                context.principal().principalId(), context.originalGoal(), context.workItem().sourceInputId());
+        procurementCaseService.ensureCase(context.principal().tenantId(), context.workItem().conversationId(),
+                context.principal().principalId());
     }
 
     private RouteValidationResult clarified(String reason) {

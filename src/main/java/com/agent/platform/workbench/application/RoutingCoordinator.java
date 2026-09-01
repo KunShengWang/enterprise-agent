@@ -187,7 +187,7 @@ public class RoutingCoordinator {
                         .orElseGet(() -> validator.validate(modelResult.decision(), validationContext));
             }
             if (validation.disposition() != RouteDisposition.REJECT) {
-                validator.captureProcurementCase(modelResult.decision(), validationContext);
+                validator.ensureProcurementCase(modelResult.decision(), validationContext);
             }
             // 落库路由决策
             completed = routingStore.completeRouting(principal, attempt, modelResult, validation);

@@ -132,6 +132,7 @@ enterprise-agent:
   procurement:
     data-dir: ${PROCUREMENT_DATA_DIR:data/procurement/aws-synthetic}
     scenario-dir: ${PROCUREMENT_SCENARIO_DIR:data/procurement/scenarios}
+    scenario-file: ${PROCUREMENT_SCENARIO_FILE:complex_workstation_01.json}
   storage:
     datasource:
       url: ${AGENT_STORAGE_POSTGRES_URL:${RAG_POSTGRES_URL:jdbc:postgresql://localhost:5432/enterprise_agent}}
