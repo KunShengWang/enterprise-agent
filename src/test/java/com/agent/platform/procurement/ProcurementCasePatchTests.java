@@ -132,6 +132,28 @@ class ProcurementCasePatchTests {
     }
 
     @Test
+    void replayingAnOlderPatchCannotRollBackAMoreRecentUpdate() {
+        MemoryCaseStore store = new MemoryCaseStore();
+        ProcurementCaseService service = new ProcurementCaseService(store, merger);
+        ProcurementCasePatch initial = new ProcurementCasePatch(
+                "计算工作站", "CUDA 开发工作站", 50, new BigDecimal("600000"), "CNY", 21,
+                Map.of("gpuMemoryMinGb", "24"), Set.of(), Map.of(), Set.of(), Set.of("Supplier A"), Set.of(), Set.of());
+        ProcurementCasePatch update = new ProcurementCasePatch(
+                null, null, 80, null, null, null,
+                Map.of(), Set.of(), Map.of(), Set.of(), Set.of(), Set.of(), Set.of());
+
+        service.applyPatch("tenant", "conversation", "buyer", initial, "input-a");
+        ProcurementCase updated = service.applyPatch("tenant", "conversation", "buyer", update, "input-b");
+        ProcurementCase replay = service.applyPatch("tenant", "conversation", "buyer", initial, "input-a");
+
+        assertEquals(80, updated.state().quantity());
+        assertEquals(80, replay.state().quantity());
+        assertEquals(2, replay.version());
+        assertEquals("input-b", replay.lastAppliedInputId());
+        assertEquals(Set.of("input-a", "input-b"), replay.appliedInputIds());
+    }
+
+    @Test
     void patchRequiresRuntimeInputIdAndRejectsBlankId() {
         MemoryCaseStore store = new MemoryCaseStore();
         ProcurementCaseService service = new ProcurementCaseService(store, merger);
