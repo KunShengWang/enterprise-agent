@@ -21,8 +21,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,25 +46,16 @@ public class ProcurementToolHandler implements ContextualToolHandler {
                                   ObjectMapper objectMapper,
                                   ProcurementCaseStore caseStore,
                                   ProcurementCaseService caseService,
-                                  ProcurementRecommendationFinalizer finalizer) {
+                                  ProcurementRecommendationFinalizer finalizer,
+                                  ProcurementCasePatchMerger patchMerger,
+                                  ProcurementDecisionEngine decisionEngine) {
         this.provider = provider;
         this.objectMapper = objectMapper;
         this.caseStore = caseStore;
         this.caseService = caseService;
         this.finalizer = finalizer;
-        this.patchMerger = new ProcurementCasePatchMerger();
-        this.decisionEngine = new ProcurementDecisionEngine();
-    }
-
-    /** 保留离线 fixture 的旧构造方式；生产 Spring Bean 使用带 Case Store 的构造器。 */
-    public ProcurementToolHandler(ProcurementDataProvider provider, ObjectMapper objectMapper) {
-        this.provider = provider;
-        this.objectMapper = objectMapper;
-        this.caseStore = null;
-        this.caseService = null;
-        this.finalizer = null;
-        this.patchMerger = new ProcurementCasePatchMerger();
-        this.decisionEngine = new ProcurementDecisionEngine();
+        this.patchMerger = patchMerger;
+        this.decisionEngine = decisionEngine;
     }
 
     @Override
@@ -103,7 +92,6 @@ public class ProcurementToolHandler implements ContextualToolHandler {
     }
 
     private ToolCallResult patch(ToolCallRequest request, ToolExecutionContext context, Map<String, Object> arguments) {
-        if (caseService == null) return failure(request, "procurement Case service is not configured");
         ToolExecutionContext trusted = requireIdentity(context);
         ProcurementCasePatch patch = objectMapper.convertValue(arguments, ProcurementCasePatch.class);
         patchMerger.validate(patch);
@@ -122,7 +110,7 @@ public class ProcurementToolHandler implements ContextualToolHandler {
 
     private ToolCallResult search(ToolCallRequest request, ToolExecutionContext context, Map<String, Object> arguments) {
         ProcurementCase current = currentCase(context);
-        ProcurementCaseState state = current == null ? legacyState(arguments, context) : current.state();
+        ProcurementCaseState state = current.state();
         if (!state.missingFields().isEmpty()) {
             throw new IllegalArgumentException("procurement CaseState is incomplete; clarification is required");
         }
@@ -137,7 +125,10 @@ public class ProcurementToolHandler implements ContextualToolHandler {
         result.put("eligibleSuppliers", evaluation.candidates().stream().filter(
                 ProcurementDecisionEngine.CandidateResult::eligible)
                 .map(ProcurementDecisionEngine.CandidateResult::candidate).toList());
-        result.put("evidence", evaluation.evidence());
+        Map<String, SupplierEvidence> evidenceById = new LinkedHashMap<>();
+        candidates.forEach(candidate -> provider.getSupplierEvidence(candidate.supplierId(), state)
+                .forEach(evidence -> evidenceById.putIfAbsent(evidence.evidenceId(), evidence)));
+        result.put("evidence", List.copyOf(evidenceById.values()));
         result.put("recommendationAvailable", false);
         result.put("source", "provider-canonical-model");
         return success(request, result);
@@ -145,7 +136,7 @@ public class ProcurementToolHandler implements ContextualToolHandler {
 
     private ToolCallResult evidence(ToolCallRequest request, ToolExecutionContext context, Map<String, Object> arguments) {
         ProcurementCase current = currentCase(context);
-        ProcurementCaseState state = current == null ? legacyState(arguments, context) : current.state();
+        ProcurementCaseState state = current.state();
         if (!state.missingFields().isEmpty()) {
             throw new IllegalArgumentException("procurement CaseState is incomplete; clarification is required");
         }
@@ -160,7 +151,6 @@ public class ProcurementToolHandler implements ContextualToolHandler {
     private ToolCallResult finalizeRecommendation(ToolCallRequest request,
                                                    ToolExecutionContext context,
                                                    Map<String, Object> arguments) {
-        if (finalizer == null) return failure(request, "procurement recommendation finalizer is not configured");
         ToolExecutionContext trusted = requireIdentity(context);
         ProcurementRecommendationDraft draft = objectMapper.convertValue(arguments, ProcurementRecommendationDraft.class);
         ProcurementRecommendationFinalizer.Finalization result = finalizer.finalize(
@@ -174,7 +164,6 @@ public class ProcurementToolHandler implements ContextualToolHandler {
     }
 
     private ProcurementCase currentCase(ToolExecutionContext context) {
-        if (caseStore == null) return null;
         ToolExecutionContext trusted = requireIdentity(context);
         return caseStore.findByTenantUserAndConversationId(trusted.tenantId(), trusted.userId(), trusted.sessionId())
                 .orElseThrow(() -> new IllegalArgumentException("procurement Case not found"));
@@ -191,12 +180,8 @@ public class ProcurementToolHandler implements ContextualToolHandler {
         if (args == null) throw new IllegalArgumentException("arguments are required");
         Set<String> allowed = switch (tool) {
             case ProcurementToolCatalog.CASE_PATCH -> PATCH_ARGUMENTS;
-            case ProcurementToolCatalog.SUPPLIER_SEARCH -> caseStore == null
-                    ? Set.of("productDescription", "productCategory", "quantity", "budget", "currency", "requiredDeliveryDays", "hardConstraints", "preferences", "excludedSuppliers")
-                    : Set.of();
-            case ProcurementToolCatalog.SUPPLIER_EVIDENCE -> caseStore == null
-                    ? Set.of("supplierId", "productDescription", "productCategory", "quantity", "hardConstraints")
-                    : Set.of("supplierId");
+            case ProcurementToolCatalog.SUPPLIER_SEARCH -> Set.of();
+            case ProcurementToolCatalog.SUPPLIER_EVIDENCE -> Set.of("supplierId");
             case ProcurementToolCatalog.RECOMMENDATION_FINALIZE -> Set.of("evaluatedCaseVersion", "selectedSupplierId", "evidenceRefs", "reasons", "tradeoffs", "risks", "uncertainties", "confidence");
             default -> Set.of();
         };
@@ -217,37 +202,15 @@ public class ProcurementToolHandler implements ContextualToolHandler {
         if (integer(args, "evaluatedCaseVersion") < 0) throw new IllegalArgumentException("evaluatedCaseVersion must not be negative");
         if (string(args, "selectedSupplierId").isBlank()) throw new IllegalArgumentException("selectedSupplierId is required");
         if (stringList(args.get("evidenceRefs")).isEmpty()) throw new IllegalArgumentException("evidenceRefs must not be empty");
+        if (stringList(args.get("reasons")).isEmpty()) throw new IllegalArgumentException("reasons must not be empty");
         double confidence = number(args.get("confidence"));
         if (Double.isNaN(confidence) || confidence < 0 || confidence > 1) throw new IllegalArgumentException("confidence must be between 0 and 1");
         for (String field : List.of("reasons", "tradeoffs", "risks", "uncertainties")) stringList(args.get(field));
     }
 
-    private ProcurementCaseState legacyState(Map<String, Object> args, ToolExecutionContext context) {
-        Object existing = context == null ? null : context.attributes().get("procurementCaseState");
-        if (existing instanceof ProcurementCaseState state) return state;
-        if (existing instanceof Map<?, ?> map) return objectMapper.convertValue(map, ProcurementCaseState.class);
-        String description = string(args, "productDescription");
-        Integer quantity = integerOrNull(args, "quantity");
-        BigDecimal budget = decimalOrNull(args, "budget");
-        Map<String, String> hard = stringMap(args.get("hardConstraints"));
-        Map<String, String> preferences = stringMap(args.get("preferences"));
-        Set<String> excluded = stringSet(args.get("excludedSuppliers"));
-        return new ProcurementCaseState(string(args, "productCategory"), description, quantity, budget,
-                blankOr(string(args, "currency"), "CNY"), integerOrNull(args, "requiredDeliveryDays"), hard,
-                preferences, excluded, missing(description, quantity, budget), "SOURCING");
-    }
-
-    private List<String> missing(String description, Integer quantity, BigDecimal budget) {
-        List<String> result = new ArrayList<>();
-        if (description == null || description.isBlank()) result.add("productDescription");
-        if (quantity == null) result.add("quantity");
-        if (budget == null) result.add("budget");
-        return List.copyOf(result);
-    }
-
     private ToolCallResult success(ToolCallRequest request, Object value) {
         return new ToolCallResult(request.toolName(), true, write(value), "",
-                Map.of("provider", "procurement", "readOnly", true));
+                metadata(request.toolName()));
     }
 
     private ToolCallResult withMetadata(ToolCallResult result, Map<String, Object> extra) {
@@ -259,7 +222,12 @@ public class ProcurementToolHandler implements ContextualToolHandler {
     private ToolCallResult failure(ToolCallRequest request, String message) {
         return new ToolCallResult(request == null ? "" : request.toolName(), false, "",
                 message == null ? "invalid procurement request" : message,
-                Map.of("provider", "procurement", "readOnly", true));
+                metadata(request == null ? "" : request.toolName()));
+    }
+
+    private Map<String, Object> metadata(String toolName) {
+        boolean mutatesCase = ProcurementToolCatalog.CASE_PATCH.equals(toolName);
+        return Map.of("provider", "procurement", "readOnly", !mutatesCase, "sideEffect", mutatesCase);
     }
 
     private String write(Object value) {
@@ -279,27 +247,10 @@ public class ProcurementToolHandler implements ContextualToolHandler {
         catch (RuntimeException exception) { throw new IllegalArgumentException(key + " must be an integer"); }
     }
 
-    private Integer integerOrNull(Map<String, Object> args, String key) { return args == null || !args.containsKey(key) ? null : integer(args, key); }
-    private BigDecimal decimalOrNull(Map<String, Object> args, String key) {
-        if (args == null || !args.containsKey(key) || args.get(key) == null) return null;
-        try { return new BigDecimal(String.valueOf(args.get(key))); }
-        catch (NumberFormatException exception) { throw new IllegalArgumentException(key + " must be a number"); }
-    }
     private double number(Object value) {
         if (value instanceof Number number) return number.doubleValue();
         try { return Double.parseDouble(String.valueOf(value)); }
         catch (RuntimeException exception) { throw new IllegalArgumentException("number argument is invalid"); }
-    }
-    private String blankOr(String value, String fallback) { return value.isBlank() ? fallback : value; }
-    private Map<String, String> stringMap(Object value) {
-        if (!(value instanceof Map<?, ?> map)) return Map.of();
-        Map<String, String> result = new LinkedHashMap<>();
-        map.forEach((key, item) -> result.put(String.valueOf(key), String.valueOf(item)));
-        return Map.copyOf(result);
-    }
-    private Set<String> stringSet(Object value) {
-        if (!(value instanceof List<?> list)) return Set.of();
-        return list.stream().map(String::valueOf).map(String::trim).filter(valueItem -> !valueItem.isBlank()).collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
     private List<String> stringList(Object value) {
         if (!(value instanceof List<?> list)) throw new IllegalArgumentException("argument must be an array");

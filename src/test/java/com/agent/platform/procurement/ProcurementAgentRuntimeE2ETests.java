@@ -12,7 +12,8 @@ import com.agent.platform.llm.ConfiguredLlmCostCalculator;
 import com.agent.platform.llm.LlmUsage;
 import com.agent.platform.mcp.McpToolGateway;
 import com.agent.platform.memory.MemoryService;
-import com.agent.platform.procurement.application.ProcurementCaseParser;
+import com.agent.platform.procurement.application.ProcurementCasePatchMerger;
+import com.agent.platform.procurement.application.ProcurementDecisionEngine;
 import com.agent.platform.procurement.application.ProcurementCaseService;
 import com.agent.platform.procurement.config.ProcurementDataProperties;
 import com.agent.platform.procurement.config.ProcurementSourcingExecutionProfileFactory;
@@ -98,11 +99,13 @@ class ProcurementAgentRuntimeE2ETests {
     void modelToolResultAndReplanCompleteRecommendationLoop() {
         MemoryCaseStore caseStore = new MemoryCaseStore();
         ProcurementDataProperties dataProperties = new ProcurementDataProperties();
-        dataProperties.setScenarioFile("complex_workstation_multi_eligible_01.json");
         ProcurementDataProvider provider = new AwsSyntheticProcurementProvider(mapper, dataProperties);
-        ProcurementCaseService caseService = new ProcurementCaseService(caseStore, new ProcurementCaseParser());
+        ProcurementCasePatchMerger patchMerger = new ProcurementCasePatchMerger();
+        ProcurementDecisionEngine decisionEngine = new ProcurementDecisionEngine();
+        ProcurementCaseService caseService = new ProcurementCaseService(caseStore, patchMerger);
         ProcurementToolHandler handler = new ProcurementToolHandler(provider, mapper, caseStore, caseService,
-                new com.agent.platform.procurement.application.ProcurementRecommendationFinalizer(caseStore, provider));
+                new com.agent.platform.procurement.application.ProcurementRecommendationFinalizer(caseStore, provider, decisionEngine),
+                patchMerger, decisionEngine);
         ProcurementToolCatalog catalog = new ProcurementToolCatalog();
         List<ToolDefinition> definitions = catalog.definitions();
 
@@ -166,10 +169,20 @@ class ProcurementAgentRuntimeE2ETests {
         assertEquals(50, current.state().quantity());
         assertTrue(timelineStore.messages.stream().anyMatch(this::isToolResult));
         assertTrue(toolExecutionStore.records.values().stream().allMatch(record -> record.state() == ToolExecutionState.SUCCEEDED));
+        assertEquals(Map.of("readOnly", false, "sideEffect", true), metadata(toolExecutionStore, ProcurementToolCatalog.CASE_PATCH));
+        assertEquals(Map.of("readOnly", true, "sideEffect", false), metadata(toolExecutionStore, ProcurementToolCatalog.SUPPLIER_SEARCH));
+        assertEquals(Map.of("readOnly", true, "sideEffect", false), metadata(toolExecutionStore, ProcurementToolCatalog.RECOMMENDATION_FINALIZE));
     }
 
     private boolean isToolResult(AgentMessage message) {
         return message.type() == AgentMessageType.TOOL_RESULT;
+    }
+
+    private Map<String, Object> metadata(InMemoryToolExecutionStore store, String toolName) {
+        return store.records.values().stream().filter(record -> record.toolName().equals(toolName))
+                .findFirst().orElseThrow().result().metadata().entrySet().stream()
+                .filter(entry -> entry.getKey().equals("readOnly") || entry.getKey().equals("sideEffect"))
+                .collect(java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private AgentContextManager contextManager(InMemoryTimelineStore timeline) {
@@ -278,20 +291,21 @@ class ProcurementAgentRuntimeE2ETests {
                 assertTrue(supplierBOffer != null && supplierDOffer != null);
                 assertTrue(supplierBOffer.path("totalPrice").asDouble() < supplierDOffer.path("totalPrice").asDouble(),
                         "Supplier B 应低于 Supplier D，才能证明 Agent 的交期权衡");
-                String evidenceRef = "";
+                String supplierBOfferEvidenceRef = "";
+                String supplierDOfferEvidenceRef = "";
                 for (JsonNode evidence : search.path("evidence")) {
-                    if ("supplier-d".equals(evidence.path("supplierId").asText())) {
-                        evidenceRef = evidence.path("evidenceId").asText();
-                        break;
-                    }
+                    if ("supplier-b".equals(evidence.path("supplierId").asText())
+                            && "OFFER".equals(evidence.path("evidenceType").asText())) supplierBOfferEvidenceRef = evidence.path("evidenceId").asText();
+                    if ("supplier-d".equals(evidence.path("supplierId").asText())
+                            && "OFFER".equals(evidence.path("evidenceType").asText())) supplierDOfferEvidenceRef = evidence.path("evidenceId").asText();
                 }
-                assertTrue(!evidenceRef.isBlank());
+                assertTrue(!supplierBOfferEvidenceRef.isBlank() && !supplierDOfferEvidenceRef.isBlank());
                 toolNames.add(ProcurementToolCatalog.RECOMMENDATION_FINALIZE);
                 return new AgentModelTurn("", List.of(new AgentToolCall(
                         "model-finalize", ProcurementToolCatalog.RECOMMENDATION_FINALIZE, Map.of(
                                 "evaluatedCaseVersion", 1,
                                 "selectedSupplierId", "supplier-d",
-                                "evidenceRefs", List.of(evidenceRef),
+                                "evidenceRefs", List.of(supplierBOfferEvidenceRef, supplierDOfferEvidenceRef),
                                 "reasons", List.of("交期更快，满足研发上线计划"),
                                 "tradeoffs", List.of("相对 Supplier B 单价更高"),
                                 "risks", List.of("报价属于 synthetic fixture，需要下单前复核"),
@@ -484,21 +498,25 @@ class ProcurementAgentRuntimeE2ETests {
         private final Map<String, ProcurementCase> values = new ConcurrentHashMap<>();
 
         @Override
-        public Optional<ProcurementCase> findByTenantAndConversationId(String tenantId, String conversationId) {
-            return values.values().stream().filter(value -> value.tenantId().equals(tenantId)
-                    && value.conversationId().equals(conversationId)).findFirst();
-        }
-
-        @Override
         public Optional<ProcurementCase> findByTenantUserAndConversationId(String tenantId, String userId,
                                                                              String conversationId) {
             return Optional.ofNullable(values.get(key(tenantId, userId, conversationId)));
         }
 
         @Override
-        public ProcurementCase save(ProcurementCase value) {
-            values.put(key(value.tenantId(), value.userId(), value.conversationId()), value);
-            return value;
+        public boolean createIfAbsent(ProcurementCase value) {
+            return values.putIfAbsent(key(value.tenantId(), value.userId(), value.conversationId()), value) == null;
+        }
+
+        @Override
+        public boolean saveIfVersion(ProcurementCase value, long expectedVersion) {
+            synchronized (values) {
+                String key = key(value.tenantId(), value.userId(), value.conversationId());
+                ProcurementCase current = values.get(key);
+                if (current == null || current.version() != expectedVersion) return false;
+                values.put(key, value);
+                return true;
+            }
         }
 
         private String key(String tenantId, String userId, String conversationId) {

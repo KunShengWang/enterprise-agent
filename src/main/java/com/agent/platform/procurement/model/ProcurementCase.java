@@ -18,12 +18,6 @@ public record ProcurementCase(
 ) {
     public ProcurementCase(String caseId, String tenantId, String conversationId, String userId,
                            ProcurementCaseStatus status, ProcurementCaseState state,
-                           Instant createdAt, Instant updatedAt) {
-        this(caseId, tenantId, conversationId, userId, status, state, createdAt, updatedAt, 0, "");
-    }
-
-    public ProcurementCase(String caseId, String tenantId, String conversationId, String userId,
-                           ProcurementCaseStatus status, ProcurementCaseState state,
                            Instant createdAt, Instant updatedAt, long version, String lastAppliedInputId) {
         this(caseId, tenantId, conversationId, userId, status, state, createdAt, updatedAt, version,
                 lastAppliedInputId, lastAppliedInputId == null || lastAppliedInputId.isBlank()

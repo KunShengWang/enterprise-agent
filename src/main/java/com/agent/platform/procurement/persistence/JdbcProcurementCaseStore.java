@@ -27,20 +27,6 @@ public class JdbcProcurementCaseStore implements ProcurementCaseStore {
     }
 
     @Override
-    public Optional<ProcurementCase> findByTenantAndConversationId(String tenantId, String conversationId) {
-        if (tenantId == null || tenantId.isBlank() || conversationId == null || conversationId.isBlank()) return Optional.empty();
-        ensureSchema();
-        try (Connection connection = open(); PreparedStatement statement = connection.prepareStatement(
-                "SELECT record_json, version FROM procurement_case_state WHERE tenant_id = ? AND conversation_id = ?")) {
-            statement.setString(1, tenantId.trim()); statement.setString(2, conversationId.trim());
-            try (ResultSet result = statement.executeQuery()) {
-                return result.next() ? Optional.of(readCase(result.getString(1), result.getLong(2))) : Optional.empty();
-            }
-        }
-        catch (SQLException exception) { throw new AgentStorageException("failed to find tenant procurement case", exception); }
-    }
-
-    @Override
     public Optional<ProcurementCase> findByTenantUserAndConversationId(String tenantId, String userId, String conversationId) {
         if (tenantId == null || tenantId.isBlank() || userId == null || userId.isBlank()
                 || conversationId == null || conversationId.isBlank()) return Optional.empty();
@@ -53,32 +39,6 @@ public class JdbcProcurementCaseStore implements ProcurementCaseStore {
             }
         }
         catch (SQLException exception) { throw new AgentStorageException("failed to find user procurement case", exception); }
-    }
-
-    @Override
-    public ProcurementCase save(ProcurementCase procurementCase) {
-        if (procurementCase == null) throw new IllegalArgumentException("procurement case is required");
-        ensureSchema();
-        try (Connection connection = open(); PreparedStatement statement = connection.prepareStatement("""
-                INSERT INTO procurement_case_state(case_id, tenant_id, conversation_id, user_id, status, version, record_json, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (tenant_id, user_id, conversation_id) DO UPDATE SET
-                    case_id = EXCLUDED.case_id, user_id = EXCLUDED.user_id, status = EXCLUDED.status,
-                    version = EXCLUDED.version, record_json = EXCLUDED.record_json, updated_at = EXCLUDED.updated_at
-                """)) {
-            statement.setString(1, procurementCase.caseId());
-            statement.setString(2, procurementCase.tenantId());
-            statement.setString(3, procurementCase.conversationId());
-            statement.setString(4, procurementCase.userId());
-            statement.setString(5, procurementCase.status().name());
-            statement.setLong(6, procurementCase.version());
-            statement.setString(7, objectMapper.writeValueAsString(procurementCase));
-            statement.setTimestamp(8, Timestamp.from(procurementCase.createdAt()));
-            statement.setTimestamp(9, Timestamp.from(procurementCase.updatedAt()));
-            statement.executeUpdate();
-            return procurementCase;
-        }
-        catch (Exception exception) { throw new AgentStorageException("failed to save procurement case", exception); }
     }
 
     @Override

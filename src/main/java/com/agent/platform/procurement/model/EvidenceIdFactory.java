@@ -9,9 +9,10 @@ public final class EvidenceIdFactory {
     private EvidenceIdFactory() { }
 
     public static String id(String supplierId, String evidenceType, String source,
-                             String sourceRecordId, String sourceSnapshot, String sourceAsOf, String fact) {
+                             String sourceRecordId, String sourceSnapshot, String sourceAsOf,
+                             String sourceDigest, String fact) {
         String canonical = String.join("|", safe(supplierId), safe(evidenceType), safe(source),
-                safe(sourceRecordId), safe(sourceSnapshot), safe(sourceAsOf), safe(fact));
+                safe(sourceRecordId), safe(sourceSnapshot), safe(sourceAsOf), safe(sourceDigest), safe(fact));
         try {
             return "evidence-" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(canonical.getBytes(StandardCharsets.UTF_8))).substring(0, 24);

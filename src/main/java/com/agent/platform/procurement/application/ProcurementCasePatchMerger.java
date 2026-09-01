@@ -36,8 +36,7 @@ public class ProcurementCasePatchMerger {
                 : patch.quantity() == null ? base.quantity() : patch.quantity();
         BigDecimal budget = patch.fieldsToClear().contains("budget") ? null
                 : patch.budget() == null ? base.budget() : patch.budget();
-        String currency = patch.fieldsToClear().contains("currency") ? null
-                : patch.currency() == null ? base.currency() : patch.currency();
+        String currency = patch.currency() == null ? base.currency() : patch.currency();
         Integer deliveryDays = patch.fieldsToClear().contains("requiredDeliveryDays") ? null
                 : patch.requiredDeliveryDays() == null ? base.requiredDeliveryDays() : patch.requiredDeliveryDays();
 

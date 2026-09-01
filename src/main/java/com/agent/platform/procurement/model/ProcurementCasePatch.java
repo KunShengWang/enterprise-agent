@@ -28,23 +28,6 @@ public record ProcurementCasePatch(
         Set<String> excludedSuppliersRemove,
         Set<String> fieldsToClear
 ) {
-    public ProcurementCasePatch(String productCategory,
-                                String productDescription,
-                                Integer quantity,
-                                BigDecimal budget,
-                                String currency,
-                                Integer requiredDeliveryDays,
-                                Map<String, String> hardConstraintsUpsert,
-                                Set<String> hardConstraintsRemove,
-                                Map<String, String> preferencesUpsert,
-                                Set<String> preferencesRemove,
-                                Set<String> excludedSuppliersAdd,
-                                Set<String> excludedSuppliersRemove) {
-        this(productCategory, productDescription, quantity, budget, currency, requiredDeliveryDays,
-                hardConstraintsUpsert, hardConstraintsRemove, preferencesUpsert, preferencesRemove,
-                excludedSuppliersAdd, excludedSuppliersRemove, Set.of());
-    }
-
     public ProcurementCasePatch {
         productCategory = normalizeNullable(productCategory);
         productDescription = normalizeNullable(productDescription);

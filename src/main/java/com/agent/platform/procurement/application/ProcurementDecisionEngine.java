@@ -1,9 +1,7 @@
 package com.agent.platform.procurement.application;
 
 import com.agent.platform.procurement.model.ProcurementCaseState;
-import com.agent.platform.procurement.model.EvidenceIdFactory;
 import com.agent.platform.procurement.model.SupplierCandidate;
-import com.agent.platform.procurement.model.SupplierEvidence;
 import com.agent.platform.procurement.model.SupplierOffer;
 import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
@@ -20,23 +18,16 @@ public class ProcurementDecisionEngine {
     public Evaluation evaluate(ProcurementCaseState state, List<SupplierCandidate> candidates, List<SupplierOffer> offers) {
         Map<String, SupplierCandidate> byId = new HashMap<>();
         (candidates == null ? List.<SupplierCandidate>of() : candidates).forEach(c -> byId.put(c.supplierId(), c));
-        List<SupplierEvidence> evidence = new ArrayList<>();
         List<CandidateResult> all = new ArrayList<>();
         for (SupplierOffer offer : offers == null ? List.<SupplierOffer>of() : offers) {
             SupplierCandidate candidate = byId.getOrDefault(offer.supplierId(),
                     new SupplierCandidate(offer.supplierId(), offer.supplierId(), offer.source()));
             List<String> failures = failures(state, candidate, offer);
-            String fact = "商品 " + offer.productName() + " 单价 " + offer.unitPrice() + " " + offer.currency()
-                    + "，总价 " + offer.totalPrice() + "，交期 " + offer.leadTimeDays() + " 天，规格 " + offer.specifications();
-            String evidenceRef = EvidenceIdFactory.id(candidate.supplierId(), "OFFER", offer.source(),
-                    offer.sourceRecordId(), offer.sourceSnapshot(), offer.sourceAsOf().toString(), fact);
-            evidence.add(new SupplierEvidence(evidenceRef, candidate.supplierId(), "OFFER", offer.source(), fact, offer.fetchedAt(),
-                    offer.sourceRecordId(), offer.sourceSnapshot(), offer.sourceAsOf(), offer.sourceDigest()));
-            all.add(new CandidateResult(candidate, offer, failures.isEmpty(), failures, List.of(evidenceRef)));
+            all.add(new CandidateResult(candidate, offer, failures.isEmpty(), failures));
         }
         // 不排序、不评分、不生成 recommendedSupplier。即使只有一个 Eligible，也必须由 Agent
         // 明确提交选择，再交给 recommendation_finalize 做当前快照验证。
-        return new Evaluation(all, evidence);
+        return new Evaluation(all);
     }
 
     private List<String> failures(ProcurementCaseState state, SupplierCandidate candidate, SupplierOffer offer) {
@@ -75,17 +66,15 @@ public class ProcurementDecisionEngine {
     private int number(Object value) { return value instanceof Number n ? n.intValue() : Integer.parseInt(String.valueOf(value == null ? "0" : value)); }
 
     public record CandidateResult(SupplierCandidate candidate, SupplierOffer offer, boolean eligible,
-                                  List<String> failures, List<String> evidenceRefs) {
+                                  List<String> failures) {
         public CandidateResult {
             failures = failures == null ? List.of() : List.copyOf(failures);
-            evidenceRefs = evidenceRefs == null ? List.of() : List.copyOf(evidenceRefs);
         }
     }
 
-    public record Evaluation(List<CandidateResult> candidates, List<SupplierEvidence> evidence) {
+    public record Evaluation(List<CandidateResult> candidates) {
         public Evaluation {
             candidates = candidates == null ? List.of() : List.copyOf(candidates);
-            evidence = evidence == null ? List.of() : List.copyOf(evidence);
         }
     }
 }

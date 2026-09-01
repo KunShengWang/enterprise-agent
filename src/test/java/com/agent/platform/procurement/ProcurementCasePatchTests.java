@@ -1,6 +1,5 @@
 package com.agent.platform.procurement;
 
-import com.agent.platform.procurement.application.ProcurementCaseParser;
 import com.agent.platform.procurement.application.ProcurementCasePatchMerger;
 import com.agent.platform.procurement.application.ProcurementCaseService;
 import com.agent.platform.procurement.application.ProcurementCaseVersionConflictException;
@@ -41,7 +40,7 @@ class ProcurementCasePatchTests {
         ProcurementCasePatch patch = new ProcurementCasePatch(
                 null, null, 60, null, null, null,
                 Map.of("gpuMemoryMinGb", "32"), Set.of(), Map.of(), Set.of(),
-                Set.of("Supplier C"), Set.of("Supplier A"));
+                Set.of("Supplier C"), Set.of("Supplier A"), Set.of());
 
         ProcurementCaseState next = merger.merge(current, patch);
 
@@ -109,20 +108,20 @@ class ProcurementCasePatchTests {
     void patchRejectsUnsupportedConstraintAndNullCollectionEntryAsClientError() {
         assertThrows(IllegalArgumentException.class, () -> merger.validate(new ProcurementCasePatch(
                 null, "CUDA 工作站", null, null, null, null,
-                Map.of("iso9001", "true"), Set.of(), Map.of(), Set.of(), Set.of(), Set.of())));
+                Map.of("iso9001", "true"), Set.of(), Map.of(), Set.of(), Set.of(), Set.of(), Set.of())));
         assertThrows(IllegalArgumentException.class, () -> merger.validate(new ProcurementCasePatch(
                 null, "CUDA 工作站", null, null, null, null,
                 Map.of(), Set.of(), Map.of(), Set.of(),
-                new java.util.LinkedHashSet<>(java.util.Collections.singletonList(null)), Set.of())));
+                new java.util.LinkedHashSet<>(java.util.Collections.singletonList(null)), Set.of(), Set.of())));
     }
 
     @Test
     void applyingTheSamePatchTwiceIsIdempotentByRuntimeInputId() {
         MemoryCaseStore store = new MemoryCaseStore();
-        ProcurementCaseService service = new ProcurementCaseService(store, new ProcurementCaseParser());
+        ProcurementCaseService service = new ProcurementCaseService(store, merger);
         ProcurementCasePatch patch = new ProcurementCasePatch(
                 "计算工作站", "CUDA 开发工作站", 50, new BigDecimal("600000"), "CNY", 21,
-                Map.of("gpuMemoryMinGb", "24"), Set.of(), Map.of(), Set.of(), Set.of("Supplier A"), Set.of());
+                Map.of("gpuMemoryMinGb", "24"), Set.of(), Map.of(), Set.of(), Set.of("Supplier A"), Set.of(), Set.of());
 
         ProcurementCase first = service.applyPatch("tenant", "conversation", "buyer", patch, "tool-call-1");
         ProcurementCase replay = service.applyPatch("tenant", "conversation", "buyer", patch, "tool-call-1");
@@ -133,14 +132,28 @@ class ProcurementCasePatchTests {
     }
 
     @Test
+    void patchRequiresRuntimeInputIdAndRejectsBlankId() {
+        MemoryCaseStore store = new MemoryCaseStore();
+        ProcurementCaseService service = new ProcurementCaseService(store, merger);
+        ProcurementCasePatch patch = new ProcurementCasePatch(
+                null, "CUDA 开发工作站", null, null, null, null,
+                Map.of(), Set.of(), Map.of(), Set.of(), Set.of(), Set.of(), Set.of());
+
+        assertThrows(IllegalArgumentException.class, () -> service.applyPatch(
+                "tenant", "conversation", "buyer", patch, " "));
+        assertThrows(IllegalArgumentException.class, () -> service.applyPatch(
+                "tenant", "conversation", "buyer", patch, null));
+    }
+
+    @Test
     void concurrentPatchesUseVersionCasAndDoNotSilentlyOverwrite() throws Exception {
         BarrierCaseStore store = new BarrierCaseStore();
-        ProcurementCaseService service = new ProcurementCaseService(store, new ProcurementCaseParser());
+        ProcurementCaseService service = new ProcurementCaseService(store, merger);
         service.ensureCase("tenant", "conversation", "buyer");
         ProcurementCasePatch quantity = new ProcurementCasePatch(
-                null, null, 50, null, null, null, Map.of(), Set.of(), Map.of(), Set.of(), Set.of(), Set.of());
+                null, null, 50, null, null, null, Map.of(), Set.of(), Map.of(), Set.of(), Set.of(), Set.of(), Set.of());
         ProcurementCasePatch budget = new ProcurementCasePatch(
-                null, null, null, new BigDecimal("600000"), null, null, Map.of(), Set.of(), Map.of(), Set.of(), Set.of(), Set.of());
+                null, null, null, new BigDecimal("600000"), null, null, Map.of(), Set.of(), Map.of(), Set.of(), Set.of(), Set.of(), Set.of());
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
@@ -174,19 +187,28 @@ class ProcurementCasePatchTests {
         private final Map<String, ProcurementCase> values = new ConcurrentHashMap<>();
 
         @Override
-        public Optional<ProcurementCase> findByTenantAndConversationId(String tenantId, String conversationId) {
-            return values.values().stream().filter(value -> value.tenantId().equals(tenantId)
-                    && value.conversationId().equals(conversationId)).findFirst();
-        }
-
-        @Override
         public Optional<ProcurementCase> findByTenantUserAndConversationId(String tenantId, String userId,
                                                                              String conversationId) {
             return Optional.ofNullable(values.get(key(tenantId, userId, conversationId)));
         }
 
         @Override
-        public ProcurementCase save(ProcurementCase value) {
+        public boolean createIfAbsent(ProcurementCase value) {
+            return values.putIfAbsent(key(value.tenantId(), value.userId(), value.conversationId()), value) == null;
+        }
+
+        @Override
+        public boolean saveIfVersion(ProcurementCase value, long expectedVersion) {
+            synchronized (values) {
+                String key = key(value.tenantId(), value.userId(), value.conversationId());
+                ProcurementCase current = values.get(key);
+                if (current == null || current.version() != expectedVersion) return false;
+                values.put(key, value);
+                return true;
+            }
+        }
+
+        protected ProcurementCase replace(ProcurementCase value) {
             values.put(key(value.tenantId(), value.userId(), value.conversationId()), value);
             return value;
         }
@@ -214,7 +236,7 @@ class ProcurementCasePatchTests {
                 Optional<ProcurementCase> current = findByTenantUserAndConversationId(
                         value.tenantId(), value.userId(), value.conversationId());
                 if (current.isEmpty() || current.get().version() != expectedVersion) return false;
-                save(value);
+                replace(value);
                 return true;
             }
         }

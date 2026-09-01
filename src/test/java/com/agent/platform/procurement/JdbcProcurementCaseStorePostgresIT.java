@@ -51,14 +51,14 @@ class JdbcProcurementCaseStorePostgresIT {
         JdbcProcurementCaseStore store = new JdbcProcurementCaseStore(storageProperties, new ObjectMapper());
         String conversationId = CONVERSATION_PREFIX + UUID.randomUUID();
         ProcurementCase created = new com.agent.platform.procurement.application.ProcurementCaseService(
-                store, new com.agent.platform.procurement.application.ProcurementCaseParser()).ensureCase(
+                store, new ProcurementCasePatchMerger()).ensureCase(
                 "tenant", conversationId, "buyer");
         ProcurementCasePatchMerger merger = new ProcurementCasePatchMerger();
         ProcurementCaseState quantityState = merger.merge(created.state(), new ProcurementCasePatch(
-                null, null, 50, null, null, null, Map.of(), Set.of(), Map.of(), Set.of(), Set.of(), Set.of()));
+                null, null, 50, null, null, null, Map.of(), Set.of(), Map.of(), Set.of(), Set.of(), Set.of(), Set.of()));
         ProcurementCaseState budgetState = merger.merge(created.state(), new ProcurementCasePatch(
                 null, null, null, new java.math.BigDecimal("600000"), null, null,
-                Map.of(), Set.of(), Map.of(), Set.of(), Set.of(), Set.of()));
+                Map.of(), Set.of(), Map.of(), Set.of(), Set.of(), Set.of(), Set.of()));
         ProcurementCase quantity = next(created, quantityState, "quantity");
         ProcurementCase budget = next(created, budgetState, "budget");
 
@@ -76,7 +76,7 @@ class JdbcProcurementCaseStorePostgresIT {
         JdbcProcurementCaseStore store = new JdbcProcurementCaseStore(storageProperties, new ObjectMapper());
         String conversationId = CONVERSATION_PREFIX + UUID.randomUUID();
         ProcurementCase created = new com.agent.platform.procurement.application.ProcurementCaseService(
-                store, new com.agent.platform.procurement.application.ProcurementCaseParser()).ensureCase(
+                store, new ProcurementCasePatchMerger()).ensureCase(
                 "tenant", conversationId, "buyer");
         ProcurementCase versionOne = next(created, created.state(), "version-one");
         assertTrue(store.saveIfVersion(versionOne, 0));

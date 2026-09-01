@@ -1,14 +1,17 @@
 {
   "scenarioId": "complex_workstation_01",
   "purpose": "project-specific scenario fixture for procurement sourcing MVP Ground Truth",
+  "sourceAsOf": "2026-01-01T00:00:00Z",
   "suppliers": [
     {"supplierId": "supplier-a", "supplierName": "Supplier A"},
     {"supplierId": "supplier-b", "supplierName": "Supplier B"},
-    {"supplierId": "supplier-c", "supplierName": "Supplier C"}
+    {"supplierId": "supplier-c", "supplierName": "Supplier C"},
+    {"supplierId": "supplier-d", "supplierName": "Supplier D"}
   ],
   "offers": [
     {"supplierId": "supplier-a", "productId": "cuda-workstation-a", "productName": "CUDA 开发工作站 A", "unitPrice": 9800, "currency": "CNY", "leadTimeDays": 45, "warranty": "2 年", "specifications": {"gpuMemoryGb": 24, "cpu": "16-core", "memoryGb": 64}, "source": "scenario:complex_workstation_01"},
     {"supplierId": "supplier-b", "productId": "cuda-workstation-b", "productName": "CUDA 开发工作站 B", "unitPrice": 11000, "currency": "CNY", "leadTimeDays": 18, "warranty": "3 年", "specifications": {"gpuMemoryGb": 32, "cpu": "24-core", "memoryGb": 128}, "source": "scenario:complex_workstation_01"},
-    {"supplierId": "supplier-c", "productId": "cuda-workstation-c", "productName": "CUDA 开发工作站 C", "unitPrice": 9200, "currency": "CNY", "leadTimeDays": 14, "warranty": "1 年", "specifications": {"gpuMemoryGb": 16, "cpu": "16-core", "memoryGb": 64}, "source": "scenario:complex_workstation_01"}
+    {"supplierId": "supplier-c", "productId": "cuda-workstation-c", "productName": "CUDA 开发工作站 C", "unitPrice": 9200, "currency": "CNY", "leadTimeDays": 14, "warranty": "1 年", "specifications": {"gpuMemoryGb": 16, "cpu": "16-core", "memoryGb": 64}, "source": "scenario:complex_workstation_01"},
+    {"supplierId": "supplier-d", "productId": "cuda-workstation-d", "productName": "CUDA 开发工作站 D", "unitPrice": 11600, "currency": "CNY", "leadTimeDays": 12, "warranty": "3 年", "specifications": {"gpuMemoryGb": 32, "cpu": "32-core", "memoryGb": 128}, "source": "scenario:complex_workstation_01"}
   ]
 }
