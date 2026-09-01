@@ -33,9 +33,9 @@ Long-Term Memory 只负责用户跨任务偏好；当前 Case 的采购事实不
 
 ### Phase 2A：权威上下文重注入与记忆门控
 
-采购 Profile 的每个模型轮次都会通过 `DefaultAgentContextManager`，使用可信的 `tenantId + userId + conversationId` 重新读取 `ProcurementCaseStore`。`ProcurementCaseContextRenderer` 将当前 `caseVersion/status/ProcurementCaseState` 作为一次性的 canonical context 投影给模型；它不缓存 Case、不写入 Timeline、不参与 `CONTEXT_SUMMARY` 摘要，也不进入长期记忆。该投影会优先占用上下文预算，不能被 recent history 裁剪；预算不足时 Runtime fail-closed。上下文压缩、Run resume 或下一模型轮会重新读取 CaseStore，因此不能继续使用过期 Case。
+采购 Profile 的每个模型轮次都会通过 `DefaultAgentContextManager`，使用可信的 `tenantId + userId + conversationId` 重新读取 `ProcurementCaseStore`。Runtime 只依赖极薄的 `AgentCanonicalContextProvider` SPI，`ProcurementCaseContextRenderer` 是当前采购实现；它将 `caseId/caseVersion/status/ProcurementCaseState` 作为一次性的 canonical context 投影给模型。该投影不缓存 Case、不写入 Timeline、不参与 `CONTEXT_SUMMARY` 摘要，也不进入长期记忆。该投影会优先占用上下文预算，不能被 recent history 裁剪；预算不足时 Runtime fail-closed。上下文压缩、Run resume 或下一模型轮会重新读取 CaseStore，因此不能继续使用过期 Case。
 
-canonical context 复用现有 `AgentMessageType.CONTEXT_SUMMARY` 的不可信数据通道，metadata 标记 `source=authoritative-procurement-case-state`、`caseVersion`、`fresh=true` 和 `trustedInstructions=false`。状态中的用户字符串只能作为业务数据，不能提升为 SYSTEM 指令。
+canonical business context 使用独立的 `AgentMessageType.CANONICAL_CONTEXT` 和 `<canonical_business_context authoritative_business_data="true" trusted_instructions="false">` 协议包装；持久化会话摘要仍使用 `AgentMessageType.CONTEXT_SUMMARY` 和 `<context_summary untrusted_data="true">`。metadata 标记 `source=authoritative-procurement-case-state`、`caseId`、`caseVersion`、`fresh=true` 和 `trustedInstructions=false`。状态中的用户字符串只能作为业务数据，不能提升为 SYSTEM 指令。
 
 采购 Profile 的 `longTermMemoryEnabled=false` 是完整门控：同时关闭长期记忆写入、recall、User Profile 加载和 synthetic `<memory_context>` 注入；PostgreSQL Timeline、持久化 `CONTEXT_SUMMARY` 和工具调用/结果的 `MessageUnit` 原子配对仍正常工作。Runtime 事件区分本轮普通 projection、`context_budget` 压缩和 `provider_context_overflow` 有界重试，并记录 token budget、压缩前后消息/Token/遗漏数量和覆盖序列。
 
@@ -62,7 +62,7 @@ Phase 1 的 Agent Tool 只有 `procurement_case_patch`、`procurement_supplier_s
 
 ## 明确非目标与后续路线
 
-当前非目标：RFQ、PO、Receiving、Invoice、Payment、Procurement HITL、Procurement Multi-Agent、完整 P2P、SAP/ERPNext 部署、大规模 MCP/Memory/Context Compression 重构和真实电商 API。Phase 2A 只补充当前 Case 的权威投影和 Runtime 级上下文门控，不建设通用 Context Provider/Contributor/Plugin 框架。
+当前非目标：RFQ、PO、Receiving、Invoice、Payment、Procurement HITL、Procurement Multi-Agent、完整 P2P、SAP/ERPNext 部署、大规模 MCP/Memory/Context Compression 重构和真实电商 API。Phase 2A 只补充当前 Case 的权威投影和 Runtime 级上下文门控，不建设通用 Context Provider/Contributor/Plugin 框架；`AgentCanonicalContextProvider` 仅是当前所需的极薄 SPI。
 
 1. Phase 2A（已落地）：权威 Case 上下文重注入、长期记忆门控和压缩可观测性
 2. Phase 2B：Memory + Context Compression 效果优化

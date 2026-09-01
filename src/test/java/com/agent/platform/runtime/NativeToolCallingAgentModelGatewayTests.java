@@ -8,7 +8,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.metadata.ChatGenerationMetadata;
 import org.springframework.ai.chat.metadata.ChatResponseMetadata;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -111,6 +113,46 @@ class NativeToolCallingAgentModelGatewayTests {
         assertEquals("provider-call-1", toolResponse.getResponses().get(0).id());
         assertTrue(toolResponse.getResponses().get(0).responseData().contains("status=OPEN"));
         assertTrue(toolResponse.getResponses().get(0).responseData().contains("success"));
+    }
+
+    @Test
+    void keepsCanonicalBusinessContextSeparateFromConversationSummary() {
+        NativeChatModelClient client = mock(NativeChatModelClient.class);
+        ChatResponse finalResponse = response(new AssistantMessage("done"), "stop");
+        when(client.completeNative(any(Prompt.class))).thenReturn(finalResponse);
+        NativeToolCallingAgentModelGateway gateway = gateway(client);
+        AgentMessage canonical = message(
+                1, AgentMessageType.CANONICAL_CONTEXT, "caseId=case-1", "", "", Map.of(),
+                Map.of("source", "authoritative-case"));
+        AgentMessage summary = message(
+                2, AgentMessageType.CONTEXT_SUMMARY, "summary text", "", "", Map.of(), Map.of());
+
+        gateway.nextTurn(requestWithTool(List.of(canonical, summary)));
+
+        ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
+        verify(client).completeNative(promptCaptor.capture());
+        List<Message> instructions = promptCaptor.getValue().getInstructions();
+        List<String> userContents = instructions.stream()
+                .filter(UserMessage.class::isInstance)
+                .map(Message::getText)
+                .toList();
+
+        String canonicalContent = userContents.stream()
+                .filter(content -> content.contains("canonical_business_context"))
+                .findFirst().orElseThrow();
+        String summaryContent = userContents.stream()
+                .filter(content -> content.contains("context_summary"))
+                .findFirst().orElseThrow();
+        assertTrue(canonicalContent.contains("authoritative_business_data=\"true\""));
+        assertTrue(canonicalContent.contains("trusted_instructions=\"false\""));
+        assertTrue(canonicalContent.contains("caseId=case-1"));
+        assertTrue(summaryContent.contains("summary text"));
+        assertFalse(canonicalContent.contains("<context_summary"));
+        assertFalse(summaryContent.contains("<canonical_business_context"));
+        assertTrue(instructions.stream().filter(SystemMessage.class::isInstance)
+                .map(Message::getText)
+                .noneMatch(content -> content.contains("canonical_business_context")
+                        || content.contains("context_summary")));
     }
 
     @Test

@@ -117,6 +117,8 @@ class DefaultAgentContextManagerTests {
                 .filter(message -> ProcurementCaseContextRenderer.SOURCE.equals(message.metadata().get("source")))
                 .findFirst()
                 .orElseThrow();
+        assertEquals(AgentMessageType.CANONICAL_CONTEXT, canonical.type());
+        assertEquals("case-1", canonical.metadata().get("caseId"));
         assertEquals(1L, canonical.metadata().get("caseVersion"));
         assertEquals(true, canonical.metadata().get("fresh"));
         assertEquals(false, canonical.metadata().get("trustedInstructions"));
@@ -124,7 +126,7 @@ class DefaultAgentContextManagerTests {
         assertEquals(1, view.omittedMessages());
         assertTrue(view.messages().stream().noneMatch(message -> message.messageId().equals("history-1")));
         assertEquals(true, view.metadata().get("canonicalContextIncluded"));
-        assertEquals(1L, view.metadata().get("canonicalContextCaseVersion"));
+        assertEquals(1, view.metadata().get("canonicalContextCount"));
     }
 
     @Test
@@ -146,8 +148,8 @@ class DefaultAgentContextManagerTests {
                 "session-1", "user-1", "tenant-1", "request", 100, procurementProfile()
         );
 
-        assertEquals(1L, first.metadata().get("canonicalContextCaseVersion"));
-        assertEquals(2L, second.metadata().get("canonicalContextCaseVersion"));
+        assertEquals(1L, first.messages().get(0).metadata().get("caseVersion"));
+        assertEquals(2L, second.messages().get(0).metadata().get("caseVersion"));
         assertTrue(second.messages().get(0).content().contains("updated description"));
         assertNotEquals(first.messages().get(0).content(), second.messages().get(0).content());
         assertEquals(2, caseStore.findCalls);
@@ -207,6 +209,7 @@ class DefaultAgentContextManagerTests {
                 .filter(message -> ProcurementCaseContextRenderer.SOURCE.equals(message.metadata().get("source")))
                 .findFirst()
                 .orElseThrow();
+        assertEquals(AgentMessageType.CANONICAL_CONTEXT, canonical.type());
         AgentMessage persistedSummary = timeline.messages.stream()
                 .filter(message -> message.type() == AgentMessageType.CONTEXT_SUMMARY)
                 .findFirst()
@@ -220,6 +223,78 @@ class DefaultAgentContextManagerTests {
         assertEquals(1, compacted.metadata().get("compactedMessageCount"));
         assertEquals(1L, compacted.metadata().get("compactionCoversThroughSequence"));
         assertEquals(1L, compacted.metadata().get("coversThroughSequence"));
+    }
+
+    @Test
+    void twoRealCompactionsAdvanceCoverageMonotonicallyWithoutResummarizingCoveredMessages() {
+        MutableTimelineStore timeline = new MutableTimelineStore(
+                message("session-1", "message-1", 1, AgentMessageType.USER, "first user", 4),
+                message("session-1", "message-2", 2, AgentMessageType.ASSISTANT_TEXT, "first answer", 4),
+                toolCall("session-1", "call-1", 3, "lookup", 4),
+                toolResult("session-1", "result-1", 4, "call-1", "lookup", "first result", 4),
+                message("session-1", "message-5", 5, AgentMessageType.USER, "post summary user", 5),
+                message("session-1", "message-6", 6, AgentMessageType.ASSISTANT_TEXT, "post summary answer", 5)
+        );
+        List<List<MemoryMessage>> summarized = new ArrayList<>();
+        ConversationSummarizer summarizer = (previous, messages, maxChars) -> {
+            summarized.add(messages);
+            return "summary-" + summarized.size();
+        };
+        AgentCanonicalContextProvider canonicalProvider = (tenantId, userId, conversationId, profile) ->
+                Optional.of(new AgentCanonicalContextProvider.CanonicalContext(
+                        "canonical-1", "canonical payload", Map.of("source", "test")));
+        DefaultAgentContextManager manager = manager(
+                timeline, mock(MemoryService.class), canonicalProvider, text -> 1, summarizer
+        );
+
+        AgentContextView first = manager.compact(
+                "session-1", "user-1", "tenant-1", "run-1", "request", 15,
+                "context_budget", profile("general", false)
+        );
+        List<AgentMessage> summariesAfterFirst = timeline.messages.stream()
+                .filter(message -> message.type() == AgentMessageType.CONTEXT_SUMMARY)
+                .toList();
+        AgentMessage firstSummary = summariesAfterFirst.get(0);
+        long firstCoverage = ((Number) firstSummary.metadata().get("coversThroughSequence")).longValue();
+
+        timeline.add(message("session-1", "message-8", 8, AgentMessageType.USER, "second user", 5));
+        timeline.add(message("session-1", "message-9", 9, AgentMessageType.ASSISTANT_TEXT, "second answer", 5));
+        timeline.add(message("session-1", "message-10", 10, AgentMessageType.USER, "latest second turn", 5));
+
+        AgentContextView second = manager.compact(
+                "session-1", "user-1", "tenant-1", "run-2", "request", 15,
+                "context_budget", profile("general", false)
+        );
+        List<AgentMessage> summaries = timeline.messages.stream()
+                .filter(message -> message.type() == AgentMessageType.CONTEXT_SUMMARY)
+                .sorted(Comparator.comparingLong(AgentMessage::sequence))
+                .toList();
+        AgentMessage secondSummary = summaries.get(1);
+        long secondPreviousCoverage = ((Number) secondSummary.metadata()
+                .get("previousCoveredThroughSequence")).longValue();
+        long secondCoverage = ((Number) secondSummary.metadata().get("coversThroughSequence")).longValue();
+
+        assertTrue((Boolean) first.metadata().get("compactionPerformed"));
+        assertTrue((Boolean) second.metadata().get("compactionPerformed"));
+        assertTrue(first.messages().stream().anyMatch(message ->
+                message.type() == AgentMessageType.CANONICAL_CONTEXT));
+        assertEquals(2, summaries.size());
+        assertEquals(firstCoverage, secondPreviousCoverage);
+        assertTrue(secondCoverage > firstCoverage);
+        assertTrue(summarized.get(0).stream().anyMatch(message -> message.content().contains("first user")));
+        assertTrue(summarized.get(0).stream().anyMatch(message -> message.content().contains("first answer")));
+        assertTrue(summarized.get(0).stream().anyMatch(message -> message.content().contains("first result")));
+        assertTrue(summarized.get(1).stream().noneMatch(message -> message.content().contains("first user")));
+        assertTrue(summarized.get(1).stream().noneMatch(message -> message.content().contains("first answer")));
+        assertTrue(summarized.get(1).stream().noneMatch(message -> message.content().contains("first result")));
+        assertTrue(summarized.stream().flatMap(List::stream).noneMatch(message ->
+                message.content().contains("canonical payload")));
+        assertTrue(timeline.messages.stream().anyMatch(message -> message.messageId().equals("message-1")));
+        assertTrue(timeline.messages.stream().anyMatch(message -> message.messageId().equals("call-1")));
+        assertTrue(timeline.messages.stream().anyMatch(message -> message.messageId().equals("result-1")));
+        assertEquals(List.of("assistant_tool_call", "tool_result"),
+                summarized.get(0).stream().filter(message -> message.content().contains("call-1"))
+                        .map(MemoryMessage::role).toList());
     }
 
     @Test
@@ -272,7 +347,7 @@ class DefaultAgentContextManagerTests {
 
     private DefaultAgentContextManager manager(AgentTimelineStore timelineStore,
                                                 MemoryService memoryService,
-                                                ProcurementCaseContextRenderer renderer,
+                                                AgentCanonicalContextProvider renderer,
                                                 TokenEstimator estimator) {
         return manager(timelineStore, memoryService, renderer, estimator,
                 (previous, messages, maxChars) -> "summary");
@@ -280,7 +355,7 @@ class DefaultAgentContextManagerTests {
 
     private DefaultAgentContextManager manager(AgentTimelineStore timelineStore,
                                                 MemoryService memoryService,
-                                                ProcurementCaseContextRenderer renderer,
+                                                AgentCanonicalContextProvider renderer,
                                                 TokenEstimator estimator,
                                                 ConversationSummarizer summarizer) {
         AgentProperties properties = new AgentProperties();
@@ -290,7 +365,7 @@ class DefaultAgentContextManagerTests {
             );
         }
         return new DefaultAgentContextManager(
-                timelineStore, estimator, memoryService, summarizer, properties, renderer
+                timelineStore, estimator, memoryService, summarizer, properties, List.of(renderer)
         );
     }
 

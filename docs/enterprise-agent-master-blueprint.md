@@ -338,7 +338,7 @@ HTTP 请求只能提交枚举化 `scenarioId`，由 `AgentScenarioProfileResolve
 
 所有 `run`、`resume` 和 follow-up 继续经过同一个 `DefaultAgentRuntime.executeLoop()`。Runtime 从可信工具策略上下文取得 `tenantId`，并把 `tenantId` 与服务端 `AgentExecutionProfile` 传给现有 `AgentContextManager`；不从用户请求重新反序列化 System Prompt、能力白名单或预算。
 
-采购寻源 Profile 是当前唯一接入专用 canonical renderer 的 Profile。每个模型轮次由 `ProcurementCaseContextRenderer` 按 `tenantId + userId + conversationId` 重新读取 `ProcurementCaseStore`，投影当前 `caseVersion/status/ProcurementCaseState`。该投影不缓存、不写 Timeline、不进入持久化 `CONTEXT_SUMMARY`，并优先占用上下文预算；压缩、恢复和下一轮投影都会重新读取权威 Case，避免用历史消息或 Memory 副本替代当前状态。投影 metadata 明确标记来源、新鲜度及 `trustedInstructions=false`，其中的用户字符串仍只是不可信业务数据。
+采购寻源 Profile 是当前唯一接入专用 canonical renderer 的 Profile。Runtime 只依赖极薄的 `AgentCanonicalContextProvider` SPI，每个模型轮次由 `ProcurementCaseContextRenderer` 按 `tenantId + userId + conversationId` 重新读取 `ProcurementCaseStore`，投影当前 `caseId/caseVersion/status/ProcurementCaseState`。该投影不缓存、不写 Timeline、不进入持久化 `CONTEXT_SUMMARY`，并优先占用上下文预算；压缩、恢复和下一轮投影都会重新读取权威 Case，避免用历史消息或 Memory 副本替代当前状态。投影 metadata 明确标记来源、新鲜度及 `trustedInstructions=false`，其中的用户字符串仍只是不可信业务数据。canonical business context 与 persisted conversation summary 在消息类型和模型协议包装上保持独立，二者都作为 UserMessage，不获得 SYSTEM 指令权限。
 
 上下文管理保留完整 PostgreSQL Timeline；`CONTEXT_SUMMARY` 只压缩已覆盖的旧消息，`coversThroughSequence` 单调推进，工具调用与工具结果作为不可拆分的 `MessageUnit`，孤立工具消息不会单独发送给模型。`longTermMemoryEnabled=false` 不影响 Timeline 或持久化摘要，只禁止长期记忆写入、recall、Profile 注入和 `<memory_context>`。
 

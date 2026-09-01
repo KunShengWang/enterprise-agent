@@ -15,5 +15,10 @@ public enum AgentMessageType {
 
     TOOL_RESULT,
 
-    CONTEXT_SUMMARY
+    CONTEXT_SUMMARY,
+
+    /**
+     * 当前业务事实的非持久化 canonical 投影；与会话压缩摘要语义分离。
+     */
+    CANONICAL_CONTEXT
 }

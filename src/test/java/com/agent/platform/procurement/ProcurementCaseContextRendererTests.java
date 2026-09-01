@@ -1,10 +1,13 @@
 package com.agent.platform.procurement;
 
 import com.agent.platform.procurement.application.ProcurementCaseContextRenderer;
+import com.agent.platform.procurement.config.ProcurementSourcingExecutionProfileFactory;
 import com.agent.platform.procurement.model.ProcurementCase;
 import com.agent.platform.procurement.model.ProcurementCaseState;
 import com.agent.platform.procurement.model.ProcurementCaseStatus;
 import com.agent.platform.procurement.persistence.ProcurementCaseStore;
+import com.agent.platform.runtime.AgentExecutionProfile;
+import com.agent.platform.runtime.AgentRunLimits;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
@@ -37,14 +40,39 @@ class ProcurementCaseContextRendererTests {
                 .orElseThrow();
 
         assertTrue(first.content().contains("caseVersion=1"));
+        assertTrue(first.content().contains("caseId=case-tenant-1-buyer-1-1"));
         assertTrue(second.content().contains("caseVersion=2"));
+        assertTrue(second.content().contains("caseId=case-tenant-1-buyer-1-2"));
         assertTrue(second.content().contains("updated"));
         assertEquals(ProcurementCaseContextRenderer.SOURCE, second.metadata().get("source"));
+        assertEquals("case-tenant-1-buyer-1-2", second.metadata().get("caseId"));
         assertEquals(2L, second.metadata().get("caseVersion"));
         assertEquals("SOURCING", second.metadata().get("status"));
         assertEquals(true, second.metadata().get("fresh"));
         assertEquals(false, second.metadata().get("trustedInstructions"));
         assertEquals(2, store.findCalls);
+    }
+
+    @Test
+    void provideUsesTheGenericCanonicalContextContractAndFiltersProfilesInsideProcurement() {
+        MutableCaseStore store = new MutableCaseStore();
+        store.put(procurementCase("tenant-1", "buyer-1", "conversation-1", 2, "updated"));
+        ProcurementCaseContextRenderer renderer = new ProcurementCaseContextRenderer(store, new ObjectMapper());
+
+        var context = renderer.provide(
+                "tenant-1", "buyer-1", "conversation-1",
+                new ProcurementSourcingExecutionProfileFactory().createProfile()
+        ).orElseThrow();
+
+        assertEquals("procurement-case-context-conversation-1", context.contextId());
+        assertTrue(context.content().contains("caseId=case-tenant-1-buyer-1-2"));
+        assertEquals("case-tenant-1-buyer-1-2", context.metadata().get("caseId"));
+        assertTrue(renderer.provide("tenant-1", "buyer-1", "conversation-1", null).isEmpty());
+        assertTrue(renderer.provide("tenant-1", "buyer-1", "conversation-1",
+                new AgentExecutionProfile(
+                        "general", "prompt", Set.of(),
+                        new AgentRunLimits(1, 1, 1, 1, 1, 0, 1), false
+                )).isEmpty());
     }
 
     @Test
@@ -97,6 +125,7 @@ class ProcurementCaseContextRendererTests {
         assertFalse(rendered.content().contains("userId="));
         assertFalse(rendered.content().contains("conversationId="));
         assertEquals("procurement_case_state", rendered.metadata().get("contextKind"));
+        assertEquals("case-tenant-1-buyer-1-7", rendered.metadata().get("caseId"));
         assertEquals(false, rendered.metadata().get("trustedInstructions"));
     }
 

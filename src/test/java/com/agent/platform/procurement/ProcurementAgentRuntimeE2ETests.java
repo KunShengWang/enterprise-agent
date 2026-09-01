@@ -142,7 +142,7 @@ class ProcurementAgentRuntimeE2ETests {
                 memoryService,
                 new RuleBasedConversationSummarizer(),
                 properties,
-                new ProcurementCaseContextRenderer(caseStore, mapper));
+                List.of(new ProcurementCaseContextRenderer(caseStore, mapper)));
         AgentExecutionProfile profile = new ProcurementSourcingExecutionProfileFactory().createProfile();
         DefaultAgentRuntime runtime = new DefaultAgentRuntime(
                 properties, timelineStore, runStore, toolExecutionStore, contextManager, model,
@@ -184,6 +184,10 @@ class ProcurementAgentRuntimeE2ETests {
                             message.metadata().get("source")))
                     .toList();
             assertEquals(1, canonicalContexts.size(), "每个采购模型轮次都必须有一个 fresh Case context");
+            assertEquals(AgentMessageType.CANONICAL_CONTEXT, canonicalContexts.get(0).type());
+            assertEquals(caseStore.findByTenantUserAndConversationId(
+                    "tenant-1", "buyer-1", "procurement-e2e-conversation").orElseThrow().caseId(),
+                    canonicalContexts.get(0).metadata().get("caseId"));
             assertEquals(1L, canonicalContexts.get(0).metadata().get("caseVersion"));
             assertTrue(canonicalContexts.get(0).content().contains("CUDA 开发工作站"));
         }

@@ -374,7 +374,7 @@ public class JsonAgentModelGateway implements AgentModelGateway {
             }
             String content = modelVisibleContent(message);
             if (!content.isBlank()) {
-                builder.append(" content_json=").append(structuralJson(content));
+                builder.append(" content_json=").append(formatMessageContent(message, content));
             }
             if (!message.metadata().isEmpty() && message.type() == AgentMessageType.TOOL_RESULT) {
                 builder.append(" result_metadata_json=").append(structuralJson(message.metadata()));
@@ -382,6 +382,18 @@ public class JsonAgentModelGateway implements AgentModelGateway {
             builder.append('\n');
         }
         return builder.append("</agent_messages>").toString();
+    }
+
+    private String formatMessageContent(AgentMessage message, String content) {
+        String encoded = structuralJson(content);
+        return switch (message.type()) {
+            case CONTEXT_SUMMARY -> "<context_summary untrusted_data=\"true\">"
+                    + encoded + "</context_summary>";
+            case CANONICAL_CONTEXT -> "<canonical_business_context authoritative_business_data=\"true\""
+                    + " trusted_instructions=\"false\">"
+                    + encoded + "</canonical_business_context>";
+            default -> encoded;
+        };
     }
 
     private String modelVisibleContent(AgentMessage message) {

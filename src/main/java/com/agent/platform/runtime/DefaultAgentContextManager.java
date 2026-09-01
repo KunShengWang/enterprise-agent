@@ -6,8 +6,6 @@ import com.agent.platform.memory.MemoryMessage;
 import com.agent.platform.memory.MemorySearchResult;
 import com.agent.platform.memory.MemoryService;
 import com.agent.platform.memory.UserProfile;
-import com.agent.platform.procurement.application.ProcurementCaseContextRenderer;
-import com.agent.platform.procurement.config.ProcurementSourcingExecutionProfileFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -39,16 +37,16 @@ public class DefaultAgentContextManager implements AgentContextManager {
     private final MemoryService memoryService;
     private final ConversationSummarizer conversationSummarizer;
     private final AgentProperties properties;
-    private final ProcurementCaseContextRenderer procurementCaseContextRenderer;
+    private final List<AgentCanonicalContextProvider> canonicalContextProviders;
     private final Object[] compactionLocks = new Object[COMPACTION_LOCK_STRIPES];
 
-    /** 兼容不需要采购上下文的旧测试/嵌入式调用方。 */
+    /** 兼容不需要 canonical context 的旧测试/嵌入式调用方。 */
     public DefaultAgentContextManager(AgentTimelineStore timelineStore,
                                       TokenEstimator tokenEstimator,
                                       MemoryService memoryService,
                                       ConversationSummarizer conversationSummarizer,
                                       AgentProperties properties) {
-        this(timelineStore, tokenEstimator, memoryService, conversationSummarizer, properties, null);
+        this(timelineStore, tokenEstimator, memoryService, conversationSummarizer, properties, List.of());
     }
 
     @Autowired
@@ -57,13 +55,14 @@ public class DefaultAgentContextManager implements AgentContextManager {
                                       MemoryService memoryService,
                                       ConversationSummarizer conversationSummarizer,
                                       AgentProperties properties,
-                                      ProcurementCaseContextRenderer procurementCaseContextRenderer) {
+                                      List<AgentCanonicalContextProvider> canonicalContextProviders) {
         this.timelineStore = timelineStore;
         this.tokenEstimator = tokenEstimator;
         this.memoryService = memoryService;
         this.conversationSummarizer = conversationSummarizer;
         this.properties = properties;
-        this.procurementCaseContextRenderer = procurementCaseContextRenderer;
+        this.canonicalContextProviders = canonicalContextProviders == null
+                ? List.of() : List.copyOf(canonicalContextProviders);
         for (int index = 0; index < compactionLocks.length; index++) {
             compactionLocks[index] = new Object();
         }
@@ -81,19 +80,20 @@ public class DefaultAgentContextManager implements AgentContextManager {
                                     String query,
                                     long maxTokens,
                                     AgentExecutionProfile profile) {
-        // 从数据库加载有限的历史消息；采购 canonical context 不依赖时间线是否为空。
+        // 从数据库加载有限的历史消息；canonical context 不依赖时间线是否为空。
         List<AgentMessage> timeline = timelineStore.loadMessages(sessionId, MAX_TIMELINE_MESSAGES);
         long budget = Math.max(1, maxTokens);
-        AgentMessage canonicalProcurementContext = freshProcurementContext(
+        List<AgentMessage> canonicalContexts = freshCanonicalContexts(
                 sessionId, userId, tenantId, profile);
-        long canonicalTokens = tokens(canonicalProcurementContext);
+        long canonicalTokens = canonicalContexts.stream().mapToLong(this::tokens).sum();
         // 获取最新的消息摘要
         AgentMessage latestSummary = latestSummary(timeline);
         // 当前最新摘要覆盖到的消息序号上限
         long coveredThrough = coveredThrough(latestSummary);
         // 活跃消息 = 序号 > 57 的（不在摘要范围里的新消息）
         List<AgentMessage> activeMessages = timeline.stream()
-                .filter(message -> message.type() != AgentMessageType.CONTEXT_SUMMARY)// 排除摘要本身
+                .filter(message -> message.type() != AgentMessageType.CONTEXT_SUMMARY
+                        && message.type() != AgentMessageType.CANONICAL_CONTEXT)// 排除合成上下文本身
                 .filter(message -> message.sequence() > coveredThrough)// 只取未被覆盖的新消息
                 .toList();
 
@@ -127,9 +127,7 @@ public class DefaultAgentContextManager implements AgentContextManager {
         selectedRecent.sort(Comparator.comparingLong(MessageUnit::firstSequence));
 
         List<AgentMessage> projected = new ArrayList<>();
-        if (canonicalProcurementContext != null) {
-            projected.add(canonicalProcurementContext);
-        }
+        projected.addAll(canonicalContexts);
         if (latestSummary != null) {
             projected.add(latestSummary);
         }
@@ -141,8 +139,8 @@ public class DefaultAgentContextManager implements AgentContextManager {
                 : null;
         long projectedTokens = canonicalTokens + summaryTokens + selectedTokens;
         if (memoryContext != null && projectedTokens + tokens(memoryContext) <= budget) {
-            // canonical context 始终位于 memory_context 之前，确保当前权威状态优先于长期偏好。
-            projected.add(canonicalProcurementContext == null ? 0 : 1, memoryContext);
+            // canonical context 始终位于 memory_context 之前，确保当前业务事实优先于长期偏好。
+            projected.add(canonicalContexts.size(), memoryContext);
             projectedTokens += tokens(memoryContext);
         }
 
@@ -168,9 +166,8 @@ public class DefaultAgentContextManager implements AgentContextManager {
         metadata.put("omittedMessages", omitted);
         metadata.put("summarySequence", latestSummary == null ? 0L : latestSummary.sequence());
         metadata.put("coversThroughSequence", coveredThrough);
-        metadata.put("canonicalContextIncluded", canonicalProcurementContext != null);
-        metadata.put("canonicalContextCaseVersion", canonicalProcurementContext == null
-                ? 0L : canonicalProcurementContext.metadata().getOrDefault("caseVersion", 0L));
+        metadata.put("canonicalContextIncluded", !canonicalContexts.isEmpty());
+        metadata.put("canonicalContextCount", canonicalContexts.size());
         metadata.put("memoryEnabled", longTermMemoryEnabled);
         metadata.put("memoryContextIncluded", memoryContext != null);
         metadata.put("compactionRequested", false);
@@ -223,7 +220,8 @@ public class DefaultAgentContextManager implements AgentContextManager {
         AgentMessage previousSummary = latestSummary(timeline);
         long previousCoveredThrough = coveredThrough(previousSummary);
         List<AgentMessage> active = timeline.stream()
-                .filter(message -> message.type() != AgentMessageType.CONTEXT_SUMMARY)
+                .filter(message -> message.type() != AgentMessageType.CONTEXT_SUMMARY
+                        && message.type() != AgentMessageType.CANONICAL_CONTEXT)
                 .filter(message -> message.sequence() > previousCoveredThrough)
                 .toList();
         List<MessageUnit> units = buildUnits(active);
@@ -367,6 +365,7 @@ public class DefaultAgentContextManager implements AgentContextManager {
             case ASSISTANT_TOOL_CALL -> "assistant_tool_call";
             case TOOL_RESULT -> "tool_result";
             case CONTEXT_SUMMARY -> "context_summary";
+            case CANONICAL_CONTEXT -> "canonical_context";
         };
         String content = switch (message.type()) {
             case ASSISTANT_TOOL_CALL -> "toolCallId=" + message.toolCallId()
@@ -391,31 +390,28 @@ public class DefaultAgentContextManager implements AgentContextManager {
                 + tokenEstimator.estimate(String.valueOf(message.metadata()));
     }
 
-    private AgentMessage freshProcurementContext(String sessionId,
-                                                 String userId,
-                                                 String tenantId,
-                                                 AgentExecutionProfile profile) {
-        if (procurementCaseContextRenderer == null
-                || profile == null
-                || !ProcurementSourcingExecutionProfileFactory.PROFILE_NAME.equals(profile.name())) {
-            return null;
-        }
-        return procurementCaseContextRenderer.render(tenantId, userId, sessionId)
-                .map(rendered -> new AgentMessage(
-                        "procurement-case-context-" + sessionId,
+    private List<AgentMessage> freshCanonicalContexts(String sessionId,
+                                                       String userId,
+                                                       String tenantId,
+                                                       AgentExecutionProfile profile) {
+        return canonicalContextProviders.stream()
+                .map(provider -> provider.provide(tenantId, userId, sessionId, profile))
+                .flatMap(java.util.Optional::stream)
+                .map(context -> new AgentMessage(
+                        context.contextId(),
                         sessionId,
                         "",
                         0,
-                        AgentMessageType.CONTEXT_SUMMARY,
-                        rendered.content(),
+                        AgentMessageType.CANONICAL_CONTEXT,
+                        context.content(),
                         "",
                         "",
                         Map.of(),
-                        rendered.metadata(),
-                        tokenEstimator.estimate(rendered.content()),
+                        context.metadata(),
+                        tokenEstimator.estimate(context.content()),
                         Instant.now()
                 ))
-                .orElse(null);
+                .toList();
     }
 
     /**
@@ -465,8 +461,8 @@ public class DefaultAgentContextManager implements AgentContextManager {
     }
 
     private boolean isSyntheticContext(AgentMessage message) {
-        return message.messageId().startsWith("memory-context-")
-                || message.messageId().startsWith("procurement-case-context-");
+        return message.type() == AgentMessageType.CANONICAL_CONTEXT
+                || message.messageId().startsWith("memory-context-");
     }
 
     private record CompactionStats(boolean performed,

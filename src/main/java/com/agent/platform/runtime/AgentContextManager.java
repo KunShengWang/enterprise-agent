@@ -3,7 +3,7 @@ package com.agent.platform.runtime;
 public interface AgentContextManager {
 
     /**
-     * 兼容旧调用方；新的 Runtime 调用必须提供可信 tenant/profile，才能完成采购权威状态投影和记忆门控。
+     * 兼容旧调用方；新的 Runtime 调用应提供可信 tenant/profile，以便完成 canonical context 投影和记忆门控。
      */
     AgentContextView project(String sessionId, String userId, String query, long maxTokens);
 
