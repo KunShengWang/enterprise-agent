@@ -187,6 +187,61 @@ class ProcurementSourcingMvpTests {
     }
 
     @Test
+    void sourcingRecommendationRejectsMismatchedAlternativeSuppliers() {
+        assertThrows(IllegalArgumentException.class, () -> recommendation(
+                List.of(supplier("supplier-b")), List.of(offer("supplier-c")), 0.82));
+        assertThrows(IllegalArgumentException.class, () -> recommendation(
+                List.of(supplier("supplier-b")), List.of(), 0.82));
+        assertThrows(IllegalArgumentException.class, () -> recommendation(
+                List.of(supplier("supplier-b"), supplier("supplier-c")),
+                List.of(offer("supplier-c"), offer("supplier-b")), 0.82));
+    }
+
+    @Test
+    void sourcingRecommendationRejectsRecommendedSupplierAsAlternative() {
+        assertThrows(IllegalArgumentException.class, () -> recommendation(
+                List.of(supplier("supplier-d")), List.of(offer("supplier-d")), 0.82));
+    }
+
+    @Test
+    void sourcingRecommendationRejectsNullAndDuplicateAlternativeSuppliers() {
+        assertThrows(IllegalArgumentException.class, () -> recommendation(
+                List.of(supplier("supplier-b"), supplier("supplier-b")),
+                List.of(offer("supplier-b"), offer("supplier-b")), 0.82));
+        assertThrows(IllegalArgumentException.class, () -> recommendation(
+                java.util.Collections.singletonList((SupplierCandidate) null),
+                java.util.Collections.singletonList(offer("supplier-b")), 0.82));
+        assertThrows(IllegalArgumentException.class, () -> recommendation(
+                List.of(supplier("supplier-b")),
+                java.util.Collections.singletonList((SupplierOffer) null), 0.82));
+    }
+
+    @Test
+    void sourcingRecommendationRejectsOutOfRangeConfidence() {
+        assertThrows(IllegalArgumentException.class, () -> recommendation(List.of(), List.of(), 1.01));
+        assertThrows(IllegalArgumentException.class, () -> recommendation(List.of(), List.of(), -0.01));
+        assertThrows(IllegalArgumentException.class, () -> recommendation(List.of(), List.of(), Double.NaN));
+        assertThrows(IllegalArgumentException.class, () -> recommendation(List.of(), List.of(), Double.POSITIVE_INFINITY));
+        assertThrows(IllegalArgumentException.class, () -> recommendation(List.of(), List.of(), Double.NEGATIVE_INFINITY));
+    }
+
+    @Test
+    void sourcingRecommendationAcceptsMatchingAlternativeAndConfidence() {
+        SourcingRecommendation recommendation = recommendation(
+                List.of(supplier("supplier-b")), List.of(offer("supplier-b")), 0.82);
+
+        assertEquals(List.of("supplier-b"), recommendation.eligibleAlternatives().stream()
+                .map(SupplierCandidate::supplierId).toList());
+        assertEquals(List.of("supplier-b"), recommendation.alternativeOffers().stream()
+                .map(SupplierOffer::supplierId).toList());
+        assertEquals(0.82, recommendation.confidence());
+        SourcingRecommendation lowerBound = recommendation(List.of(), List.of(), 0.0);
+        SourcingRecommendation upperBound = recommendation(List.of(), List.of(), 1.0);
+        assertEquals(0.0, lowerBound.confidence());
+        assertEquals(1.0, upperBound.confidence());
+    }
+
+    @Test
     void sameConversationIsolatedByTenantAndUser() {
         MemoryCaseStore store = new MemoryCaseStore();
         ProcurementCaseService service = service(store);
@@ -236,6 +291,24 @@ class ProcurementSourcingMvpTests {
     private ProcurementCasePatch patch(String category, String description, int quantity, BigDecimal budget) {
         return new ProcurementCasePatch(category, description, quantity, budget, "CNY", null,
                 Map.of(), Set.of(), Map.of(), Set.of(), Set.of(), Set.of(), Set.of());
+    }
+
+    private SourcingRecommendation recommendation(List<SupplierCandidate> alternatives,
+                                                  List<SupplierOffer> alternativeOffers,
+                                                  double confidence) {
+        return new SourcingRecommendation(supplier("supplier-d"), offer("supplier-d"), alternatives,
+                alternativeOffers, List.of(), List.of(), List.of("evidence"),
+                List.of(ProcurementTradeoffDimension.DELIVERY), confidence);
+    }
+
+    private SupplierCandidate supplier(String supplierId) {
+        return provider.searchSuppliers(completeState()).stream()
+                .filter(value -> value.supplierId().equals(supplierId)).findFirst().orElseThrow();
+    }
+
+    private SupplierOffer offer(String supplierId) {
+        return provider.getSupplierOffers(completeState(), provider.searchSuppliers(completeState())).stream()
+                .filter(value -> value.supplierId().equals(supplierId)).findFirst().orElseThrow();
     }
 
     private Set<String> ids(JsonNode values) {

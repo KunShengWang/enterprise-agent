@@ -43,7 +43,12 @@ Java Eligibility/Evaluation 只计算 totalPrice、currency、budget、delivery�
 
 Phase 1 的 Agent Tool 只有 `procurement_case_patch`、`procurement_supplier_search` 和 `procurement_recommendation_finalize`。Search 已返回本阶段需要的 Provider Offer 和 Evidence；没有独立的供应商深入调查来源。质量历史、履约率、库存、供应商风险、认证和合同状态若未出现在 ToolResult 中，Agent 必须明确说明“当前数据未提供”，不得推断或补写。
 
-`SourcingRecommendation` 是权威业务记录，只保存 Java/Provider 验证后的 recommendedSupplier、selectedOffer、eligibleAlternatives、alternativeOffers、matchedConstraints、rejectedCandidates、evidenceRefs、tradeoffDimensions 和 confidence。价格、总价、交期、质保、规格和 Eligibility 都由当前 Provider snapshot 与 Java Evaluation 构造；Agent 不能提交这些字段，也不能提交 reasons、risks、uncertainties 或自由文本 tradeoffs。Agent 的最终中文 explanation 属于展示层，只能在 Finalize ToolResult 之后基于其中 verified facts 生成，不写入 canonical Recommendation。
+`SourcingRecommendation` 是权威业务记录，但字段分为两层：
+
+- **Verified Facts**：`recommendedSupplier`、`selectedOffer`、`eligibleAlternatives`、`alternativeOffers`、`matchedConstraints`、`rejectedCandidates` 和 `evidenceRefs`。这些事实由 Java 根据当前 Provider snapshot 构造并验证；价格、总价、交期、质保、规格和 Eligibility 不由 Agent 提交。`eligibleAlternatives` 与 `alternativeOffers` 必须按位置一一对应并表达同一组 Supplier，不能包含 null、重复 Supplier ID 或 recommended supplier。
+- **Agent Decision Metadata**：`tradeoffDimensions` 与 `confidence`。它们由 Agent 提交，用来说明选择时关注的权衡维度和主观决策置信度，不是 Provider 事实。
+
+`confidence` 只表示 Agent 对本次 Supplier Selection 的主观决策置信度，不表示 Provider 数据真实性概率、Supplier 实际履约概率、Supplier 风险概率、推荐正确率、Eligibility 置信度或统计概率。Java 只校验有限值满足 `0 <= confidence <= 1`，`NaN`、`±Infinity` 和越界值均直接拒绝，不增加计算或静默修正逻辑。Agent 的最终中文 explanation 属于展示层，只能在 Finalize ToolResult 之后基于其中 verified facts 生成，不写入 canonical Recommendation。
 
 `ProcurementCaseState` 的权威来源是 tenant/user/conversation 维度的 Case Store，不是 Runtime metadata 副本。`procurement_case_patch` 是内部状态 mutation，Tool metadata 如实标记为 `readOnly=false/sideEffect=true`；search 和 finalize 为 `readOnly=true/sideEffect=false`，三者都不执行 RFQ、PO、审批、付款等采购业务动作。
 

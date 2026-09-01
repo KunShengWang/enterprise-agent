@@ -143,7 +143,7 @@ class ProcurementAgentRuntimeE2ETests {
 
         AgentRuntimeResult result = runtime.run(new AgentRequest(
                 "procurement-e2e-conversation", "buyer-1",
-                "研发部门需要采购 50 台 CUDA 工作站，预算 60 万，三周内到，显存至少 24GB；可以稍贵，不要 Supplier A。",
+                "研发部门需要采购 50 台 CUDA 工作站，预算 60 万，三周内到，显存至少 24GB；不要 Supplier A。这次项目比较急，可以稍微贵一点，交付优先。",
                 Map.of("tenantId", "tenant-1", "authenticatedRoles", Set.of("USER")),
                 profile.name()), profile, AgentEventListener.NOOP);
 
@@ -152,6 +152,11 @@ class ProcurementAgentRuntimeE2ETests {
                         .map(record -> record.toolName() + ":" + (record.result() == null ? "null" : record.result().errorMessage()))
                         .toList());
         assertTrue(result.answer().contains("Supplier D"));
+        assertTrue(result.answer().contains("580000"));
+        assertTrue(result.answer().contains("12"));
+        assertTrue(result.answer().contains("Supplier B"));
+        assertTrue(result.answer().contains("550000"));
+        assertTrue(result.answer().contains("18"));
         assertEquals(List.of(
                         ProcurementToolCatalog.CASE_PATCH,
                         ProcurementToolCatalog.SUPPLIER_SEARCH,
@@ -252,7 +257,7 @@ class ProcurementAgentRuntimeE2ETests {
                                 "currency", "CNY",
                                 "requiredDeliveryDays", 21,
                                 "hardConstraintsUpsert", Map.of("gpuMemoryMinGb", "24"),
-                                "preferencesUpsert", Map.of("pricePriority", "MEDIUM", "deliveryPriority", "HIGH"),
+                                "preferencesUpsert", Map.of("deliveryPriority", "HIGH"),
                                 "excludedSuppliersAdd", List.of("Supplier A")
                         ), "把自然语言采购约束写入当前 Case")), "patch", usage, "tool_calls");
             }
@@ -310,11 +315,47 @@ class ProcurementAgentRuntimeE2ETests {
                                 "confidence", 0.86
                         ), "在多个 Eligible 中提交透明权衡后的选择")), "finalize", usage, "tool_calls");
             }
-            assertTrue(request.messages().stream().anyMatch(message ->
-                    message.type() == AgentMessageType.TOOL_RESULT
-                            && message.content().contains("recommendation")));
-            return new AgentModelTurn("当前推荐 Supplier D：交期更快且满足硬约束，但单价高于 Supplier B；本阶段仅完成只读推荐。",
+            JsonNode finalized = request.messages().stream()
+                    .filter(message -> message.type() == AgentMessageType.TOOL_RESULT
+                            && ProcurementToolCatalog.RECOMMENDATION_FINALIZE.equals(message.toolName()))
+                    .reduce((left, right) -> right)
+                    .map(message -> readTree(message.content()))
+                    .orElseThrow(() -> new AssertionError("第四轮未收到 recommendation_finalize ToolResult"));
+            assertEquals("verified-provider-snapshot", finalized.path("source").asText());
+            JsonNode recommendation = finalized.path("recommendation");
+            JsonNode selectedOffer = recommendation.path("selectedOffer");
+            assertEquals("supplier-d", selectedOffer.path("supplierId").asText());
+            assertEquals(580000, selectedOffer.path("totalPrice").asInt());
+            assertEquals(12, selectedOffer.path("leadTimeDays").asInt());
+            JsonNode alternativeOffer = null;
+            for (JsonNode offer : recommendation.path("alternativeOffers")) {
+                if ("supplier-b".equals(offer.path("supplierId").asText())) alternativeOffer = offer;
+            }
+            assertTrue(alternativeOffer != null, "Finalize ToolResult 缺少 Supplier B alternative offer");
+            assertEquals(550000, alternativeOffer.path("totalPrice").asInt());
+            assertEquals(18, alternativeOffer.path("leadTimeDays").asInt());
+            String selectedSupplierName = recommendation.path("recommendedSupplier").path("supplierName").asText();
+            String alternativeSupplierName = "";
+            for (JsonNode supplier : recommendation.path("eligibleAlternatives")) {
+                if ("supplier-b".equals(supplier.path("supplierId").asText())) {
+                    alternativeSupplierName = supplier.path("supplierName").asText();
+                }
+            }
+            assertTrue(!alternativeSupplierName.isBlank(), "Finalize ToolResult 缺少 Supplier B alternative candidate");
+            return new AgentModelTurn("推荐 " + selectedSupplierName + "：总价 "
+                    + selectedOffer.path("totalPrice").asText() + "，交期 "
+                    + selectedOffer.path("leadTimeDays").asInt() + " 天；备选 "
+                    + alternativeSupplierName + "：总价 " + alternativeOffer.path("totalPrice").asText()
+                    + "，交期 " + alternativeOffer.path("leadTimeDays").asInt() + " 天。本阶段仅完成只读推荐。",
                     List.of(), "answer", usage, "stop");
+        }
+
+        private JsonNode readTree(String content) {
+            try {
+                return mapper.readTree(content);
+            } catch (Exception exception) {
+                throw new AssertionError("无法解析 recommendation_finalize ToolResult", exception);
+            }
         }
 
         private List<String> toolNames() {
