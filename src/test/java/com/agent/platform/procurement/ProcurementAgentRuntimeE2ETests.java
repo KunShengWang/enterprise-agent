@@ -12,6 +12,8 @@ import com.agent.platform.llm.ConfiguredLlmCostCalculator;
 import com.agent.platform.llm.LlmUsage;
 import com.agent.platform.mcp.McpToolGateway;
 import com.agent.platform.memory.MemoryService;
+import com.agent.platform.memory.RuleBasedConversationSummarizer;
+import com.agent.platform.procurement.application.ProcurementCaseContextRenderer;
 import com.agent.platform.procurement.application.ProcurementCasePatchMerger;
 import com.agent.platform.procurement.application.ProcurementDecisionEngine;
 import com.agent.platform.procurement.application.ProcurementCaseService;
@@ -26,7 +28,6 @@ import com.agent.platform.procurement.tool.ProcurementToolHandler;
 import com.agent.platform.rag.RagService;
 import com.agent.platform.runtime.AgentCapabilityRegistry;
 import com.agent.platform.runtime.AgentContextManager;
-import com.agent.platform.runtime.AgentContextView;
 import com.agent.platform.runtime.AgentEvent;
 import com.agent.platform.runtime.AgentEventDraft;
 import com.agent.platform.runtime.AgentEventListener;
@@ -46,6 +47,7 @@ import com.agent.platform.runtime.AgentRuntimeResult;
 import com.agent.platform.runtime.AgentToolCall;
 import com.agent.platform.runtime.AgentToolRuntimeResult;
 import com.agent.platform.runtime.DefaultAgentCapabilityExecutor;
+import com.agent.platform.runtime.DefaultAgentContextManager;
 import com.agent.platform.runtime.DefaultAgentRuntime;
 import com.agent.platform.runtime.DefaultAgentToolRuntime;
 import com.agent.platform.runtime.ToolExecutionClaim;
@@ -88,6 +90,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /** 验证真实 DefaultAgentRuntime → ToolRuntime → LocalToolExecutor → 采购 Handler 闭环。 */
@@ -132,13 +135,20 @@ class ProcurementAgentRuntimeE2ETests {
         ScriptedProcurementModel model = new ScriptedProcurementModel(mapper);
         InMemoryRunStore runStore = new InMemoryRunStore();
         InMemoryTimelineStore timelineStore = new InMemoryTimelineStore();
-        AgentContextManager contextManager = contextManager(timelineStore);
+        MemoryService memoryService = mock(MemoryService.class);
+        AgentContextManager contextManager = new DefaultAgentContextManager(
+                timelineStore,
+                new ConservativeTokenEstimator(),
+                memoryService,
+                new RuleBasedConversationSummarizer(),
+                properties,
+                new ProcurementCaseContextRenderer(caseStore, mapper));
         AgentExecutionProfile profile = new ProcurementSourcingExecutionProfileFactory().createProfile();
         DefaultAgentRuntime runtime = new DefaultAgentRuntime(
                 properties, timelineStore, runStore, toolExecutionStore, contextManager, model,
                 new MapCapabilityRegistry(definitions), toolRuntime, guardrail, List.of(),
                 mock(ApprovalService.class), new ConservativeTokenEstimator(), new NoopRunControlStore(),
-                mock(MemoryService.class), new ConfiguredLlmCostCalculator(properties),
+                memoryService, new ConfiguredLlmCostCalculator(properties),
                 new ToolResultProjector(properties));
 
         AgentRuntimeResult result = runtime.run(new AgentRequest(
@@ -168,6 +178,21 @@ class ProcurementAgentRuntimeE2ETests {
                 isToolResult(message) && message.content().contains("eligibleSuppliers")));
         assertTrue(model.requests.get(3).messages().stream().anyMatch(message ->
                 isToolResult(message) && message.content().contains("recommendation")));
+        for (int index = 1; index < model.requests.size(); index++) {
+            List<AgentMessage> canonicalContexts = model.requests.get(index).messages().stream()
+                    .filter(message -> ProcurementCaseContextRenderer.SOURCE.equals(
+                            message.metadata().get("source")))
+                    .toList();
+            assertEquals(1, canonicalContexts.size(), "每个采购模型轮次都必须有一个 fresh Case context");
+            assertEquals(1L, canonicalContexts.get(0).metadata().get("caseVersion"));
+            assertTrue(canonicalContexts.get(0).content().contains("CUDA 开发工作站"));
+        }
+        assertTrue(model.requests.stream().flatMap(request -> request.messages().stream())
+                .noneMatch(message -> message.content().contains("<memory_context>")));
+        verifyNoInteractions(memoryService);
+        assertTrue(timelineStore.events.stream().filter(event ->
+                        event.type() == AgentEventType.CONTEXT_PREPARED)
+                .allMatch(event -> "projection".equals(event.payload().get("reason"))));
         ProcurementCase current = caseStore.findByTenantUserAndConversationId(
                 "tenant-1", "buyer-1", "procurement-e2e-conversation").orElseThrow();
         assertEquals(1, current.version());
@@ -188,23 +213,6 @@ class ProcurementAgentRuntimeE2ETests {
                 .findFirst().orElseThrow().result().metadata().entrySet().stream()
                 .filter(entry -> entry.getKey().equals("readOnly") || entry.getKey().equals("sideEffect"))
                 .collect(java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    private AgentContextManager contextManager(InMemoryTimelineStore timeline) {
-        return new AgentContextManager() {
-            @Override
-            public AgentContextView project(String sessionId, String userId, String query, long maxTokens) {
-                List<AgentMessage> messages = timeline.loadMessages(sessionId, 10_000);
-                long estimated = messages.stream().mapToLong(AgentMessage::estimatedTokens).sum();
-                return new AgentContextView(messages, estimated, 0, false);
-            }
-
-            @Override
-            public AgentContextView compact(String sessionId, String userId, String runId, String query,
-                                            long maxTokens, String reason) {
-                return project(sessionId, userId, query, maxTokens);
-            }
-        };
     }
 
     private GuardrailService allowAllGuardrail() {

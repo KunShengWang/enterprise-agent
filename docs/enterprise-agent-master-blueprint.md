@@ -332,7 +332,17 @@ limits: 独立的 turn/model/tool/token/cost/time 预算
 
 HTTP 请求只能提交枚举化 `scenarioId`，由 `AgentScenarioProfileResolver` 映射为服务端对象。浏览器不能提交 System Prompt、能力白名单和预算。
 
-OrderCare 禁用长期记忆写入：订单事实属于业务系统和当前 Run，不应该被抽取成用户画像。短期上下文继续由 PostgreSQL Timeline 和 Context Summary 管理。
+对 `longTermMemoryEnabled: false` 的业务 Profile（包括 OrderCare），该开关统一关闭 Runtime 的长期记忆写入、recall、User Profile 加载和 synthetic `memory_context` 注入；订单事实属于业务系统和当前 Run，不应该被抽取成用户画像。PostgreSQL Timeline 与持久化 `CONTEXT_SUMMARY` 仍正常工作。
+
+### 9.1 Phase 2A：权威上下文与压缩边界
+
+所有 `run`、`resume` 和 follow-up 继续经过同一个 `DefaultAgentRuntime.executeLoop()`。Runtime 从可信工具策略上下文取得 `tenantId`，并把 `tenantId` 与服务端 `AgentExecutionProfile` 传给现有 `AgentContextManager`；不从用户请求重新反序列化 System Prompt、能力白名单或预算。
+
+采购寻源 Profile 是当前唯一接入专用 canonical renderer 的 Profile。每个模型轮次由 `ProcurementCaseContextRenderer` 按 `tenantId + userId + conversationId` 重新读取 `ProcurementCaseStore`，投影当前 `caseVersion/status/ProcurementCaseState`。该投影不缓存、不写 Timeline、不进入持久化 `CONTEXT_SUMMARY`，并优先占用上下文预算；压缩、恢复和下一轮投影都会重新读取权威 Case，避免用历史消息或 Memory 副本替代当前状态。投影 metadata 明确标记来源、新鲜度及 `trustedInstructions=false`，其中的用户字符串仍只是不可信业务数据。
+
+上下文管理保留完整 PostgreSQL Timeline；`CONTEXT_SUMMARY` 只压缩已覆盖的旧消息，`coversThroughSequence` 单调推进，工具调用与工具结果作为不可拆分的 `MessageUnit`，孤立工具消息不会单独发送给模型。`longTermMemoryEnabled=false` 不影响 Timeline 或持久化摘要，只禁止长期记忆写入、recall、Profile 注入和 `<memory_context>`。
+
+Runtime 事件按本轮实际行为区分 `CONTEXT_PREPARED` 与 `CONTEXT_COMPACTED`：已有历史摘要但本轮未压缩仍是 prepared；因 context budget 执行压缩或因 Provider `CONTEXT_OVERFLOW` 触发有界重试时才记录 compacted。事件记录原因、token budget、压缩前后消息数/Token/遗漏数和覆盖序列；Provider overflow 仍受 `maxContextOverflowRetries` 限制，不改变既有 Runtime 状态机。
 
 ## 10. 恢复 Proposal 与状态漂移
 

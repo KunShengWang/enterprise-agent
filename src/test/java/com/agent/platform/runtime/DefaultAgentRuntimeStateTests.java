@@ -114,7 +114,7 @@ class DefaultAgentRuntimeStateTests {
             persisted.set(updated);
             return updated;
         });
-        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyString(), anyLong(), any(AgentExecutionProfile.class)))
                 .thenThrow(new IllegalStateException("context database failed"));
 
         AgentRuntimeResult result = fixture.runtime().run(
@@ -167,7 +167,7 @@ class DefaultAgentRuntimeStateTests {
             pauseSignal.set(false);
             return true;
         });
-        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyString(), anyLong(), any(AgentExecutionProfile.class)))
                 .thenReturn(new AgentContextView(List.of(), 0, 0, false));
         when(fixture.modelGateway.nextTurn(any())).thenAnswer(invocation -> {
             int call = modelCalls.incrementAndGet();
@@ -234,7 +234,7 @@ class DefaultAgentRuntimeStateTests {
             return updated;
         });
         when(fixture.runControlStore.clearPauseRequest("run-pause-requested")).thenReturn(true);
-        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyString(), anyLong(), any(AgentExecutionProfile.class)))
                 .thenReturn(new AgentContextView(List.of(), 0, 0, false));
         when(fixture.modelGateway.nextTurn(any())).thenReturn(finalTurn("recovered after pause request crash"));
 
@@ -319,7 +319,7 @@ class DefaultAgentRuntimeStateTests {
             fixture.persisted.set(updated);
             return updated;
         });
-        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyString(), anyLong(), any(AgentExecutionProfile.class)))
                 .thenReturn(new AgentContextView(List.of(), 0, 0, false));
         org.mockito.Mockito.doAnswer(invocation -> {
                     AgentEventDraft draft = invocation.getArgument(3);
@@ -379,7 +379,7 @@ class DefaultAgentRuntimeStateTests {
             fixture.persisted.set(updated);
             return updated;
         });
-        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyString(), anyLong(), any(AgentExecutionProfile.class)))
                 .thenReturn(new AgentContextView(List.of(), 0, 0, false));
         org.mockito.Mockito.doAnswer(invocation -> {
             AgentEventDraft draft = invocation.getArgument(3);
@@ -412,6 +412,124 @@ class DefaultAgentRuntimeStateTests {
                 && Integer.valueOf(1).equals(event.payload().get("protocolRetry"))));
     }
 
+    @Test
+    void existingSummaryDoesNotCountAsACompactionInTheCurrentTurn() {
+        Fixture fixture = new Fixture();
+        configureRunPersistence(fixture);
+        List<AgentEventDraft> drafts = new ArrayList<>();
+        recordEvents(fixture, drafts);
+        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyString(), anyLong(), any(AgentExecutionProfile.class)))
+                .thenReturn(new AgentContextView(
+                        List.of(), 12, 0, true,
+                        Map.of("coversThroughSequence", 17L, "compactionPerformed", false)
+                ));
+        when(fixture.modelGateway.nextTurn(any())).thenReturn(finalTurn("summary reused"));
+
+        AgentRuntimeResult result = fixture.runtime().run(
+                new AgentRequest("session-summary", "user-1", "question", Map.of()),
+                AgentEventListener.NOOP
+        );
+
+        assertEquals(AgentRunState.COMPLETED, result.state());
+        AgentEventDraft contextEvent = drafts.stream()
+                .filter(event -> event.type() == AgentEventType.CONTEXT_PREPARED
+                        || event.type() == AgentEventType.CONTEXT_COMPACTED)
+                .findFirst()
+                .orElseThrow();
+        assertEquals(AgentEventType.CONTEXT_PREPARED, contextEvent.type());
+        assertEquals("projection", contextEvent.payload().get("reason"));
+        assertEquals(false, contextEvent.payload().get("compactionRequested"));
+        assertEquals(false, contextEvent.payload().get("compactionPerformed"));
+        assertEquals(24_000L, contextEvent.payload().get("tokenBudget"));
+        assertEquals(17L, contextEvent.payload().get("coversThroughSequence"));
+    }
+
+    @Test
+    void contextBudgetCompactionEventContainsBeforeAndAfterMetrics() {
+        Fixture fixture = new Fixture();
+        configureRunPersistence(fixture);
+        List<AgentEventDraft> drafts = new ArrayList<>();
+        recordEvents(fixture, drafts);
+        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyString(), anyLong(), any(AgentExecutionProfile.class)))
+                .thenReturn(new AgentContextView(
+                        contextMessages(2), 20, 1, false,
+                        Map.of("coversThroughSequence", 2L, "compactionPerformed", false)
+                ));
+        when(fixture.contextManager.compact(anyString(), anyString(), anyString(), anyString(), anyString(), anyLong(), anyString(), any(AgentExecutionProfile.class)))
+                .thenReturn(new AgentContextView(
+                        contextMessages(1), 8, 0, true,
+                        Map.of("coversThroughSequence", 8L, "compactionPerformed", true,
+                                "compactedMessageCount", 3)
+                ));
+        when(fixture.modelGateway.nextTurn(any())).thenReturn(finalTurn("compacted"));
+
+        AgentRuntimeResult result = fixture.runtime().run(
+                new AgentRequest("session-context-budget", "user-1", "question", Map.of()),
+                AgentEventListener.NOOP
+        );
+
+        assertEquals(AgentRunState.COMPLETED, result.state());
+        AgentEventDraft contextEvent = drafts.stream()
+                .filter(event -> event.type() == AgentEventType.CONTEXT_COMPACTED)
+                .findFirst()
+                .orElseThrow();
+        assertEquals("context_budget", contextEvent.payload().get("reason"));
+        assertEquals(true, contextEvent.payload().get("compactionRequested"));
+        assertEquals(true, contextEvent.payload().get("compactionPerformed"));
+        assertEquals(24_000L, contextEvent.payload().get("tokenBudget"));
+        assertEquals(2, contextEvent.payload().get("beforeMessageCount"));
+        assertEquals(20L, contextEvent.payload().get("beforeEstimatedTokens"));
+        assertEquals(1, contextEvent.payload().get("beforeOmittedMessages"));
+        assertEquals(1, contextEvent.payload().get("afterMessageCount"));
+        assertEquals(8L, contextEvent.payload().get("afterEstimatedTokens"));
+        assertEquals(0, contextEvent.payload().get("afterOmittedMessages"));
+        assertEquals(8L, contextEvent.payload().get("coversThroughSequence"));
+    }
+
+    @Test
+    void providerContextOverflowCompactsOnceAndStopsAfterTheBoundedRetry() {
+        Fixture fixture = new Fixture();
+        fixture.properties.setMaxContextOverflowRetries(1);
+        configureRunPersistence(fixture);
+        List<AgentEventDraft> drafts = new ArrayList<>();
+        recordEvents(fixture, drafts);
+        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyString(), anyLong(), any(AgentExecutionProfile.class)))
+                .thenReturn(new AgentContextView(List.of(), 10, 0, false));
+        when(fixture.contextManager.compact(anyString(), anyString(), anyString(), anyString(), anyString(), anyLong(), anyString(), any(AgentExecutionProfile.class)))
+                .thenReturn(new AgentContextView(
+                        List.of(), 5, 0, true,
+                        Map.of("coversThroughSequence", 9L, "compactionPerformed", true)
+                ));
+        AtomicInteger modelCalls = new AtomicInteger();
+        org.mockito.Mockito.doAnswer(invocation -> {
+            modelCalls.incrementAndGet();
+            throw new LlmCallException("CONTEXT_OVERFLOW", "context too large", null);
+        }).when(fixture.modelGateway).nextTurn(any(), any());
+
+        AgentRuntimeResult result = fixture.runtime().run(
+                new AgentRequest("session-overflow", "user-1", "question", Map.of()),
+                AgentEventListener.NOOP
+        );
+
+        assertEquals(AgentRunState.FAILED, result.state());
+        assertEquals(AgentStopReason.CONTEXT_OVERFLOW, result.stopReason());
+        assertEquals(2, modelCalls.get());
+        org.mockito.Mockito.verify(fixture.contextManager).compact(
+                anyString(), anyString(), anyString(), anyString(), anyString(), anyLong(),
+                org.mockito.ArgumentMatchers.eq("provider_context_overflow"), any(AgentExecutionProfile.class)
+        );
+        AgentEventDraft overflowEvent = drafts.stream()
+                .filter(event -> event.type() == AgentEventType.CONTEXT_COMPACTED
+                        && "provider_context_overflow".equals(event.payload().get("reason")))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(1, overflowEvent.payload().get("retry"));
+        assertEquals(1, overflowEvent.payload().get("maxRetries"));
+        assertEquals(24_000L, overflowEvent.payload().get("tokenBudget"));
+        assertEquals(12_000L, overflowEvent.payload().get("retryBudget"));
+        assertEquals(true, overflowEvent.payload().get("compactionPerformed"));
+    }
+
     private static AgentModelTurn finalTurn(String answer) {
         return new AgentModelTurn(
                 answer,
@@ -420,6 +538,44 @@ class DefaultAgentRuntimeStateTests {
                 new LlmUsage(10, 5, 15, 0, 0, "test-model", "test"),
                 "stop"
         );
+    }
+
+    private void configureRunPersistence(Fixture fixture) {
+        when(fixture.runStore.create(any())).thenAnswer(invocation -> {
+            AgentRunRecord created = invocation.getArgument(0);
+            fixture.persisted.set(created);
+            return created;
+        });
+        when(fixture.runStore.find(anyString()))
+                .thenAnswer(invocation -> Optional.ofNullable(fixture.persisted.get()));
+        when(fixture.runStore.update(anyString(), any())).thenAnswer(invocation -> {
+            java.util.function.UnaryOperator<AgentRunRecord> updater = invocation.getArgument(1);
+            AgentRunRecord updated = updater.apply(fixture.persisted.get());
+            fixture.persisted.set(updated);
+            return updated;
+        });
+    }
+
+    private void recordEvents(Fixture fixture, List<AgentEventDraft> drafts) {
+        org.mockito.Mockito.doAnswer(invocation -> {
+            AgentEventDraft draft = invocation.getArgument(3);
+            drafts.add(draft);
+            return new AgentEvent(
+                    "event-" + drafts.size(), invocation.getArgument(2), invocation.getArgument(0), drafts.size(),
+                    draft.type(), draft.content(), draft.payload(), Instant.now()
+            );
+        }).when(fixture.timelineStore).appendEvent(anyString(), anyString(), anyString(), any());
+    }
+
+    private List<AgentMessage> contextMessages(int count) {
+        List<AgentMessage> messages = new ArrayList<>();
+        for (int index = 0; index < count; index++) {
+            messages.add(new AgentMessage(
+                    "context-message-" + index, "session-context", "run-context", index + 1,
+                    AgentMessageType.USER, "context", "", "", Map.of(), Map.of(), 1, Instant.now()
+            ));
+        }
+        return List.copyOf(messages);
     }
 
     @Test
@@ -439,7 +595,7 @@ class DefaultAgentRuntimeStateTests {
             fixture.persisted.set(updated);
             return updated;
         });
-        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+        when(fixture.contextManager.project(anyString(), anyString(), anyString(), anyString(), anyLong(), any(AgentExecutionProfile.class)))
                 .thenReturn(new AgentContextView(List.of(), 0, 0, false));
         ToolDefinition order = subAgentDefinition("delegate_order_analyst");
         ToolDefinition inventory = subAgentDefinition("delegate_inventory_analyst");
@@ -755,7 +911,7 @@ class DefaultAgentRuntimeStateTests {
                             1, result.errorMessage(), now, now
                     )
             ));
-            when(contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+            when(contextManager.project(anyString(), anyString(), anyString(), anyString(), anyLong(), any(AgentExecutionProfile.class)))
                     .thenReturn(new AgentContextView(List.of(), 0, 0, false));
             when(modelGateway.nextTurn(any())).thenReturn(new AgentModelTurn(
                     "replanned answer", List.of(), "replanned answer",
@@ -790,7 +946,7 @@ class DefaultAgentRuntimeStateTests {
             ToolExecutionRecord succeeded = running.withResult(ToolExecutionState.SUCCEEDED, resolvedResult, "");
             when(toolExecutionStore.findToolExecution("tool-exec-1")).thenReturn(Optional.of(running));
             when(toolRuntime.reconcileUncertain(running)).thenReturn(succeeded);
-            when(contextManager.project(anyString(), anyString(), anyString(), anyLong()))
+            when(contextManager.project(anyString(), anyString(), anyString(), anyString(), anyLong(), any(AgentExecutionProfile.class)))
                     .thenReturn(new AgentContextView(List.of(), 0, 0, false));
             when(modelGateway.nextTurn(any())).thenReturn(new AgentModelTurn(
                     "recovered answer", List.of(), "recovered answer",

@@ -709,27 +709,33 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
 
             // 计算上下文消息预算
             long contextTokenBudget = contextMessageBudget(profile);
+            String tenantId = ToolPolicyContext.from(
+                    runId, sessionId, userId, request.metadata()).tenantId();
             // 从数据库中加载消息 AgentMessage 并做处理
-            AgentContextView context = contextManager.project(
+            AgentContextView projectedContext = contextManager.project(
                     sessionId,
                     userId,
+                    tenantId,
                     request.question(),
-                    contextTokenBudget
+                    contextTokenBudget,
+                    profile
             );
-            if (context.omittedMessages() > 0) {
-                // TODO 上下文压缩
+            AgentContextView context = projectedContext;
+            boolean contextBudgetCompactionRequested = projectedContext.omittedMessages() > 0;
+            if (contextBudgetCompactionRequested) {
                 context = contextManager.compact(
-                        sessionId, userId, runId, request.question(), contextTokenBudget, "context_budget"
+                        sessionId, userId, tenantId, runId, request.question(), contextTokenBudget,
+                        "context_budget", profile
                 );
             }
             publish(sessionId, userId, runId,
-                    context.compacted() ? AgentEventType.CONTEXT_COMPACTED : AgentEventType.CONTEXT_PREPARED,
-                    "context projected",
-                    Map.of(
-                            "messageCount", context.messages().size(),
-                            "estimatedTokens", context.estimatedTokens(),
-                            "omittedMessages", context.omittedMessages()
-                    ),
+                    contextBudgetCompactionRequested
+                            ? AgentEventType.CONTEXT_COMPACTED : AgentEventType.CONTEXT_PREPARED,
+                    contextBudgetCompactionRequested ? "context compacted" : "context projected",
+                    contextEventPayload(projectedContext, context,
+                            contextBudgetCompactionRequested ? "context_budget" : "projection",
+                            contextBudgetCompactionRequested,
+                            Map.of("tokenBudget", contextTokenBudget)),
                     listener);
             if (context.estimatedTokens() > contextTokenBudget || context.omittedMessages() > 0) {
                 return finish(
@@ -838,19 +844,21 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                         }
                         // ① 压缩上下文，预算减半
                         long retryBudget = Math.max(1, contextTokenBudget / 2);
+                        AgentContextView beforeOverflowCompaction = context;
                         context = contextManager.compact(
-                                sessionId, userId, runId, request.question(), retryBudget,
-                                "provider_context_overflow"// ← 压缩原因
+                                sessionId, userId, tenantId, runId, request.question(), retryBudget,
+                                "provider_context_overflow", profile
                         );
                         publish(sessionId, userId, runId, AgentEventType.CONTEXT_COMPACTED,
                                 "provider rejected context; compacted before bounded retry",
-                                Map.of(
-                                        "retry", contextOverflowRetries,
-                                        "maxRetries", properties.getMaxContextOverflowRetries(),
-                                        "messageCount", context.messages().size(),
-                                        "estimatedTokens", context.estimatedTokens(),
-                                        "omittedMessages", context.omittedMessages()
-                                ), listener);
+                                contextEventPayload(beforeOverflowCompaction, context,
+                                        "provider_context_overflow", true,
+                                        Map.of(
+                                                "retry", contextOverflowRetries,
+                                                "maxRetries", properties.getMaxContextOverflowRetries(),
+                                                "tokenBudget", contextTokenBudget,
+                                                "retryBudget", retryBudget
+                                        )), listener);
                         // ② 压缩后还是超 → 直接放弃
                         if (context.estimatedTokens() > retryBudget || context.omittedMessages() > 0) {
                             return finish(
@@ -2363,6 +2371,88 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 "remainingExecutionMillis", budget.remainingExecutionMillis(),
                 "executionPaused", budget.executionPaused()
         );
+    }
+
+    private Map<String, Object> contextEventPayload(AgentContextView before,
+                                                     AgentContextView after,
+                                                     String reason,
+                                                     boolean compactionRequested) {
+        return contextEventPayload(before, after, reason, compactionRequested, Map.of());
+    }
+
+    private Map<String, Object> contextEventPayload(AgentContextView before,
+                                                     AgentContextView after,
+                                                     String reason,
+                                                     boolean compactionRequested,
+                                                     Map<String, Object> extras) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        if (after != null) {
+            payload.putAll(after.metadata());
+            payload.put("messageCount", after.messages().size());
+            payload.put("estimatedTokens", after.estimatedTokens());
+            payload.put("omittedMessages", after.omittedMessages());
+            payload.put("afterMessageCount", after.messages().size());
+            payload.put("afterEstimatedTokens", after.estimatedTokens());
+            payload.put("afterOmittedMessages", after.omittedMessages());
+            payload.put("afterCoversThroughSequence",
+                    contextLongMetric(after, "coversThroughSequence", 0));
+            payload.put("coversThroughSequence",
+                    contextLongMetric(after, "coversThroughSequence", 0));
+            payload.put("compactionPerformed", contextBooleanMetric(
+                    after, "compactionPerformed", compactionRequested));
+        }
+        else {
+            payload.put("messageCount", 0);
+            payload.put("estimatedTokens", 0L);
+            payload.put("omittedMessages", 0);
+            payload.put("afterMessageCount", 0);
+            payload.put("afterEstimatedTokens", 0L);
+            payload.put("afterOmittedMessages", 0);
+            payload.put("afterCoversThroughSequence", 0L);
+            payload.put("coversThroughSequence", 0L);
+            payload.put("compactionPerformed", compactionRequested);
+        }
+        payload.put("reason", reason == null || reason.isBlank() ? "projection" : reason);
+        payload.put("compactionRequested", compactionRequested);
+        if (compactionRequested && before != null) {
+            payload.put("beforeMessageCount", before.messages().size());
+            payload.put("beforeEstimatedTokens", before.estimatedTokens());
+            payload.put("beforeOmittedMessages", before.omittedMessages());
+            payload.put("beforeCoversThroughSequence",
+                    contextLongMetric(before, "coversThroughSequence", 0));
+        }
+        if (extras != null) {
+            extras.forEach((key, value) -> {
+                if (key != null && value != null) {
+                    payload.put(key, value);
+                }
+            });
+        }
+        return Map.copyOf(payload);
+    }
+
+    private long contextLongMetric(AgentContextView context, String key, long fallback) {
+        if (context == null || key == null) {
+            return fallback;
+        }
+        Object value = context.metadata().get(key);
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            return value == null ? fallback : Long.parseLong(String.valueOf(value));
+        }
+        catch (RuntimeException ignored) {
+            return fallback;
+        }
+    }
+
+    private boolean contextBooleanMetric(AgentContextView context, String key, boolean fallback) {
+        if (context == null || key == null) {
+            return fallback;
+        }
+        Object value = context.metadata().get(key);
+        return value == null ? fallback : Boolean.parseBoolean(String.valueOf(value));
     }
 
     private AgentRuntimeResult resultFromStored(AgentRunRecord stored, AgentStopReason stopReason) {
