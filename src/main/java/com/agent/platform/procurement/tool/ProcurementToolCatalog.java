@@ -12,7 +12,6 @@ import java.util.Map;
 public class ProcurementToolCatalog implements ToolCatalogContributor {
     public static final String CASE_PATCH = "procurement_case_patch";
     public static final String SUPPLIER_SEARCH = "procurement_supplier_search";
-    public static final String SUPPLIER_EVIDENCE = "procurement_supplier_evidence";
     public static final String RECOMMENDATION_FINALIZE = "procurement_recommendation_finalize";
 
     @Override
@@ -39,10 +38,6 @@ public class ProcurementToolCatalog implements ToolCatalogContributor {
                         "只读读取当前 authoritative ProcurementCaseState，查询采购供应商报价并由 Java 计算 Eligibility。不会接受模型传入的权威数量、预算或约束。",
                         "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{}}",
                         ToolRiskLevel.LOW, metadata("供应商寻源", "正在查询采购供应商和报价", List.of(), true, false)),
-                new ToolDefinition(SUPPLIER_EVIDENCE,
-                        "只读查询当前 Provider 快照中指定供应商的报价、规格和质保证据。",
-                        "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"supplierId\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":128}},\"required\":[\"supplierId\"]}",
-                        ToolRiskLevel.LOW, metadata("供应商证据", "正在查询供应商证据", List.of("supplierId"), true, false)),
                 new ToolDefinition(RECOMMENDATION_FINALIZE,
                         "提交 Agent 基于 Eligibility/Evidence 的供应商推荐草案；Java 重新读取当前 Case 和 Provider 快照，验证版本、资格与证据后返回 canonical Recommendation。不会修改采购 Case 或执行采购业务副作用。",
                         """
@@ -50,12 +45,9 @@ public class ProcurementToolCatalog implements ToolCatalogContributor {
                                   "evaluatedCaseVersion":{"type":"integer","minimum":0},
                                   "selectedSupplierId":{"type":"string","minLength":1,"maxLength":128},
                                   "evidenceRefs":{"type":"array","minItems":1,"items":{"type":"string","minLength":1}},
-                                  "reasons":{"type":"array","items":{"type":"string","minLength":1}},
-                                  "tradeoffs":{"type":"array","items":{"type":"string","minLength":1}},
-                                  "risks":{"type":"array","items":{"type":"string","minLength":1}},
-                                  "uncertainties":{"type":"array","items":{"type":"string","minLength":1}},
+                                  "tradeoffDimensions":{"type":"array","items":{"type":"string","enum":["PRICE","DELIVERY","WARRANTY","SPECIFICATION"]}},
                                   "confidence":{"type":"number","minimum":0,"maximum":1}
-                                },"required":["evaluatedCaseVersion","selectedSupplierId","evidenceRefs","reasons","tradeoffs","risks","uncertainties","confidence"]}
+                                },"required":["evaluatedCaseVersion","selectedSupplierId","evidenceRefs","tradeoffDimensions","confidence"]}
                                 """.strip(),
                         ToolRiskLevel.LOW, metadata("确认供应商推荐", "正在验证供应商推荐与证据", List.of("selectedSupplierId", "evidenceRefs"), true, false))
         );
@@ -64,7 +56,7 @@ public class ProcurementToolCatalog implements ToolCatalogContributor {
     private Map<String, Object> metadata(String displayName, String action, List<String> keys,
                                          boolean readOnly, boolean sideEffect) {
         return Map.of("provider", "procurement", "domain", "procurement", "readOnly", readOnly,
-                "sideEffect", sideEffect, "parallelSafe", false, "contractVersion", "procurement-sourcing-v2",
+                "sideEffect", sideEffect, "parallelSafe", false, "contractVersion", "procurement-sourcing-v3",
                 "publicDisplayName", displayName, "publicActionSummary", action, "publicArgumentKeys", keys);
     }
 }

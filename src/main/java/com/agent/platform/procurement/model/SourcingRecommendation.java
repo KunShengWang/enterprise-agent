@@ -4,25 +4,34 @@ import java.util.List;
 
 public record SourcingRecommendation(
         SupplierCandidate recommendedSupplier,
-        List<SupplierCandidate> alternatives,
+        SupplierOffer selectedOffer,
+        List<SupplierCandidate> eligibleAlternatives,
+        List<SupplierOffer> alternativeOffers,
         List<String> matchedConstraints,
         List<RejectedCandidate> rejectedCandidates,
-        List<String> tradeoffs,
-        List<String> reasons,
-        List<String> risks,
         List<String> evidenceRefs,
-        List<String> uncertainties,
+        List<ProcurementTradeoffDimension> tradeoffDimensions,
         double confidence
 ) {
     public SourcingRecommendation {
-        alternatives = alternatives == null ? List.of() : List.copyOf(alternatives);
+        eligibleAlternatives = eligibleAlternatives == null ? List.of() : List.copyOf(eligibleAlternatives);
+        alternativeOffers = alternativeOffers == null ? List.of() : List.copyOf(alternativeOffers);
         matchedConstraints = matchedConstraints == null ? List.of() : List.copyOf(matchedConstraints);
         rejectedCandidates = rejectedCandidates == null ? List.of() : List.copyOf(rejectedCandidates);
-        tradeoffs = tradeoffs == null ? List.of() : List.copyOf(tradeoffs);
-        reasons = reasons == null ? List.of() : List.copyOf(reasons);
-        risks = risks == null ? List.of() : List.copyOf(risks);
         evidenceRefs = evidenceRefs == null ? List.of() : List.copyOf(evidenceRefs);
-        uncertainties = uncertainties == null ? List.of() : List.copyOf(uncertainties);
+        tradeoffDimensions = tradeoffDimensions == null ? List.of() : List.copyOf(tradeoffDimensions);
+        if (recommendedSupplier == null || selectedOffer == null) {
+            throw new IllegalArgumentException("recommended supplier and selected offer are required");
+        }
+        if (!recommendedSupplier.supplierId().equals(selectedOffer.supplierId())) {
+            throw new IllegalArgumentException("selected offer must belong to the recommended supplier");
+        }
+        if (alternativeOffers.stream().anyMatch(offer -> offer == null || offer.supplierId().equals(recommendedSupplier.supplierId()))) {
+            throw new IllegalArgumentException("alternative offers must belong to eligible alternatives");
+        }
+        if (tradeoffDimensions.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new IllegalArgumentException("tradeoffDimensions must not contain null");
+        }
         confidence = Math.max(0, Math.min(1, confidence));
     }
 }

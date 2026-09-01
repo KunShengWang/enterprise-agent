@@ -28,9 +28,6 @@ public final class ProcurementRecommendationVerifier {
             }
             return;
         }
-        if (recommendation.reasons().isEmpty()) {
-            throw new IllegalArgumentException("recommendation reasons must not be empty");
-        }
         Map<String, SupplierEvidence> evidenceById = new HashMap<>();
         currentEvidence.forEach(value -> evidenceById.put(value.evidenceId(), value));
         boolean selectedOffer = recommendation.evidenceRefs().stream()
@@ -42,8 +39,8 @@ public final class ProcurementRecommendationVerifier {
         }
         Set<String> eligible = eligibleSupplierIds == null ? Set.of() : Set.copyOf(eligibleSupplierIds);
         if (eligible.size() > 1) {
-            if (recommendation.tradeoffs().isEmpty()) {
-                throw new IllegalArgumentException("multiple eligible suppliers require tradeoffs");
+            if (recommendation.tradeoffDimensions().isEmpty()) {
+                throw new IllegalArgumentException("multiple eligible suppliers require tradeoffDimensions");
             }
             boolean alternativeOffer = recommendation.evidenceRefs().stream()
                     .map(evidenceById::get)

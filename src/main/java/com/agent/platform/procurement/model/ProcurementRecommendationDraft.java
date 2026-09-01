@@ -7,19 +7,16 @@ public record ProcurementRecommendationDraft(
         long evaluatedCaseVersion,
         String selectedSupplierId,
         List<String> evidenceRefs,
-        List<String> reasons,
-        List<String> tradeoffs,
-        List<String> risks,
-        List<String> uncertainties,
+        List<ProcurementTradeoffDimension> tradeoffDimensions,
         double confidence
 ) {
     public ProcurementRecommendationDraft {
         selectedSupplierId = selectedSupplierId == null ? "" : selectedSupplierId.trim();
         evidenceRefs = distinct(evidenceRefs);
-        reasons = copy(reasons);
-        tradeoffs = copy(tradeoffs);
-        risks = copy(risks);
-        uncertainties = copy(uncertainties);
+        tradeoffDimensions = tradeoffDimensions == null ? List.of() : List.copyOf(tradeoffDimensions);
+        if (tradeoffDimensions.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new IllegalArgumentException("tradeoffDimensions must not contain null");
+        }
     }
 
     private static List<String> copy(List<String> values) {

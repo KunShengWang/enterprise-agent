@@ -8,6 +8,7 @@ import com.agent.platform.procurement.model.ProcurementCase;
 import com.agent.platform.procurement.model.ProcurementCaseState;
 import com.agent.platform.procurement.model.ProcurementCaseStatus;
 import com.agent.platform.procurement.model.ProcurementRecommendationDraft;
+import com.agent.platform.procurement.model.ProcurementTradeoffDimension;
 import com.agent.platform.procurement.persistence.ProcurementCaseStore;
 import com.agent.platform.procurement.provider.AwsSyntheticProcurementProvider;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,14 +37,33 @@ class ProcurementRecommendationFinalizeTests {
         ProcurementCase current = save(store, completeState(), 4);
         String supplierBOffer = provider.getSupplierEvidence("supplier-b", current.state()).get(0).evidenceId();
         String supplierDOffer = provider.getSupplierEvidence("supplier-d", current.state()).get(0).evidenceId();
+        var providerOffers = provider.getSupplierOffers(current.state(), provider.searchSuppliers(current.state()));
+        var expectedSupplierBOffer = providerOffers.stream().filter(offer -> offer.supplierId().equals("supplier-b"))
+                .findFirst().orElseThrow();
+        var expectedSupplierDOffer = providerOffers.stream().filter(offer -> offer.supplierId().equals("supplier-d"))
+                .findFirst().orElseThrow();
 
         ProcurementRecommendationFinalizer.Finalization result = finalizer(store).finalize(
                 "tenant", "buyer", "conversation", draft(current.version(), "supplier-d",
-                        List.of(supplierBOffer, supplierDOffer), List.of("价格与交期存在权衡")));
+                        List.of(supplierBOffer, supplierDOffer), List.of(ProcurementTradeoffDimension.DELIVERY,
+                                ProcurementTradeoffDimension.PRICE)));
 
         assertEquals("Supplier D", result.recommendation().recommendedSupplier().supplierName());
-        assertEquals(List.of("supplier-b"), result.recommendation().alternatives().stream()
+        assertOfferMatchesProviderSnapshot(expectedSupplierDOffer, result.recommendation().selectedOffer());
+        assertEquals("supplier-d", result.recommendation().selectedOffer().supplierId());
+        assertEquals(new BigDecimal("580000"), result.recommendation().selectedOffer().totalPrice());
+        assertEquals(12, result.recommendation().selectedOffer().leadTimeDays());
+        assertEquals(List.of("supplier-b"), result.recommendation().eligibleAlternatives().stream()
                 .map(value -> value.supplierId()).toList());
+        assertOfferMatchesProviderSnapshot(expectedSupplierBOffer, result.recommendation().alternativeOffers().get(0));
+        assertEquals(new BigDecimal("550000"), result.recommendation().alternativeOffers().get(0).totalPrice());
+        assertEquals(18, result.recommendation().alternativeOffers().get(0).leadTimeDays());
+        assertEquals(List.of(ProcurementTradeoffDimension.DELIVERY, ProcurementTradeoffDimension.PRICE),
+                result.recommendation().tradeoffDimensions());
+        assertEquals(Set.of("recommendedSupplier", "selectedOffer", "eligibleAlternatives", "alternativeOffers",
+                        "matchedConstraints", "rejectedCandidates", "evidenceRefs", "tradeoffDimensions", "confidence"),
+                Arrays.stream(result.recommendation().getClass().getRecordComponents())
+                        .map(component -> component.getName()).collect(java.util.stream.Collectors.toSet()));
         assertEquals(2, result.evaluation().candidates().stream()
                 .filter(ProcurementDecisionEngine.CandidateResult::eligible).count());
     }
@@ -58,7 +79,7 @@ class ProcurementRecommendationFinalizeTests {
                         List.of(excludedEvidence), List.of())));
         assertThrows(IllegalArgumentException.class, () -> finalizer(store).finalize(
                 "tenant", "buyer", "conversation", draft(current.version(), "supplier-b",
-                        List.of("evidence-not-from-provider"), List.of("价格与交期存在权衡"))));
+                        List.of("evidence-not-from-provider"), List.of(ProcurementTradeoffDimension.PRICE))));
     }
 
     @Test
@@ -69,7 +90,7 @@ class ProcurementRecommendationFinalizeTests {
 
         assertThrows(ProcurementCaseVersionConflictException.class, () -> finalizer(store).finalize(
                 "tenant", "buyer", "conversation", draft(current.version() - 1, "supplier-b",
-                        List.of(evidence), List.of("价格与交期存在权衡"))));
+                        List.of(evidence), List.of(ProcurementTradeoffDimension.PRICE))));
     }
 
     @Test
@@ -80,11 +101,11 @@ class ProcurementRecommendationFinalizeTests {
 
         assertThrows(IllegalArgumentException.class, () -> finalizer(store).finalize(
                 "tenant", "buyer", "conversation", draft(current.version(), "supplier-d",
-                        List.of(warranty), List.of("交期更快"))));
+                        List.of(warranty), List.of(ProcurementTradeoffDimension.DELIVERY))));
     }
 
     @Test
-    void multiEligibleFinalizerRequiresTradeoffAndAlternativeOfferEvidence() {
+    void multiEligibleFinalizerRequiresTradeoffDimensionsAndAlternativeOfferEvidence() {
         MemoryCaseStore store = new MemoryCaseStore();
         ProcurementCase current = save(store, completeState(), 1);
         String supplierDOffer = provider.getSupplierEvidence("supplier-d", current.state()).get(0).evidenceId();
@@ -95,10 +116,10 @@ class ProcurementRecommendationFinalizeTests {
                         List.of(supplierDOffer), List.of())));
         assertThrows(IllegalArgumentException.class, () -> finalizer(store).finalize(
                 "tenant", "buyer", "conversation", draft(current.version(), "supplier-d",
-                        List.of(supplierDOffer), List.of("交期更快"))));
+                        List.of(supplierDOffer), List.of(ProcurementTradeoffDimension.DELIVERY))));
         // The complete pair is accepted by the first test; this assertion keeps the alternative evidence explicit.
         var result = finalizer(store).finalize("tenant", "buyer", "conversation",
-                draft(current.version(), "supplier-d", List.of(supplierDOffer, supplierBOffer), List.of("交期更快")));
+                draft(current.version(), "supplier-d", List.of(supplierDOffer, supplierBOffer), List.of(ProcurementTradeoffDimension.DELIVERY)));
         assertEquals("supplier-d", result.recommendation().recommendedSupplier().supplierId());
     }
 
@@ -133,11 +154,27 @@ class ProcurementRecommendationFinalizeTests {
     }
 
     private ProcurementRecommendationDraft draft(long version, String supplierId, List<String> evidenceRefs,
-                                                 List<String> tradeoffs) {
-        return new ProcurementRecommendationDraft(version, supplierId, evidenceRefs,
-                List.of("基于当前报价和交期做出选择"), tradeoffs,
-                List.of("报价和交期需要在下单前重新确认"),
-                List.of("当前仅使用 synthetic fixture 证据"), 0.82);
+                                                 List<ProcurementTradeoffDimension> tradeoffDimensions) {
+        return new ProcurementRecommendationDraft(version, supplierId, evidenceRefs, tradeoffDimensions, 0.82);
+    }
+
+    private void assertOfferMatchesProviderSnapshot(com.agent.platform.procurement.model.SupplierOffer expected,
+                                                    com.agent.platform.procurement.model.SupplierOffer actual) {
+        assertEquals(expected.supplierId(), actual.supplierId());
+        assertEquals(expected.productId(), actual.productId());
+        assertEquals(expected.productName(), actual.productName());
+        assertEquals(expected.unitPrice(), actual.unitPrice());
+        assertEquals(expected.currency(), actual.currency());
+        assertEquals(expected.quantity(), actual.quantity());
+        assertEquals(expected.totalPrice(), actual.totalPrice());
+        assertEquals(expected.leadTimeDays(), actual.leadTimeDays());
+        assertEquals(expected.warranty(), actual.warranty());
+        assertEquals(expected.specifications(), actual.specifications());
+        assertEquals(expected.source(), actual.source());
+        assertEquals(expected.sourceRecordId(), actual.sourceRecordId());
+        assertEquals(expected.sourceSnapshot(), actual.sourceSnapshot());
+        assertEquals(expected.sourceAsOf(), actual.sourceAsOf());
+        assertEquals(expected.sourceDigest(), actual.sourceDigest());
     }
 
     private ProcurementCase save(MemoryCaseStore store, ProcurementCaseState state, long version) {

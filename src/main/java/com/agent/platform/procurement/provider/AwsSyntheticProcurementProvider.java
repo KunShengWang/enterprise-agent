@@ -21,7 +21,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
-/** 将 AWS sample 的原始字段转换为本项目 canonical procurement model。 */
+/** 将 AWS supplier base 与项目 scenario fixture 转换为 canonical procurement model。 */
 @Component
 public class AwsSyntheticProcurementProvider implements ProcurementDataProvider {
     private static final String AWS_SOURCE = "aws-samples/sample-multi-agent-procure-to-pay";
@@ -58,7 +58,6 @@ public class AwsSyntheticProcurementProvider implements ProcurementDataProvider 
                     .filter(node -> safeCandidates.stream().anyMatch(c -> c.supplierId().equals(text(node, "supplierId"))))
                     .map(node -> offer(node, quantity, state.currency(), scenarioId, sourceAsOf)).toList();
         }
-        // 03_items.json 只有目录基准价，不是供应商报价；没有 supplier-specific quote 时必须返回空。
         return List.of();
     }
 

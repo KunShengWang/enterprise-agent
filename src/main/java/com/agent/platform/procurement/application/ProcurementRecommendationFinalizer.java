@@ -77,16 +77,15 @@ public class ProcurementRecommendationFinalizer {
         Set<String> eligibleSupplierIds = evaluation.candidates().stream()
                 .filter(ProcurementDecisionEngine.CandidateResult::eligible)
                 .map(candidate -> candidate.candidate().supplierId()).collect(java.util.stream.Collectors.toUnmodifiableSet());
+        List<ProcurementDecisionEngine.CandidateResult> eligibleAlternatives = evaluation.candidates().stream()
+                .filter(candidate -> candidate.eligible()
+                        && !candidate.candidate().supplierId().equals(selected.candidate().supplierId()))
+                .toList();
         SourcingRecommendation recommendation = new SourcingRecommendation(
                 selected.candidate(),
-                evaluation.candidates().stream()
-                        .filter(candidate -> candidate.eligible()
-                                && !candidate.candidate().supplierId().equals(selected.candidate().supplierId()))
-                        .map(ProcurementDecisionEngine.CandidateResult::candidate)
-                        .collect(java.util.stream.Collectors.collectingAndThen(
-                                java.util.stream.Collectors.toMap(SupplierCandidate::supplierId, value -> value,
-                                        (left, right) -> left, java.util.LinkedHashMap::new),
-                                values -> List.copyOf(values.values()))),
+                selected.offer(),
+                eligibleAlternatives.stream().map(ProcurementDecisionEngine.CandidateResult::candidate).toList(),
+                eligibleAlternatives.stream().map(ProcurementDecisionEngine.CandidateResult::offer).toList(),
                 decisionEngine.matchedConstraints(state, selected.offer()),
                 evaluation.candidates().stream().filter(candidate -> !candidate.eligible())
                         .map(candidate -> new RejectedCandidate(candidate.candidate(), candidate.failures(),
@@ -95,7 +94,7 @@ public class ProcurementRecommendationFinalizer {
                                 java.util.stream.Collectors.toMap(value -> value.supplier().supplierId(), value -> value,
                                         (left, right) -> left, java.util.LinkedHashMap::new),
                                 values -> List.copyOf(values.values()))),
-                draft.tradeoffs(), draft.reasons(), draft.risks(), draft.evidenceRefs(), draft.uncertainties(), draft.confidence());
+                draft.evidenceRefs(), draft.tradeoffDimensions(), draft.confidence());
         ProcurementRecommendationVerifier.verify(recommendation, currentEvidence, eligibleSupplierIds);
         return new Finalization(current, recommendation, evaluation, currentEvidence);
     }
@@ -110,10 +109,6 @@ public class ProcurementRecommendationFinalizer {
             throw new IllegalArgumentException("confidence must be between 0 and 1");
         }
         if (draft.evidenceRefs().stream().anyMatch(String::isBlank)) throw new IllegalArgumentException("evidenceRefs must not be blank");
-        if (draft.reasons().isEmpty()) throw new IllegalArgumentException("reasons must not be empty");
-        for (List<String> values : List.of(draft.reasons(), draft.tradeoffs(), draft.risks(), draft.uncertainties())) {
-            if (values.stream().anyMatch(String::isBlank)) throw new IllegalArgumentException("recommendation explanation entries must not be blank");
-        }
     }
 
     public record Finalization(ProcurementCase procurementCase,

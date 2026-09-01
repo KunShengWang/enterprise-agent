@@ -10,8 +10,10 @@ import com.agent.platform.procurement.config.ProcurementSourcingExecutionProfile
 import com.agent.platform.procurement.model.ProcurementCase;
 import com.agent.platform.procurement.model.ProcurementCasePatch;
 import com.agent.platform.procurement.model.ProcurementCaseState;
+import com.agent.platform.procurement.model.ProcurementTradeoffDimension;
 import com.agent.platform.procurement.model.SourcingRecommendation;
 import com.agent.platform.procurement.model.SupplierCandidate;
+import com.agent.platform.procurement.model.SupplierOffer;
 import com.agent.platform.procurement.persistence.ProcurementCaseStore;
 import com.agent.platform.procurement.provider.AwsSyntheticProcurementProvider;
 import com.agent.platform.procurement.tool.ProcurementToolCatalog;
@@ -51,15 +53,18 @@ class ProcurementSourcingMvpTests {
         assertEquals(com.agent.platform.workbench.target.TargetRiskLevel.LOW, target.riskLevel());
         var profile = new ProcurementSourcingExecutionProfileFactory().createProfile();
         assertEquals(Set.of(ProcurementToolCatalog.CASE_PATCH, ProcurementToolCatalog.SUPPLIER_SEARCH,
-                ProcurementToolCatalog.SUPPLIER_EVIDENCE, ProcurementToolCatalog.RECOMMENDATION_FINALIZE),
+                ProcurementToolCatalog.RECOMMENDATION_FINALIZE),
                 profile.allowedCapabilities());
         assertFalse(profile.longTermMemoryEnabled());
 
         var definitions = new ProcurementToolCatalog().definitions();
         assertEquals(Map.of("readOnly", false, "sideEffect", true), metadata(definitions, ProcurementToolCatalog.CASE_PATCH));
         assertEquals(Map.of("readOnly", true, "sideEffect", false), metadata(definitions, ProcurementToolCatalog.SUPPLIER_SEARCH));
-        assertEquals(Map.of("readOnly", true, "sideEffect", false), metadata(definitions, ProcurementToolCatalog.SUPPLIER_EVIDENCE));
         assertEquals(Map.of("readOnly", true, "sideEffect", false), metadata(definitions, ProcurementToolCatalog.RECOMMENDATION_FINALIZE));
+        assertEquals(3, definitions.size());
+        assertEquals(Set.of("procurement-sourcing-v3"), definitions.stream()
+                .map(definition -> String.valueOf(definition.metadata().get("contractVersion")))
+                .collect(java.util.stream.Collectors.toSet()));
     }
 
     @Test
@@ -75,6 +80,7 @@ class ProcurementSourcingMvpTests {
         JsonNode json = mapper.readTree(result.content());
         assertEquals(1, json.path("caseVersion").asInt());
         assertEquals(Set.of("supplier-b", "supplier-d"), ids(json.path("eligibleSuppliers")));
+        assertTrue(json.path("evidence").size() >= 8);
         assertEquals(true, result.metadata().get("readOnly"));
         assertEquals(false, result.metadata().get("sideEffect"));
     }
@@ -113,19 +119,32 @@ class ProcurementSourcingMvpTests {
     }
 
     @Test
-    void evidenceToolUsesOnlyTheAuthoritativeCaseAndCanonicalProviderEvidence() throws Exception {
+    void modelCannotInjectFreeFactsOrUnsupportedTradeoffDimensionsIntoRecommendationFinalize() {
         MemoryCaseStore store = new MemoryCaseStore();
         service(store).applyPatch("tenant", "conversation", "buyer", completePatch(), "patch-1");
-        var result = handler(store).execute(new ToolCallRequest(ProcurementToolCatalog.SUPPLIER_EVIDENCE, "evidence-1",
-                Map.of("supplierId", "supplier-d")), context());
+        ProcurementCaseState state = store.findByTenantUserAndConversationId("tenant", "buyer", "conversation")
+                .orElseThrow().state();
+        String supplierBOffer = provider.getSupplierEvidence("supplier-b", state).get(0).evidenceId();
+        String supplierDOffer = provider.getSupplierEvidence("supplier-d", state).get(0).evidenceId();
+        Map<String, Object> valid = Map.of(
+                "evaluatedCaseVersion", 1,
+                "selectedSupplierId", "supplier-d",
+                "evidenceRefs", List.of(supplierBOffer, supplierDOffer),
+                "tradeoffDimensions", List.of("DELIVERY", "PRICE"),
+                "confidence", 0.86);
+        Map<String, Object> freeFact = new java.util.LinkedHashMap<>(valid);
+        freeFact.put("reasons", List.of("Supplier D 通过 ISO9001"));
+        var freeFactResult = handler(store).execute(new ToolCallRequest(ProcurementToolCatalog.RECOMMENDATION_FINALIZE,
+                "finalize-free-fact", freeFact), context());
+        assertFalse(freeFactResult.success());
+        assertTrue(freeFactResult.errorMessage().contains("unknown argument"));
 
-        assertTrue(result.success(), result.errorMessage());
-        JsonNode json = mapper.readTree(result.content());
-        assertEquals(1, json.path("caseVersion").asInt());
-        assertTrue(json.path("evidence").size() >= 2);
-        assertTrue(json.path("evidence").get(0).path("sourceDigest").asText().length() >= 32);
-        assertEquals(true, result.metadata().get("readOnly"));
-        assertEquals(false, result.metadata().get("sideEffect"));
+        Map<String, Object> invalidDimension = new java.util.LinkedHashMap<>(valid);
+        invalidDimension.put("tradeoffDimensions", List.of("RISK"));
+        var invalidDimensionResult = handler(store).execute(new ToolCallRequest(ProcurementToolCatalog.RECOMMENDATION_FINALIZE,
+                "finalize-invalid-dimension", invalidDimension), context());
+        assertFalse(invalidDimensionResult.success());
+        assertTrue(invalidDimensionResult.errorMessage().contains("invalid tradeoffDimension"));
     }
 
     @Test
@@ -158,10 +177,11 @@ class ProcurementSourcingMvpTests {
 
     @Test
     void recommendationVerifierRejectsUnknownEvidenceReference() {
+        SupplierOffer offer = provider.getSupplierOffers(completeState(), provider.searchSuppliers(completeState())).stream()
+                .filter(value -> value.supplierId().equals("supplier-b")).findFirst().orElseThrow();
         var recommendation = new SourcingRecommendation(
-                new SupplierCandidate("supplier-b", "Supplier B", "fixture"), List.of(), List.of(), List.of(),
-                List.of("价格与交期存在权衡"), List.of("基于当前报价做出选择"), List.of(),
-                List.of("missing-evidence"), List.of(), 1.0);
+                new SupplierCandidate("supplier-b", "Supplier B", "fixture"), offer, List.of(), List.of(),
+                List.of(), List.of(), List.of("missing-evidence"), List.of(ProcurementTradeoffDimension.PRICE), 1.0);
         assertThrows(IllegalArgumentException.class,
                 () -> ProcurementRecommendationVerifier.verify(recommendation, List.of(), Set.of("supplier-b")));
     }

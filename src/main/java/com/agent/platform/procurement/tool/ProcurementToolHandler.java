@@ -8,6 +8,7 @@ import com.agent.platform.procurement.model.ProcurementCase;
 import com.agent.platform.procurement.model.ProcurementCasePatch;
 import com.agent.platform.procurement.model.ProcurementCaseState;
 import com.agent.platform.procurement.model.ProcurementRecommendationDraft;
+import com.agent.platform.procurement.model.ProcurementTradeoffDimension;
 import com.agent.platform.procurement.model.SupplierCandidate;
 import com.agent.platform.procurement.model.SupplierEvidence;
 import com.agent.platform.procurement.model.SupplierOffer;
@@ -62,7 +63,6 @@ public class ProcurementToolHandler implements ContextualToolHandler {
     public boolean supports(String toolName) {
         return ProcurementToolCatalog.CASE_PATCH.equals(toolName)
                 || ProcurementToolCatalog.SUPPLIER_SEARCH.equals(toolName)
-                || ProcurementToolCatalog.SUPPLIER_EVIDENCE.equals(toolName)
                 || ProcurementToolCatalog.RECOMMENDATION_FINALIZE.equals(toolName);
     }
 
@@ -75,7 +75,6 @@ public class ProcurementToolHandler implements ContextualToolHandler {
             return switch (request.toolName()) {
                 case ProcurementToolCatalog.CASE_PATCH -> patch(request, context, arguments);
                 case ProcurementToolCatalog.SUPPLIER_SEARCH -> search(request, context, arguments);
-                case ProcurementToolCatalog.SUPPLIER_EVIDENCE -> evidence(request, context, arguments);
                 case ProcurementToolCatalog.RECOMMENDATION_FINALIZE -> finalizeRecommendation(request, context, arguments);
                 default -> failure(request, "unsupported procurement tool");
             };
@@ -118,7 +117,7 @@ public class ProcurementToolHandler implements ContextualToolHandler {
         List<SupplierOffer> offers = provider.getSupplierOffers(state, candidates);
         ProcurementDecisionEngine.Evaluation evaluation = decisionEngine.evaluate(state, candidates, offers);
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("caseVersion", current == null ? null : current.version());
+        result.put("caseVersion", current.version());
         result.put("candidates", candidates);
         result.put("offers", offers);
         result.put("evaluations", evaluation.candidates());
@@ -132,20 +131,6 @@ public class ProcurementToolHandler implements ContextualToolHandler {
         result.put("recommendationAvailable", false);
         result.put("source", "provider-canonical-model");
         return success(request, result);
-    }
-
-    private ToolCallResult evidence(ToolCallRequest request, ToolExecutionContext context, Map<String, Object> arguments) {
-        ProcurementCase current = currentCase(context);
-        ProcurementCaseState state = current.state();
-        if (!state.missingFields().isEmpty()) {
-            throw new IllegalArgumentException("procurement CaseState is incomplete; clarification is required");
-        }
-        String supplierId = string(arguments, "supplierId");
-        List<SupplierEvidence> evidence = provider.getSupplierEvidence(supplierId, state);
-        ToolCallResult result = success(request, Map.of("supplierId", supplierId, "evidence", evidence,
-                "evidenceRefs", evidence.stream().map(SupplierEvidence::evidenceId).toList(),
-                "caseVersion", current == null ? 0 : current.version()));
-        return withMetadata(result, Map.of("enoughEvidence", !evidence.isEmpty(), "evidenceCount", evidence.size()));
     }
 
     private ToolCallResult finalizeRecommendation(ToolCallRequest request,
@@ -181,8 +166,7 @@ public class ProcurementToolHandler implements ContextualToolHandler {
         Set<String> allowed = switch (tool) {
             case ProcurementToolCatalog.CASE_PATCH -> PATCH_ARGUMENTS;
             case ProcurementToolCatalog.SUPPLIER_SEARCH -> Set.of();
-            case ProcurementToolCatalog.SUPPLIER_EVIDENCE -> Set.of("supplierId");
-            case ProcurementToolCatalog.RECOMMENDATION_FINALIZE -> Set.of("evaluatedCaseVersion", "selectedSupplierId", "evidenceRefs", "reasons", "tradeoffs", "risks", "uncertainties", "confidence");
+            case ProcurementToolCatalog.RECOMMENDATION_FINALIZE -> Set.of("evaluatedCaseVersion", "selectedSupplierId", "evidenceRefs", "tradeoffDimensions", "confidence");
             default -> Set.of();
         };
         if (args.keySet().stream().anyMatch(key -> !allowed.contains(key))) throw new IllegalArgumentException("unknown argument");
@@ -190,33 +174,30 @@ public class ProcurementToolHandler implements ContextualToolHandler {
             patchMerger.validate(objectMapper.convertValue(args, ProcurementCasePatch.class));
         }
         if (ProcurementToolCatalog.RECOMMENDATION_FINALIZE.equals(tool)) validateFinalizerArguments(args);
-        if (ProcurementToolCatalog.SUPPLIER_EVIDENCE.equals(tool) && string(args, "supplierId").isBlank()) {
-            throw new IllegalArgumentException("supplierId is required");
-        }
     }
 
     private void validateFinalizerArguments(Map<String, Object> args) {
-        for (String required : List.of("evaluatedCaseVersion", "selectedSupplierId", "evidenceRefs", "reasons", "tradeoffs", "risks", "uncertainties", "confidence")) {
+        for (String required : List.of("evaluatedCaseVersion", "selectedSupplierId", "evidenceRefs", "tradeoffDimensions", "confidence")) {
             if (!args.containsKey(required) || args.get(required) == null) throw new IllegalArgumentException("missing required argument: " + required);
         }
         if (integer(args, "evaluatedCaseVersion") < 0) throw new IllegalArgumentException("evaluatedCaseVersion must not be negative");
         if (string(args, "selectedSupplierId").isBlank()) throw new IllegalArgumentException("selectedSupplierId is required");
         if (stringList(args.get("evidenceRefs")).isEmpty()) throw new IllegalArgumentException("evidenceRefs must not be empty");
-        if (stringList(args.get("reasons")).isEmpty()) throw new IllegalArgumentException("reasons must not be empty");
         double confidence = number(args.get("confidence"));
         if (Double.isNaN(confidence) || confidence < 0 || confidence > 1) throw new IllegalArgumentException("confidence must be between 0 and 1");
-        for (String field : List.of("reasons", "tradeoffs", "risks", "uncertainties")) stringList(args.get(field));
+        for (String value : stringList(args.get("tradeoffDimensions"))) {
+            try {
+                ProcurementTradeoffDimension.valueOf(value);
+            }
+            catch (IllegalArgumentException exception) {
+                throw new IllegalArgumentException("invalid tradeoffDimension: " + value);
+            }
+        }
     }
 
     private ToolCallResult success(ToolCallRequest request, Object value) {
         return new ToolCallResult(request.toolName(), true, write(value), "",
                 metadata(request.toolName()));
-    }
-
-    private ToolCallResult withMetadata(ToolCallResult result, Map<String, Object> extra) {
-        Map<String, Object> metadata = new LinkedHashMap<>(result.metadata());
-        metadata.putAll(extra);
-        return new ToolCallResult(result.toolName(), result.success(), result.content(), result.errorMessage(), metadata);
     }
 
     private ToolCallResult failure(ToolCallRequest request, String message) {

@@ -306,10 +306,7 @@ class ProcurementAgentRuntimeE2ETests {
                                 "evaluatedCaseVersion", 1,
                                 "selectedSupplierId", "supplier-d",
                                 "evidenceRefs", List.of(supplierBOfferEvidenceRef, supplierDOfferEvidenceRef),
-                                "reasons", List.of("交期更快，满足研发上线计划"),
-                                "tradeoffs", List.of("相对 Supplier B 单价更高"),
-                                "risks", List.of("报价属于 synthetic fixture，需要下单前复核"),
-                                "uncertainties", List.of("实际库存需在后续阶段确认"),
+                                "tradeoffDimensions", List.of("DELIVERY", "PRICE"),
                                 "confidence", 0.86
                         ), "在多个 Eligible 中提交透明权衡后的选择")), "finalize", usage, "tool_calls");
             }
