@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class JdbcMemoryService implements MemoryService {
 
     private static final String DEFAULT_CONVERSATION_ID = "default-conversation";
-    private static final String DEFAULT_USER_ID = "anonymous-user";
+    private static final Set<String> AUTOMATIC_PROFILE_KEYS = Set.of("language", "response_style");
 
     private final MemoryProperties properties;
     private final RagProperties ragProperties;
@@ -61,20 +61,23 @@ public class JdbcMemoryService implements MemoryService {
      */
     @Override
     public void rememberLongTerm(String conversationId, String userId, MemoryMessage message) {
-        if (message == null || !"user".equalsIgnoreCase(message.role())
+        if (!DurableMemoryAdmission.hasStableUserId(userId)
+                || message == null || !"user".equalsIgnoreCase(message.role())
                 || message.content() == null || message.content().isBlank()) {
             return;
         }
-        String messageContent = message.content().trim();
-        if (!LlmMemoryExtractor.allowsAutomaticExtraction(messageContent)) {
+        String originalUserContent = message.content();
+        String messageContent = originalUserContent.trim();
+        if (!DurableMemoryAdmission.allowsAutomaticExtraction(messageContent)) {
             return;
         }
         String normalizedConversationId = normalize(conversationId, DEFAULT_CONVERSATION_ID);
-        String normalizedUserId = normalize(userId, DEFAULT_USER_ID);
+        String normalizedUserId = userId.trim();
+        Instant effectiveCreatedAt = message.createdAt() == null ? Instant.now() : message.createdAt();
         MemoryMessage normalizedMessage = new MemoryMessage(
                 message.role().trim().toLowerCase(Locale.ROOT),
                 messageContent,
-                message.createdAt() == null ? Instant.now() : message.createdAt()
+                effectiveCreatedAt
         );
         MemoryExtraction extraction = memoryExtractor.extract(
                 normalizedConversationId, normalizedUserId, normalizedMessage
@@ -83,10 +86,15 @@ public class JdbcMemoryService implements MemoryService {
             return;
         }
         List<LongTermMemoryDraft> memories = extraction.longTermMemories().stream()
-                .filter(this::validDraft)
+                .filter(draft -> validDraft(draft, originalUserContent))
                 .toList();
         List<UserProfileItem> profileItems = extraction.profileItems().stream()
-                .map(this::validAutomaticProfileItem)
+                .map(item -> validAutomaticProfileItem(
+                        item,
+                        originalUserContent,
+                        DurableMemoryAdmission.automaticProfileSource(
+                                normalizedConversationId, effectiveCreatedAt),
+                        effectiveCreatedAt))
                 .filter(java.util.Objects::nonNull)
                 .toList();
         if (memories.isEmpty() && profileItems.isEmpty()) return;
@@ -96,7 +104,8 @@ public class JdbcMemoryService implements MemoryService {
             try {
                 for (LongTermMemoryDraft draft : memories) {
                     // 保存长期记忆到数据库
-                    saveLongTermMemory(connection, normalizedConversationId, normalizedUserId, draft);
+                    saveLongTermMemory(connection, normalizedConversationId, normalizedUserId,
+                            originalUserContent, draft);
                 }
                 for (UserProfileItem item : profileItems) {
                     // 插入或更新用户画像
@@ -116,10 +125,11 @@ public class JdbcMemoryService implements MemoryService {
 
     @Override
     public List<MemorySearchResult> recall(String conversationId, String userId, String query, int limit) {
-        if (query == null || query.isBlank()) {
+        if (!DurableMemoryAdmission.hasStableUserId(userId)
+                || query == null || query.isBlank()) {
             return List.of();
         }
-        String normalizedUserId = normalize(userId, DEFAULT_USER_ID);
+        String normalizedUserId = userId.trim();
         int effectiveLimit = Math.max(1, limit);
         ensureSchema();
         double[] queryEmbedding = embedBestEffort(query);
@@ -143,7 +153,10 @@ public class JdbcMemoryService implements MemoryService {
 
     @Override
     public UserProfile loadUserProfile(String userId) {
-        String normalizedUserId = normalize(userId, DEFAULT_USER_ID);
+        if (!DurableMemoryAdmission.hasStableUserId(userId)) {
+            return UserProfile.empty(userId);
+        }
+        String normalizedUserId = userId.trim();
         ensureSchema();
         try (Connection connection = openConnection();
              PreparedStatement statement = connection.prepareStatement("""
@@ -177,12 +190,13 @@ public class JdbcMemoryService implements MemoryService {
 
     @Override
     public void upsertUserProfile(String userId, String key, String value, String source, Instant updatedAt) {
-        if (key == null || key.isBlank() || value == null || value.isBlank()) {
+        if (!DurableMemoryAdmission.hasStableUserId(userId)
+                || key == null || key.isBlank() || value == null || value.isBlank()) {
             return;
         }
         ensureSchema();
         try (Connection connection = openConnection()) {
-            upsertProfileItem(connection, normalize(userId, DEFAULT_USER_ID), new UserProfileItem(
+            upsertProfileItem(connection, userId.trim(), new UserProfileItem(
                     key.trim(), value.trim(), normalize(source, "manual"),
                     updatedAt == null ? Instant.now() : updatedAt
             ));
@@ -200,7 +214,10 @@ public class JdbcMemoryService implements MemoryService {
 
     @Override
     public void clearUserMemory(String userId) {
-        String normalizedUserId = normalize(userId, DEFAULT_USER_ID);
+        if (!DurableMemoryAdmission.hasStableUserId(userId)) {
+            return;
+        }
+        String normalizedUserId = userId.trim();
         ensureSchema();
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
@@ -227,11 +244,12 @@ public class JdbcMemoryService implements MemoryService {
     private void saveLongTermMemory(Connection connection,
                                     String conversationId,
                                     String userId,
+                                    String originalUserContent,
                                     LongTermMemoryDraft draft) throws SQLException {
         if (draft == null || draft.content() == null || draft.content().isBlank()) {
             return;
         }
-        if (!validDraft(draft)) {
+        if (!validDraft(draft, originalUserContent)) {
             return;
         }
         String category = draft.type().persistedValue();
@@ -368,24 +386,38 @@ public class JdbcMemoryService implements MemoryService {
         return candidates;
     }
 
-    private boolean validDraft(LongTermMemoryDraft draft) {
+    private boolean validDraft(LongTermMemoryDraft draft, String originalUserContent) {
         return draft != null && draft.type() != null
                 && draft.content() != null && !draft.content().isBlank()
-                && LlmMemoryExtractor.allowsCandidateContent(draft.content())
+                && DurableMemoryAdmission.allowsCandidateContent(draft.content())
+                && DurableMemoryAdmission.isExactSourceSpan(
+                originalUserContent, draft.content(), DurableMemoryAdmission.MAX_LONG_TERM_CONTENT_LENGTH)
                 && Double.isFinite(draft.confidence())
-                && draft.confidence() >= 0 && draft.confidence() <= 1;
+                && draft.confidence() >= DurableMemoryAdmission.MIN_LONG_TERM_CONFIDENCE
+                && draft.confidence() <= 1;
     }
 
-    private UserProfileItem validAutomaticProfileItem(UserProfileItem item) {
+    private UserProfileItem validAutomaticProfileItem(UserProfileItem item,
+                                                      String originalUserContent,
+                                                      String expectedSource,
+                                                      Instant expectedUpdatedAt) {
         if (item == null || item.key() == null || item.key().isBlank()
                 || item.value() == null || item.value().isBlank()) {
             return null;
         }
         String key = item.key().trim().toLowerCase(Locale.ROOT);
-        if (!Set.of("language", "response_style").contains(key)) {
+        if (!AUTOMATIC_PROFILE_KEYS.contains(key)
+                || !expectedSource.equals(item.source())
+                || !expectedUpdatedAt.equals(item.updatedAt())) {
             return null;
         }
-        return new UserProfileItem(key, item.value().trim(), item.source(), item.updatedAt());
+        String value = item.value().trim();
+        if (!DurableMemoryAdmission.allowsCandidateContent(value)
+                || !DurableMemoryAdmission.isExactSourceSpan(
+                originalUserContent, value, DurableMemoryAdmission.MAX_PROFILE_VALUE_LENGTH)) {
+            return null;
+        }
+        return new UserProfileItem(key, value, expectedSource, expectedUpdatedAt);
     }
 
     private boolean isPersistedDurableType(String category) {

@@ -15,6 +15,8 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,6 +28,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -37,7 +40,7 @@ class JdbcMemoryServiceTests {
         MemoryExtractor extractor = mock(MemoryExtractor.class);
         when(extractor.extract(anyString(), anyString(), any(MemoryMessage.class))).thenReturn(
                 new MemoryExtraction(List.of(new LongTermMemoryDraft(
-                        DurableMemoryType.PREFERENCE, "交付速度优先", 0.9)), List.of()));
+                        DurableMemoryType.PREFERENCE, "交付优先", 0.9)), List.of()));
         MemoryProperties properties = memoryProperties();
         RagProperties ragProperties = ragProperties();
         ObjectProvider<EmbeddingClient> embeddings = noEmbeddingProvider();
@@ -59,14 +62,14 @@ class JdbcMemoryServiceTests {
         ArgumentCaptor<Integer> indexes = ArgumentCaptor.forClass(Integer.class);
         ArgumentCaptor<String> values = ArgumentCaptor.forClass(String.class);
         verify(insert, atLeastOnce()).setString(indexes.capture(), values.capture());
-        Map<Integer, String> bound = new java.util.HashMap<>();
+        Map<Integer, String> bound = new HashMap<>();
         for (int index = 0; index < indexes.getAllValues().size(); index++) {
             bound.put(indexes.getAllValues().get(index), values.getAllValues().get(index));
         }
         assertEquals("conversation-a", bound.get(3));
         assertEquals("user-a", bound.get(4));
         assertEquals("PREFERENCE", bound.get(5));
-        assertEquals("交付速度优先", bound.get(6));
+        assertEquals("交付优先", bound.get(6));
     }
 
     @Test
@@ -89,13 +92,184 @@ class JdbcMemoryServiceTests {
         MemoryExtractor extractor = mock(MemoryExtractor.class);
         when(extractor.extract(anyString(), anyString(), any(MemoryMessage.class))).thenReturn(
                 new MemoryExtraction(List.of(), List.of(new UserProfileItem(
-                        "budget", "600000", "llm-message", Instant.now()))));
+                        "budget", "600000", "llm-message:conversation-a;createdAt=2026-01-01T00:00:00Z",
+                        Instant.parse("2026-01-01T00:00:00Z")))));
         JdbcMemoryService service = service(memoryProperties(), ragProperties(), extractor, noEmbeddingProvider());
 
         service.rememberLongTerm("conversation-a", "user-a",
-                new MemoryMessage("user", "请记住我的预算偏好", Instant.now()));
+                new MemoryMessage("user", "请记住我的预算偏好", Instant.parse("2026-01-01T00:00:00Z")));
 
         verify(extractor).extract(anyString(), anyString(), any(MemoryMessage.class));
+    }
+
+    @Test
+    void rememberRejectsUnGroundedExtractorResultBeforeOpeningDb() throws Exception {
+        MemoryProperties properties = memoryProperties();
+        MemoryExtractor extractor = mock(MemoryExtractor.class);
+        when(extractor.extract(anyString(), anyString(), any(MemoryMessage.class))).thenReturn(
+                new MemoryExtraction(List.of(new LongTermMemoryDraft(
+                        DurableMemoryType.PREFERENCE, "我喜欢最低价供应商", 0.95)), List.of()));
+        JdbcMemoryService service = service(properties, ragProperties(), extractor, noEmbeddingProvider());
+        Connection connection = mock(Connection.class);
+
+        try (MockedStatic<DriverManager> driverManager = driverManager(properties, connection)) {
+            service.rememberLongTerm("conversation-a", "user-a",
+                    new MemoryMessage("user", "以后默认使用中文回答。", Instant.now()));
+            driverManager.verify(() -> DriverManager.getConnection(
+                    properties.getDatasource().getUrl(),
+                    properties.getDatasource().getUsername(),
+                    properties.getDatasource().getPassword()), never());
+        }
+
+        verifyNoInteractions(connection);
+    }
+
+    @Test
+    void rememberRejectsLowConfidenceAndDynamicExtractorCandidatesBeforeOpeningDb() throws Exception {
+        MemoryProperties properties = memoryProperties();
+        Connection connection = mock(Connection.class);
+        for (LongTermMemoryDraft draft : List.of(
+                new LongTermMemoryDraft(DurableMemoryType.PREFERENCE, "以后默认使用中文回答", 0.1),
+                new LongTermMemoryDraft(DurableMemoryType.PREFERENCE, "以后采购时 Supplier D 报价 58 万", 0.95))) {
+            MemoryExtractor extractor = mock(MemoryExtractor.class);
+            when(extractor.extract(anyString(), anyString(), any(MemoryMessage.class))).thenReturn(
+                    new MemoryExtraction(List.of(draft), List.of()));
+            JdbcMemoryService service = service(properties, ragProperties(), extractor, noEmbeddingProvider());
+
+            try (MockedStatic<DriverManager> driverManager = driverManager(properties, connection)) {
+                service.rememberLongTerm("conversation-a", "user-a",
+                        new MemoryMessage("user", "以后默认使用中文回答。以后采购时 Supplier D 报价 58 万", Instant.now()));
+                driverManager.verify(() -> DriverManager.getConnection(
+                        properties.getDatasource().getUrl(),
+                        properties.getDatasource().getUsername(),
+                        properties.getDatasource().getPassword()), never());
+            }
+        }
+        verifyNoInteractions(connection);
+    }
+
+    @Test
+    void automaticProfileMustBeExactSourceGroundedAndUseCurrentMessageProvenance() throws Exception {
+        MemoryProperties properties = memoryProperties();
+        Instant createdAt = Instant.parse("2026-01-01T00:00:00Z");
+        String source = DurableMemoryAdmission.automaticProfileSource("conversation-a", createdAt);
+        MemoryMessage message = new MemoryMessage("user", "以后默认使用中文回答。", createdAt);
+
+        MemoryExtractor invalidExtractor = mock(MemoryExtractor.class);
+        when(invalidExtractor.extract(anyString(), anyString(), any(MemoryMessage.class))).thenReturn(
+                new MemoryExtraction(List.of(), List.of(new UserProfileItem(
+                        "language", "English", source, createdAt))));
+        JdbcMemoryService invalidService = service(properties, ragProperties(), invalidExtractor, noEmbeddingProvider());
+        Connection invalidConnection = mock(Connection.class);
+        try (MockedStatic<DriverManager> driverManager = driverManager(properties, invalidConnection)) {
+            invalidService.rememberLongTerm("conversation-a", "user-a", message);
+            driverManager.verify(() -> DriverManager.getConnection(
+                    properties.getDatasource().getUrl(),
+                    properties.getDatasource().getUsername(),
+                    properties.getDatasource().getPassword()), never());
+        }
+        verifyNoInteractions(invalidConnection);
+
+        MemoryExtractor validExtractor = mock(MemoryExtractor.class);
+        when(validExtractor.extract(anyString(), anyString(), any(MemoryMessage.class))).thenReturn(
+                new MemoryExtraction(List.of(), List.of(new UserProfileItem(
+                        "language", "中文", source, createdAt))));
+        JdbcMemoryService validService = service(properties, ragProperties(), validExtractor, noEmbeddingProvider());
+        Connection validConnection = mock(Connection.class);
+        Statement schema = mock(Statement.class);
+        PreparedStatement upsert = mock(PreparedStatement.class);
+        when(validConnection.createStatement()).thenReturn(schema);
+        when(validConnection.prepareStatement(anyString())).thenReturn(upsert);
+        when(upsert.executeUpdate()).thenReturn(1);
+
+        try (MockedStatic<DriverManager> driverManager = driverManager(properties, validConnection)) {
+            validService.rememberLongTerm("conversation-a", "user-a", message);
+        }
+
+        ArgumentCaptor<Integer> indexes = ArgumentCaptor.forClass(Integer.class);
+        ArgumentCaptor<String> values = ArgumentCaptor.forClass(String.class);
+        verify(upsert, atLeastOnce()).setString(indexes.capture(), values.capture());
+        Map<Integer, String> bound = new HashMap<>();
+        for (int index = 0; index < indexes.getAllValues().size(); index++) {
+            bound.put(indexes.getAllValues().get(index), values.getAllValues().get(index));
+        }
+        assertEquals("user-a", bound.get(1));
+        assertEquals("language", bound.get(2));
+        assertEquals("中文", bound.get(3));
+        assertEquals(source, bound.get(4));
+    }
+
+    @Test
+    void automaticProfileWithWrongProvenanceIsRejectedBeforeOpeningDb() throws Exception {
+        MemoryProperties properties = memoryProperties();
+        Instant createdAt = Instant.parse("2026-01-01T00:00:00Z");
+        MemoryExtractor extractor = mock(MemoryExtractor.class);
+        when(extractor.extract(anyString(), anyString(), any(MemoryMessage.class))).thenReturn(
+                new MemoryExtraction(List.of(), List.of(new UserProfileItem(
+                        "language", "以后默认使用中文回答", "arbitrary-source", createdAt))));
+        JdbcMemoryService service = service(properties, ragProperties(), extractor, noEmbeddingProvider());
+        Connection connection = mock(Connection.class);
+
+        try (MockedStatic<DriverManager> driverManager = driverManager(properties, connection)) {
+            service.rememberLongTerm("conversation-a", "user-a",
+                    new MemoryMessage("user", "以后默认使用中文回答。", createdAt));
+            driverManager.verify(() -> DriverManager.getConnection(
+                    properties.getDatasource().getUrl(),
+                    properties.getDatasource().getUsername(),
+                    properties.getDatasource().getPassword()), never());
+        }
+        verifyNoInteractions(connection);
+    }
+
+    @Test
+    void automaticProfileWithStaleTimestampIsRejectedBeforeOpeningDb() throws Exception {
+        MemoryProperties properties = memoryProperties();
+        Instant createdAt = Instant.parse("2026-01-01T00:00:00Z");
+        String source = DurableMemoryAdmission.automaticProfileSource("conversation-a", createdAt);
+        MemoryExtractor extractor = mock(MemoryExtractor.class);
+        when(extractor.extract(anyString(), anyString(), any(MemoryMessage.class))).thenReturn(
+                new MemoryExtraction(List.of(), List.of(new UserProfileItem(
+                        "language", "中文", source, createdAt.plusSeconds(1)))));
+        JdbcMemoryService service = service(properties, ragProperties(), extractor, noEmbeddingProvider());
+        Connection connection = mock(Connection.class);
+
+        try (MockedStatic<DriverManager> driverManager = driverManager(properties, connection)) {
+            service.rememberLongTerm("conversation-a", "user-a",
+                    new MemoryMessage("user", "以后默认使用中文回答。", createdAt));
+            driverManager.verify(() -> DriverManager.getConnection(
+                    properties.getDatasource().getUrl(),
+                    properties.getDatasource().getUsername(),
+                    properties.getDatasource().getPassword()), never());
+        }
+        verifyNoInteractions(connection);
+    }
+
+    @Test
+    void unstableUserIdsFailClosedWithoutExtractorEmbeddingOrDb() throws Exception {
+        MemoryProperties properties = memoryProperties();
+        MemoryExtractor extractor = mock(MemoryExtractor.class);
+        ObjectProvider<EmbeddingClient> embeddings = mock(ObjectProvider.class);
+        JdbcMemoryService service = service(properties, ragProperties(), extractor, embeddings);
+        Connection connection = mock(Connection.class);
+        List<String> unstableUserIds = Arrays.asList(
+                null, "", "  ", "anonymous", "anonymous-user", "ANONYMOUS", " ANONYMOUS-USER ");
+
+        try (MockedStatic<DriverManager> driverManager = driverManager(properties, connection)) {
+            for (String userId : unstableUserIds) {
+                service.rememberLongTerm("conversation-a", userId,
+                        new MemoryMessage("user", "以后默认使用中文回答。", Instant.now()));
+                assertTrue(service.recall("conversation-a", userId, "中文", 5).isEmpty());
+                assertTrue(service.loadUserProfile(userId).items().isEmpty());
+                service.upsertUserProfile(userId, "language", "以后默认使用中文回答", "manual", Instant.now());
+                service.clearUserMemory(userId);
+            }
+            driverManager.verify(() -> DriverManager.getConnection(
+                    properties.getDatasource().getUrl(),
+                    properties.getDatasource().getUsername(),
+                    properties.getDatasource().getPassword()), never());
+        }
+
+        verifyNoInteractions(extractor, embeddings, connection);
     }
 
     @Test

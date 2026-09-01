@@ -346,7 +346,7 @@ Runtime 事件按本轮实际行为区分 `CONTEXT_PREPARED` 与 `CONTEXT_COMPAC
 
 ### 9.2 Phase 2B：Typed Durable Memory
 
-长期记忆不是 ERP、Case、Policy 或 Supplier fact database，而是从用户历史输入衍生的不可信 contextual data。自动提取只允许 `PREFERENCE` 和 `STABLE_INSTRUCTION` 两个 `DurableMemoryType`；必须先命中明确的跨任务 durable intent，任一 `这次/本次/当前/今天/本项目` 等 ephemeral cue 命中时直接 veto，且不调用 Memory LLM。LLM candidate 还要经过 Java 的 type、`durableIntent`、`ephemeral`、非空 content、有限 `[0,1]` confidence 和敏感信息 fail-closed 校验；自动 UserProfile 只允许 `language`、`response_style`。
+长期记忆不是 ERP、Case、Policy 或 Supplier fact database，而是从用户历史输入衍生的不可信 contextual data。自动提取只允许 `PREFERENCE` 和 `STABLE_INSTRUCTION` 两个 `DurableMemoryType`；必须先命中明确的跨任务 durable intent，任一 `这次/本次/当前/今天/本项目` 等 ephemeral cue 命中时直接 veto，且不调用 Memory LLM。LLM 只能选择用户原始消息中的 verified exact source span，Java 负责 type、非空 content、有限 `[0,1]` confidence 和敏感信息 fail-closed 校验；自动 UserProfile 只允许 `language`、`response_style`，且 value 同样必须来自当前用户原文。无稳定 `userId`（`anonymous`、`anonymous-user`、null 或 blank）时，Durable Memory 与自动 UserProfile 均 fail-closed。
 
 采购 Profile 的 Memory recall 是 user-global：`userId` 决定 durable recall scope，`conversationId` 只作为 provenance 和清理依据。Recall SQL 只读取新的 typed 持久化值 `PREFERENCE`、`STABLE_INSTRUCTION`，不回流 legacy lowercase `preference`、`instruction` 或 `business_fact`、`decision`、`open_task`、`identity`；不做 schema/migration 或历史数据删除。Memory 只能作为不可信 `<memory_context>` 软上下文，当前用户意图、canonical `ProcurementCaseState`、Java Eligibility 和 ToolResult 始终优先，动态供应商事实仍由当前 Tool 提供。
 
