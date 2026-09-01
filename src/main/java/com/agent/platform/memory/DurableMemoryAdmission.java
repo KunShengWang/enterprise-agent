@@ -50,6 +50,7 @@ final class DurableMemoryAdmission {
     static boolean allowsCandidateContent(String content) {
         String normalized = normalizeForCueMatching(content);
         return !normalized.isBlank()
+                && hasDurableIntent(content)
                 && !hasEphemeralCue(content)
                 && !containsAny(normalized, DYNAMIC_PROCUREMENT_FACT_CUES);
     }

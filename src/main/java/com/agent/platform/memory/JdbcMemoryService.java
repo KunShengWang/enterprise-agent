@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class JdbcMemoryService implements MemoryService {
 
     private static final String DEFAULT_CONVERSATION_ID = "default-conversation";
+    private static final String DEFAULT_USER_ID = "anonymous-user";
     private static final Set<String> AUTOMATIC_PROFILE_KEYS = Set.of("language", "response_style");
 
     private final MemoryProperties properties;
@@ -190,13 +191,12 @@ public class JdbcMemoryService implements MemoryService {
 
     @Override
     public void upsertUserProfile(String userId, String key, String value, String source, Instant updatedAt) {
-        if (!DurableMemoryAdmission.hasStableUserId(userId)
-                || key == null || key.isBlank() || value == null || value.isBlank()) {
+        if (key == null || key.isBlank() || value == null || value.isBlank()) {
             return;
         }
         ensureSchema();
         try (Connection connection = openConnection()) {
-            upsertProfileItem(connection, userId.trim(), new UserProfileItem(
+            upsertProfileItem(connection, normalize(userId, DEFAULT_USER_ID), new UserProfileItem(
                     key.trim(), value.trim(), normalize(source, "manual"),
                     updatedAt == null ? Instant.now() : updatedAt
             ));
@@ -214,10 +214,7 @@ public class JdbcMemoryService implements MemoryService {
 
     @Override
     public void clearUserMemory(String userId) {
-        if (!DurableMemoryAdmission.hasStableUserId(userId)) {
-            return;
-        }
-        String normalizedUserId = userId.trim();
+        String normalizedUserId = normalize(userId, DEFAULT_USER_ID);
         ensureSchema();
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);

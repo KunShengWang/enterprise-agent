@@ -41,7 +41,7 @@ Phase 2A 的 Context Manager 门控仍由 Profile 统一控制长期记忆写入
 
 ### Phase 2B：Typed Durable Memory
 
-采购 Profile 现已开启 `longTermMemoryEnabled=true`。只有用户明确表达“以后/今后/默认/通常/长期/请记住”等跨任务意图，且没有“这次/本次/当前/今天/本项目”等 ephemeral cue 时，才会调用 Memory LLM；ephemeral veto 优先于 durable intent。LLM 只能提出 `PREFERENCE` 或 `STABLE_INSTRUCTION` candidate，并选择当前用户消息中的 verified exact source span；Java 对类型、非空内容、有限 `[0,1]` confidence 和敏感信息再次 fail-closed 校验，Jdbc persistence boundary 还会重新核验原文 grounding；自动 UserProfile 仅允许 `language`、`response_style`，无稳定 `userId`（`anonymous`、`anonymous-user`、null 或 blank）时不写入或加载。
+采购 Profile 现已开启 `longTermMemoryEnabled=true`。只有用户明确表达“以后/今后/默认/通常/长期/请记住”等跨任务意图，且没有“这次/本次/当前/今天/本项目”等 ephemeral cue 时，才会调用 Memory LLM；ephemeral veto 优先于 durable intent。LLM 只能提出 `PREFERENCE` 或 `STABLE_INSTRUCTION` candidate，并选择当前用户消息中的 verified exact source span；实际持久化的 candidate 与自动 UserProfile value 自身也必须包含 durable intent，Java 对类型、非空内容、有限 `[0,1]` confidence 和敏感信息再次 fail-closed 校验，Jdbc persistence boundary 还会重新核验原文 grounding；自动 UserProfile 仅允许 `language`、`response_style`，无稳定 `userId`（`anonymous`、`anonymous-user`、null 或 blank）时自动写入或加载 fail-closed，显式 profile upsert 与 user memory clear 仍保持公共管理契约。
 
 采购预算、数量、交期、当前 Case 状态、排除或选中的供应商、报价、库存和规格等一次性事实不会进入 Durable Memory，即使模型错误建议保存也会被 Java 边界拒绝。Memory 只作为不可信的 `<memory_context>` 软上下文，不能覆盖当前用户意图、canonical `ProcurementCaseState`、Java Eligibility 或 ToolResult；供应商事实仍只能来自当前 Case/Tool。Recall 按 `userId` 隔离，并只读取新的 typed 持久化值 `PREFERENCE`、`STABLE_INSTRUCTION`；历史 lowercase `preference`、`instruction` 以及 `business_fact`、`decision`、`open_task`、`identity` 等 unsafe category 不再召回，不做破坏性迁移。
 

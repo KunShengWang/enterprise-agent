@@ -44,18 +44,31 @@ class LlmMemoryExtractorTests {
         LlmService llm = mock(LlmService.class);
         LlmMemoryExtractor extractor = extractor(llm, response(
                 "{\"longTermMemories\":[{\"type\":\"PREFERENCE\","
-                        + "\"content\":\"交付速度\",\"confidence\":0.91}],\"profileItems\":[]}"));
+                        + "\"content\":\"以后采购研发工作站时，我通常更看重交付速度\",\"confidence\":0.91}],\"profileItems\":[]}"));
 
         MemoryExtraction extraction = extractor.extract("conversation-a", "user-a",
                 userMessage("以后采购研发工作站时，我通常更看重交付速度。"));
 
         assertEquals(1, extraction.longTermMemories().size());
         assertEquals(DurableMemoryType.PREFERENCE, extraction.longTermMemories().get(0).type());
-        assertEquals("交付速度", extraction.longTermMemories().get(0).content());
+        assertEquals("以后采购研发工作站时，我通常更看重交付速度", extraction.longTermMemories().get(0).content());
         ArgumentCaptor<PromptRequest> prompt = ArgumentCaptor.forClass(PromptRequest.class);
         verify(llm).complete(prompt.capture());
         assertFalse(prompt.getValue().systemPrompt().contains("durableIntent"));
         assertFalse(prompt.getValue().systemPrompt().contains("ephemeral"));
+    }
+
+    @Test
+    void exactSourceSpanWithoutItsOwnDurableIntentIsRejected() {
+        LlmService llm = mock(LlmService.class);
+        LlmMemoryExtractor extractor = extractor(llm, response(
+                "{\"longTermMemories\":[{\"type\":\"PREFERENCE\","
+                        + "\"content\":\"交付优先\",\"confidence\":0.95}],\"profileItems\":[]}"));
+
+        MemoryExtraction extraction = extractor.extract("conversation-a", "user-a",
+                userMessage("以后默认使用中文回答，交付优先。"));
+
+        assertTrue(extraction.longTermMemories().isEmpty());
     }
 
     @Test
@@ -127,13 +140,26 @@ class LlmMemoryExtractorTests {
         LlmService llm = mock(LlmService.class);
         LlmMemoryExtractor extractor = extractor(llm, response(
                 "{\"longTermMemories\":[],\"profileItems\":["
-                        + "{\"key\":\"language\",\"value\":\"中文\",\"confidence\":0.95}]}"));
+                        + "{\"key\":\"language\",\"value\":\"以后默认使用中文回答\",\"confidence\":0.95}]}"));
 
         MemoryExtraction extraction = extractor.extract("conversation-a", "user-a",
                 userMessage("以后默认使用中文回答。"));
 
         assertEquals(1, extraction.profileItems().size());
-        assertEquals("中文", extraction.profileItems().get(0).value());
+        assertEquals("以后默认使用中文回答", extraction.profileItems().get(0).value());
+    }
+
+    @Test
+    void automaticProfileValueWithoutItsOwnDurableIntentIsRejected() {
+        LlmService llm = mock(LlmService.class);
+        LlmMemoryExtractor extractor = extractor(llm, response(
+                "{\"longTermMemories\":[],\"profileItems\":["
+                        + "{\"key\":\"language\",\"value\":\"中文\",\"confidence\":0.95}]}"));
+
+        MemoryExtraction extraction = extractor.extract("conversation-a", "user-a",
+                userMessage("以后默认使用中文回答。"));
+
+        assertTrue(extraction.profileItems().isEmpty());
     }
 
     @Test
