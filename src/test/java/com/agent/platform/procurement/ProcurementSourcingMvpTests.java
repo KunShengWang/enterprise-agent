@@ -55,7 +55,11 @@ class ProcurementSourcingMvpTests {
         assertEquals(Set.of(ProcurementToolCatalog.CASE_PATCH, ProcurementToolCatalog.SUPPLIER_SEARCH,
                 ProcurementToolCatalog.RECOMMENDATION_FINALIZE),
                 profile.allowedCapabilities());
-        assertFalse(profile.longTermMemoryEnabled());
+        assertTrue(profile.longTermMemoryEnabled());
+        assertTrue(profile.systemPrompt().contains("软偏好"));
+        assertTrue(profile.systemPrompt().contains("当前用户"));
+        assertTrue(profile.systemPrompt().contains("当前供应商事实"));
+        assertTrue(profile.systemPrompt().contains("ToolResult"));
 
         var definitions = new ProcurementToolCatalog().definitions();
         assertEquals(Map.of("readOnly", false, "sideEffect", true), metadata(definitions, ProcurementToolCatalog.CASE_PATCH));

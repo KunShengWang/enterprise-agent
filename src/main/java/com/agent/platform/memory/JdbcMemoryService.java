@@ -22,7 +22,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -59,31 +61,44 @@ public class JdbcMemoryService implements MemoryService {
      */
     @Override
     public void rememberLongTerm(String conversationId, String userId, MemoryMessage message) {
-        if (message == null || message.content() == null || message.content().isBlank()) {
+        if (message == null || !"user".equalsIgnoreCase(message.role())
+                || message.content() == null || message.content().isBlank()) {
+            return;
+        }
+        String messageContent = message.content().trim();
+        if (!LlmMemoryExtractor.allowsAutomaticExtraction(messageContent)) {
             return;
         }
         String normalizedConversationId = normalize(conversationId, DEFAULT_CONVERSATION_ID);
         String normalizedUserId = normalize(userId, DEFAULT_USER_ID);
         MemoryMessage normalizedMessage = new MemoryMessage(
-                normalize(message.role(), "user").toLowerCase(),
-                message.content().trim(),
+                message.role().trim().toLowerCase(Locale.ROOT),
+                messageContent,
                 message.createdAt() == null ? Instant.now() : message.createdAt()
         );
         MemoryExtraction extraction = memoryExtractor.extract(
                 normalizedConversationId, normalizedUserId, normalizedMessage
         );
-        if (extraction.longTermMemories().isEmpty() && extraction.profileItems().isEmpty()) {
+        if (extraction == null) {
             return;
         }
+        List<LongTermMemoryDraft> memories = extraction.longTermMemories().stream()
+                .filter(this::validDraft)
+                .toList();
+        List<UserProfileItem> profileItems = extraction.profileItems().stream()
+                .map(this::validAutomaticProfileItem)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (memories.isEmpty() && profileItems.isEmpty()) return;
         ensureSchema();
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
-                for (LongTermMemoryDraft draft : extraction.longTermMemories()) {
+                for (LongTermMemoryDraft draft : memories) {
                     // 保存长期记忆到数据库
                     saveLongTermMemory(connection, normalizedConversationId, normalizedUserId, draft);
                 }
-                for (UserProfileItem item : extraction.profileItems()) {
+                for (UserProfileItem item : profileItems) {
                     // 插入或更新用户画像
                     upsertProfileItem(connection, normalizedUserId, item);
                 }
@@ -104,16 +119,14 @@ public class JdbcMemoryService implements MemoryService {
         if (query == null || query.isBlank()) {
             return List.of();
         }
-        String normalizedConversationId = normalize(conversationId, DEFAULT_CONVERSATION_ID);
         String normalizedUserId = normalize(userId, DEFAULT_USER_ID);
         int effectiveLimit = Math.max(1, limit);
         ensureSchema();
         double[] queryEmbedding = embedBestEffort(query);
         try (Connection connection = openConnection()) {
             List<StoredMemory> candidates = queryEmbedding == null
-                    ? readFallbackCandidates(connection, normalizedConversationId, normalizedUserId, effectiveLimit)
-                    : readSemanticCandidates(connection, normalizedConversationId, normalizedUserId,
-                    queryEmbedding, effectiveLimit);
+                    ? readFallbackCandidates(connection, normalizedUserId, effectiveLimit)
+                    : readSemanticCandidates(connection, normalizedUserId, queryEmbedding, effectiveLimit);
             List<MemorySearchResult> selected = candidates.stream()
                     .map(candidate -> score(query, queryEmbedding != null, candidate))
                     .filter(result -> result.score() >= properties.getMinimumRecallScore())
@@ -218,9 +231,12 @@ public class JdbcMemoryService implements MemoryService {
         if (draft == null || draft.content() == null || draft.content().isBlank()) {
             return;
         }
-        String category = normalize(draft.category(), "fact");
+        if (!validDraft(draft)) {
+            return;
+        }
+        String category = draft.type().persistedValue();
         String content = draft.content().trim();
-        double confidence = clamp(draft.confidence());
+        double confidence = draft.confidence();
         // 把记忆内容转成向量
         double[] embedding = embedBestEffort(content);
         Instant now = Instant.now();
@@ -277,7 +293,6 @@ public class JdbcMemoryService implements MemoryService {
     }
 
     private List<StoredMemory> readSemanticCandidates(Connection connection,
-                                                       String conversationId,
                                                        String userId,
                                                        double[] queryEmbedding,
                                                        int limit) throws SQLException {
@@ -291,7 +306,8 @@ public class JdbcMemoryService implements MemoryService {
                             ELSE 1 - (memory.embedding <=> query_vector.embedding) END AS semantic_score
                 FROM agent_long_term_memory memory
                 CROSS JOIN query_vector
-                WHERE (conversation_id = ? OR user_id = ?)
+                WHERE user_id = ?
+                  AND category IN ('PREFERENCE', 'STABLE_INSTRUCTION')
                   AND (expires_at IS NULL OR expires_at > NOW())
                 ORDER BY CASE WHEN memory.embedding IS NULL THEN 2
                               ELSE memory.embedding <=> query_vector.embedding END,
@@ -299,15 +315,13 @@ public class JdbcMemoryService implements MemoryService {
                 LIMIT ?
                 """)) {
             statement.setString(1, queryVector);
-            statement.setString(2, conversationId);
-            statement.setString(3, userId);
-            statement.setInt(4, candidateLimit(limit));
+            statement.setString(2, userId);
+            statement.setInt(3, candidateLimit(limit));
             return readCandidates(statement);
         }
     }
 
     private List<StoredMemory> readFallbackCandidates(Connection connection,
-                                                       String conversationId,
                                                        String userId,
                                                        int limit) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
@@ -316,14 +330,14 @@ public class JdbcMemoryService implements MemoryService {
                        FALSE AS semantic_available,
                        0 AS semantic_score
                 FROM agent_long_term_memory
-                WHERE (conversation_id = ? OR user_id = ?)
+                WHERE user_id = ?
+                  AND category IN ('PREFERENCE', 'STABLE_INSTRUCTION')
                   AND (expires_at IS NULL OR expires_at > NOW())
                 ORDER BY importance DESC, updated_at DESC
                 LIMIT ?
                 """)) {
-            statement.setString(1, conversationId);
-            statement.setString(2, userId);
-            statement.setInt(3, candidateLimit(limit));
+            statement.setString(1, userId);
+            statement.setInt(2, candidateLimit(limit));
             return readCandidates(statement);
         }
     }
@@ -332,10 +346,14 @@ public class JdbcMemoryService implements MemoryService {
         List<StoredMemory> candidates = new ArrayList<>();
         try (ResultSet resultSet = statement.executeQuery()) {
             while (resultSet.next()) {
+                String category = resultSet.getString("category");
+                if (!isPersistedDurableType(category)) {
+                    continue;
+                }
                 Timestamp lastAccessed = resultSet.getTimestamp("last_accessed_at");
                 candidates.add(new StoredMemory(
                         resultSet.getString("memory_id"),
-                        resultSet.getString("category"),
+                        category,
                         resultSet.getString("content"),
                         resultSet.getDouble("confidence"),
                         resultSet.getDouble("importance"),
@@ -348,6 +366,30 @@ public class JdbcMemoryService implements MemoryService {
             }
         }
         return candidates;
+    }
+
+    private boolean validDraft(LongTermMemoryDraft draft) {
+        return draft != null && draft.type() != null
+                && draft.content() != null && !draft.content().isBlank()
+                && LlmMemoryExtractor.allowsCandidateContent(draft.content())
+                && Double.isFinite(draft.confidence())
+                && draft.confidence() >= 0 && draft.confidence() <= 1;
+    }
+
+    private UserProfileItem validAutomaticProfileItem(UserProfileItem item) {
+        if (item == null || item.key() == null || item.key().isBlank()
+                || item.value() == null || item.value().isBlank()) {
+            return null;
+        }
+        String key = item.key().trim().toLowerCase(Locale.ROOT);
+        if (!Set.of("language", "response_style").contains(key)) {
+            return null;
+        }
+        return new UserProfileItem(key, item.value().trim(), item.source(), item.updatedAt());
+    }
+
+    private boolean isPersistedDurableType(String category) {
+        return DurableMemoryType.fromPersistedValue(category).isPresent();
     }
 
     private MemorySearchResult score(String query, boolean queryEmbeddingAvailable, StoredMemory memory) {

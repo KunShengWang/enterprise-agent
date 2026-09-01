@@ -29,7 +29,7 @@ Search 返回候选、报价、Provider canonical 证据和硬约束过滤结果
 
 `ProcurementCaseState` 是同一 tenant/user/conversation 当前采购任务的结构化权威状态，例如数量、预算、交期、显存下限和排除供应商。模型只能提交 `ProcurementCasePatch`，不能提交身份、版本、`missingFields` 或 `currentPhase`；Patch 对标量字段支持更新和 `fieldsToClear` 显式清除，对 hard constraint、preference 和排除供应商支持 upsert/remove。Java 合并后把状态持久化到与 Agent Runtime 共用的 storage datasource 的 `procurement_case_state` 表，并用 version CAS 拒绝并发静默覆盖。`appliedInputIds` 最多保留 128 条，用于避免有限窗口内的旧输入重放。
 
-Long-Term Memory 只负责用户跨任务偏好；当前 Case 的采购事实不能依赖 Memory。报价、库存、交期和规格等供应商动态事实每次从 Provider/Tool 获取，不写入长期记忆。
+Long-Term Memory 只负责用户跨任务的软偏好或稳定交互指令，自动 Durable 类型仅有 `PREFERENCE` 和 `STABLE_INSTRUCTION`。`userId` 是 durable recall scope，`conversationId` 只记录 provenance；当前 Case 的采购事实不能依赖 Memory。报价、库存、交期、规格、预算、数量、供应商选择和排除等动态事实每次从 Provider/Tool 或当前 Case 获取，不写入长期记忆。
 
 ### Phase 2A：权威上下文重注入与记忆门控
 
@@ -37,7 +37,13 @@ Long-Term Memory 只负责用户跨任务偏好；当前 Case 的采购事实不
 
 canonical business context 使用独立的 `AgentMessageType.CANONICAL_CONTEXT` 和 `<canonical_business_context authoritative_business_data="true" trusted_instructions="false">` 协议包装；持久化会话摘要仍使用 `AgentMessageType.CONTEXT_SUMMARY` 和 `<context_summary untrusted_data="true">`。metadata 标记 `source=authoritative-procurement-case-state`、`caseId`、`caseVersion`、`fresh=true` 和 `trustedInstructions=false`。状态中的用户字符串只能作为业务数据，不能提升为 SYSTEM 指令。
 
-采购 Profile 的 `longTermMemoryEnabled=false` 是完整门控：同时关闭长期记忆写入、recall、User Profile 加载和 synthetic `<memory_context>` 注入；PostgreSQL Timeline、持久化 `CONTEXT_SUMMARY` 和工具调用/结果的 `MessageUnit` 原子配对仍正常工作。Runtime 事件区分本轮普通 projection、`context_budget` 压缩和 `provider_context_overflow` 有界重试，并记录 token budget、压缩前后消息/Token/遗漏数量和覆盖序列。
+Phase 2A 的 Context Manager 门控仍由 Profile 统一控制长期记忆写入、recall、User Profile 加载和 synthetic `<memory_context>` 注入；关闭时 PostgreSQL Timeline、持久化 `CONTEXT_SUMMARY` 和工具调用/结果的 `MessageUnit` 原子配对仍正常工作。Runtime 事件区分本轮普通 projection、`context_budget` 压缩和 `provider_context_overflow` 有界重试，并记录 token budget、压缩前后消息/Token/遗漏数量和覆盖序列。
+
+### Phase 2B：Typed Durable Memory
+
+采购 Profile 现已开启 `longTermMemoryEnabled=true`。只有用户明确表达“以后/今后/默认/通常/长期/请记住”等跨任务意图，且没有“这次/本次/当前/今天/本项目”等 ephemeral cue 时，才会调用 Memory LLM；ephemeral veto 优先于 durable intent。LLM 只能提出 `PREFERENCE` 或 `STABLE_INSTRUCTION` candidate，Java 对类型、布尔标记、非空内容、有限 `[0,1]` confidence 和敏感信息再次 fail-closed 校验；自动 UserProfile 仅允许 `language`、`response_style`。
+
+采购预算、数量、交期、当前 Case 状态、排除或选中的供应商、报价、库存和规格等一次性事实不会进入 Durable Memory，即使模型错误建议保存也会被 Java 边界拒绝。Memory 只作为不可信的 `<memory_context>` 软上下文，不能覆盖当前用户意图、canonical `ProcurementCaseState`、Java Eligibility 或 ToolResult；供应商事实仍只能来自当前 Case/Tool。Recall 按 `userId` 隔离，并只读取新的 typed 持久化值 `PREFERENCE`、`STABLE_INSTRUCTION`；历史 lowercase `preference`、`instruction` 以及 `business_fact`、`decision`、`open_task`、`identity` 等 unsafe category 不再召回，不做破坏性迁移。
 
 ## Provider / Adapter 与数据来源
 
@@ -65,7 +71,7 @@ Phase 1 的 Agent Tool 只有 `procurement_case_patch`、`procurement_supplier_s
 当前非目标：RFQ、PO、Receiving、Invoice、Payment、Procurement HITL、Procurement Multi-Agent、完整 P2P、SAP/ERPNext 部署、大规模 MCP/Memory/Context Compression 重构和真实电商 API。Phase 2A 只补充当前 Case 的权威投影和 Runtime 级上下文门控，不建设通用 Context Provider/Contributor/Plugin 框架；`AgentCanonicalContextProvider` 仅是当前所需的极薄 SPI。
 
 1. Phase 2A（已落地）：权威 Case 上下文重注入、长期记忆门控和压缩可观测性
-2. Phase 2B：Memory + Context Compression 效果优化
+2. Phase 2B（已落地）：Typed Durable Memory 的提取边界、user scope 与不可信上下文接入
 3. Phase 3：MCP Runtime 优化
 4. Phase 4：Adaptive Multi-Agent
 5. Phase 5：HITL + create_rfq

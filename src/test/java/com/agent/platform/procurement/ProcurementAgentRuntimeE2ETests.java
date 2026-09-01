@@ -12,7 +12,9 @@ import com.agent.platform.llm.ConfiguredLlmCostCalculator;
 import com.agent.platform.llm.LlmUsage;
 import com.agent.platform.mcp.McpToolGateway;
 import com.agent.platform.memory.MemoryService;
+import com.agent.platform.memory.MemoryMessage;
 import com.agent.platform.memory.RuleBasedConversationSummarizer;
+import com.agent.platform.memory.UserProfile;
 import com.agent.platform.procurement.application.ProcurementCaseContextRenderer;
 import com.agent.platform.procurement.application.ProcurementCasePatchMerger;
 import com.agent.platform.procurement.application.ProcurementDecisionEngine;
@@ -89,8 +91,13 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /** 验证真实 DefaultAgentRuntime → ToolRuntime → LocalToolExecutor → 采购 Handler 闭环。 */
@@ -136,6 +143,9 @@ class ProcurementAgentRuntimeE2ETests {
         InMemoryRunStore runStore = new InMemoryRunStore();
         InMemoryTimelineStore timelineStore = new InMemoryTimelineStore();
         MemoryService memoryService = mock(MemoryService.class);
+        when(memoryService.recall(anyString(), anyString(), anyString(), anyInt())).thenReturn(List.of());
+        when(memoryService.loadUserProfile(anyString())).thenAnswer(invocation ->
+                UserProfile.empty(invocation.getArgument(0, String.class)));
         AgentContextManager contextManager = new DefaultAgentContextManager(
                 timelineStore,
                 new ConservativeTokenEstimator(),
@@ -193,7 +203,11 @@ class ProcurementAgentRuntimeE2ETests {
         }
         assertTrue(model.requests.stream().flatMap(request -> request.messages().stream())
                 .noneMatch(message -> message.content().contains("<memory_context>")));
-        verifyNoInteractions(memoryService);
+        verify(memoryService, atLeastOnce()).rememberLongTerm(
+                eq("procurement-e2e-conversation"), eq("buyer-1"), any(MemoryMessage.class));
+        verify(memoryService, atLeastOnce()).recall(
+                anyString(), eq("buyer-1"), anyString(), eq(8));
+        verify(memoryService, atLeastOnce()).loadUserProfile("buyer-1");
         assertTrue(timelineStore.events.stream().filter(event ->
                         event.type() == AgentEventType.CONTEXT_PREPARED)
                 .allMatch(event -> "projection".equals(event.payload().get("reason"))));

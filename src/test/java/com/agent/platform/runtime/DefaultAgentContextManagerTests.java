@@ -94,6 +94,72 @@ class DefaultAgentContextManagerTests {
     }
 
     @Test
+    void procurementMemoryIsScopedToTheUserAndPlacedAfterCanonicalCaseBeforeRecentIntent() {
+        MutableCaseStore caseStore = new MutableCaseStore(procurementCase(
+                "tenant-1", "buyer-1", "conversation-b", 2, "new procurement case"
+        ));
+        MemoryService memoryService = new MemoryService() {
+            @Override
+            public void rememberLongTerm(String conversationId, String userId, MemoryMessage message) {
+            }
+
+            @Override
+            public List<MemorySearchResult> recall(String conversationId, String userId,
+                                                    String query, int limit) {
+                return "buyer-1".equals(userId)
+                        ? List.of(new MemorySearchResult("long_term", "memory-a",
+                        "采购研发设备时通常交付优先", 0.95, Map.of("category", "preference")))
+                        : List.of();
+            }
+
+            @Override
+            public UserProfile loadUserProfile(String userId) {
+                return UserProfile.empty(userId);
+            }
+
+            @Override
+            public void upsertUserProfile(String userId, String key, String value,
+                                          String source, Instant updatedAt) {
+            }
+
+            @Override
+            public void clearConversation(String conversationId) {
+            }
+
+            @Override
+            public void clearUserMemory(String userId) {
+            }
+        };
+        DefaultAgentContextManager manager = manager(
+                new MutableTimelineStore(message("conversation-b", "recent-user", 1,
+                        AgentMessageType.USER, "这次价格优先。", 3)),
+                memoryService,
+                new ProcurementCaseContextRenderer(caseStore, new ObjectMapper()),
+                text -> 1
+        );
+
+        AgentContextView sameUser = manager.project(
+                "conversation-b", "buyer-1", "tenant-1", "这次价格优先。", 100,
+                procurementProfile()
+        );
+
+        int canonicalIndex = indexOfType(sameUser, AgentMessageType.CANONICAL_CONTEXT);
+        int memoryIndex = indexOfMessage(sameUser, "memory-context-conversation-b");
+        int recentIndex = indexOfMessage(sameUser, "recent-user");
+        assertTrue(canonicalIndex < memoryIndex);
+        assertTrue(memoryIndex < recentIndex);
+        assertTrue(sameUser.messages().get(memoryIndex).content().contains("交付优先"));
+        assertTrue(sameUser.messages().get(recentIndex).content().contains("这次价格优先"));
+        assertEquals("case-2", sameUser.messages().get(canonicalIndex).metadata().get("caseId"));
+
+        AgentContextView differentUser = manager.project(
+                "conversation-c", "buyer-2", "tenant-1", "交付", 100, procurementProfile()
+        );
+        assertTrue(differentUser.messages().stream().noneMatch(message ->
+                message.content().contains("<memory_context>")));
+    }
+
+    @Test
     void authoritativeProcurementContextIsRetainedAndConsumesBudgetBeforeRecentHistory() {
         MutableCaseStore caseStore = new MutableCaseStore(procurementCase(
                 "tenant-1", "user-1", "session-1", 1, "CUDA workstation"
@@ -105,7 +171,7 @@ class DefaultAgentContextManagerTests {
         DefaultAgentContextManager manager = manager(
                 new MutableTimelineStore(message("session-1", "history-1", 1,
                         AgentMessageType.USER, "old history", 7)),
-                mock(MemoryService.class), renderer, estimator
+                emptyMemoryService(), renderer, estimator
         );
 
         AgentContextView view = manager.project(
@@ -137,7 +203,7 @@ class DefaultAgentContextManagerTests {
         TokenEstimator estimator = text -> 1;
         ProcurementCaseContextRenderer renderer = new ProcurementCaseContextRenderer(caseStore, new ObjectMapper());
         DefaultAgentContextManager manager = manager(
-                new MutableTimelineStore(), mock(MemoryService.class), renderer, estimator
+                new MutableTimelineStore(), emptyMemoryService(), renderer, estimator
         );
 
         AgentContextView first = manager.project(
@@ -193,7 +259,7 @@ class DefaultAgentContextManagerTests {
             return "summary-v1";
         };
         DefaultAgentContextManager manager = manager(
-                timeline, mock(MemoryService.class),
+                timeline, emptyMemoryService(),
                 new ProcurementCaseContextRenderer(caseStore, new ObjectMapper()),
                 estimator, summarizer
         );
@@ -367,6 +433,52 @@ class DefaultAgentContextManagerTests {
         return new DefaultAgentContextManager(
                 timelineStore, estimator, memoryService, summarizer, properties, List.of(renderer)
         );
+    }
+
+    private MemoryService emptyMemoryService() {
+        return new MemoryService() {
+            @Override
+            public void rememberLongTerm(String conversationId, String userId, MemoryMessage message) {
+            }
+
+            @Override
+            public List<MemorySearchResult> recall(String conversationId, String userId,
+                                                    String query, int limit) {
+                return List.of();
+            }
+
+            @Override
+            public UserProfile loadUserProfile(String userId) {
+                return UserProfile.empty(userId);
+            }
+
+            @Override
+            public void upsertUserProfile(String userId, String key, String value,
+                                          String source, Instant updatedAt) {
+            }
+
+            @Override
+            public void clearConversation(String conversationId) {
+            }
+
+            @Override
+            public void clearUserMemory(String userId) {
+            }
+        };
+    }
+
+    private int indexOfType(AgentContextView view, AgentMessageType type) {
+        for (int index = 0; index < view.messages().size(); index++) {
+            if (view.messages().get(index).type() == type) return index;
+        }
+        return -1;
+    }
+
+    private int indexOfMessage(AgentContextView view, String messageId) {
+        for (int index = 0; index < view.messages().size(); index++) {
+            if (messageId.equals(view.messages().get(index).messageId())) return index;
+        }
+        return -1;
     }
 
     private AgentExecutionProfile profile(String name, boolean memoryEnabled) {

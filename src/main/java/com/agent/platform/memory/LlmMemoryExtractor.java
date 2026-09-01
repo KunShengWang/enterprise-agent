@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -22,8 +23,22 @@ import java.util.Set;
 @Service
 public class LlmMemoryExtractor implements MemoryExtractor {
 
-    private static final Set<String> ALLOWED_CATEGORIES = Set.of(
-            "identity", "preference", "instruction", "business_fact", "decision", "open_task"
+    private static final Set<String> AUTOMATIC_PROFILE_KEYS = Set.of("language", "response_style");
+    private static final List<String> DURABLE_INTENT_CUES = List.of(
+            "以后", "今后", "默认", "通常", "一直", "长期", "我的偏好", "我更喜欢", "我偏好",
+            "请记住", "记住", "每次", "总是", "always", "from now on", "going forward",
+            "by default", "usually", "my preference", "i prefer", "remember", "long-term"
+    );
+    private static final List<String> EPHEMERAL_CUES = List.of(
+            "这次", "本次", "当前", "今天", "本周", "这个项目", "本项目", "这单", "本单",
+            "这笔", "本采购", "这个采购", "这个订单", "本订单", "当前任务", "这项任务", "临时", "暂时",
+            "this time", "current", "today", "this week", "this project", "this task", "this case",
+            "this order", "this purchase", "for now", "temporarily", "temporary", "one-off"
+    );
+    private static final List<String> DYNAMIC_PROCUREMENT_FACT_CUES = List.of(
+            "预算", "报价", "供应商", "库存", "数量", "交期", "supplier", "quote", "inventory",
+            "quantity", "deadline", "lead time", "selected supplier", "excluded supplier",
+            "采购状态", "订单状态", "case state", "toolresult"
     );
 
     private final LlmService llmService;
@@ -44,17 +59,24 @@ public class LlmMemoryExtractor implements MemoryExtractor {
                 || message.content() == null || message.content().isBlank()) {
             return MemoryExtraction.empty();
         }
+        String content = message.content().trim();
+        if (!allowsAutomaticExtraction(content)) {
+            return MemoryExtraction.empty();
+        }
         try {
             String raw = llmService.complete(new PromptRequest(
                     """
                     你是长期记忆提取器，只输出 JSON，不要 Markdown。
-                    仅提取用户明确表达、未来对话仍有价值的信息；不要保存临时闲聊、模型回答或未经确认的推测。
-                    禁止提取密码、令牌、身份证、手机号、银行卡等敏感数据。
-                    category 只能是 identity、preference、instruction、business_fact、decision、open_task。
-                    JSON：{"longTermMemories":[{"category":"preference","content":"内容","confidence":0.0}],"profileItems":[{"key":"字段","value":"值","confidence":0.0}]}
+                    仅提取用户明确表达、未来跨任务仍有价值的软偏好或稳定交互指令；不要保存临时闲聊、模型回答或未经确认的推测。
+                    只能返回 type=PREFERENCE 或 type=STABLE_INSTRUCTION。
+                    当前预算、deadline、数量、排除或选中的供应商、报价、库存、规格、采购/订单状态、一次性决策和 ToolResult 动态事实都禁止作为长期记忆。
+                    禁止提取密码、令牌、身份证、手机号、银行卡等敏感数据；检测到敏感信息时不要返回该项。
+                    每个长期记忆项必须包含 durableIntent=true 和 ephemeral=false；每个 profile 项也必须包含这两个布尔字段。
+                    自动 profile key 只能是 language 或 response_style。
+                    JSON：{"longTermMemories":[{"type":"PREFERENCE","content":"内容","confidence":0.0,"durableIntent":true,"ephemeral":false}],"profileItems":[{"key":"language","value":"中文","confidence":0.0,"durableIntent":true,"ephemeral":false}]}
                     没有可保存内容时返回两个空数组。
                     """.strip(),
-                    "用户消息：" + message.content(),
+                    "用户消息：" + content,
                     List.of("conversationId=" + conversationId, "userId=" + userId),
                     Map.of("purpose", "memory_extraction")
             ));
@@ -79,12 +101,15 @@ public class LlmMemoryExtractor implements MemoryExtractor {
                 if (!(value instanceof Map<?, ?> item)) {
                     continue;
                 }
-                String category = stringValue(item.get("category"));
+                DurableMemoryType type = typeValue(item.get("type"));
                 String content = safeMemoryValue(stringValue(item.get("content")));
-                double confidence = confidence(item.get("confidence"));
-                if (ALLOWED_CATEGORIES.contains(category) && !content.isBlank()
-                        && confidence >= 0.55 && dedupe.add(category + "\n" + content)) {
-                    memories.add(new LongTermMemoryDraft(category, limit(content, 800), confidence));
+                Double confidence = confidence(item.get("confidence"));
+                if (type != null && allowsCandidateContent(content)
+                        && Boolean.TRUE.equals(booleanValue(item.get("durableIntent")))
+                        && Boolean.FALSE.equals(booleanValue(item.get("ephemeral")))
+                        && confidence != null && confidence >= 0.55
+                        && dedupe.add(type.name() + "\n" + content)) {
+                    memories.add(new LongTermMemoryDraft(type, limit(content, 800), confidence));
                 }
             }
         }
@@ -97,8 +122,11 @@ public class LlmMemoryExtractor implements MemoryExtractor {
                 }
                 String key = normalizeKey(stringValue(item.get("key")));
                 String profileValue = safeMemoryValue(stringValue(item.get("value")));
-                double confidence = confidence(item.get("confidence"));
-                if (!key.isBlank() && !profileValue.isBlank() && confidence >= 0.7
+                Double confidence = confidence(item.get("confidence"));
+                if (AUTOMATIC_PROFILE_KEYS.contains(key) && !profileValue.isBlank()
+                        && Boolean.TRUE.equals(booleanValue(item.get("durableIntent")))
+                        && Boolean.FALSE.equals(booleanValue(item.get("ephemeral")))
+                        && confidence != null && confidence >= 0.7
                         && dedupe.add("profile\n" + key + "\n" + profileValue)) {
                     profileItems.add(new UserProfileItem(
                             key,
@@ -112,12 +140,43 @@ public class LlmMemoryExtractor implements MemoryExtractor {
         return new MemoryExtraction(memories, profileItems);
     }
 
+    static boolean allowsAutomaticExtraction(String content) {
+        return hasDurableIntent(content) && !hasEphemeralCue(content);
+    }
+
+    static boolean hasDurableIntent(String content) {
+        String normalized = normalizeForCueMatching(content);
+        return !normalized.isBlank() && containsAny(normalized, DURABLE_INTENT_CUES);
+    }
+
+    static boolean hasEphemeralCue(String content) {
+        String normalized = normalizeForCueMatching(content);
+        return !normalized.isBlank() && containsAny(normalized, EPHEMERAL_CUES);
+    }
+
+    static boolean allowsCandidateContent(String content) {
+        String normalized = normalizeForCueMatching(content);
+        return !normalized.isBlank() && !hasEphemeralCue(normalized)
+                && !containsAny(normalized, DYNAMIC_PROCUREMENT_FACT_CUES);
+    }
+
+    private static String normalizeForCueMatching(String content) {
+        return content == null ? "" : content.toLowerCase(Locale.ROOT).trim();
+    }
+
+    private static boolean containsAny(String content, List<String> cues) {
+        return cues.stream().anyMatch(content::contains);
+    }
+
     private String safeMemoryValue(String value) {
-        if (value.isBlank()) {
+        if (value == null || value.isBlank() || sensitiveDataFilter == null) {
             return "";
         }
         SensitiveDataFilterResult filtered = sensitiveDataFilter.filter(value);
-        return filtered.categories().isEmpty() ? value : filtered.safeContent();
+        if (filtered == null || !filtered.categories().isEmpty()) {
+            return "";
+        }
+        return filtered.safeContent() == null ? "" : filtered.safeContent().trim();
     }
 
     private String normalizeKey(String key) {
@@ -127,20 +186,21 @@ public class LlmMemoryExtractor implements MemoryExtractor {
         return limit(normalized, 64);
     }
 
-    private double confidence(Object value) {
-        double parsed = 0;
-        if (value instanceof Number number) {
-            parsed = number.doubleValue();
+    private DurableMemoryType typeValue(Object value) {
+        return value instanceof String text
+                ? DurableMemoryType.fromProtocolValue(text).orElse(null) : null;
+    }
+
+    private Boolean booleanValue(Object value) {
+        return value instanceof Boolean booleanValue ? booleanValue : null;
+    }
+
+    private Double confidence(Object value) {
+        if (!(value instanceof Number number)) {
+            return null;
         }
-        else if (value != null) {
-            try {
-                parsed = Double.parseDouble(String.valueOf(value));
-            }
-            catch (NumberFormatException ignored) {
-                parsed = 0;
-            }
-        }
-        return Math.max(0, Math.min(1, parsed));
+        double parsed = number.doubleValue();
+        return Double.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : null;
     }
 
     private String extractJson(String text) {
@@ -153,7 +213,7 @@ public class LlmMemoryExtractor implements MemoryExtractor {
     }
 
     private String stringValue(Object value) {
-        return value == null ? "" : String.valueOf(value).trim();
+        return value instanceof String text ? text.trim() : "";
     }
 
     private String limit(String value, int maxChars) {
