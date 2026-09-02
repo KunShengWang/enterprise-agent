@@ -5,9 +5,11 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 @Service
 public class LocalToolRegistry implements ToolRegistry {
@@ -78,12 +80,16 @@ public class LocalToolRegistry implements ToolRegistry {
      */
     @Override
     public List<ToolDefinition> listTools() {
-        List<ToolDefinition> mergedTools = new ArrayList<>(tools);// ① 内置工具
+        Map<String, ToolDefinition> mergedTools = new LinkedHashMap<>();
+        tools.forEach(tool -> addUnique(mergedTools, tool, "local"));
         // 遍历 ToolCatalogContributor 的子类，把他们的工具整合到 mergedTools
-        catalogContributors.orderedStream()
-                .forEach(contributor -> mergedTools.addAll(contributor.definitions()));
-        mcpToolGatewayProvider.ifAvailable(gateway -> mergedTools.addAll(gateway.discoverTools()));
-        return List.copyOf(mergedTools);
+        contributorStream().forEach(contributor -> contributor.definitions()
+                .forEach(tool -> addUnique(mergedTools, tool, "contributor")));
+        McpToolGateway gateway = mcpToolGatewayProvider == null ? null : mcpToolGatewayProvider.getIfAvailable();
+        if (gateway != null) {
+            gateway.discoverTools().forEach(tool -> addUnique(mergedTools, tool, "mcp"));
+        }
+        return List.copyOf(mergedTools.values());
     }
 
     /**
@@ -94,5 +100,25 @@ public class LocalToolRegistry implements ToolRegistry {
         return listTools().stream()
                 .filter(tool -> tool.name().equals(toolName))
                 .findFirst();
+    }
+
+    private Stream<ToolCatalogContributor> contributorStream() {
+        return catalogContributors == null ? Stream.empty() : catalogContributors.orderedStream();
+    }
+
+    private void addUnique(Map<String, ToolDefinition> mergedTools, ToolDefinition definition, String source) {
+        if (definition == null || definition.name() == null || definition.name().isBlank()) {
+            throw new IllegalStateException("tool definition name must not be blank: " + source);
+        }
+        ToolDefinition previous = mergedTools.putIfAbsent(definition.name(), definition);
+        if (previous != null) {
+            throw new IllegalStateException("duplicate tool name '" + definition.name()
+                    + "' between providers '" + providerOf(previous) + "' and '" + source + "'");
+        }
+    }
+
+    private String providerOf(ToolDefinition definition) {
+        Object provider = definition.metadata().get("provider");
+        return provider == null ? "unknown" : String.valueOf(provider);
     }
 }

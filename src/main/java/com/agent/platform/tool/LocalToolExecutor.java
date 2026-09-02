@@ -100,7 +100,7 @@ public class LocalToolExecutor implements ToolExecutor {
             if (gateway == null) {
                 return new ToolCallResult(request.toolName(), false, "", "MCP gateway is not configured", Map.of("provider", "mcp"));
             }
-            return gateway.callTool(request);
+            return gateway.callTool(definition.get(), request);
         }
 
         Optional<ToolHandler> businessHandler = toolHandlers.orderedStream()

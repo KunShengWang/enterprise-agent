@@ -570,6 +570,12 @@ traceId
 
 不删除已经学习过的模块，但不再把每个模块都包装成 OrderCare 的“核心功能”。
 
+### 14.1 MCP Developer Lab 边界
+
+当前 MCP Harness 仅支持 stdio 工具传输，并按需为每个 enabled Server 建立一个 lazy persistent session；同一 session generation 只执行一次 `initialize` 和一次 `tools/list`，后续 discovery 与 `tools/call` 复用该进程。发现结果保存为当前 generation 的 immutable snapshot，每个解析出的 `ToolDefinition` 只携带安全的 `serverId + session generation` binding，并且执行时必须仍来自当前 generation 的已发布 snapshot。
+
+一个 session generation 从初始化完成到失效只对应一个不变的工具 snapshot；snapshot 只有在旧 generation 因进程退出、EOF 或 broken pipe 失效、后续重新建立下一代连接时才可能变化。旧 `ToolDefinition` 永不透明绑定到新 generation，不确定的工具调用不会跨 generation 自动重放。MCP discovery 只表示远端声明了工具和 schema，不等于授权，仍需经过上层 capability、policy、approval 和 schema 校验。
+
 ## 15. Controller 与页面收口
 
 ### 15.1 业务命令入口
