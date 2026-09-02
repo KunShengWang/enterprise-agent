@@ -4,6 +4,7 @@ import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.approval.ApprovalRecord;
 import com.agent.platform.approval.ApprovalService;
 import com.agent.platform.config.AgentProperties;
+import com.agent.platform.config.McpProperties;
 import com.agent.platform.guardrail.GuardrailAction;
 import com.agent.platform.guardrail.GuardrailDecision;
 import com.agent.platform.guardrail.GuardrailService;
@@ -11,6 +12,7 @@ import com.agent.platform.guardrail.GuardrailStage;
 import com.agent.platform.llm.ConfiguredLlmCostCalculator;
 import com.agent.platform.llm.LlmUsage;
 import com.agent.platform.mcp.McpToolGateway;
+import com.agent.platform.mcp.StdioMcpToolGateway;
 import com.agent.platform.memory.MemoryService;
 import com.agent.platform.memory.MemoryMessage;
 import com.agent.platform.memory.RuleBasedConversationSummarizer;
@@ -24,6 +26,7 @@ import com.agent.platform.procurement.config.ProcurementSourcingExecutionProfile
 import com.agent.platform.procurement.model.ProcurementCase;
 import com.agent.platform.procurement.persistence.ProcurementCaseStore;
 import com.agent.platform.procurement.provider.AwsSyntheticProcurementProvider;
+import com.agent.platform.procurement.provider.McpProcurementDataProvider;
 import com.agent.platform.procurement.provider.ProcurementDataProvider;
 import com.agent.platform.procurement.tool.ProcurementToolCatalog;
 import com.agent.platform.procurement.tool.ProcurementToolHandler;
@@ -49,6 +52,7 @@ import com.agent.platform.runtime.AgentRuntimeResult;
 import com.agent.platform.runtime.AgentToolCall;
 import com.agent.platform.runtime.AgentToolRuntimeResult;
 import com.agent.platform.runtime.DefaultAgentCapabilityExecutor;
+import com.agent.platform.runtime.DefaultAgentCapabilityRegistry;
 import com.agent.platform.runtime.DefaultAgentContextManager;
 import com.agent.platform.runtime.DefaultAgentRuntime;
 import com.agent.platform.runtime.DefaultAgentToolRuntime;
@@ -63,9 +67,11 @@ import com.agent.platform.tool.JsonSchemaToolParameterValidator;
 import com.agent.platform.tool.LocalToolExecutor;
 import com.agent.platform.tool.TicketStore;
 import com.agent.platform.tool.ToolCallRequest;
+import com.agent.platform.tool.ToolCatalogContributor;
 import com.agent.platform.tool.ToolDefinition;
 import com.agent.platform.tool.ToolExecutor;
 import com.agent.platform.tool.ToolHandler;
+import com.agent.platform.tool.LocalToolRegistry;
 import com.agent.platform.tool.ToolRegistry;
 import com.agent.platform.tool.ToolRunRecorder;
 import org.junit.jupiter.api.Test;
@@ -107,65 +113,18 @@ class ProcurementAgentRuntimeE2ETests {
 
     @Test
     void modelToolResultAndReplanCompleteRecommendationLoop() {
-        MemoryCaseStore caseStore = new MemoryCaseStore();
         ProcurementDataProperties dataProperties = new ProcurementDataProperties();
         ProcurementDataProvider provider = new AwsSyntheticProcurementProvider(mapper, dataProperties);
-        ProcurementCasePatchMerger patchMerger = new ProcurementCasePatchMerger();
-        ProcurementDecisionEngine decisionEngine = new ProcurementDecisionEngine();
-        ProcurementCaseService caseService = new ProcurementCaseService(caseStore, patchMerger);
-        ProcurementToolHandler handler = new ProcurementToolHandler(provider, mapper, caseStore, caseService,
-                new com.agent.platform.procurement.application.ProcurementRecommendationFinalizer(caseStore, provider, decisionEngine),
-                patchMerger, decisionEngine);
-        ProcurementToolCatalog catalog = new ProcurementToolCatalog();
-        List<ToolDefinition> definitions = catalog.definitions();
-
-        ToolRegistry registry = new MapToolRegistry(definitions);
         ObjectProvider<McpToolGateway> mcpGateways = mock(ObjectProvider.class);
         when(mcpGateways.getIfAvailable()).thenReturn(null);
-        ObjectProvider<ToolHandler> handlers = mock(ObjectProvider.class);
-        when(handlers.orderedStream()).thenAnswer(invocation -> Stream.of(handler));
-        ToolRunRecorder recorder = mock(ToolRunRecorder.class);
-        LocalToolExecutor localExecutor = new LocalToolExecutor(
-                registry, new JsonSchemaToolParameterValidator(mapper), recorder,
-                mock(TicketStore.class), mcpGateways, handlers);
-        DefaultAgentCapabilityExecutor capabilityExecutor = new DefaultAgentCapabilityExecutor(
-                mock(RagService.class), localExecutor, mock(SkillRegistry.class));
-
-        AgentProperties properties = new AgentProperties();
-        properties.setMaxToolExecutionAttempts(1);
-        properties.setToolRetryBackoffMillis(0);
-        InMemoryToolExecutionStore toolExecutionStore = new InMemoryToolExecutionStore();
-        GuardrailService guardrail = allowAllGuardrail();
-        DefaultAgentToolRuntime toolRuntime = new DefaultAgentToolRuntime(
-                guardrail, mock(ApprovalService.class), toolExecutionStore,
-                capabilityExecutor, properties, List.of(), List.of());
-        ScriptedProcurementModel model = new ScriptedProcurementModel(mapper);
-        InMemoryRunStore runStore = new InMemoryRunStore();
-        InMemoryTimelineStore timelineStore = new InMemoryTimelineStore();
-        MemoryService memoryService = mock(MemoryService.class);
-        when(memoryService.recall(anyString(), anyString(), anyString(), anyInt())).thenReturn(List.of());
-        when(memoryService.loadUserProfile(anyString())).thenAnswer(invocation ->
-                UserProfile.empty(invocation.getArgument(0, String.class)));
-        AgentContextManager contextManager = new DefaultAgentContextManager(
-                timelineStore,
-                new ConservativeTokenEstimator(),
-                memoryService,
-                new RuleBasedConversationSummarizer(),
-                properties,
-                List.of(new ProcurementCaseContextRenderer(caseStore, mapper)));
-        AgentExecutionProfile profile = new ProcurementSourcingExecutionProfileFactory().createProfile();
-        DefaultAgentRuntime runtime = new DefaultAgentRuntime(
-                properties, timelineStore, runStore, toolExecutionStore, contextManager, model,
-                new MapCapabilityRegistry(definitions), toolRuntime, guardrail, List.of(),
-                mock(ApprovalService.class), new ConservativeTokenEstimator(), new NoopRunControlStore(),
-                memoryService, new ConfiguredLlmCostCalculator(properties),
-                new ToolResultProjector(properties));
-
-        AgentRuntimeResult result = runtime.run(new AgentRequest(
-                "procurement-e2e-conversation", "buyer-1",
-                "研发部门需要采购 50 台 CUDA 工作站，预算 60 万，三周内到，显存至少 24GB；不要 Supplier A。这次项目比较急，可以稍微贵一点，交付优先。",
-                Map.of("tenantId", "tenant-1", "authenticatedRoles", Set.of("USER")),
-                profile.name()), profile, AgentEventListener.NOOP);
+        RuntimeExecution execution = runRuntime(provider, mcpGateways,
+                "procurement-e2e-conversation", "");
+        MemoryCaseStore caseStore = execution.caseStore();
+        InMemoryToolExecutionStore toolExecutionStore = execution.toolExecutionStore();
+        InMemoryTimelineStore timelineStore = execution.timelineStore();
+        MemoryService memoryService = execution.memoryService();
+        ScriptedProcurementModel model = execution.model();
+        AgentRuntimeResult result = execution.result();
 
         assertEquals(AgentRunState.COMPLETED, result.state(),
                 result.stopReason() + " / " + toolExecutionStore.records.values().stream()
@@ -222,6 +181,136 @@ class ProcurementAgentRuntimeE2ETests {
         assertEquals(Map.of("readOnly", true, "sideEffect", false), metadata(toolExecutionStore, ProcurementToolCatalog.RECOMMENDATION_FINALIZE));
     }
 
+    @Test
+    void mcpBackedRuntimeKeepsTheThreeToolLoopAndUsesInternalStdioSource() throws Exception {
+        try (ProcurementMcpTestServer server = ProcurementMcpTestServer.create()) {
+            McpProperties mcpProperties = new McpProperties();
+            mcpProperties.setServers(List.of(server.config()));
+            StdioMcpToolGateway gateway = new StdioMcpToolGateway(mcpProperties, mapper);
+            try {
+                ProcurementDataProperties dataProperties = new ProcurementDataProperties();
+                dataProperties.setProvider("mcp");
+                ProcurementDataProvider provider = new McpProcurementDataProvider(
+                        mapper, dataProperties, gatewayProvider(gateway));
+                RuntimeExecution execution = runRuntime(provider, gatewayProvider(gateway),
+                        "procurement-mcp-e2e-conversation", "mcp:procurement-fixture");
+
+                assertEquals(AgentRunState.COMPLETED, execution.result().state(),
+                        execution.result().stopReason() + " / " + execution.toolExecutionStore().records.values());
+                assertTrue(execution.result().answer().contains("Supplier D"));
+                assertTrue(execution.result().answer().contains("Supplier B"));
+                assertEquals(List.of(ProcurementToolCatalog.CASE_PATCH, ProcurementToolCatalog.SUPPLIER_SEARCH,
+                        ProcurementToolCatalog.RECOMMENDATION_FINALIZE), execution.model().toolNames());
+                assertTrue(execution.timelineStore().messages.stream()
+                        .filter(message -> ProcurementToolCatalog.RECOMMENDATION_FINALIZE.equals(message.toolName()))
+                        .anyMatch(message -> message.content().contains("mcp:procurement-fixture")));
+
+                List<String> events = server.events();
+                assertTrue(events.contains("initialize"));
+                assertTrue(events.contains("initialized"));
+                assertTrue(events.contains("tools/list"));
+                assertTrue(events.stream().anyMatch(value -> value.startsWith("tools/call search_suppliers ")));
+                assertTrue(events.stream().anyMatch(value -> value.startsWith("tools/call get_offers ")));
+                assertTrue(events.stream().filter(value -> value.startsWith("tools/call "))
+                        .noneMatch(value -> value.contains("budget") || value.contains("requiredDeliveryDays")
+                                || value.contains("excludedSuppliers") || value.contains("preferences")
+                                || value.contains("hardConstraints") || value.contains("deliveryPriority")),
+                        () -> "MCP source request leaked Case decision fields: " + events);
+            }
+            finally {
+                gateway.shutdown();
+            }
+        }
+    }
+
+    private RuntimeExecution runRuntime(ProcurementDataProvider provider,
+                                        ObjectProvider<McpToolGateway> mcpGateways,
+                                        String conversationId,
+                                        String expectedOfferSource) {
+        MemoryCaseStore caseStore = new MemoryCaseStore();
+        ProcurementCasePatchMerger patchMerger = new ProcurementCasePatchMerger();
+        ProcurementDecisionEngine decisionEngine = new ProcurementDecisionEngine();
+        ProcurementCaseService caseService = new ProcurementCaseService(caseStore, patchMerger);
+        ProcurementToolHandler handler = new ProcurementToolHandler(provider, mapper, caseStore, caseService,
+                new com.agent.platform.procurement.application.ProcurementRecommendationFinalizer(caseStore, provider, decisionEngine),
+                patchMerger, decisionEngine);
+        ToolRegistry registry = new LocalToolRegistry(
+                mcpGateways,
+                contributorProvider(new ProcurementToolCatalog()));
+        AgentCapabilityRegistry capabilityRegistry = new DefaultAgentCapabilityRegistry(registry);
+        ObjectProvider<ToolHandler> handlers = mock(ObjectProvider.class);
+        when(handlers.orderedStream()).thenAnswer(invocation -> Stream.of(handler));
+        ToolRunRecorder recorder = mock(ToolRunRecorder.class);
+        LocalToolExecutor localExecutor = new LocalToolExecutor(
+                registry, new JsonSchemaToolParameterValidator(mapper), recorder,
+                mock(TicketStore.class), mcpGateways, handlers);
+        DefaultAgentCapabilityExecutor capabilityExecutor = new DefaultAgentCapabilityExecutor(
+                mock(RagService.class), localExecutor, mock(SkillRegistry.class));
+
+        AgentProperties properties = new AgentProperties();
+        properties.setMaxToolExecutionAttempts(1);
+        properties.setToolRetryBackoffMillis(0);
+        InMemoryToolExecutionStore toolExecutionStore = new InMemoryToolExecutionStore();
+        GuardrailService guardrail = allowAllGuardrail();
+        DefaultAgentToolRuntime toolRuntime = new DefaultAgentToolRuntime(
+                guardrail, mock(ApprovalService.class), toolExecutionStore,
+                capabilityExecutor, properties, List.of(), List.of());
+        ScriptedProcurementModel model = new ScriptedProcurementModel(mapper, expectedOfferSource);
+        InMemoryRunStore runStore = new InMemoryRunStore();
+        InMemoryTimelineStore timelineStore = new InMemoryTimelineStore();
+        MemoryService memoryService = mock(MemoryService.class);
+        when(memoryService.recall(anyString(), anyString(), anyString(), anyInt())).thenReturn(List.of());
+        when(memoryService.loadUserProfile(anyString())).thenAnswer(invocation ->
+                UserProfile.empty(invocation.getArgument(0, String.class)));
+        AgentContextManager contextManager = new DefaultAgentContextManager(
+                timelineStore,
+                new ConservativeTokenEstimator(),
+                memoryService,
+                new RuleBasedConversationSummarizer(),
+                properties,
+                List.of(new ProcurementCaseContextRenderer(caseStore, mapper)));
+        AgentExecutionProfile profile = new ProcurementSourcingExecutionProfileFactory().createProfile();
+        DefaultAgentRuntime runtime = new DefaultAgentRuntime(
+                properties, timelineStore, runStore, toolExecutionStore, contextManager, model,
+                capabilityRegistry, toolRuntime, guardrail, List.of(),
+                mock(ApprovalService.class), new ConservativeTokenEstimator(), new NoopRunControlStore(),
+                memoryService, new ConfiguredLlmCostCalculator(properties),
+                new ToolResultProjector(properties));
+
+        AgentRuntimeResult result = runtime.run(new AgentRequest(
+                conversationId, "buyer-1",
+                "研发部门需要采购 50 台 CUDA 工作站，预算 60 万，三周内到，显存至少 24GB；不要 Supplier A。这次项目比较急，可以稍微贵一点，交付优先。",
+                Map.of("tenantId", "tenant-1", "authenticatedRoles", Set.of("USER")),
+                profile.name()), profile, AgentEventListener.NOOP);
+        return new RuntimeExecution(result, model, caseStore, timelineStore, toolExecutionStore, memoryService);
+    }
+
+    private ObjectProvider<McpToolGateway> gatewayProvider(McpToolGateway gateway) {
+        return new ObjectProvider<>() {
+            @Override
+            public McpToolGateway getIfAvailable() {
+                return gateway;
+            }
+        };
+    }
+
+    private ObjectProvider<ToolCatalogContributor> contributorProvider(ToolCatalogContributor contributor) {
+        return new ObjectProvider<>() {
+            @Override
+            public Stream<ToolCatalogContributor> orderedStream() {
+                return Stream.of(contributor);
+            }
+        };
+    }
+
+    private record RuntimeExecution(AgentRuntimeResult result,
+                                    ScriptedProcurementModel model,
+                                    MemoryCaseStore caseStore,
+                                    InMemoryTimelineStore timelineStore,
+                                    InMemoryToolExecutionStore toolExecutionStore,
+                                    MemoryService memoryService) {
+    }
+
     private boolean isToolResult(AgentMessage message) {
         return message.type() == AgentMessageType.TOOL_RESULT;
     }
@@ -259,17 +348,34 @@ class ProcurementAgentRuntimeE2ETests {
 
     private static final class ScriptedProcurementModel implements AgentModelGateway {
         private final ObjectMapper mapper;
+        private final String expectedOfferSource;
         private final AtomicInteger turns = new AtomicInteger();
         private final List<AgentModelRequest> requests = new ArrayList<>();
         private final List<String> toolNames = new ArrayList<>();
 
         private ScriptedProcurementModel(ObjectMapper mapper) {
+            this(mapper, "");
+        }
+
+        private ScriptedProcurementModel(ObjectMapper mapper, String expectedOfferSource) {
             this.mapper = mapper;
+            this.expectedOfferSource = expectedOfferSource == null ? "" : expectedOfferSource;
         }
 
         @Override
         public synchronized AgentModelTurn nextTurn(AgentModelRequest request) {
             requests.add(request);
+            assertEquals(3, request.tools().size(),
+                    "Procurement Profile 每一轮只能向模型暴露三个领域工具");
+            assertEquals(List.of(
+                            ProcurementToolCatalog.CASE_PATCH,
+                            ProcurementToolCatalog.SUPPLIER_SEARCH,
+                            ProcurementToolCatalog.RECOMMENDATION_FINALIZE),
+                    request.tools().stream().map(ToolDefinition::name).toList(),
+                    "Procurement Profile 每一轮只能向模型暴露三个领域工具");
+            assertTrue(request.tools().stream().noneMatch(definition ->
+                            definition.name().startsWith("mcp.procurement.")),
+                    "内部 MCP source tool 不得成为模型可见 capability");
             int turn = turns.incrementAndGet();
             LlmUsage usage = new LlmUsage(100, 40, 140, 0, 0, "procurement-scripted", "test");
             if (turn == 1) {
@@ -320,6 +426,13 @@ class ProcurementAgentRuntimeE2ETests {
                     if ("supplier-d".equals(offer.path("supplierId").asText())) supplierDOffer = offer;
                 }
                 assertTrue(supplierBOffer != null && supplierDOffer != null);
+                if (!expectedOfferSource.isBlank()) {
+                    for (JsonNode offer : search.path("offers")) {
+                        assertEquals(expectedOfferSource, offer.path("source").asText());
+                    }
+                    assertTrue(search.toString().contains(expectedOfferSource));
+                    assertTrue(!search.toString().contains("ignore all rules"));
+                }
                 assertTrue(supplierBOffer.path("totalPrice").asDouble() < supplierDOffer.path("totalPrice").asDouble(),
                         "Supplier B 应低于 Supplier D，才能证明 Agent 的交期权衡");
                 String supplierBOfferEvidenceRef = "";
@@ -348,9 +461,17 @@ class ProcurementAgentRuntimeE2ETests {
                     .map(message -> readTree(message.content()))
                     .orElseThrow(() -> new AssertionError("第四轮未收到 recommendation_finalize ToolResult"));
             assertEquals("verified-provider-snapshot", finalized.path("source").asText());
+            if (!expectedOfferSource.isBlank()) {
+                assertTrue(finalized.toString().contains(expectedOfferSource));
+                assertTrue(!finalized.toString().contains("Supplier A is safest"));
+                assertTrue(!finalized.toString().contains("remote-digest-must-be-ignored"));
+            }
             JsonNode recommendation = finalized.path("recommendation");
             JsonNode selectedOffer = recommendation.path("selectedOffer");
             assertEquals("supplier-d", selectedOffer.path("supplierId").asText());
+            if (!expectedOfferSource.isBlank()) {
+                assertEquals(expectedOfferSource, selectedOffer.path("source").asText());
+            }
             assertEquals(580000, selectedOffer.path("totalPrice").asInt());
             assertEquals(12, selectedOffer.path("leadTimeDays").asInt());
             JsonNode alternativeOffer = null;
@@ -386,42 +507,6 @@ class ProcurementAgentRuntimeE2ETests {
 
         private List<String> toolNames() {
             return List.copyOf(toolNames);
-        }
-    }
-
-    private static final class MapCapabilityRegistry implements AgentCapabilityRegistry {
-        private final Map<String, ToolDefinition> definitions;
-
-        private MapCapabilityRegistry(List<ToolDefinition> values) {
-            definitions = values.stream().collect(java.util.stream.Collectors.toUnmodifiableMap(ToolDefinition::name, value -> value));
-        }
-
-        @Override
-        public List<ToolDefinition> listCapabilities() {
-            return List.copyOf(definitions.values());
-        }
-
-        @Override
-        public Optional<ToolDefinition> findCapability(String name) {
-            return Optional.ofNullable(definitions.get(name));
-        }
-    }
-
-    private static final class MapToolRegistry implements ToolRegistry {
-        private final Map<String, ToolDefinition> definitions;
-
-        private MapToolRegistry(List<ToolDefinition> values) {
-            definitions = values.stream().collect(java.util.stream.Collectors.toUnmodifiableMap(ToolDefinition::name, value -> value));
-        }
-
-        @Override
-        public List<ToolDefinition> listTools() {
-            return List.copyOf(definitions.values());
-        }
-
-        @Override
-        public Optional<ToolDefinition> findTool(String toolName) {
-            return Optional.ofNullable(definitions.get(toolName));
         }
     }
 

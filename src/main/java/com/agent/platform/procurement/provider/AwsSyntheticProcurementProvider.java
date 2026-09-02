@@ -7,6 +7,7 @@ import com.agent.platform.procurement.model.SupplierCandidate;
 import com.agent.platform.procurement.model.SupplierEvidence;
 import com.agent.platform.procurement.model.SupplierOffer;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -23,6 +24,8 @@ import java.util.Optional;
 
 /** 将 AWS supplier base 与项目 scenario fixture 转换为 canonical procurement model。 */
 @Component
+@ConditionalOnProperty(prefix = "enterprise-agent.procurement", name = "provider",
+        havingValue = "synthetic", matchIfMissing = true)
 public class AwsSyntheticProcurementProvider implements ProcurementDataProvider {
     private static final String AWS_SOURCE = "aws-samples/sample-multi-agent-procure-to-pay";
     private final ObjectMapper objectMapper;

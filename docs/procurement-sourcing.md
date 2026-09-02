@@ -49,6 +49,22 @@ Phase 2A 的 Context Manager 门控仍由 Profile 统一控制长期记忆写入
 
 Agent 只接触 `SupplierCandidate`、`SupplierOffer` 和 `SupplierEvidence` 等 canonical model。`AwsSyntheticProcurementProvider` 负责读取 AWS sample 原始 JSON 并转换模型，未来可替换为 SAP、ERPNext 或供应商 API Provider，不需要修改上层 Agent 和 Tool。
 
+Provider backend 由 `enterprise-agent.procurement.provider` 选择，默认是 `synthetic`；设置为 `mcp` 时，Spring 只装配 `McpProcurementDataProvider`，通过冻结的 `McpToolGateway` 读取只读事实。调用边界保持为：
+
+```text
+Agent
+  -> procurement_supplier_search / procurement_recommendation_finalize
+  -> ProcurementDataProvider
+  -> McpToolGateway
+  -> mcp.procurement.search_suppliers / mcp.procurement.get_offers
+```
+
+`mcp.procurement.search_suppliers` 和 `mcp.procurement.get_offers` 是 Provider backend API，不是模型可见 Tool；采购 Profile 仍只暴露 `procurement_case_patch`、`procurement_supplier_search` 和 `procurement_recommendation_finalize` 三项。Provider 每次从当前 immutable MCP tool snapshot 精确解析工具，并使用 bound `ToolDefinition` 调用，不自动 refresh、retry 或回退 Synthetic。MCP 只提交商品类别、描述、数量、币种和候选供应商 ID 等必要事实查询字段，不提交预算、交期、排除项、偏好或 hard constraints。
+
+远端响应只被当作不可信业务资料：Java 严格校验 snapshot/as-of、ID、价格、交期、规格和候选归属，重新计算 `totalPrice`，由 Java `ProcurementDecisionEngine` 计算 Eligibility，并从 canonical offer 生成 Evidence、provenance 和 `sourceDigest`。缺字段、错误类型、重复工具/供应商/报价、MCP 调用失败或当前快照不可用都会 fail closed；不会静默返回空数据或切换 Synthetic。`source` 只记录安全的 `mcp:<mcpServerId>`，不记录 command、args、工作目录或凭证。
+
+MCP 集成测试使用自包含的 JVM `FakeProcurementMcpServerApplication`，由独立 child process 通过 stdio 实现 `initialize`、`tools/list` 和 `tools/call`，并读取现有 `data/procurement/scenarios/complex_workstation_01.json`。它是 synthetic integration fixture，不是真实 ERPNext、SAP 或生产供应商系统；因此简历表述应是“在 Provider/Adapter 边界接入只读 MCP 事实源”，不能夸大为已接入真实 ERP。
+
 基础数据来源为 [aws-samples/sample-multi-agent-procure-to-pay](https://github.com/aws-samples/sample-multi-agent-procure-to-pay)，第一阶段只消费 `01_suppliers.json` 做 fallback supplier discovery；商品组、目录基准价以及 `04_material_requests.json`、`06_payment_terms.json` 和 `07_budgets.json` 当前不引入。数据是 synthetic and fabricated for demonstration，不是生产数据，来源说明见 `data/procurement/aws-synthetic/README.md`。AWS Base Dataset 不被当作供应商专属实时报价。
 
 另外只保留一个明确标注的 project-specific scenario fixture：`complex_workstation_01.json` 自带 `sourceAsOf`，同时覆盖 Supplier A 排除、Supplier C 的 GPU 硬约束失败，以及 Supplier B/D 两个 Eligible Supplier 的价格/交期 trade-off。Provider 通过配置项 `enterprise-agent.procurement.scenario-file`（环境变量 `PROCUREMENT_SCENARIO_FILE`）显式选择 fixture，用户 preference 不会切换数据集。它不冒充 AWS 原始数据，也不构成通用报价数据集。
@@ -72,7 +88,7 @@ Phase 1 的 Agent Tool 只有 `procurement_case_patch`、`procurement_supplier_s
 
 1. Phase 2A（已落地）：权威 Case 上下文重注入、长期记忆门控和压缩可观测性
 2. Phase 2B（已落地）：Typed Durable Memory 的提取边界、user scope 与不可信上下文接入
-3. Phase 3：MCP Runtime 优化
+3. Phase 3：MCP Runtime 冻结后的 Procurement 只读 Provider 接入
 4. Phase 4：Adaptive Multi-Agent
 5. Phase 5：HITL + create_rfq
 6. Phase 6：Eval / Ablation / Resume Metrics
