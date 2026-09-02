@@ -431,8 +431,11 @@ class ProcurementRfqHitlTests {
         assertEquals("supplier-d", approval.toolCallRequest().arguments().get("supplierId"));
         assertEquals(50, approval.toolCallRequest().arguments().get("quantity"));
         assertEquals("rfq:" + approval.approvalId(), approval.toolCallRequest().arguments().get("idempotencyKey"));
-        assertEquals(AgentRunState.WAITING_APPROVAL,
-                fixture.runStore.values.get(waiting.runId()).state());
+        AgentRunRecord waitingRecord = fixture.runStore.find(waiting.runId()).orElseThrow();
+        assertEquals(waiting.runId(), waitingRecord.runId());
+        assertEquals(AgentRunState.WAITING_APPROVAL, waitingRecord.state());
+        assertEquals(0, waitingRecord.resumeCount());
+        assertEquals(0, fixture.gateway.createCount.get());
 
         fixture.gateway.commitThenThrow = true;
         fixture.approvalService.decide(approval.approvalId(), true, "reviewer", "approved");
@@ -440,12 +443,15 @@ class ProcurementRfqHitlTests {
 
         assertEquals(AgentRunState.COMPLETED, completed.state(), completed.answer());
         assertEquals(waiting.runId(), completed.runId());
+        assertEquals(waiting.runId(), fixture.runStore.find(completed.runId()).orElseThrow().runId());
+        assertEquals(1, fixture.runStore.find(completed.runId()).orElseThrow().resumeCount());
         assertEquals(1, fixture.gateway.createCount.get());
         assertEquals(1, fixture.gateway.findCount.get());
         ToolExecutionRecord rfqExecution = fixture.executions.records.values().stream()
                 .filter(record -> ProcurementToolCatalog.CREATE_RFQ.equals(record.toolName()))
                 .findFirst().orElseThrow();
         assertEquals(approval.toolCallRequest(), rfqExecution.request());
+        assertEquals(1, rfqExecution.attempt());
         assertEquals(1, rfqExecution.result().metadata().get("attempts"));
         assertTrue(completed.answer().contains("RFQ"));
         AgentRuntimeResult repeated = fixture.runtime.resume(waiting.runId(), AgentEventListener.NOOP);
@@ -464,18 +470,24 @@ class ProcurementRfqHitlTests {
         assertEquals(AgentRunState.WAITING_APPROVAL, waiting.state());
         ApprovalRecord approval = fixture.approvalService.lastApproval;
         assertTrue(approval != null);
+        AgentRunRecord waitingRecord = fixture.runStore.find(waiting.runId()).orElseThrow();
+        assertEquals(0, waitingRecord.resumeCount());
+        assertEquals(0, fixture.gateway.createCount.get());
         fixture.gateway.throwOnCreate = true;
         fixture.approvalService.decide(approval.approvalId(), true, "reviewer", "approved");
 
         AgentRuntimeResult reviewed = fixture.runtime.resume(waiting.runId(), AgentEventListener.NOOP);
 
         assertEquals(AgentRunState.MANUAL_REVIEW, reviewed.state(), reviewed.answer());
+        assertEquals(waiting.runId(), reviewed.runId());
+        assertEquals(1, fixture.runStore.find(reviewed.runId()).orElseThrow().resumeCount());
         assertEquals(1, fixture.gateway.createCount.get());
         assertEquals(1, fixture.gateway.findCount.get());
         ToolExecutionRecord rfqExecution = fixture.executions.records.values().stream()
                 .filter(record -> ProcurementToolCatalog.CREATE_RFQ.equals(record.toolName()))
                 .findFirst().orElseThrow();
         assertEquals(approval.toolCallRequest().requestId(), rfqExecution.toolCallId());
+        assertEquals(1, rfqExecution.attempt());
         assertEquals(ToolExecutionState.MANUAL_REVIEW, rfqExecution.state());
         assertEquals(true, rfqExecution.result().metadata().get("manualReview"));
     }

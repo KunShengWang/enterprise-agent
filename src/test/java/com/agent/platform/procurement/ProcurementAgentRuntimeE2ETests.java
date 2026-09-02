@@ -46,6 +46,7 @@ import com.agent.platform.runtime.AgentMessageType;
 import com.agent.platform.runtime.AgentModelGateway;
 import com.agent.platform.runtime.AgentModelRequest;
 import com.agent.platform.runtime.AgentModelTurn;
+import com.agent.platform.runtime.AgentRunBudgetSnapshot;
 import com.agent.platform.runtime.AgentRunControlStore;
 import com.agent.platform.runtime.AgentRunLimits;
 import com.agent.platform.runtime.AgentRunRecord;
@@ -287,6 +288,44 @@ class ProcurementAgentRuntimeE2ETests {
     }
 
     @Test
+    void deterministicAblationMeasuresAdaptiveDelegationOverheadOnSameComplexCase() {
+        ProcurementDataProperties dataProperties = new ProcurementDataProperties();
+        ProcurementDataProvider provider = new AwsSyntheticProcurementProvider(mapper, dataProperties);
+        RuntimeExecution nonAdaptive = runRuntime(provider, null,
+                "procurement-eval-complex-off", "", false, false);
+        RuntimeExecution adaptive = runRuntime(provider, null,
+                "procurement-eval-complex-on", "", true, false);
+
+        assertEquals(AgentRunState.COMPLETED, nonAdaptive.result().state());
+        assertEquals(AgentRunState.COMPLETED, adaptive.result().state());
+        assertEquals("supplier-d", recommendedSupplierId(nonAdaptive));
+        assertEquals("supplier-d", recommendedSupplierId(adaptive));
+
+        assertEquals(0, subAgentStartedCount(nonAdaptive));
+        assertEquals(0, specialistToolExecutionCount(nonAdaptive));
+        assertEquals(2, subAgentStartedCount(adaptive));
+        assertEquals(2, specialistToolExecutionCount(adaptive));
+
+        Set<String> adaptiveParallelTools = adaptive.timelineStore().events.stream()
+                .filter(event -> event.runId().equals(adaptive.result().runId()))
+                .filter(event -> event.type() == AgentEventType.TOOL_REQUESTED)
+                .filter(event -> Boolean.TRUE.equals(event.payload().get("parallelBatch")))
+                .map(event -> String.valueOf(event.payload().get("toolName")))
+                .collect(java.util.stream.Collectors.toSet());
+        assertEquals(Set.of(ProcurementToolCatalog.COMMERCIAL_ANALYSIS,
+                        ProcurementToolCatalog.DELIVERY_ANALYSIS), adaptiveParallelTools);
+
+        EvalUsage nonAdaptiveUsage = evalUsage(nonAdaptive);
+        EvalUsage adaptiveUsage = evalUsage(adaptive);
+        assertEquals(0, nonAdaptiveUsage.childRunCount());
+        assertEquals(0, nonAdaptiveUsage.childModelCalls());
+        assertEquals(2, adaptiveUsage.childRunCount());
+        assertTrue(adaptiveUsage.totalModelCalls() > nonAdaptiveUsage.totalModelCalls());
+        assertTrue(adaptiveUsage.totalInputTokens() + adaptiveUsage.totalOutputTokens()
+                > nonAdaptiveUsage.totalInputTokens() + nonAdaptiveUsage.totalOutputTokens());
+    }
+
+    @Test
     void adaptiveProcurementSkipsChildForSingleEligibleSupplier() {
         ProcurementDataProperties dataProperties = new ProcurementDataProperties();
         RuntimeExecution execution = runRuntime(
@@ -385,7 +424,7 @@ class ProcurementAgentRuntimeE2ETests {
                 "研发部门需要采购 50 台 CUDA 工作站，预算 60 万，三周内到，显存至少 24GB；不要 Supplier A。这次项目比较急，可以稍微贵一点，交付优先。",
                 Map.of("tenantId", "tenant-1", "authenticatedRoles", Set.of("USER")),
                 profile.name()), profile, AgentEventListener.NOOP);
-        return new RuntimeExecution(result, model, caseStore, timelineStore, toolExecutionStore, memoryService);
+        return new RuntimeExecution(result, model, caseStore, timelineStore, toolExecutionStore, runStore, memoryService);
     }
 
     private ObjectProvider<McpToolGateway> gatewayProvider(McpToolGateway gateway) {
@@ -411,7 +450,87 @@ class ProcurementAgentRuntimeE2ETests {
                                     MemoryCaseStore caseStore,
                                     InMemoryTimelineStore timelineStore,
                                     InMemoryToolExecutionStore toolExecutionStore,
+                                    InMemoryRunStore runStore,
                                     MemoryService memoryService) {
+    }
+
+    private record EvalUsage(int parentModelCalls,
+                             int childModelCalls,
+                             int totalModelCalls,
+                             long parentInputTokens,
+                             long childInputTokens,
+                             long totalInputTokens,
+                             long parentOutputTokens,
+                             long childOutputTokens,
+                             long totalOutputTokens,
+                             int parentToolCalls,
+                             int childRunCount) {
+    }
+
+    private String recommendedSupplierId(RuntimeExecution execution) {
+        List<ToolExecutionRecord> finalizations = execution.toolExecutionStore().records.values().stream()
+                .filter(record -> ProcurementToolCatalog.RECOMMENDATION_FINALIZE.equals(record.toolName()))
+                .filter(record -> record.state() == ToolExecutionState.SUCCEEDED)
+                .filter(record -> record.result() != null && record.result().success())
+                .toList();
+        assertEquals(1, finalizations.size(), "必须存在且仅存在一个成功的 Finalize ToolExecutionRecord");
+        JsonNode recommendation = readJson(finalizations.get(0).result().content()).path("recommendation");
+        String recommendedSupplierId = recommendation.path("recommendedSupplier").path("supplierId").asText();
+        String selectedOfferSupplierId = recommendation.path("selectedOffer").path("supplierId").asText();
+        assertTrue(!recommendedSupplierId.isBlank(), "canonical recommendation 缺少 recommendedSupplier.supplierId");
+        assertEquals(recommendedSupplierId, selectedOfferSupplierId);
+        return recommendedSupplierId;
+    }
+
+    private EvalUsage evalUsage(RuntimeExecution execution) {
+        AgentRunBudgetSnapshot parent = execution.result().budget();
+        assertTrue(parent != null, "parent Run 必须提供 budget snapshot");
+        Set<String> childRunIds = execution.timelineStore().events.stream()
+                .filter(event -> event.runId().equals(execution.result().runId()))
+                .filter(event -> event.type() == AgentEventType.SUB_AGENT_COMPLETED)
+                .map(event -> event.payload().get("childRunId"))
+                .filter(value -> value != null)
+                .map(String::valueOf)
+                .collect(java.util.stream.Collectors.toSet());
+        List<AgentRunBudgetSnapshot> childBudgets = childRunIds.stream()
+                .map(childRunId -> execution.runStore().find(childRunId)
+                        .orElseThrow(() -> new AssertionError("Timeline 引用的 child Run 不存在: " + childRunId)))
+                .map(child -> {
+                    assertTrue(child.budgetSnapshot() != null,
+                            "completed child Run 必须提供 budget snapshot: " + child.runId());
+                    return child.budgetSnapshot();
+                })
+                .toList();
+        int childModelCalls = childBudgets.stream().mapToInt(AgentRunBudgetSnapshot::modelCalls).sum();
+        long childInputTokens = childBudgets.stream().mapToLong(AgentRunBudgetSnapshot::inputTokens).sum();
+        long childOutputTokens = childBudgets.stream().mapToLong(AgentRunBudgetSnapshot::outputTokens).sum();
+        return new EvalUsage(
+                parent.modelCalls(), childModelCalls, parent.modelCalls() + childModelCalls,
+                parent.inputTokens(), childInputTokens, parent.inputTokens() + childInputTokens,
+                parent.outputTokens(), childOutputTokens, parent.outputTokens() + childOutputTokens,
+                parent.toolCalls(), childRunIds.size());
+    }
+
+    private long subAgentStartedCount(RuntimeExecution execution) {
+        return execution.timelineStore().events.stream()
+                .filter(event -> event.runId().equals(execution.result().runId()))
+                .filter(event -> event.type() == AgentEventType.SUB_AGENT_STARTED)
+                .count();
+    }
+
+    private long specialistToolExecutionCount(RuntimeExecution execution) {
+        return execution.toolExecutionStore().records.values().stream()
+                .filter(record -> ProcurementToolCatalog.COMMERCIAL_ANALYSIS.equals(record.toolName())
+                        || ProcurementToolCatalog.DELIVERY_ANALYSIS.equals(record.toolName()))
+                .count();
+    }
+
+    private JsonNode readJson(String content) {
+        try {
+            return mapper.readTree(content);
+        } catch (Exception exception) {
+            throw new AssertionError("无法解析 canonical recommendation ToolResult", exception);
+        }
     }
 
     private boolean isToolResult(AgentMessage message) {
