@@ -22,6 +22,7 @@ import com.agent.platform.procurement.application.ProcurementCasePatchMerger;
 import com.agent.platform.procurement.application.ProcurementDecisionEngine;
 import com.agent.platform.procurement.application.ProcurementCaseService;
 import com.agent.platform.procurement.config.ProcurementDataProperties;
+import com.agent.platform.procurement.config.ProcurementSpecialistProfileFactory;
 import com.agent.platform.procurement.config.ProcurementSourcingExecutionProfileFactory;
 import com.agent.platform.procurement.model.ProcurementCase;
 import com.agent.platform.procurement.persistence.ProcurementCaseStore;
@@ -29,6 +30,7 @@ import com.agent.platform.procurement.provider.AwsSyntheticProcurementProvider;
 import com.agent.platform.procurement.provider.McpProcurementDataProvider;
 import com.agent.platform.procurement.provider.ProcurementDataProvider;
 import com.agent.platform.procurement.tool.ProcurementToolCatalog;
+import com.agent.platform.procurement.tool.ProcurementSpecialistToolHandler;
 import com.agent.platform.procurement.tool.ProcurementToolHandler;
 import com.agent.platform.rag.RagService;
 import com.agent.platform.runtime.AgentCapabilityRegistry;
@@ -62,6 +64,7 @@ import com.agent.platform.runtime.ToolExecutionState;
 import com.agent.platform.runtime.ToolExecutionStore;
 import com.agent.platform.runtime.ToolResultProjector;
 import com.agent.platform.runtime.ConservativeTokenEstimator;
+import com.agent.platform.multiagent.SubAgentRunner;
 import com.agent.platform.skill.SkillRegistry;
 import com.agent.platform.tool.JsonSchemaToolParameterValidator;
 import com.agent.platform.tool.LocalToolExecutor;
@@ -85,6 +88,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -223,10 +227,103 @@ class ProcurementAgentRuntimeE2ETests {
         }
     }
 
+    @Test
+    void adaptiveProcurementDelegatesBothDimensionsInOneNativeParallelBatch() {
+        ProcurementDataProperties dataProperties = new ProcurementDataProperties();
+        RuntimeExecution execution = runRuntime(
+                new AwsSyntheticProcurementProvider(mapper, dataProperties),
+                null,
+                "procurement-adaptive-complex",
+                "",
+                true,
+                false);
+
+        assertEquals(AgentRunState.COMPLETED, execution.result().state(),
+                execution.result().stopReason() + " / " + execution.toolExecutionStore().records.values());
+        assertTrue(execution.result().answer().contains("Supplier D"));
+        assertEquals(List.of(ProcurementToolCatalog.CASE_PATCH, ProcurementToolCatalog.SUPPLIER_SEARCH,
+                        ProcurementToolCatalog.COMMERCIAL_ANALYSIS, ProcurementToolCatalog.DELIVERY_ANALYSIS,
+                        ProcurementToolCatalog.RECOMMENDATION_FINALIZE),
+                execution.model().toolNames());
+
+        List<AgentEvent> parallelRequests = execution.timelineStore().events.stream()
+                .filter(event -> event.type() == AgentEventType.TOOL_REQUESTED)
+                .filter(event -> Boolean.TRUE.equals(event.payload().get("parallelBatch")))
+                .toList();
+        assertEquals(Set.of(ProcurementToolCatalog.COMMERCIAL_ANALYSIS, ProcurementToolCatalog.DELIVERY_ANALYSIS),
+                parallelRequests.stream().map(event -> String.valueOf(event.payload().get("toolName")))
+                        .collect(java.util.stream.Collectors.toSet()));
+        assertEquals(2, execution.timelineStore().events.stream()
+                .filter(event -> event.type() == AgentEventType.SUB_AGENT_STARTED).count());
+        List<AgentEvent> completed = execution.timelineStore().events.stream()
+                .filter(event -> event.type() == AgentEventType.SUB_AGENT_COMPLETED).toList();
+        assertEquals(2, completed.size());
+        assertEquals(2, completed.stream().map(event -> event.payload().get("childRunId")).distinct().count());
+        assertEquals(2, completed.stream().map(event -> event.payload().get("childSessionId")).distinct().count());
+        assertEquals(2, execution.model().childRequests().size());
+        assertTrue(execution.model().childRequests().stream().allMatch(request -> request.tools().isEmpty()));
+        assertTrue(execution.model().childRequests().stream().allMatch(request ->
+                request.metadata().get("internalSubAgent").equals(true)));
+        assertTrue(execution.model().childRequests().stream().allMatch(request ->
+                request.messages().stream().anyMatch(message ->
+                        message.content().contains("<procurement_specialist_input trusted_instructions=\"false\">"))));
+
+        List<String> parentTools = execution.model().parentRequests().stream()
+                .flatMap(request -> request.messages().stream())
+                .filter(AgentMessage::isToolResult)
+                .map(AgentMessage::toolName)
+                .toList();
+        int finalizeIndex = parentTools.lastIndexOf(ProcurementToolCatalog.RECOMMENDATION_FINALIZE);
+        assertTrue(finalizeIndex >= 0);
+        assertTrue(parentTools.subList(0, finalizeIndex).contains(ProcurementToolCatalog.COMMERCIAL_ANALYSIS));
+        assertTrue(parentTools.subList(0, finalizeIndex).contains(ProcurementToolCatalog.DELIVERY_ANALYSIS));
+        assertTrue(execution.toolExecutionStore().records.values().stream()
+                .filter(record -> record.toolName().equals(ProcurementToolCatalog.COMMERCIAL_ANALYSIS)
+                        || record.toolName().equals(ProcurementToolCatalog.DELIVERY_ANALYSIS))
+                .allMatch(record -> Boolean.TRUE.equals(record.result().metadata().get("advisory"))
+                        && Boolean.FALSE.equals(record.result().metadata().get("authoritativeFacts"))));
+        assertEquals(1, execution.caseStore().findByTenantUserAndConversationId(
+                "tenant-1", "buyer-1", "procurement-adaptive-complex").orElseThrow().version());
+    }
+
+    @Test
+    void adaptiveProcurementSkipsChildForSingleEligibleSupplier() {
+        ProcurementDataProperties dataProperties = new ProcurementDataProperties();
+        RuntimeExecution execution = runRuntime(
+                new SingleEligibleProvider(new AwsSyntheticProcurementProvider(mapper, dataProperties)),
+                null,
+                "procurement-adaptive-simple",
+                "",
+                true,
+                true);
+
+        assertEquals(AgentRunState.COMPLETED, execution.result().state(),
+                execution.result().stopReason() + " / " + execution.toolExecutionStore().records.values());
+        assertTrue(execution.result().answer().contains("Supplier D"));
+        assertEquals(List.of(ProcurementToolCatalog.CASE_PATCH, ProcurementToolCatalog.SUPPLIER_SEARCH,
+                        ProcurementToolCatalog.RECOMMENDATION_FINALIZE),
+                execution.model().toolNames());
+        assertEquals(0, execution.timelineStore().events.stream()
+                .filter(event -> event.type() == AgentEventType.SUB_AGENT_STARTED).count());
+        assertTrue(execution.model().childRequests().isEmpty());
+        assertTrue(execution.toolExecutionStore().records.values().stream()
+                .noneMatch(record -> record.toolName().equals(ProcurementToolCatalog.COMMERCIAL_ANALYSIS)
+                        || record.toolName().equals(ProcurementToolCatalog.DELIVERY_ANALYSIS)));
+    }
+
     private RuntimeExecution runRuntime(ProcurementDataProvider provider,
                                         ObjectProvider<McpToolGateway> mcpGateways,
                                         String conversationId,
                                         String expectedOfferSource) {
+        return runRuntime(provider, mcpGateways, conversationId, expectedOfferSource, false, false);
+    }
+
+    private RuntimeExecution runRuntime(ProcurementDataProvider provider,
+                                        ObjectProvider<McpToolGateway> mcpGateways,
+                                        String conversationId,
+                                        String expectedOfferSource,
+                                        boolean adaptive,
+                                        boolean simple) {
         MemoryCaseStore caseStore = new MemoryCaseStore();
         ProcurementCasePatchMerger patchMerger = new ProcurementCasePatchMerger();
         ProcurementDecisionEngine decisionEngine = new ProcurementDecisionEngine();
@@ -239,7 +336,9 @@ class ProcurementAgentRuntimeE2ETests {
                 contributorProvider(new ProcurementToolCatalog()));
         AgentCapabilityRegistry capabilityRegistry = new DefaultAgentCapabilityRegistry(registry);
         ObjectProvider<ToolHandler> handlers = mock(ObjectProvider.class);
-        when(handlers.orderedStream()).thenAnswer(invocation -> Stream.of(handler));
+        List<ToolHandler> registeredHandlers = new ArrayList<>();
+        registeredHandlers.add(handler);
+        when(handlers.orderedStream()).thenAnswer(invocation -> registeredHandlers.stream());
         ToolRunRecorder recorder = mock(ToolRunRecorder.class);
         LocalToolExecutor localExecutor = new LocalToolExecutor(
                 registry, new JsonSchemaToolParameterValidator(mapper), recorder,
@@ -255,7 +354,7 @@ class ProcurementAgentRuntimeE2ETests {
         DefaultAgentToolRuntime toolRuntime = new DefaultAgentToolRuntime(
                 guardrail, mock(ApprovalService.class), toolExecutionStore,
                 capabilityExecutor, properties, List.of(), List.of());
-        ScriptedProcurementModel model = new ScriptedProcurementModel(mapper, expectedOfferSource);
+        ScriptedProcurementModel model = new ScriptedProcurementModel(mapper, expectedOfferSource, adaptive, simple);
         InMemoryRunStore runStore = new InMemoryRunStore();
         InMemoryTimelineStore timelineStore = new InMemoryTimelineStore();
         MemoryService memoryService = mock(MemoryService.class);
@@ -276,6 +375,10 @@ class ProcurementAgentRuntimeE2ETests {
                 mock(ApprovalService.class), new ConservativeTokenEstimator(), new NoopRunControlStore(),
                 memoryService, new ConfiguredLlmCostCalculator(properties),
                 new ToolResultProjector(properties));
+        SubAgentRunner subAgentRunner = new SubAgentRunner(runtime, timelineStore);
+        registeredHandlers.add(new ProcurementSpecialistToolHandler(
+                toolExecutionStore, caseStore, subAgentRunner,
+                new ProcurementSpecialistProfileFactory(), mapper));
 
         AgentRuntimeResult result = runtime.run(new AgentRequest(
                 conversationId, "buyer-1",
@@ -352,27 +455,58 @@ class ProcurementAgentRuntimeE2ETests {
         private final AtomicInteger turns = new AtomicInteger();
         private final List<AgentModelRequest> requests = new ArrayList<>();
         private final List<String> toolNames = new ArrayList<>();
+        private final boolean adaptive;
+        private final boolean simple;
 
         private ScriptedProcurementModel(ObjectMapper mapper) {
-            this(mapper, "");
+            this(mapper, "", false, false);
         }
 
         private ScriptedProcurementModel(ObjectMapper mapper, String expectedOfferSource) {
+            this(mapper, expectedOfferSource, false, false);
+        }
+
+        private ScriptedProcurementModel(ObjectMapper mapper,
+                                         String expectedOfferSource,
+                                         boolean adaptive,
+                                         boolean simple) {
             this.mapper = mapper;
             this.expectedOfferSource = expectedOfferSource == null ? "" : expectedOfferSource;
+            this.adaptive = adaptive;
+            this.simple = simple;
         }
 
         @Override
         public synchronized AgentModelTurn nextTurn(AgentModelRequest request) {
             requests.add(request);
-            assertEquals(3, request.tools().size(),
-                    "Procurement Profile 每一轮只能向模型暴露三个领域工具");
-            assertEquals(List.of(
-                            ProcurementToolCatalog.CASE_PATCH,
-                            ProcurementToolCatalog.SUPPLIER_SEARCH,
-                            ProcurementToolCatalog.RECOMMENDATION_FINALIZE),
-                    request.tools().stream().map(ToolDefinition::name).toList(),
-                    "Procurement Profile 每一轮只能向模型暴露三个领域工具");
+            if (Boolean.TRUE.equals(request.metadata().get("internalSubAgent"))) {
+                assertTrue(request.tools().isEmpty(), "Specialist child 不得暴露任何工具");
+                String focus = request.systemPrompt().contains("COMMERCIAL") ? "COMMERCIAL" : "DELIVERY";
+                JsonNode packet = specialistPacket(request);
+                String supplierBOfferEvidenceRef = offerEvidenceRef(packet, "supplier-b");
+                String supplierDOfferEvidenceRef = offerEvidenceRef(packet, "supplier-d");
+                String summary = "COMMERCIAL".equals(focus)
+                        ? "Supplier B 的 totalPrice 更低，当前输入未提供 contract payment terms。"
+                        : "Supplier D 的 leadTimeDays 更短，当前输入未提供 on-time historical rate。";
+                return new AgentModelTurn(mapper.writeValueAsString(Map.of(
+                                "focus", focus,
+                                "summary", summary,
+                                "supplierIds", List.of("supplier-b", "supplier-d"),
+                                "evidenceRefs", List.of(supplierBOfferEvidenceRef, supplierDOfferEvidenceRef),
+                                "limitations", List.of("仅基于当前 Search facts"))),
+                        List.of(), "specialist-answer",
+                        new LlmUsage(60, 40, 100, 0, 0, "procurement-specialist-scripted", "test"),
+                        "stop");
+            }
+            Set<String> visibleNames = request.tools().stream().map(ToolDefinition::name)
+                    .collect(java.util.stream.Collectors.toSet());
+            assertTrue(Set.of(ProcurementToolCatalog.CASE_PATCH, ProcurementToolCatalog.SUPPLIER_SEARCH,
+                            ProcurementToolCatalog.COMMERCIAL_ANALYSIS, ProcurementToolCatalog.DELIVERY_ANALYSIS,
+                            ProcurementToolCatalog.RECOMMENDATION_FINALIZE).containsAll(visibleNames),
+                    "模型可见 capability 不得超出采购 Profile");
+            assertTrue(request.tools().stream().noneMatch(definition ->
+                            definition.name().startsWith("mcp.procurement.")),
+                    "内部 MCP source tool 不得成为模型可见 capability");
             assertTrue(request.tools().stream().noneMatch(definition ->
                             definition.name().startsWith("mcp.procurement.")),
                     "内部 MCP source tool 不得成为模型可见 capability");
@@ -402,18 +536,25 @@ class ProcurementAgentRuntimeE2ETests {
                         "model-search", ProcurementToolCatalog.SUPPLIER_SEARCH, Map.of(), "基于最新 Case 查询候选供应商")),
                         "search", usage, "tool_calls");
             }
+            if (turn == 3 && adaptive && !simple) {
+                assertSearchFacts(request);
+                toolNames.add(ProcurementToolCatalog.COMMERCIAL_ANALYSIS);
+                toolNames.add(ProcurementToolCatalog.DELIVERY_ANALYSIS);
+                return new AgentModelTurn("", List.of(
+                        new AgentToolCall("model-commercial", ProcurementToolCatalog.COMMERCIAL_ANALYSIS,
+                                Map.of(), "分析价格与预算权衡"),
+                        new AgentToolCall("model-delivery", ProcurementToolCatalog.DELIVERY_ANALYSIS,
+                                Map.of(), "分析交付速度权衡")),
+                        "specialists", usage, "tool_calls");
+            }
+            if (turn == 3 && adaptive && simple) {
+                JsonNode search = assertSearchFacts(request);
+                assertEquals(Set.of("supplier-d"), eligibleIds(search));
+                toolNames.add(ProcurementToolCatalog.RECOMMENDATION_FINALIZE);
+                return finalizeCall(search, "单一 Eligible 直接提交 Finalize");
+            }
             if (turn == 3) {
-                assertTrue(request.messages().stream().anyMatch(message ->
-                        message.type() == AgentMessageType.TOOL_RESULT),
-                        "第三轮未收到工具结果：" + request.messages().stream().map(AgentMessage::content).toList());
-                JsonNode search = request.messages().stream()
-                        .filter(message -> message.type() == AgentMessageType.TOOL_RESULT
-                                && message.content().contains("eligibleSuppliers"))
-                        .reduce((left, right) -> right)
-                        .map(message -> mapper.readTree(message.content()))
-                        .orElseThrow(() -> new AssertionError("第三轮未收到供应商寻源结果："
-                                + request.messages().stream().map(message -> message.type() + ":" + message.content()
-                                + ":metadata=" + message.metadata()).toList()));
+                JsonNode search = assertSearchFacts(request);
                 Set<String> eligibleSupplierIds = new java.util.HashSet<>();
                 for (JsonNode eligible : search.path("eligibleSuppliers")) {
                     eligibleSupplierIds.add(eligible.path("supplierId").asText());
@@ -453,6 +594,28 @@ class ProcurementAgentRuntimeE2ETests {
                                 "tradeoffDimensions", List.of("DELIVERY", "PRICE"),
                                 "confidence", 0.86
                         ), "在多个 Eligible 中提交透明权衡后的选择")), "finalize", usage, "tool_calls");
+            }
+            if (turn == 4 && adaptive && !simple) {
+                assertTrue(request.messages().stream().anyMatch(message ->
+                        ProcurementToolCatalog.COMMERCIAL_ANALYSIS.equals(message.toolName())
+                                && message.type() == AgentMessageType.TOOL_RESULT));
+                assertTrue(request.messages().stream().anyMatch(message ->
+                        ProcurementToolCatalog.DELIVERY_ANALYSIS.equals(message.toolName())
+                                && message.type() == AgentMessageType.TOOL_RESULT));
+                toolNames.add(ProcurementToolCatalog.RECOMMENDATION_FINALIZE);
+                return finalizeCall(assertSearchFacts(request), "综合 Commercial 与 Delivery advisory 后选择 Supplier D");
+            }
+            if (turn == 4 && adaptive && simple) {
+                JsonNode finalizedSimple = request.messages().stream()
+                        .filter(message -> message.type() == AgentMessageType.TOOL_RESULT
+                                && ProcurementToolCatalog.RECOMMENDATION_FINALIZE.equals(message.toolName()))
+                        .reduce((left, right) -> right)
+                        .map(message -> readTree(message.content()))
+                        .orElseThrow(() -> new AssertionError("简单场景未收到 recommendation_finalize ToolResult"));
+                assertEquals("supplier-d", finalizedSimple.path("recommendation")
+                        .path("selectedOffer").path("supplierId").asText());
+                assertEquals(0, finalizedSimple.path("recommendation").path("alternativeOffers").size());
+                return new AgentModelTurn("简单场景直接推荐 Supplier D。", List.of(), "answer", usage, "stop");
             }
             JsonNode finalized = request.messages().stream()
                     .filter(message -> message.type() == AgentMessageType.TOOL_RESULT
@@ -497,6 +660,70 @@ class ProcurementAgentRuntimeE2ETests {
                     List.of(), "answer", usage, "stop");
         }
 
+        private JsonNode assertSearchFacts(AgentModelRequest request) {
+            assertTrue(request.messages().stream().anyMatch(AgentMessage::isToolResult),
+                    "模型未收到供应商寻源结果：" + request.messages().stream().map(AgentMessage::content).toList());
+            return request.messages().stream()
+                    .filter(message -> message.type() == AgentMessageType.TOOL_RESULT
+                            && ProcurementToolCatalog.SUPPLIER_SEARCH.equals(message.toolName()))
+                    .reduce((left, right) -> right)
+                    .map(message -> readTree(message.content()))
+                    .orElseThrow(() -> new AssertionError("未收到 procurement_supplier_search ToolResult"));
+        }
+
+        private Set<String> eligibleIds(JsonNode search) {
+            Set<String> result = new HashSet<>();
+            for (JsonNode value : search.path("eligibleSuppliers")) {
+                result.add(value.path("supplierId").asText());
+            }
+            return result;
+        }
+
+        private AgentModelTurn finalizeCall(JsonNode search, String description) {
+            List<String> evidenceRefs = new ArrayList<>();
+            for (JsonNode evidence : search.path("evidence")) {
+                if ("OFFER".equals(evidence.path("evidenceType").asText())
+                        && (eligibleIds(search).contains(evidence.path("supplierId").asText()))) {
+                    evidenceRefs.add(evidence.path("evidenceId").asText());
+                }
+            }
+            assertTrue(!evidenceRefs.isEmpty(), "Finalize 至少需要一个 grounded OFFER evidence");
+            List<String> dimensions = eligibleIds(search).size() == 1
+                    ? List.of("DELIVERY") : List.of("DELIVERY", "PRICE");
+            return new AgentModelTurn("", List.of(new AgentToolCall(
+                    "model-finalize", ProcurementToolCatalog.RECOMMENDATION_FINALIZE, Map.of(
+                            "evaluatedCaseVersion", 1,
+                            "selectedSupplierId", "supplier-d",
+                            "evidenceRefs", evidenceRefs,
+                            "tradeoffDimensions", dimensions,
+                            "confidence", 0.86
+                    ), description)), "finalize",
+                    new LlmUsage(100, 40, 140, 0, 0, "procurement-scripted", "test"),
+                    "tool_calls");
+        }
+
+        private JsonNode specialistPacket(AgentModelRequest request) {
+            String instruction = request.messages().stream()
+                    .map(AgentMessage::content)
+                    .filter(value -> value.contains("<procurement_specialist_input trusted_instructions=\"false\">"))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("child 未收到 filtered specialist input"));
+            int start = instruction.indexOf("<procurement_specialist_input trusted_instructions=\"false\">")
+                    + "<procurement_specialist_input trusted_instructions=\"false\">".length();
+            int end = instruction.indexOf("</procurement_specialist_input>", start);
+            return readTree(instruction.substring(start, end).trim());
+        }
+
+        private String offerEvidenceRef(JsonNode packet, String supplierId) {
+            for (JsonNode evidence : packet.path("evidence")) {
+                if (supplierId.equals(evidence.path("supplierId").asText())
+                        && "OFFER".equals(evidence.path("evidenceType").asText())) {
+                    return evidence.path("evidenceId").asText();
+                }
+            }
+            throw new AssertionError("filtered packet 缺少 " + supplierId + " 的 OFFER evidence");
+        }
+
         private JsonNode readTree(String content) {
             try {
                 return mapper.readTree(content);
@@ -507,6 +734,18 @@ class ProcurementAgentRuntimeE2ETests {
 
         private List<String> toolNames() {
             return List.copyOf(toolNames);
+        }
+
+        private List<AgentModelRequest> childRequests() {
+            return requests.stream()
+                    .filter(request -> Boolean.TRUE.equals(request.metadata().get("internalSubAgent")))
+                    .toList();
+        }
+
+        private List<AgentModelRequest> parentRequests() {
+            return requests.stream()
+                    .filter(request -> !Boolean.TRUE.equals(request.metadata().get("internalSubAgent")))
+                    .toList();
         }
     }
 
@@ -545,9 +784,11 @@ class ProcurementAgentRuntimeE2ETests {
 
         @Override
         public synchronized List<AgentMessage> loadMessages(String sessionId, int limit) {
-            return messages.stream().filter(message -> message.sessionId().equals(sessionId))
-                    .sorted(Comparator.comparingLong(AgentMessage::sequence))
-                    .limit(limit).toList();
+            synchronized (messages) {
+                return messages.stream().filter(message -> message.sessionId().equals(sessionId))
+                        .sorted(Comparator.comparingLong(AgentMessage::sequence))
+                        .limit(limit).toList();
+            }
         }
 
         @Override
@@ -561,13 +802,17 @@ class ProcurementAgentRuntimeE2ETests {
 
         @Override
         public List<AgentEvent> loadEvents(String runId, int limit) {
-            return events.stream().filter(event -> event.runId().equals(runId)).limit(limit).toList();
+            synchronized (events) {
+                return events.stream().filter(event -> event.runId().equals(runId)).limit(limit).toList();
+            }
         }
 
         @Override
         public List<AgentEvent> loadEventsAfter(String runId, long afterSequence, int limit) {
-            return events.stream().filter(event -> event.runId().equals(runId) && event.sequence() > afterSequence)
-                    .limit(limit).toList();
+            synchronized (events) {
+                return events.stream().filter(event -> event.runId().equals(runId) && event.sequence() > afterSequence)
+                        .limit(limit).toList();
+            }
         }
     }
 
@@ -670,6 +915,35 @@ class ProcurementAgentRuntimeE2ETests {
 
         private String key(String tenantId, String userId, String conversationId) {
             return tenantId + "|" + userId + "|" + conversationId;
+        }
+    }
+
+    private static final class SingleEligibleProvider implements ProcurementDataProvider {
+        private final ProcurementDataProvider delegate;
+
+        private SingleEligibleProvider(ProcurementDataProvider delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public List<com.agent.platform.procurement.model.SupplierCandidate> searchSuppliers(
+                com.agent.platform.procurement.model.ProcurementCaseState state) {
+            return delegate.searchSuppliers(state).stream()
+                    .filter(candidate -> "supplier-d".equals(candidate.supplierId()))
+                    .toList();
+        }
+
+        @Override
+        public List<com.agent.platform.procurement.model.SupplierOffer> getSupplierOffers(
+                com.agent.platform.procurement.model.ProcurementCaseState state,
+                List<com.agent.platform.procurement.model.SupplierCandidate> candidates) {
+            return delegate.getSupplierOffers(state, candidates);
+        }
+
+        @Override
+        public List<com.agent.platform.procurement.model.SupplierEvidence> getSupplierEvidence(
+                String supplierId, com.agent.platform.procurement.model.ProcurementCaseState state) {
+            return delegate.getSupplierEvidence(supplierId, state);
         }
     }
 

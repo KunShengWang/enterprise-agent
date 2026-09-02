@@ -59,7 +59,7 @@ Agent
   -> mcp.procurement.search_suppliers / mcp.procurement.get_offers
 ```
 
-`mcp.procurement.search_suppliers` 和 `mcp.procurement.get_offers` 是 Provider backend API，不是模型可见 Tool；采购 Profile 仍只暴露 `procurement_case_patch`、`procurement_supplier_search` 和 `procurement_recommendation_finalize` 三项。Provider 每次从当前 immutable MCP tool snapshot 精确解析工具，并使用 bound `ToolDefinition` 调用，不自动 refresh、retry 或回退 Synthetic。MCP 只提交商品类别、描述、数量、币种和候选供应商 ID 等必要事实查询字段，不提交预算、交期、排除项、偏好或 hard constraints。
+`mcp.procurement.search_suppliers` 和 `mcp.procurement.get_offers` 是 Provider backend API，不是模型可见 Tool；采购 Profile 暴露三个核心 Tool（`procurement_case_patch`、`procurement_supplier_search`、`procurement_recommendation_finalize`）以及两个可选的只读 advisory capability（`procurement_commercial_analysis`、`procurement_delivery_analysis`）。Provider 每次从当前 immutable MCP tool snapshot 精确解析工具，并使用 bound `ToolDefinition` 调用，不自动 refresh、retry 或回退 Synthetic。MCP 只提交商品类别、描述、数量、币种和候选供应商 ID 等必要事实查询字段，不提交预算、交期、排除项、偏好或 hard constraints。
 
 远端响应只被当作不可信业务资料：Java 严格校验 snapshot/as-of、ID、价格、交期、规格和候选归属，重新计算 `totalPrice`，由 Java `ProcurementDecisionEngine` 计算 Eligibility，并从 canonical offer 生成 Evidence、provenance 和 `sourceDigest`。缺字段、错误类型、重复工具/供应商/报价、MCP 调用失败或当前快照不可用都会 fail closed；不会静默返回空数据或切换 Synthetic。`source` 只记录安全的 `mcp:<mcpServerId>`，不记录 command、args、工作目录或凭证。
 
@@ -84,11 +84,17 @@ Phase 1 的 Agent Tool 只有 `procurement_case_patch`、`procurement_supplier_s
 
 ## 明确非目标与后续路线
 
-当前非目标：RFQ、PO、Receiving、Invoice、Payment、Procurement HITL、Procurement Multi-Agent、完整 P2P、SAP/ERPNext 部署、大规模 MCP/Memory/Context Compression 重构和真实电商 API。Phase 2A 只补充当前 Case 的权威投影和 Runtime 级上下文门控，不建设通用 Context Provider/Contributor/Plugin 框架；`AgentCanonicalContextProvider` 仅是当前所需的极薄 SPI。
+当前非目标：RFQ、PO、Receiving、Invoice、Payment、Procurement HITL、完整 P2P、SAP/ERPNext 部署、大规模 MCP/Memory/Context Compression 重构和真实电商 API。Phase 2A 只补充当前 Case 的权威投影和 Runtime 级上下文门控，不建设通用 Context Provider/Contributor/Plugin 框架；`AgentCanonicalContextProvider` 仅是当前所需的极薄 SPI。
 
 1. Phase 2A（已落地）：权威 Case 上下文重注入、长期记忆门控和压缩可观测性
 2. Phase 2B（已落地）：Typed Durable Memory 的提取边界、user scope 与不可信上下文接入
 3. Phase 3：MCP Runtime 冻结后的 Procurement 只读 Provider 接入
-4. Phase 4：Adaptive Multi-Agent
+4. Phase 4A（当前）：Adaptive Multi-Agent 的可选采购 Specialist
 5. Phase 5：HITL + create_rfq
 6. Phase 6：Eval / Ablation / Resume Metrics
+
+### Phase 4A：采购自适应专家子 Agent
+
+主 Agent 先完成 `procurement_case_patch` 和 `procurement_supplier_search`。单一 Eligible 或明显简单的采购不委派；当多个 Eligible 存在价格/交付 trade-off 时，主 Agent 可在同一模型轮同时调用 Commercial 与 Delivery 两个 Specialist，Runtime 会复用原生并行子 Agent 路径。两个 child 使用隔离的 run/session、focus 对应的 filtered Search/Case facts、无工具、关闭长期记忆，最大 delegation depth 为 1。
+
+Specialist 只返回经过 Java 校验的 advisory 分析：不接 Provider/MCP，不重新查询、不修改 Case、不重算 Eligibility、不创建 Evidence，也不形成最终推荐。主 Agent 综合原始 Search facts 与 advisory 结果后，仍必须调用 `procurement_recommendation_finalize`，由 Java Finalizer 重新验证。当前没有 Risk/Compliance 或 Supplier Performance Specialist，因为 Provider 尚未提供对应的 provenance-backed facts。

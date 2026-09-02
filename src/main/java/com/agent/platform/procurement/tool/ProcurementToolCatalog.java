@@ -6,12 +6,15 @@ import com.agent.platform.tool.ToolRiskLevel;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Component
 public class ProcurementToolCatalog implements ToolCatalogContributor {
     public static final String CASE_PATCH = "procurement_case_patch";
     public static final String SUPPLIER_SEARCH = "procurement_supplier_search";
+    public static final String COMMERCIAL_ANALYSIS = "procurement_commercial_analysis";
+    public static final String DELIVERY_ANALYSIS = "procurement_delivery_analysis";
     public static final String RECOMMENDATION_FINALIZE = "procurement_recommendation_finalize";
 
     @Override
@@ -38,6 +41,12 @@ public class ProcurementToolCatalog implements ToolCatalogContributor {
                         "只读读取当前 authoritative ProcurementCaseState，查询采购供应商报价并由 Java 计算 Eligibility。不会接受模型传入的权威数量、预算或约束。",
                         "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{}}",
                         ToolRiskLevel.LOW, metadata("供应商寻源", "正在查询采购供应商和报价", List.of(), true, false)),
+                specialist(COMMERCIAL_ANALYSIS,
+                        "只读分析已完成供应商寻源中的价格、预算、质保等商业权衡。仅在多个 Eligible 候选存在实质商业 trade-off 时调用；输入事实由 Java 从当前 Search 结果提供。",
+                        "商业分析"),
+                specialist(DELIVERY_ANALYSIS,
+                        "只读分析已完成供应商寻源中的交期、交付余量等交付权衡。仅在多个 Eligible 候选存在实质交付 trade-off 时调用；输入事实由 Java 从当前 Search 结果提供。",
+                        "交付分析"),
                 new ToolDefinition(RECOMMENDATION_FINALIZE,
                         "提交 Agent 基于 Eligibility/Evidence 的供应商推荐草案；Java 重新读取当前 Case 和 Provider 快照，验证版本、资格与证据后返回 canonical Recommendation。不会修改采购 Case 或执行采购业务副作用。",
                         """
@@ -51,6 +60,25 @@ public class ProcurementToolCatalog implements ToolCatalogContributor {
                                 """.strip(),
                         ToolRiskLevel.LOW, metadata("确认供应商推荐", "正在验证供应商推荐与证据", List.of("selectedSupplierId", "evidenceRefs"), true, false))
         );
+    }
+
+    private ToolDefinition specialist(String name, String description, String displayName) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("provider", "procurement");
+        metadata.put("domain", "procurement");
+        metadata.put("readOnly", true);
+        metadata.put("sideEffect", false);
+        metadata.put("parallelSafe", true);
+        metadata.put("executionKind", "SUB_AGENT");
+        metadata.put("singleUse", true);
+        metadata.put("contractVersion", "procurement-specialist-v1");
+        metadata.put("publicDisplayName", displayName);
+        metadata.put("publicActionSummary", "正在执行采购维度分析");
+        metadata.put("publicArgumentKeys", List.of());
+        return new ToolDefinition(name, description,
+                "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{}}",
+                ToolRiskLevel.LOW,
+                Map.copyOf(metadata));
     }
 
     private Map<String, Object> metadata(String displayName, String action, List<String> keys,

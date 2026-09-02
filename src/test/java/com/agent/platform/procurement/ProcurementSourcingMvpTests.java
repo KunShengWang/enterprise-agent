@@ -53,6 +53,7 @@ class ProcurementSourcingMvpTests {
         assertEquals(com.agent.platform.workbench.target.TargetRiskLevel.LOW, target.riskLevel());
         var profile = new ProcurementSourcingExecutionProfileFactory().createProfile();
         assertEquals(Set.of(ProcurementToolCatalog.CASE_PATCH, ProcurementToolCatalog.SUPPLIER_SEARCH,
+                ProcurementToolCatalog.COMMERCIAL_ANALYSIS, ProcurementToolCatalog.DELIVERY_ANALYSIS,
                 ProcurementToolCatalog.RECOMMENDATION_FINALIZE),
                 profile.allowedCapabilities());
         assertTrue(profile.longTermMemoryEnabled());
@@ -65,8 +66,23 @@ class ProcurementSourcingMvpTests {
         assertEquals(Map.of("readOnly", false, "sideEffect", true), metadata(definitions, ProcurementToolCatalog.CASE_PATCH));
         assertEquals(Map.of("readOnly", true, "sideEffect", false), metadata(definitions, ProcurementToolCatalog.SUPPLIER_SEARCH));
         assertEquals(Map.of("readOnly", true, "sideEffect", false), metadata(definitions, ProcurementToolCatalog.RECOMMENDATION_FINALIZE));
-        assertEquals(3, definitions.size());
+        assertEquals(5, definitions.size());
+        assertEquals("procurement-specialist-v1", definition(definitions, ProcurementToolCatalog.COMMERCIAL_ANALYSIS)
+                .metadata().get("contractVersion"));
+        assertEquals("procurement-specialist-v1", definition(definitions, ProcurementToolCatalog.DELIVERY_ANALYSIS)
+                .metadata().get("contractVersion"));
+        assertEquals("LOW", definition(definitions, ProcurementToolCatalog.COMMERCIAL_ANALYSIS).riskLevel().name());
+        assertEquals("{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{}}",
+                definition(definitions, ProcurementToolCatalog.COMMERCIAL_ANALYSIS).inputSchema());
+        assertEquals(Map.of("readOnly", true, "sideEffect", false, "parallelSafe", true,
+                        "executionKind", "SUB_AGENT", "singleUse", true),
+                specialistMetadata(definitions, ProcurementToolCatalog.COMMERCIAL_ANALYSIS));
+        assertEquals(Map.of("readOnly", true, "sideEffect", false, "parallelSafe", true,
+                        "executionKind", "SUB_AGENT", "singleUse", true),
+                specialistMetadata(definitions, ProcurementToolCatalog.DELIVERY_ANALYSIS));
         assertEquals(Set.of("procurement-sourcing-v3"), definitions.stream()
+                .filter(definition -> !definition.name().equals(ProcurementToolCatalog.COMMERCIAL_ANALYSIS)
+                        && !definition.name().equals(ProcurementToolCatalog.DELIVERY_ANALYSIS))
                 .map(definition -> String.valueOf(definition.metadata().get("contractVersion")))
                 .collect(java.util.stream.Collectors.toSet()));
     }
@@ -259,8 +275,21 @@ class ProcurementSourcingMvpTests {
     }
 
     private Map<String, Object> metadata(List<com.agent.platform.tool.ToolDefinition> definitions, String name) {
-        return definitions.stream().filter(definition -> definition.name().equals(name)).findFirst().orElseThrow()
+        return definition(definitions, name)
                 .metadata().entrySet().stream().filter(entry -> entry.getKey().equals("readOnly") || entry.getKey().equals("sideEffect"))
+                .collect(java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    private com.agent.platform.tool.ToolDefinition definition(
+            List<com.agent.platform.tool.ToolDefinition> definitions, String name) {
+        return definitions.stream().filter(definition -> definition.name().equals(name)).findFirst().orElseThrow();
+    }
+
+    private Map<String, Object> specialistMetadata(
+            List<com.agent.platform.tool.ToolDefinition> definitions, String name) {
+        return definition(definitions, name).metadata().entrySet().stream()
+                .filter(entry -> Set.of("readOnly", "sideEffect", "parallelSafe", "executionKind", "singleUse")
+                        .contains(entry.getKey()))
                 .collect(java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
