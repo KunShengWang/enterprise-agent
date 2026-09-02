@@ -99,34 +99,73 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 class ProcurementRfqHitlTests {
     private final ObjectMapper mapper = new ObjectMapper();
+    private static final Set<String> EXPECTED_RFQ_PREPARED_ARGUMENTS = Set.of(
+            "caseId", "caseVersion", "supplierId", "productCategory", "productDescription",
+            "quantity", "currency", "requiredDeliveryDays", "hardConstraints",
+            "sourceRecommendationToolCallId", "idempotencyKey");
+    private static final Set<String> FORBIDDEN_RFQ_PREPARED_ARGUMENTS = Set.of(
+            "approvalId", "budget", "preferences", "excludedSuppliers", "unitPrice", "totalPrice",
+            "confidence", "evidence", "evidenceRefs", "evaluatedCaseVersion", "selectedSupplierId",
+            "tradeoffDimensions", "tenantId", "userId", "runId", "sessionId");
 
     @Test
     void preparerRebuildsExactAuthoritativeRequestAndDiscardsModelFields() throws Exception {
         Fixture fixture = fixture();
-        ToolCallRequest modelRequest = new ToolCallRequest(ProcurementToolCatalog.CREATE_RFQ, "model-rfq", Map.of(
-                "supplierId", "supplier-b", "quantity", 1, "caseVersion", 999, "idempotencyKey", "model-key"));
+        Map<String, Object> modelArguments = new LinkedHashMap<>();
+        modelArguments.put("supplierId", "supplier-b");
+        modelArguments.put("quantity", 1);
+        modelArguments.put("caseVersion", 999);
+        modelArguments.put("idempotencyKey", "model-key");
+        modelArguments.put("approvalId", "forged-approval");
+        modelArguments.put("budget", 1);
+        modelArguments.put("preferences", Map.of("deliveryPriority", "LOW"));
+        modelArguments.put("excludedSuppliers", List.of("supplier-d"));
+        modelArguments.put("unitPrice", 1);
+        modelArguments.put("totalPrice", 1);
+        modelArguments.put("confidence", 0.01);
+        modelArguments.put("tenantId", "forged-tenant");
+        modelArguments.put("userId", "forged-user");
+        ToolCallRequest modelRequest = new ToolCallRequest(ProcurementToolCatalog.CREATE_RFQ, "model-rfq", modelArguments);
 
         ToolCallRequest prepared = fixture.preparer.prepare("approval-123", modelRequest, policyContext());
 
-        assertEquals(Set.of("caseId", "caseVersion", "supplierId", "productCategory", "productDescription",
-                "quantity", "currency", "requiredDeliveryDays", "hardConstraints",
-                "sourceRecommendationToolCallId", "idempotencyKey"), prepared.arguments().keySet());
+        assertCanonicalPreparedRequest(prepared);
         assertEquals("supplier-d", prepared.arguments().get("supplierId"));
         assertEquals(50, prepared.arguments().get("quantity"));
         assertEquals(1L, prepared.arguments().get("caseVersion"));
         assertEquals("rfq:approval-123", prepared.arguments().get("idempotencyKey"));
-        assertFalse(prepared.arguments().containsKey("approvalId"));
         assertEquals("finalize-1", prepared.arguments().get("sourceRecommendationToolCallId"));
-        assertFalse(prepared.arguments().containsKey("budget"));
-        assertFalse(prepared.arguments().containsKey("preferences"));
-        assertFalse(prepared.arguments().containsKey("evidence"));
-        assertFalse(prepared.arguments().containsKey("tenantId"));
         assertEquals("{}", new ObjectMapper().writeValueAsString(Map.of()));
+    }
+
+    @Test
+    void realDefaultToolRuntimeDoesNotCreateApprovalBeforeRfqPreparationSucceeds() {
+        RuntimeFixture fixture = runtimeFixture();
+        fixture.caseStore.put(caseValue(1));
+
+        assertThrows(IllegalArgumentException.class, () -> fixture.toolRuntime.execute(
+                "run-prepare-failure", "conversation", "buyer",
+                Map.of("tenantId", "tenant", "authenticatedRoles", Set.of("USER")),
+                new AgentToolCall("rfq-prepare-failure", ProcurementToolCatalog.CREATE_RFQ, Map.of(), "发起 RFQ"),
+                rfqDefinition()));
+
+        assertTrue(fixture.approvalService.recent(10).isEmpty());
+        assertTrue(fixture.approvalService.lastApproval == null);
+        verify(fixture.approvalService, never()).requestApproval(any());
+        assertTrue(fixture.executions.findToolExecution("rfq-prepare-failure").isEmpty());
+        assertTrue(fixture.executions.findByRun("run-prepare-failure").stream()
+                .noneMatch(record -> ProcurementToolCatalog.CREATE_RFQ.equals(record.toolName())));
+        assertTrue(fixture.executions.findByRun("run-prepare-failure").stream()
+                .noneMatch(record -> ProcurementToolCatalog.RECOMMENDATION_FINALIZE.equals(record.toolName())
+                        && record.state() == ToolExecutionState.SUCCEEDED));
+        assertEquals(0, fixture.gateway.createCount.get());
     }
 
     @Test
@@ -227,6 +266,34 @@ class ProcurementRfqHitlTests {
     }
 
     @Test
+    void handlerRejectsFinalizeSourceWithWrongToolNameWithoutGatewayCreate() {
+        Fixture fixture = fixture();
+        ToolCallRequest prepared = fixture.preparer.prepare("approval-wrong-finalize-tool", intentRequest(), policyContext());
+        replaceFinalizeExecution(fixture, ProcurementToolCatalog.SUPPLIER_SEARCH, ToolExecutionState.SUCCEEDED, true);
+
+        ToolCallResult result = fixture.handler.execute(prepared, executionContext());
+
+        assertFalse(result.success());
+        assertEquals("RFQ_REQUEST_REJECTED", result.metadata().get("errorType"));
+        assertEquals(0, fixture.gateway.createCount.get());
+        assertEquals(0, fixture.gateway.findCount.get());
+    }
+
+    @Test
+    void handlerRejectsFailedFinalizeSourceWithoutGatewayCreate() {
+        Fixture fixture = fixture();
+        ToolCallRequest prepared = fixture.preparer.prepare("approval-failed-finalize", intentRequest(), policyContext());
+        replaceFinalizeExecution(fixture, ProcurementToolCatalog.RECOMMENDATION_FINALIZE, ToolExecutionState.FAILED, false);
+
+        ToolCallResult result = fixture.handler.execute(prepared, executionContext());
+
+        assertFalse(result.success());
+        assertEquals("RFQ_REQUEST_REJECTED", result.metadata().get("errorType"));
+        assertEquals(0, fixture.gateway.createCount.get());
+        assertEquals(0, fixture.gateway.findCount.get());
+    }
+
+    @Test
     void handlerRejectsSupplierNotGroundedInCurrentFinalizeWithoutGatewayCreate() {
         Fixture fixture = fixture();
         ToolCallRequest prepared = fixture.preparer.prepare("approval-wrong-supplier", intentRequest(), policyContext());
@@ -266,9 +333,7 @@ class ProcurementRfqHitlTests {
         assertFalse(result.success());
         assertEquals(1, fixture.gateway.createCount.get());
         assertEquals(1, fixture.gateway.findCount.get());
-        assertEquals(true, result.metadata().get("manualReview"));
-        assertEquals(false, result.metadata().get("retryable"));
-        assertEquals(true, result.metadata().get("uncertainExternalState"));
+        assertUnresolvedMetadata(result);
     }
 
     @Test
@@ -302,9 +367,7 @@ class ProcurementRfqHitlTests {
         assertFalse(result.success());
         assertEquals(1, fixture.gateway.createCount.get());
         assertEquals(1, fixture.gateway.findCount.get());
-        assertEquals(true, result.metadata().get("manualReview"));
-        assertEquals(false, result.metadata().get("retryable"));
-        assertEquals(true, result.metadata().get("uncertainExternalState"));
+        assertUnresolvedMetadata(result);
     }
 
     @Test
@@ -332,9 +395,7 @@ class ProcurementRfqHitlTests {
 
         assertFalse(result.success());
         assertEquals(0, fixture.gateway.createCount.get());
-        assertEquals(true, result.metadata().get("manualReview"));
-        assertEquals(false, result.metadata().get("retryable"));
-        assertEquals(true, result.metadata().get("uncertainExternalState"));
+        assertUnresolvedMetadata(result);
     }
 
     @Test
@@ -350,8 +411,7 @@ class ProcurementRfqHitlTests {
         assertFalse(result.success());
         assertEquals(0, fixture.gateway.createCount.get());
         assertEquals(0, fixture.gateway.findCount.get());
-        assertEquals(true, result.metadata().get("manualReview"));
-        assertEquals(false, result.metadata().get("retryable"));
+        assertUnresolvedMetadata(result);
     }
 
     @Test
@@ -367,14 +427,10 @@ class ProcurementRfqHitlTests {
         ApprovalRecord approval = fixture.approvalService.lastApproval;
         assertTrue(approval != null);
         assertEquals(ProcurementToolCatalog.CREATE_RFQ, approval.toolCallRequest().toolName());
-        assertEquals(Set.of("caseId", "caseVersion", "supplierId", "productCategory", "productDescription",
-                "quantity", "currency", "requiredDeliveryDays", "hardConstraints",
-                "sourceRecommendationToolCallId", "idempotencyKey"), approval.toolCallRequest().arguments().keySet());
+        assertCanonicalPreparedRequest(approval.toolCallRequest());
         assertEquals("supplier-d", approval.toolCallRequest().arguments().get("supplierId"));
         assertEquals(50, approval.toolCallRequest().arguments().get("quantity"));
         assertEquals("rfq:" + approval.approvalId(), approval.toolCallRequest().arguments().get("idempotencyKey"));
-        assertFalse(approval.toolCallRequest().arguments().containsKey("approvalId"));
-        assertFalse(approval.toolCallRequest().arguments().containsKey("budget"));
         assertEquals(AgentRunState.WAITING_APPROVAL,
                 fixture.runStore.values.get(waiting.runId()).state());
 
@@ -441,6 +497,38 @@ class ProcurementRfqHitlTests {
         assertEquals(0, fixture.gateway.createCount.get());
     }
 
+    private void assertCanonicalPreparedRequest(ToolCallRequest request) {
+        assertEquals(11, request.arguments().size());
+        assertEquals(EXPECTED_RFQ_PREPARED_ARGUMENTS, request.arguments().keySet());
+        FORBIDDEN_RFQ_PREPARED_ARGUMENTS.forEach(key -> assertFalse(request.arguments().containsKey(key), key));
+    }
+
+    private void assertUnresolvedMetadata(ToolCallResult result) {
+        assertEquals(true, result.metadata().get("manualReview"));
+        assertEquals(false, result.metadata().get("retryable"));
+        assertEquals(true, result.metadata().get("uncertainExternalState"));
+    }
+
+    private void replaceFinalizeExecution(Fixture fixture,
+                                          String toolName,
+                                          ToolExecutionState state,
+                                          boolean success) {
+        ToolCallRequest request = new ToolCallRequest(toolName, "finalize-1", Map.of());
+        ToolCallResult result = new ToolCallResult(toolName, success,
+                success ? finalizeContent("case-1", 1, "supplier-d") : "",
+                success ? "" : "finalize failed",
+                Map.of("provider", "procurement", "readOnly", true, "sideEffect", false));
+        fixture.executions.records.put("finalize-1",
+                ToolExecutionRecord.running("run-1", request).withResult(state, result, result.errorMessage()));
+    }
+
+    private ToolDefinition rfqDefinition() {
+        return new ProcurementToolCatalog().definitions().stream()
+                .filter(definition -> ProcurementToolCatalog.CREATE_RFQ.equals(definition.name()))
+                .findFirst()
+                .orElseThrow();
+    }
+
     private Fixture fixture() {
         MemoryCaseStore caseStore = new MemoryCaseStore();
         caseStore.put(caseValue(1));
@@ -471,7 +559,7 @@ class ProcurementRfqHitlTests {
                 new com.agent.platform.procurement.tool.ProcurementToolHandler(provider, mapper, caseStore,
                         caseService, new com.agent.platform.procurement.application.ProcurementRecommendationFinalizer(
                                 caseStore, provider, decisionEngine), merger, decisionEngine);
-        ApprovalMemoryService approvals = new ApprovalMemoryService();
+        ApprovalMemoryService approvals = spy(new ApprovalMemoryService());
         ProcurementRfqToolHandler rfqHandler = new ProcurementRfqToolHandler(
                 gateway, caseStore, executions, mapper);
         ObjectProvider<com.agent.platform.mcp.McpToolGateway> mcp = mock(ObjectProvider.class);
@@ -509,7 +597,7 @@ class ProcurementRfqHitlTests {
                 model, capabilities, toolRuntime, approvalGuardrail(), List.of(), approvals,
                 new ConservativeTokenEstimator(), new NoopRunControlStore(), mock(MemoryService.class),
                 new ConfiguredLlmCostCalculator(properties), new ToolResultProjector(properties));
-        return new RuntimeFixture(runtime, profile, gateway, approvals, runs, model, executions);
+        return new RuntimeFixture(runtime, toolRuntime, profile, gateway, approvals, runs, model, executions, caseStore);
     }
 
     private GuardrailService approvalGuardrail() {
@@ -582,10 +670,11 @@ class ProcurementRfqHitlTests {
                            ProcurementRfqApprovalPreparer preparer,
                            ProcurementRfqToolHandler handler) { }
 
-    private record RuntimeFixture(DefaultAgentRuntime runtime, AgentExecutionProfile profile,
+    private record RuntimeFixture(DefaultAgentRuntime runtime, DefaultAgentToolRuntime toolRuntime,
+                                  AgentExecutionProfile profile,
                                   CountingGateway gateway, ApprovalMemoryService approvalService,
                                   InMemoryRunStore runStore, ScriptedRfqModel model,
-                                  InMemoryToolExecutionStore executions) { }
+                                  InMemoryToolExecutionStore executions, MemoryCaseStore caseStore) { }
 
     private static final class CountingGateway implements ProcurementRfqGateway {
         private final AtomicInteger createCount = new AtomicInteger();
