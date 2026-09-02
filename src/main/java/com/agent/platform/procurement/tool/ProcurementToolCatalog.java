@@ -67,8 +67,7 @@ public class ProcurementToolCatalog implements ToolCatalogContributor {
                                   "caseId":{"type":"string"},"caseVersion":{"type":"integer"},"supplierId":{"type":"string"},
                                   "productCategory":{"type":"string"},"productDescription":{"type":"string"},"quantity":{"type":"integer"},
                                   "currency":{"type":"string"},"requiredDeliveryDays":{"type":"integer"},"hardConstraints":{"type":"object"},
-                                  "sourceRecommendationToolCallId":{"type":"string"},"idempotencyKey":{"type":"string"},
-                                  "approvalId":{"type":"string"}
+                                  "sourceRecommendationToolCallId":{"type":"string"},"idempotencyKey":{"type":"string"}
                                 }}
                                 """.strip(),
                         ToolRiskLevel.HIGH,

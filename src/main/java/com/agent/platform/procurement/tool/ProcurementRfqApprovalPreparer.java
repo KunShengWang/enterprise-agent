@@ -79,7 +79,6 @@ public class ProcurementRfqApprovalPreparer implements ApprovalToolCallRequestPr
         authoritative.put("hardConstraints", state.hardConstraints());
         authoritative.put("sourceRecommendationToolCallId", finalizeExecution.toolCallId());
         authoritative.put("idempotencyKey", "rfq:" + approvalId.trim());
-        authoritative.put("approvalId", approvalId.trim());
         return new ToolCallRequest(request.toolName(), request.requestId(), authoritative);
     }
 

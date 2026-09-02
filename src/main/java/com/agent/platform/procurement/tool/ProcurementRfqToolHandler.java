@@ -1,8 +1,5 @@
 package com.agent.platform.procurement.tool;
 
-import com.agent.platform.approval.ApprovalRecord;
-import com.agent.platform.approval.ApprovalService;
-import com.agent.platform.approval.ApprovalStatus;
 import com.agent.platform.procurement.model.ProcurementCase;
 import com.agent.platform.procurement.persistence.ProcurementCaseStore;
 import com.agent.platform.runtime.ToolExecutionRecord;
@@ -17,40 +14,34 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-import java.time.Instant;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 /**
- * RFQ 的受控副作用边界：验证审批绑定的 exact request，只执行一次并在异常后对账。
+ * RFQ 的受控副作用边界：验证 Runtime 传入的 exact prepared request，只执行一次并在异常后对账。
  */
 @Component
 public class ProcurementRfqToolHandler implements ContextualToolHandler, UncertainToolExecutionResolver {
     private static final Set<String> CANONICAL_ARGUMENTS = Set.of(
             "caseId", "caseVersion", "supplierId", "productCategory", "productDescription",
             "quantity", "currency", "requiredDeliveryDays", "hardConstraints",
-            "sourceRecommendationToolCallId", "idempotencyKey", "approvalId");
+            "sourceRecommendationToolCallId", "idempotencyKey");
 
     private final ProcurementRfqGateway gateway;
     private final ProcurementCaseStore caseStore;
     private final ToolExecutionStore toolExecutionStore;
     private final ObjectMapper objectMapper;
-    private final ApprovalService approvalService;
 
     public ProcurementRfqToolHandler(ProcurementRfqGateway gateway,
                                      ProcurementCaseStore caseStore,
                                      ToolExecutionStore toolExecutionStore,
-                                     ObjectMapper objectMapper,
-                                     ApprovalService approvalService) {
+                                     ObjectMapper objectMapper) {
         this.gateway = gateway;
         this.caseStore = caseStore;
         this.toolExecutionStore = toolExecutionStore;
         this.objectMapper = objectMapper;
-        this.approvalService = approvalService;
     }
 
     @Override
@@ -60,24 +51,24 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
 
     @Override
     public ToolCallResult execute(ToolCallRequest request, ToolExecutionContext context) {
+        ParsedPreparedRfq prepared;
         try {
-            ParsedApprovedRfq approved = validateApprovedRequest(request, context);
-            ProcurementRfqGateway.Receipt receipt;
-            try {
-                // 一次 attempt 最多调用一次 create；异常后只允许按同一 key 查询。
-                receipt = gateway.create(approved.gatewayRequest());
-            }
-            catch (RuntimeException exception) {
-                return reconcileAfterCreateFailure(approved, exception);
-            }
-            if (!matches(receipt, approved)) {
-                return reconcileAfterCreateFailure(approved,
-                        new IllegalStateException("RFQ gateway returned a mismatched receipt"));
-            }
-            return success(approved, receipt);
+            prepared = validatePreparedRequest(request, context);
         }
         catch (RuntimeException exception) {
             return failure(request, message(exception), "RFQ_REQUEST_REJECTED");
+        }
+
+        try {
+            // 从 create 调用开始，直到结果构造完成的任何 RuntimeException 都必须对账。
+            ProcurementRfqGateway.Receipt receipt = gateway.create(prepared.gatewayRequest());
+            if (!matches(receipt, prepared)) {
+                throw new IllegalStateException("RFQ gateway returned a mismatched receipt");
+            }
+            return success(prepared, receipt);
+        }
+        catch (RuntimeException exception) {
+            return reconcileAfterCreateFailure(prepared, exception);
         }
     }
 
@@ -94,8 +85,7 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
             return uncertain("stored RFQ execution is missing or unsupported", "");
         }
         try {
-            ParsedApprovedRfq stored = parseStoredRequest(execution.request());
-            requireApprovedApproval(stored, execution.runId());
+            ParsedPreparedRfq stored = parseStoredRequest(execution.request());
             Optional<ProcurementRfqGateway.Receipt> receipt = gateway.findByIdempotencyKey(
                     stored.idempotencyKey());
             if (receipt.isPresent() && matches(receipt.get(), stored)) {
@@ -108,16 +98,15 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
         }
     }
 
-    private ParsedApprovedRfq validateApprovedRequest(ToolCallRequest request,
-                                                      ToolExecutionContext context) {
+    private ParsedPreparedRfq validatePreparedRequest(ToolCallRequest request,
+                                                       ToolExecutionContext context) {
         ToolExecutionContext trusted = requireContext(context);
-        ParsedApprovedRfq parsed = parseStoredRequest(request);
-        requireApprovedApproval(parsed, trusted);
+        ParsedPreparedRfq parsed = parseStoredRequest(request);
         ProcurementCase current = caseStore.findByTenantUserAndConversationId(
                         trusted.tenantId(), trusted.userId(), trusted.sessionId())
                 .orElseThrow(() -> new IllegalArgumentException("procurement Case not found"));
         if (!current.caseId().equals(parsed.caseId()) || current.version() != parsed.caseVersion()) {
-            throw new IllegalArgumentException("approved RFQ request is stale for the current procurement Case");
+            throw new IllegalArgumentException("prepared RFQ request is stale for the current procurement Case");
         }
         if (!current.state().productCategory().equals(parsed.productCategory())
                 || !current.state().productDescription().equals(parsed.productDescription())
@@ -125,36 +114,36 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
                 || !current.state().currency().equals(parsed.currency())
                 || !Integer.valueOf(parsed.requiredDeliveryDays()).equals(current.state().requiredDeliveryDays())
                 || !current.state().hardConstraints().equals(parsed.hardConstraints())) {
-            throw new IllegalArgumentException("approved RFQ request does not match the current Case facts");
+            throw new IllegalArgumentException("prepared RFQ request does not match the current Case facts");
         }
 
         ToolExecutionRecord finalizeExecution = toolExecutionStore
                 .findToolExecution(parsed.sourceRecommendationToolCallId())
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "approved RFQ request does not reference a known Finalize execution"));
+                        "prepared RFQ request does not reference a known Finalize execution"));
         if (!trusted.runId().equals(finalizeExecution.runId())
                 || finalizeExecution.state() != ToolExecutionState.SUCCEEDED
                 || finalizeExecution.result() == null
                 || !finalizeExecution.result().success()
                 || !ProcurementToolCatalog.RECOMMENDATION_FINALIZE.equals(finalizeExecution.toolName())) {
-            throw new IllegalArgumentException("approved RFQ request does not reference a successful current-run Finalize");
+            throw new IllegalArgumentException("prepared RFQ request does not reference a successful current-run Finalize");
         }
         FinalizeSnapshot finalized = readFinalize(finalizeExecution);
         if (!current.caseId().equals(finalized.caseId())
                 || current.version() != finalized.caseVersion()
                 || !parsed.supplierId().equals(finalized.supplierId())) {
-            throw new IllegalArgumentException("approved RFQ supplier is not grounded in the current Finalize");
+            throw new IllegalArgumentException("prepared RFQ supplier is not grounded in the current Finalize");
         }
         return parsed;
     }
 
-    private ParsedApprovedRfq parseStoredRequest(ToolCallRequest request) {
+    private ParsedPreparedRfq parseStoredRequest(ToolCallRequest request) {
         if (request == null || !supports(request.toolName())) {
             throw new IllegalArgumentException("unsupported procurement RFQ tool");
         }
         Map<String, Object> arguments = request.arguments();
         if (!CANONICAL_ARGUMENTS.equals(arguments.keySet())) {
-            throw new IllegalArgumentException("RFQ request must contain exactly the canonical 12 fields");
+            throw new IllegalArgumentException("RFQ request must contain exactly the canonical 11 fields");
         }
         String caseId = requiredString(arguments, "caseId");
         long caseVersion = requiredLong(arguments, "caseVersion");
@@ -167,40 +156,15 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
         Map<String, String> hardConstraints = stringMap(arguments.get("hardConstraints"), "hardConstraints");
         String sourceRecommendationToolCallId = requiredString(arguments, "sourceRecommendationToolCallId");
         String idempotencyKey = requiredString(arguments, "idempotencyKey");
-        String approvalId = requiredString(arguments, "approvalId");
-        if (!idempotencyKey.equals("rfq:" + approvalId)) {
-            throw new IllegalArgumentException("idempotencyKey must match approvalId");
+        if (!idempotencyKey.startsWith("rfq:") || idempotencyKey.length() == "rfq:".length()) {
+            throw new IllegalArgumentException("idempotencyKey must be rfq:<non-empty>");
         }
         ProcurementRfqGateway.CreateRequest gatewayRequest = new ProcurementRfqGateway.CreateRequest(
                 idempotencyKey, supplierId, productCategory, productDescription,
                 quantity, currency, requiredDeliveryDays, hardConstraints);
-        return new ParsedApprovedRfq(caseId, caseVersion, supplierId, productCategory, productDescription,
+        return new ParsedPreparedRfq(caseId, caseVersion, supplierId, productCategory, productDescription,
                 quantity, currency, requiredDeliveryDays, hardConstraints,
-                sourceRecommendationToolCallId, idempotencyKey, approvalId, request, gatewayRequest);
-    }
-
-    private void requireApprovedApproval(ParsedApprovedRfq request, ToolExecutionContext context) {
-        ToolExecutionContext trusted = requireContext(context);
-        ApprovalRecord approval = requireApprovedApproval(request, trusted.runId());
-        if (!trusted.sessionId().equals(approval.conversationId())) {
-            throw new IllegalArgumentException("RFQ Approval does not belong to the current conversation");
-        }
-    }
-
-    private ApprovalRecord requireApprovedApproval(ParsedApprovedRfq request, String runId) {
-        if (approvalService == null) {
-            throw new IllegalArgumentException("Approval service is required for RFQ execution");
-        }
-        ApprovalRecord approval = approvalService.find(request.approvalId())
-                .filter(value -> value.status() == ApprovalStatus.APPROVED)
-                .orElseThrow(() -> new IllegalArgumentException("approved RFQ ApprovalRecord not found"));
-        if (!runId.equals(approval.runId())) {
-            throw new IllegalArgumentException("RFQ Approval does not belong to the current Run");
-        }
-        if (!request.toolCallRequest().equals(approval.toolCallRequest())) {
-            throw new IllegalArgumentException("RFQ request does not match the approved exact request");
-        }
-        return approval;
+                sourceRecommendationToolCallId, idempotencyKey, gatewayRequest);
     }
 
     private ToolExecutionContext requireContext(ToolExecutionContext context) {
@@ -211,46 +175,54 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
         return context;
     }
 
-    private ToolCallResult reconcileAfterCreateFailure(ParsedApprovedRfq approved, RuntimeException cause) {
+    private ToolCallResult reconcileAfterCreateFailure(ParsedPreparedRfq prepared, RuntimeException cause) {
         try {
-            Optional<ProcurementRfqGateway.Receipt> receipt = gateway.findByIdempotencyKey(approved.idempotencyKey());
-            if (receipt.isPresent() && matches(receipt.get(), approved)) {
-                return success(approved, receipt.get(), true);
+            Optional<ProcurementRfqGateway.Receipt> receipt = gateway.findByIdempotencyKey(prepared.idempotencyKey());
+            if (receipt.isPresent() && matches(receipt.get(), prepared)) {
+                try {
+                    return success(prepared, receipt.get(), true);
+                }
+                catch (RuntimeException materializationFailure) {
+                    return uncertain("RFQ reconciliation found a receipt but result materialization failed: "
+                                    + message(materializationFailure), prepared.idempotencyKey());
+                }
             }
         }
-        catch (RuntimeException ignored) {
-            // 查询失败本身就是 external state unknown，不能把它当作可安全重试。
+        catch (RuntimeException reconciliationFailure) {
+            // 查询、receipt 匹配或结果读取失败本身就是 external state unknown。
+            return uncertain("RFQ create failed and reconciliation failed: " + message(reconciliationFailure),
+                    prepared.idempotencyKey());
         }
         return uncertain("RFQ create failed and external state is uncertain: " + message(cause),
-                approved.idempotencyKey());
+                prepared.idempotencyKey());
     }
 
-    private boolean matches(ProcurementRfqGateway.Receipt receipt, ParsedApprovedRfq approved) {
+    private boolean matches(ProcurementRfqGateway.Receipt receipt, ParsedPreparedRfq prepared) {
         return receipt != null
                 && "CREATED".equals(receipt.status())
-                && approved.idempotencyKey().equals(receipt.idempotencyKey())
-                && approved.supplierId().equals(receipt.supplierId());
+                && prepared.idempotencyKey().equals(receipt.idempotencyKey())
+                && prepared.supplierId().equals(receipt.supplierId());
     }
 
-    private ToolCallResult success(ParsedApprovedRfq approved, ProcurementRfqGateway.Receipt receipt) {
-        return success(approved, receipt, false);
+    private ToolCallResult success(ParsedPreparedRfq prepared, ProcurementRfqGateway.Receipt receipt) {
+        return success(prepared, receipt, false);
     }
 
-    private ToolCallResult success(ParsedApprovedRfq approved,
+    private ToolCallResult success(ParsedPreparedRfq prepared,
                                    ProcurementRfqGateway.Receipt receipt,
                                    boolean reconciled) {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("caseId", approved.caseId());
-        result.put("caseVersion", approved.caseVersion());
-        result.put("supplierId", approved.supplierId());
+        result.put("caseId", prepared.caseId());
+        result.put("caseVersion", prepared.caseVersion());
+        result.put("supplierId", prepared.supplierId());
         result.put("rfqId", receipt.rfqId());
         result.put("idempotencyKey", receipt.idempotencyKey());
         result.put("status", receipt.status());
         result.put("createdAt", receipt.createdAt());
         result.put("source", receipt.source());
-        result.put("sourceRecommendationToolCallId", approved.sourceRecommendationToolCallId());
+        result.put("sourceRecommendationToolCallId", prepared.sourceRecommendationToolCallId());
         result.put("approvalBound", true);
-        Map<String, Object> metadata = baseMetadata(approved.idempotencyKey());
+        Map<String, Object> metadata = baseMetadata(prepared.idempotencyKey());
         metadata.put("rfqId", receipt.rfqId());
         metadata.put("supplierId", receipt.supplierId());
         metadata.put("reconciled", reconciled);
@@ -402,7 +374,7 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
     private record FinalizeSnapshot(String caseId, long caseVersion, String supplierId) {
     }
 
-    private record ParsedApprovedRfq(
+    private record ParsedPreparedRfq(
             String caseId,
             long caseVersion,
             String supplierId,
@@ -414,8 +386,6 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
             Map<String, String> hardConstraints,
             String sourceRecommendationToolCallId,
             String idempotencyKey,
-            String approvalId,
-            ToolCallRequest toolCallRequest,
             ProcurementRfqGateway.CreateRequest gatewayRequest
     ) {
     }

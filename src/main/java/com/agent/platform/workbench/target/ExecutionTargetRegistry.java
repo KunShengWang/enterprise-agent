@@ -72,7 +72,7 @@ public class ExecutionTargetRegistry {
                 "复杂采购的供应商寻源、证据推荐，并可在人工审批后创建受控 RFQ",
                 Set.of("PROCUREMENT_REQUIREMENT_UNDERSTANDING", "SUPPLIER_SOURCING", "SUPPLIER_EVALUATION",
                         "APPROVAL_BOUND_RFQ_CREATION"),
-                Set.of("productDescription"), TargetRiskLevel.HIGH, TargetCostClass.HIGH,
+                Set.of("productDescription"), TargetRiskLevel.HIGH, TargetCostClass.LOW,
                 "procurement-sourcing-rfq-v1", true));
         return Map.copyOf(definitions);
     }

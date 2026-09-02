@@ -89,8 +89,8 @@ Phase 1 的 Agent Tool 只有 `procurement_case_patch`、`procurement_supplier_s
 1. Phase 2A（已落地）：权威 Case 上下文重注入、长期记忆门控和压缩可观测性
 2. Phase 2B（已落地）：Typed Durable Memory 的提取边界、user scope 与不可信上下文接入
 3. Phase 3：MCP Runtime 冻结后的 Procurement 只读 Provider 接入
-4. Phase 4A（当前）：Adaptive Multi-Agent 的可选采购 Specialist
-5. Phase 5A（已落地）：审批绑定的 RFQ 创建与不确定副作用对账
+4. Phase 4A（已落地）：Adaptive Multi-Agent 的可选采购 Specialist
+5. Phase 5A（当前）：审批绑定的 RFQ 创建与不确定副作用对账
 6. Phase 6：Eval / Ablation / Resume Metrics
 
 ### Phase 4A：采购自适应专家子 Agent
@@ -103,10 +103,10 @@ Specialist 只返回经过 Java 校验的 advisory 分析：不接 Provider/MCP�
 
 RFQ 只代表向一个已经推荐并验证的供应商创建询价请求资源，不代表 PO、采购承诺、付款或合同。只有当前 Run 已经成功完成 `procurement_recommendation_finalize`，且用户明确要求发起 RFQ 时，模型才可以提出 `procurement_create_rfq`；Recommendation-only 请求在 Finalize 后直接回答，不会自动创建 RFQ。
 
-模型的 proposal 与最终动作严格分开。模型应使用空 arguments 表达意图；`ProcurementRfqApprovalPreparer` 在写入 `ApprovalRecord` 前，使用可信的 tenant/user/session/run context、当前 Case 和本 Run 原始成功 Finalize ToolResult，重建恰好包含 12 个字段的 canonical request，其中 `approvalId` 由服务端生成，并与 `idempotencyKey=rfq:<approvalId>` 绑定。Supplier 来自 verified Recommendation，quantity、Case version、hard constraints 等来自当前权威 Case，预算、偏好、报价和身份信息不会进入 RFQ payload。
+模型的 proposal 与最终动作严格分开。模型应使用空 arguments 表达意图；`ProcurementRfqApprovalPreparer` 在写入 `ApprovalRecord` 前，使用可信的 tenant/user/session/run context、当前 Case 和本 Run 原始成功 Finalize ToolResult，重建恰好包含 11 个字段的 canonical request，其中 `approvalId` 不属于 RFQ action payload，仅由服务端用于生成 `idempotencyKey=rfq:<approvalId>`。Supplier 来自 verified Recommendation，quantity、Case version、hard constraints 等来自当前权威 Case，预算、偏好、报价和身份信息不会进入 RFQ payload。
 
 人工批准后，Runtime 在同一个 Run 中执行 ApprovalRecord 保存的 exact request，不会重新生成 payload 或再次询问模型。Case 在等待期间发生版本变化、Finalize 失效或 provenance 不匹配时，动作 fail closed，必须重新 Search、Finalize 并发起新的 Approval。批准前 Gateway create 次数为零。
 
-`ProcurementRfqToolHandler` 每次执行最多调用 Gateway create 一次。若 create 抛出异常，只按同一幂等键调用 `findByIdempotencyKey`，找到 receipt 就返回成功；找不到或查询失败则返回 `manualReview=true`、`retryable=false`、`uncertainExternalState=true`，不把未知状态当作普通可重试失败。Runtime 恢复 RUNNING 的崩溃窗口时，注册的 `UncertainToolExecutionResolver` 也只查询该幂等键，绝不盲目重放 create。
+`ProcurementRfqToolHandler` 不重新查询 ApprovalService；通用 Runtime 负责 APPROVED 与 ApprovalRecord 中 exact prepared request 的绑定，Handler 负责当前 Case、Finalize provenance 和供应商事实校验。每次执行最多调用 Gateway create 一次；一旦进入 create，后续任何异常都只按同一幂等键调用 `findByIdempotencyKey`，找到匹配 receipt 就返回成功，找不到或查询失败则返回 `manualReview=true`、`retryable=false`、`uncertainExternalState=true`，不把未知状态当作普通可重试失败。Runtime 恢复 RUNNING 的崩溃窗口时，注册的 `UncertainToolExecutionResolver` 也只查询该幂等键，绝不盲目重放 create。
 
 当前 `SimulatedProcurementRfqGateway` 是 process-local 的 simulated external adapter，仅用于验证上述 Harness 与领域安全契约；它不是 SAP、ERPNext、真实供应商 API 或真实邮件服务，也不能证明跨进程 production exactly-once。真实下游适配器未来必须持久化幂等键并提供可查询的事实对账能力。本阶段不创建 PO、不发送供应商邮件、不增加 MCP write、不新增数据库表。

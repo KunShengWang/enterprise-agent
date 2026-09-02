@@ -51,6 +51,7 @@ class ProcurementSourcingMvpTests {
                 ExecutionTargetId.PROCUREMENT_SOURCING.name()).orElseThrow();
         assertEquals("procurement-sourcing-rfq-v1", target.executionProfileId());
         assertEquals(com.agent.platform.workbench.target.TargetRiskLevel.HIGH, target.riskLevel());
+        assertEquals(com.agent.platform.workbench.target.TargetCostClass.LOW, target.costClass());
         var profile = new ProcurementSourcingExecutionProfileFactory().createProfile();
         assertEquals(Set.of(ProcurementToolCatalog.CASE_PATCH, ProcurementToolCatalog.SUPPLIER_SEARCH,
                 ProcurementToolCatalog.COMMERCIAL_ANALYSIS, ProcurementToolCatalog.DELIVERY_ANALYSIS,
@@ -75,6 +76,7 @@ class ProcurementSourcingMvpTests {
                                 .contains(entry.getKey()))
                         .collect(java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue)));
         assertEquals(List.of(), definition(definitions, ProcurementToolCatalog.CREATE_RFQ).metadata().get("publicArgumentKeys"));
+        assertFalse(definition(definitions, ProcurementToolCatalog.CREATE_RFQ).inputSchema().contains("approvalId"));
         assertEquals("procurement-specialist-v1", definition(definitions, ProcurementToolCatalog.COMMERCIAL_ANALYSIS)
                 .metadata().get("contractVersion"));
         assertEquals("procurement-specialist-v1", definition(definitions, ProcurementToolCatalog.DELIVERY_ANALYSIS)
