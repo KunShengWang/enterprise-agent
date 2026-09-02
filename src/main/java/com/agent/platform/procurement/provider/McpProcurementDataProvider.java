@@ -106,7 +106,7 @@ public class McpProcurementDataProvider implements ProcurementDataProvider {
         RemoteSnapshotMeta snapshot = snapshot(response, "offer");
         JsonNode offers = requiredArray(response, "offers");
         String source = source(definition);
-        Set<String> offerKeys = new LinkedHashSet<>();
+        Set<String> seenSupplierIds = new LinkedHashSet<>();
         List<SupplierOffer> result = new ArrayList<>();
         for (JsonNode offer : offers) {
             requireObject(offer, "offer");
@@ -114,9 +114,8 @@ public class McpProcurementDataProvider implements ProcurementDataProvider {
             if (!requestedSupplierIds.contains(remote.supplierId())) {
                 throw failure("MCP offer supplier is not in the requested candidate set");
             }
-            String offerKey = remote.supplierId() + "|" + remote.productId();
-            if (!offerKeys.add(offerKey)) {
-                throw failure("duplicate supplierId and productId in MCP offer response");
+            if (!seenSupplierIds.add(remote.supplierId())) {
+                throw failure("multiple MCP offers for the same supplier are not supported by the current procurement contract");
             }
             Map<String, Object> canonicalPayload = canonicalOfferPayload(remote);
             String sourceDigest = EvidenceIdFactory.digest(source, remote.sourceRecordId(),

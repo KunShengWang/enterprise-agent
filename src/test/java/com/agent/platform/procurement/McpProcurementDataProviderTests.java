@@ -223,6 +223,18 @@ class McpProcurementDataProviderTests {
     }
 
     @Test
+    void sameSupplierWithDifferentProductsFailsClosed() throws Exception {
+        ProcurementCaseState state = completeState();
+        RecordingGateway gateway = new RecordingGateway(definitions(), (definition, request) ->
+                success(definition, "search_suppliers".equals(originalName(definition))
+                        ? json(unitSearchPayload()) : json(unitOfferPayloadWithDifferentProducts())));
+        List<SupplierCandidate> candidates = provider(gateway).searchSuppliers(state);
+
+        assertThrows(IllegalStateException.class,
+                () -> provider(gateway).getSupplierOffers(state, candidates));
+    }
+
+    @Test
     void realStdioGatewayReadsFixtureAndJavaStillOwnsEligibility() throws Exception {
         try (ProcurementMcpTestServer server = ProcurementMcpTestServer.create()) {
             McpProperties mcpProperties = new McpProperties();
@@ -374,6 +386,14 @@ class McpProcurementDataProviderTests {
         Map<String, Object> first = unitOffer("supplier-b", "WS-B-01", "CUDA Workstation B",
                 new BigDecimal("11000"), 18, "3 years", "offer-B-01");
         return offerPayload(List.of(first, new LinkedHashMap<>(first)), "offers-unit");
+    }
+
+    private Map<String, Object> unitOfferPayloadWithDifferentProducts() {
+        Map<String, Object> first = unitOffer("supplier-b", "WS-B-01", "CUDA Workstation B",
+                new BigDecimal("11000"), 18, "3 years", "offer-B-01");
+        Map<String, Object> second = unitOffer("supplier-b", "WS-B-02", "CUDA Workstation B Plus",
+                new BigDecimal("11600"), 12, "3 years", "offer-B-02");
+        return offerPayload(List.of(first, second), "offers-unit");
     }
 
     private Map<String, Object> unitOfferPayloadWithUnitPrice(int unitPrice) {
