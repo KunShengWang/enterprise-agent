@@ -67,7 +67,22 @@ public final class FakeMcpServerApplication {
                     case "tools/list" -> {
                         listCount++;
                         writeEvent(eventPath, "list");
-                        writeResult(writer, id, tools(mode, firstTool, secondTool, sessionToken, listCount));
+                        if ("refresh-protocol-error".equals(mode) && listCount == 2) {
+                            writeError(writer, id, "refresh protocol failure");
+                        }
+                        else if ("refresh-timeout".equals(mode) && listCount == 2) {
+                            Thread.sleep(1_200L);
+                            writeResult(writer, id, tools(mode, firstTool, secondTool, sessionToken, listCount));
+                        }
+                        else if ("refresh-hang".equals(mode) && listCount == 2) {
+                            continue;
+                        }
+                        else if ("refresh-die-once".equals(mode) && listCount == 2 && claim(oneShotPath)) {
+                            System.exit(0);
+                        }
+                        else {
+                            writeResult(writer, id, tools(mode, firstTool, secondTool, sessionToken, listCount));
+                        }
                     }
                     case "tools/call" -> {
                         callCount++;
@@ -111,8 +126,22 @@ public final class FakeMcpServerApplication {
                                              String sessionToken, int listCount) {
         List<Map<String, Object>> values = new ArrayList<>();
         values.add(tool(firstTool, sessionToken, listCount));
-        if (!secondTool.isBlank() && !secondTool.equals(firstTool)) {
+        if ("refresh-change".equals(mode)) {
+            if (listCount >= 2) {
+                values.clear();
+                if (!secondTool.isBlank()) {
+                    values.add(tool(secondTool, sessionToken, listCount));
+                }
+            }
+        }
+        else if ("refresh-add".equals(mode) && listCount >= 2
+                && !secondTool.isBlank() && !secondTool.equals(firstTool)) {
             values.add(tool(secondTool, sessionToken, listCount));
+        }
+        else if (!secondTool.isBlank() && !secondTool.equals(firstTool)) {
+            if (!"refresh-add".equals(mode)) {
+                values.add(tool(secondTool, sessionToken, listCount));
+            }
         }
         return Map.of("tools", values);
     }

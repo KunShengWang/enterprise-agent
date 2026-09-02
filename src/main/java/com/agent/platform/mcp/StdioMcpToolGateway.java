@@ -105,6 +105,27 @@ public class StdioMcpToolGateway implements McpToolGateway {
     }
 
     /**
+     * 只刷新已经 READY 的 session；刷新失败由各 Server 自己隔离，不在这里隐式重连。
+     */
+    @Override
+    public List<ToolDefinition> refreshTools() {
+        if (shuttingDown.get()) {
+            return List.of();
+        }
+        List<ToolDefinition> definitions = new ArrayList<>();
+        for (ServerRuntime runtime : serverRuntimes) {
+            try {
+                definitions.addAll(runtime.refresh());
+            }
+            catch (RuntimeException exception) {
+                log.warn("MCP refresh failed serverId={} reason={}",
+                        runtime.specification.serverId(), exception.getClass().getSimpleName());
+            }
+        }
+        return List.copyOf(definitions);
+    }
+
+    /**
      * 兼容旧调用方：先建立一次新的 definition resolution，再使用其稳定 binding。
      */
     @Override
@@ -332,6 +353,8 @@ public class StdioMcpToolGateway implements McpToolGateway {
 
         private final Object lifecycleLock = new Object();
 
+        private final Object refreshLock = new Object();
+
         private long nextGeneration;
 
         private McpSession activeSession;
@@ -349,6 +372,47 @@ public class StdioMcpToolGateway implements McpToolGateway {
                     return List.of();
                 }
                 return createSessionLocked();
+            }
+        }
+
+        private List<ToolDefinition> refresh() {
+            synchronized (refreshLock) {
+                McpSession session;
+                synchronized (lifecycleLock) {
+                    if (isShuttingDown() || !isReady(activeSession)) {
+                        return List.of();
+                    }
+                    session = activeSession;
+                }
+
+                try {
+                    List<ToolDefinition> refreshed = loadToolSnapshot(specification, session);
+                    synchronized (lifecycleLock) {
+                        if (isShuttingDown()
+                                || activeSession != session
+                                || !isReady(session)) {
+                            return List.of();
+                        }
+                        session.publishRefresh(refreshed);
+                        return session.snapshot();
+                    }
+                }
+                catch (McpProtocolException | McpRequestTimeoutException | McpInterruptedException exception) {
+                    return currentSnapshot(session);
+                }
+                catch (McpTransportException exception) {
+                    invalidate(session, exception.getClass().getSimpleName());
+                    return List.of();
+                }
+                catch (RuntimeException exception) {
+                    return currentSnapshot(session);
+                }
+            }
+        }
+
+        private List<ToolDefinition> currentSnapshot(McpSession session) {
+            synchronized (lifecycleLock) {
+                return activeSession == session && isReady(session) ? session.snapshot() : List.of();
             }
         }
 
@@ -472,6 +536,8 @@ public class StdioMcpToolGateway implements McpToolGateway {
 
         private volatile List<ToolDefinition> snapshot = List.of();
 
+        private volatile List<ToolDefinition> publishedDefinitions = List.of();
+
         private volatile boolean snapshotInitialized;
 
         private McpSession(String serverId, long generation, Process process, ObjectMapper objectMapper,
@@ -498,7 +564,7 @@ public class StdioMcpToolGateway implements McpToolGateway {
         }
 
         private boolean containsDefinition(ToolDefinition definition) {
-            return snapshot.contains(definition);
+            return publishedDefinitions.contains(definition);
         }
 
         private void initializeSnapshot(List<ToolDefinition> definitions) {
@@ -511,7 +577,25 @@ public class StdioMcpToolGateway implements McpToolGateway {
                     throw new IllegalStateException("MCP tool snapshot is already initialized");
                 }
                 snapshot = immutableSnapshot;
+                publishedDefinitions = immutableSnapshot;
                 snapshotInitialized = true;
+            }
+        }
+
+        private void publishRefresh(List<ToolDefinition> definitions) {
+            List<ToolDefinition> immutableSnapshot = List.copyOf(definitions);
+            synchronized (snapshotLock) {
+                if (state != SessionState.READY || !snapshotInitialized) {
+                    throw new IllegalStateException("MCP tool snapshot can only be refreshed while ready");
+                }
+                List<ToolDefinition> published = new ArrayList<>(publishedDefinitions);
+                for (ToolDefinition definition : immutableSnapshot) {
+                    if (!published.contains(definition)) {
+                        published.add(definition);
+                    }
+                }
+                publishedDefinitions = List.copyOf(published);
+                snapshot = immutableSnapshot;
             }
         }
 

@@ -13,6 +13,13 @@ public interface McpToolGateway {
      */
     List<ToolDefinition> discoverTools();
 
+    /**
+     * 显式刷新已经建立的 MCP 会话；不支持独立刷新的兼容实现安全地跳过刷新。
+     */
+    default List<ToolDefinition> refreshTools() {
+        return List.of();
+    }
+
     ToolCallResult callTool(ToolCallRequest request);
 
     /**

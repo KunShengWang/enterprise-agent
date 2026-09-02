@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -75,7 +76,7 @@ class StdioMcpToolGatewayTests {
     }
 
     @Test
-    void snapshotIsImmutableForTheEntireSessionGeneration() throws Exception {
+    void discoverReusesCurrentImmutableSnapshotUntilExplicitRefresh() throws Exception {
         FakeServer server = FakeServer.create("normal", "echo", "probe");
         StdioMcpToolGateway gateway = gateway(Duration.ofSeconds(1), server.config());
         try {
@@ -107,7 +108,290 @@ class StdioMcpToolGatewayTests {
     }
 
     @Test
-    void newSnapshotRequiresANewSessionGeneration() throws Exception {
+    void explicitRefreshDoesNotStartAServerWithoutAReadySession() throws Exception {
+        FakeServer server = FakeServer.create("normal", "echo", "probe");
+        StdioMcpToolGateway gateway = gateway(Duration.ofSeconds(1), server.config());
+        try {
+            assertTrue(gateway.refreshTools().isEmpty());
+            assertFalse(Files.exists(server.startedPath));
+        }
+        finally {
+            gateway.shutdown();
+            server.close();
+        }
+    }
+
+    @Test
+    void refreshPublishesNewImmutableSnapshotWithoutChangingGenerationOrProcess() throws Exception {
+        FakeServer server = FakeServer.create("refresh-add", "old", "new");
+        StdioMcpToolGateway gateway = gateway(Duration.ofSeconds(1), server.config());
+        try {
+            List<ToolDefinition> first = gateway.discoverTools();
+            ToolDefinition oldDefinition = first.get(0);
+
+            List<ToolDefinition> refreshed = gateway.refreshTools();
+            ToolDefinition refreshedOldDefinition = refreshed.get(0);
+            ToolDefinition newDefinition = refreshed.get(1);
+            List<ToolDefinition> repeated = gateway.discoverTools();
+            LocalToolRegistry registry = new LocalToolRegistry(
+                    provider(gateway), emptyContributors());
+            List<ToolDefinition> registryTools = registry.listTools();
+
+            assertEquals("mcp.fake.old", oldDefinition.name());
+            assertEquals(1, first.size());
+            assertEquals("mcp.fake.old", refreshedOldDefinition.name());
+            assertEquals("mcp.fake.new", newDefinition.name());
+            assertEquals(1L, generation(oldDefinition));
+            assertEquals(1L, generation(refreshedOldDefinition));
+            assertEquals(1L, generation(newDefinition));
+            assertEquals("session=" + sessionToken(oldDefinition.description()) + ";list=1",
+                    oldDefinition.description());
+            assertEquals("session=" + sessionToken(refreshedOldDefinition.description()) + ";list=2",
+                    refreshedOldDefinition.description());
+            assertEquals("session=" + sessionToken(newDefinition.description()) + ";list=2",
+                    newDefinition.description());
+            assertEquals(sessionToken(oldDefinition.description()), sessionToken(refreshedOldDefinition.description()));
+            assertEquals(sessionToken(oldDefinition.description()), sessionToken(newDefinition.description()));
+            assertNotSame(first, refreshed);
+            assertNotSame(first.get(0), refreshedOldDefinition);
+            assertEquals(refreshed, repeated);
+            assertSame(refreshedOldDefinition, repeated.get(0));
+            assertSame(newDefinition, repeated.get(1));
+            assertTrue(registry.findTool("mcp.fake.new").isPresent());
+            assertEquals(2, registryTools.stream()
+                    .filter(tool -> "mcp".equals(tool.metadata().get("provider")))
+                    .count());
+            assertThrows(UnsupportedOperationException.class, () -> first.add(newDefinition));
+            assertThrows(UnsupportedOperationException.class, () -> refreshed.add(newDefinition));
+            assertThrows(UnsupportedOperationException.class, () -> repeated.add(newDefinition));
+            assertEquals(1, countEvents(server, "started"));
+            assertEquals(1, countEvents(server, "initialize"));
+            assertEquals(1, countEvents(server, "initialized"));
+            assertEquals(2, countEvents(server, "list"));
+        }
+        finally {
+            gateway.shutdown();
+            server.close();
+        }
+    }
+
+    @Test
+    void refreshRetainsOldPublishedBindingAndRejectsForgedDefinition() throws Exception {
+        FakeServer server = FakeServer.create("refresh-change", "old", "new");
+        StdioMcpToolGateway gateway = gateway(Duration.ofSeconds(1), server.config());
+        try {
+            ToolDefinition oldDefinition = gateway.discoverTools().get(0);
+            ToolDefinition newDefinition = gateway.refreshTools().get(0);
+            ToolDefinition forged = new ToolDefinition(
+                    oldDefinition.name(),
+                    "forged description",
+                    oldDefinition.inputSchema(),
+                    oldDefinition.riskLevel(),
+                    oldDefinition.metadata());
+
+            ToolCallResult oldCall = gateway.callTool(oldDefinition, request(oldDefinition.name(), "old"));
+            ToolCallResult newCall = gateway.callTool(newDefinition, request(newDefinition.name(), "new"));
+            ToolCallResult forgedCall = gateway.callTool(forged, request(forged.name(), "forged"));
+
+            assertTrue(oldCall.success(), oldCall.errorMessage());
+            assertTrue(newCall.success(), newCall.errorMessage());
+            assertFalse(forgedCall.success());
+            assertEquals("definition-not-in-snapshot", forgedCall.metadata().get("bindingFailure"));
+            assertEquals(1L, generation(oldDefinition));
+            assertEquals(1L, generation(newDefinition));
+            assertEquals(2, countEvents(server, "list"));
+            assertEquals(2, countEvents(server, "call"));
+        }
+        finally {
+            gateway.shutdown();
+            server.close();
+        }
+    }
+
+    @Test
+    void refreshProtocolFailureKeepsLastKnownGoodSnapshotWithoutRestarting() throws Exception {
+        FakeServer server = FakeServer.create("refresh-protocol-error", "echo", "probe");
+        StdioMcpToolGateway gateway = gateway(Duration.ofSeconds(1), server.config());
+        try {
+            List<ToolDefinition> first = gateway.discoverTools();
+            ToolDefinition echo = first.get(0);
+
+            List<ToolDefinition> refreshed = gateway.refreshTools();
+            List<ToolDefinition> repeated = gateway.discoverTools();
+            ToolCallResult call = gateway.callTool(echo, request(echo.name(), "lkg"));
+
+            assertEquals(first, refreshed);
+            assertEquals(first, repeated);
+            assertSame(echo, refreshed.get(0));
+            assertSame(echo, repeated.get(0));
+            assertEquals("session=" + sessionToken(echo.description()) + ";list=1", echo.description());
+            assertTrue(call.success(), call.errorMessage());
+            assertEquals(1L, generation(echo));
+            assertEquals(1, countEvents(server, "started"));
+            assertEquals(1, countEvents(server, "initialize"));
+            assertEquals(1, countEvents(server, "initialized"));
+            assertEquals(2, countEvents(server, "list"));
+            assertEquals(1, countEvents(server, "call"));
+            assertTrue(server.isAlive());
+        }
+        finally {
+            gateway.shutdown();
+            server.close();
+        }
+    }
+
+    @Test
+    void refreshTimeoutKeepsLastKnownGoodSnapshotAndDropsLateResponse() throws Exception {
+        FakeServer server = FakeServer.create("refresh-timeout", "echo", "probe");
+        StdioMcpToolGateway gateway = gateway(Duration.ofSeconds(1), server.config());
+        try {
+            ToolDefinition echo = gateway.discoverTools().get(0);
+
+            List<ToolDefinition> refreshed = gateway.refreshTools();
+            assertEquals(2, refreshed.size());
+            assertSame(echo, refreshed.get(0));
+            assertEquals(1L, generation(echo));
+            waitUntil(() -> countEvents(server, "list") == 2,
+                    "fake server should receive the refresh list request");
+
+            Thread.sleep(1_400L);
+            ToolCallResult call = gateway.callTool(echo, request(echo.name(), "after-late"));
+
+            assertTrue(call.success(), call.errorMessage());
+            assertEquals(1, countEvents(server, "started"));
+            assertEquals(1, countEvents(server, "initialize"));
+            assertEquals(1, countEvents(server, "initialized"));
+            assertEquals(2, countEvents(server, "list"));
+            assertEquals(1, countEvents(server, "call"));
+            assertTrue(server.isAlive());
+        }
+        finally {
+            gateway.shutdown();
+            server.close();
+        }
+    }
+
+    @Test
+    void refreshTransportFailureInvalidatesWithoutReconnectUntilOrdinaryDiscovery() throws Exception {
+        FakeServer server = FakeServer.create("refresh-die-once", "echo", "probe");
+        StdioMcpToolGateway gateway = gateway(Duration.ofSeconds(1), server.config());
+        try {
+            ToolDefinition generationOne = gateway.discoverTools().get(0);
+
+            assertTrue(gateway.refreshTools().isEmpty());
+            waitUntil(() -> !server.isAlive(), "refresh failure should terminate generation one");
+            assertEquals(1, countEvents(server, "started"));
+            assertEquals(1, countEvents(server, "initialize"));
+            assertEquals(1, countEvents(server, "initialized"));
+            assertEquals(2, countEvents(server, "list"));
+
+            ToolCallResult staleBeforeDiscover = gateway.callTool(
+                    generationOne, request(generationOne.name(), "stale-before-discover"));
+            assertFalse(staleBeforeDiscover.success());
+            assertEquals("stale-session", staleBeforeDiscover.metadata().get("bindingFailure"));
+            assertEquals(1, countEvents(server, "started"));
+
+            ToolDefinition generationTwo = gateway.discoverTools().get(0);
+            ToolCallResult staleAfterDiscover = gateway.callTool(
+                    generationOne, request(generationOne.name(), "stale-after-discover"));
+            ToolCallResult current = gateway.callTool(
+                    generationTwo, request(generationTwo.name(), "current"));
+
+            assertEquals(2L, generation(generationTwo));
+            assertTrue(generationOne.name().equals(generationTwo.name()));
+            assertFalse(staleAfterDiscover.success());
+            assertEquals("stale-session", staleAfterDiscover.metadata().get("bindingFailure"));
+            assertTrue(current.success(), current.errorMessage());
+            assertEquals(2, countEvents(server, "started"));
+            assertEquals(2, countEvents(server, "initialize"));
+            assertEquals(2, countEvents(server, "initialized"));
+            assertEquals(3, countEvents(server, "list"));
+            assertEquals(1, countEvents(server, "call"));
+        }
+        finally {
+            gateway.shutdown();
+            server.close();
+        }
+    }
+
+    @Test
+    void refreshFailureInOneServerDoesNotAffectAnotherServer() throws Exception {
+        FakeServer failed = FakeServer.create("refresh-die-once", "echo", "probe");
+        FakeServer healthy = FakeServer.create("refresh-change", "old", "new");
+        McpProperties properties = new McpProperties();
+        properties.setServers(List.of(
+                failed.config("mcp.failed."),
+                healthy.config("mcp.healthy.")));
+        StdioMcpToolGateway gateway = new StdioMcpToolGateway(properties, objectMapper, Duration.ofSeconds(1));
+        try {
+            List<ToolDefinition> definitions = gateway.discoverTools();
+            ToolDefinition failedOld = definitions.stream()
+                    .filter(tool -> tool.name().equals("mcp.failed.echo"))
+                    .findFirst()
+                    .orElseThrow();
+            ToolDefinition healthyOld = definitions.stream()
+                    .filter(tool -> tool.name().equals("mcp.healthy.old"))
+                    .findFirst()
+                    .orElseThrow();
+
+            List<ToolDefinition> refreshed = gateway.refreshTools();
+            ToolDefinition healthyNew = refreshed.stream()
+                    .filter(tool -> tool.name().equals("mcp.healthy.new"))
+                    .findFirst()
+                    .orElseThrow();
+            waitUntil(() -> !failed.isAlive(), "failed server should terminate during refresh");
+
+            ToolCallResult failedCall = gateway.callTool(failedOld, request(failedOld.name(), "failed"));
+            ToolCallResult healthyOldCall = gateway.callTool(healthyOld, request(healthyOld.name(), "healthy-old"));
+            ToolCallResult healthyNewCall = gateway.callTool(healthyNew, request(healthyNew.name(), "healthy-new"));
+
+            assertEquals(1, refreshed.size());
+            assertEquals(1L, generation(healthyNew));
+            assertFalse(failedCall.success());
+            assertEquals("stale-session", failedCall.metadata().get("bindingFailure"));
+            assertTrue(healthyOldCall.success(), healthyOldCall.errorMessage());
+            assertTrue(healthyNewCall.success(), healthyNewCall.errorMessage());
+            assertEquals(1, countEvents(failed, "started"));
+            assertEquals(2, countEvents(failed, "list"));
+            assertEquals(1, countEvents(healthy, "started"));
+            assertEquals(1, countEvents(healthy, "initialize"));
+            assertEquals(1, countEvents(healthy, "initialized"));
+            assertEquals(2, countEvents(healthy, "list"));
+            assertEquals(2, countEvents(healthy, "call"));
+        }
+        finally {
+            gateway.shutdown();
+            failed.close();
+            healthy.close();
+        }
+    }
+
+    @Test
+    void shutdownCompletesPendingRefreshAndTerminatesChildProcess() throws Exception {
+        FakeServer server = FakeServer.create("refresh-hang", "echo", "probe");
+        StdioMcpToolGateway gateway = gateway(Duration.ofSeconds(5), server.config());
+        try {
+            gateway.discoverTools();
+            CompletableFuture<List<ToolDefinition>> pending = CompletableFuture.supplyAsync(gateway::refreshTools);
+            waitUntil(() -> countEvents(server, "list") == 2,
+                    "fake server should receive the pending refresh request");
+
+            gateway.shutdown();
+            assertTrue(pending.get(2, TimeUnit.SECONDS).isEmpty());
+            waitUntil(() -> !server.isAlive(), "shutdown should terminate the child process");
+            assertEquals(1, countEvents(server, "started"));
+            assertEquals(1, countEvents(server, "initialize"));
+            assertEquals(1, countEvents(server, "initialized"));
+            assertEquals(2, countEvents(server, "list"));
+        }
+        finally {
+            gateway.shutdown();
+            server.close();
+        }
+    }
+
+    @Test
+    void transportRecoveryCreatesNewGenerationAndOldBindingStaysStale() throws Exception {
         FakeServer server = FakeServer.create("die-once", "echo", "probe");
         StdioMcpToolGateway gateway = gateway(Duration.ofSeconds(1), server.config());
         try {

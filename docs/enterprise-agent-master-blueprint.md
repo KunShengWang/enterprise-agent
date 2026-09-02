@@ -572,9 +572,9 @@ traceId
 
 ### 14.1 MCP Developer Lab 边界
 
-当前 MCP Harness 仅支持 stdio 工具传输，并按需为每个 enabled Server 建立一个 lazy persistent session；同一 session generation 只执行一次 `initialize` 和一次 `tools/list`，后续 discovery 与 `tools/call` 复用该进程。发现结果保存为当前 generation 的 immutable snapshot，每个解析出的 `ToolDefinition` 只携带安全的 `serverId + session generation` binding，并且执行时必须仍来自当前 generation 的已发布 snapshot。
+当前 MCP Harness 仅支持 stdio 工具传输，并按需为每个 enabled Server 建立一个 lazy persistent session。每个 session generation 只执行一次 `initialize`；建立 session 时执行一次初始 `tools/list`，后续 discovery 与 `tools/call` 复用该进程。READY session 可以被显式 `refreshTools()` 再执行一次 `tools/list`，但 refresh 不创建新 session、不增加 generation，也不在生命周期锁下等待远端响应。
 
-一个 session generation 从初始化完成到失效只对应一个不变的工具 snapshot；snapshot 只有在旧 generation 因进程退出、EOF 或 broken pipe 失效、后续重新建立下一代连接时才可能变化。旧 `ToolDefinition` 永不透明绑定到新 generation，不确定的工具调用不会跨 generation 自动重放。MCP discovery 只表示远端声明了工具和 schema，不等于授权，仍需经过上层 capability、policy、approval 和 schema 校验。
+每次成功 discovery/refresh 都先完整解析，再原子替换该 generation 的 immutable current snapshot。protocol error 或 timeout 保留 last-known-good snapshot，不重试；transport failure 使当前 generation 失效，refresh 本身不 reconnect，后续普通 discovery 才能建立下一代连接。当前 snapshot 可以变化，但本 generation 曾成功发布过的旧 `ToolDefinition` 仍属于该 generation 的 published membership，继续使用原 binding；只复制 binding metadata 的伪造 definition 仍拒绝。旧 generation 永不绑定到新 generation，不确定的 `tools/call` 不会自动重放。MCP discovery 只表示远端声明了工具和 schema，不等于授权，仍需经过上层 capability、policy、approval 和 schema 校验。
 
 ## 15. Controller 与页面收口
 
