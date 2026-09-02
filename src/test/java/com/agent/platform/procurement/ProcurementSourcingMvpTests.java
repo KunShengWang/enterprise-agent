@@ -49,12 +49,12 @@ class ProcurementSourcingMvpTests {
         var target = new ExecutionTargetRegistry(incident).findEnabled(
                 new com.agent.platform.workbench.security.AuthenticatedPrincipal("tenant", "buyer", Set.of("USER")),
                 ExecutionTargetId.PROCUREMENT_SOURCING.name()).orElseThrow();
-        assertEquals("procurement-sourcing-readonly-v1", target.executionProfileId());
-        assertEquals(com.agent.platform.workbench.target.TargetRiskLevel.LOW, target.riskLevel());
+        assertEquals("procurement-sourcing-rfq-v1", target.executionProfileId());
+        assertEquals(com.agent.platform.workbench.target.TargetRiskLevel.HIGH, target.riskLevel());
         var profile = new ProcurementSourcingExecutionProfileFactory().createProfile();
         assertEquals(Set.of(ProcurementToolCatalog.CASE_PATCH, ProcurementToolCatalog.SUPPLIER_SEARCH,
                 ProcurementToolCatalog.COMMERCIAL_ANALYSIS, ProcurementToolCatalog.DELIVERY_ANALYSIS,
-                ProcurementToolCatalog.RECOMMENDATION_FINALIZE),
+                ProcurementToolCatalog.RECOMMENDATION_FINALIZE, ProcurementToolCatalog.CREATE_RFQ),
                 profile.allowedCapabilities());
         assertTrue(profile.longTermMemoryEnabled());
         assertTrue(profile.systemPrompt().contains("软偏好"));
@@ -66,7 +66,15 @@ class ProcurementSourcingMvpTests {
         assertEquals(Map.of("readOnly", false, "sideEffect", true), metadata(definitions, ProcurementToolCatalog.CASE_PATCH));
         assertEquals(Map.of("readOnly", true, "sideEffect", false), metadata(definitions, ProcurementToolCatalog.SUPPLIER_SEARCH));
         assertEquals(Map.of("readOnly", true, "sideEffect", false), metadata(definitions, ProcurementToolCatalog.RECOMMENDATION_FINALIZE));
-        assertEquals(5, definitions.size());
+        assertEquals(6, definitions.size());
+        assertEquals("HIGH", definition(definitions, ProcurementToolCatalog.CREATE_RFQ).riskLevel().name());
+        assertEquals(Map.of("readOnly", false, "sideEffect", true, "parallelSafe", false,
+                        "singleUse", true, "contractVersion", "procurement-rfq-v1"),
+                definition(definitions, ProcurementToolCatalog.CREATE_RFQ).metadata().entrySet().stream()
+                        .filter(entry -> Set.of("readOnly", "sideEffect", "parallelSafe", "singleUse", "contractVersion")
+                                .contains(entry.getKey()))
+                        .collect(java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue)));
+        assertEquals(List.of(), definition(definitions, ProcurementToolCatalog.CREATE_RFQ).metadata().get("publicArgumentKeys"));
         assertEquals("procurement-specialist-v1", definition(definitions, ProcurementToolCatalog.COMMERCIAL_ANALYSIS)
                 .metadata().get("contractVersion"));
         assertEquals("procurement-specialist-v1", definition(definitions, ProcurementToolCatalog.DELIVERY_ANALYSIS)
@@ -82,7 +90,8 @@ class ProcurementSourcingMvpTests {
                 specialistMetadata(definitions, ProcurementToolCatalog.DELIVERY_ANALYSIS));
         assertEquals(Set.of("procurement-sourcing-v3"), definitions.stream()
                 .filter(definition -> !definition.name().equals(ProcurementToolCatalog.COMMERCIAL_ANALYSIS)
-                        && !definition.name().equals(ProcurementToolCatalog.DELIVERY_ANALYSIS))
+                        && !definition.name().equals(ProcurementToolCatalog.DELIVERY_ANALYSIS)
+                        && !definition.name().equals(ProcurementToolCatalog.CREATE_RFQ))
                 .map(definition -> String.valueOf(definition.metadata().get("contractVersion")))
                 .collect(java.util.stream.Collectors.toSet()));
     }

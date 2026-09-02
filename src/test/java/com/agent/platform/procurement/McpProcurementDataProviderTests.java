@@ -70,7 +70,7 @@ class McpProcurementDataProviderTests {
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Test
-    void providerSelectionKeepsSyntheticDefaultAndExposesFiveModelCapabilities() {
+    void providerSelectionKeepsSyntheticDefaultAndExposesSixModelCapabilities() {
         ProcurementDataProperties defaults = new ProcurementDataProperties();
         assertEquals("synthetic", defaults.getProvider());
         assertEquals("mcp.procurement.", defaults.getMcpToolPrefix());
@@ -78,7 +78,7 @@ class McpProcurementDataProviderTests {
         Set<String> modelTools = new ProcurementSourcingExecutionProfileFactory().createProfile().allowedCapabilities();
         assertEquals(Set.of(ProcurementToolCatalog.CASE_PATCH, ProcurementToolCatalog.SUPPLIER_SEARCH,
                 ProcurementToolCatalog.COMMERCIAL_ANALYSIS, ProcurementToolCatalog.DELIVERY_ANALYSIS,
-                ProcurementToolCatalog.RECOMMENDATION_FINALIZE), modelTools);
+                ProcurementToolCatalog.RECOMMENDATION_FINALIZE, ProcurementToolCatalog.CREATE_RFQ), modelTools);
         assertTrue(modelTools.stream().noneMatch(value -> value.startsWith("mcp.procurement.")));
 
         new ApplicationContextRunner()

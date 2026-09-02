@@ -6,7 +6,7 @@
 
 固定办公耗材补货、明确型号查最低价、预算计算、固定审批阈值、供应商 BLOCKED 判断、金额计算和固定评分公式不需要 Agent，继续由 Java、SQL 或 Rule 完成。Agent 只处理约束较多、候选不明确、证据来自多个来源且需要开放式权衡的采购请求。
 
-## 第一阶段 READ-ONLY 链路
+## 第一阶段寻源与推荐链路
 
 ```text
 自然语言采购需求
@@ -19,13 +19,13 @@
   -> Evidence-backed Supplier Recommendation
 ```
 
-Search 返回候选、报价、Provider canonical 证据和硬约束过滤结果，不在 Java 中评分或隐式代选；多个 Eligible Supplier 的价格、交期、质保和规格由 Agent 做透明 trade-off。当前止于 Recommendation，不创建 RFQ/PO，不执行审批、收货、发票或付款。Case Patch 虽然会写入内部 `ProcurementCaseState`，但不是采购业务副作用。
+Search 返回候选、报价、Provider canonical 证据和硬约束过滤结果，不在 Java 中评分或隐式代选；多个 Eligible Supplier 的价格、交期、质保和规格由 Agent 做透明 trade-off。寻源、Specialist 和 Recommendation 仍然止于只读分析；Case Patch 虽然会写入内部 `ProcurementCaseState`，但不是采购业务副作用。创建 RFQ 的受控边界见下方 Phase 5A。
 
 ## 职责边界与状态
 
-- Agent：理解目标，区分 hard constraints 与 preferences，提出 Case Patch，根据 Search ToolResult 在多个 Eligible Supplier 中作选择，提交 selectedSupplierId、evidenceRefs、受限 `tradeoffDimensions` 和 confidence；Finalize 成功后再给出中文解释。
+- Agent：理解目标，区分 hard constraints 与 preferences，提出 Case Patch，根据 Search ToolResult 在多个 Eligible Supplier 中作选择，提交 selectedSupplierId、evidenceRefs、受限 `tradeoffDimensions` 和 confidence；Finalize 成功后再给出中文解释。只有用户明确要求发起 RFQ 时，才可提出 `procurement_create_rfq` 意图。
 - Java Runtime：Profile 白名单、Tool Schema 校验、CaseState 持久化、CAS 版本控制、总价计算、预算/排除供应商/数值硬约束、证据和最终推荐校验。唯一生产 Case 写入路径是 Agent Patch → Java validate → CAS；没有 Parser/upsert 或模型直接传入 search-state 的兼容路径。
-- Human：本阶段只消费推荐结果；后续阶段再确认是否进入 RFQ。
+- Human：消费推荐结果，并在 RFQ 的具体 Supplier、数量和要求完成服务端重建后，审批或拒绝这一个 exact action。
 
 `ProcurementCaseState` 是同一 tenant/user/conversation 当前采购任务的结构化权威状态，例如数量、预算、交期、显存下限和排除供应商。模型只能提交 `ProcurementCasePatch`，不能提交身份、版本、`missingFields` 或 `currentPhase`；Patch 对标量字段支持更新和 `fieldsToClear` 显式清除，对 hard constraint、preference 和排除供应商支持 upsert/remove。Java 合并后把状态持久化到与 Agent Runtime 共用的 storage datasource 的 `procurement_case_state` 表，并用 version CAS 拒绝并发静默覆盖。`appliedInputIds` 最多保留 128 条，用于避免有限窗口内的旧输入重放。
 
@@ -59,7 +59,7 @@ Agent
   -> mcp.procurement.search_suppliers / mcp.procurement.get_offers
 ```
 
-`mcp.procurement.search_suppliers` 和 `mcp.procurement.get_offers` 是 Provider backend API，不是模型可见 Tool；采购 Profile 暴露三个核心 Tool（`procurement_case_patch`、`procurement_supplier_search`、`procurement_recommendation_finalize`）以及两个可选的只读 advisory capability（`procurement_commercial_analysis`、`procurement_delivery_analysis`）。Provider 每次从当前 immutable MCP tool snapshot 精确解析工具，并使用 bound `ToolDefinition` 调用，不自动 refresh、retry 或回退 Synthetic。MCP 只提交商品类别、描述、数量、币种和候选供应商 ID 等必要事实查询字段，不提交预算、交期、排除项、偏好或 hard constraints。
+`mcp.procurement.search_suppliers` 和 `mcp.procurement.get_offers` 是 Provider backend API，不是模型可见 Tool；采购 Profile 暴露三个核心 Tool（`procurement_case_patch`、`procurement_supplier_search`、`procurement_recommendation_finalize`）、两个可选的只读 advisory capability（`procurement_commercial_analysis`、`procurement_delivery_analysis`）和一个审批绑定的 `procurement_create_rfq`。Provider 每次从当前 immutable MCP tool snapshot 精确解析工具，并使用 bound `ToolDefinition` 调用，不自动 refresh、retry 或回退 Synthetic。MCP 只提交商品类别、描述、数量、币种和候选供应商 ID 等必要事实查询字段，不提交预算、交期、排除项、偏好或 hard constraints。
 
 远端响应只被当作不可信业务资料：Java 严格校验 snapshot/as-of、ID、价格、交期、规格和候选归属，重新计算 `totalPrice`，由 Java `ProcurementDecisionEngine` 计算 Eligibility，并从 canonical offer 生成 Evidence、provenance 和 `sourceDigest`。缺字段、错误类型、重复工具/供应商/报价、MCP 调用失败或当前快照不可用都会 fail closed；不会静默返回空数据或切换 Synthetic。`source` 只记录安全的 `mcp:<mcpServerId>`，不记录 command、args、工作目录或凭证。
 
@@ -80,17 +80,17 @@ Phase 1 的 Agent Tool 只有 `procurement_case_patch`、`procurement_supplier_s
 
 `confidence` 只表示 Agent 对本次 Supplier Selection 的主观决策置信度，不表示 Provider 数据真实性概率、Supplier 实际履约概率、Supplier 风险概率、推荐正确率、Eligibility 置信度或统计概率。Java 只校验有限值满足 `0 <= confidence <= 1`，`NaN`、`±Infinity` 和越界值均直接拒绝，不增加计算或静默修正逻辑。Agent 的最终中文 explanation 属于展示层，只能在 Finalize ToolResult 之后基于其中 verified facts 生成，不写入 canonical Recommendation。
 
-`ProcurementCaseState` 的权威来源是 tenant/user/conversation 维度的 Case Store，不是 Runtime metadata 副本。`procurement_case_patch` 是内部状态 mutation，Tool metadata 如实标记为 `readOnly=false/sideEffect=true`；search 和 finalize 为 `readOnly=true/sideEffect=false`，三者都不执行 RFQ、PO、审批、付款等采购业务动作。
+`ProcurementCaseState` 的权威来源是 tenant/user/conversation 维度的 Case Store，不是 Runtime metadata 副本。`procurement_case_patch` 是内部状态 mutation，Tool metadata 如实标记为 `readOnly=false/sideEffect=true`；search 和 finalize 为 `readOnly=true/sideEffect=false`。`procurement_create_rfq` 是 `HIGH`、`readOnly=false/sideEffect=true` 的唯一外部副作用 capability，必须通过现有 generic human approval。
 
 ## 明确非目标与后续路线
 
-当前非目标：RFQ、PO、Receiving、Invoice、Payment、Procurement HITL、完整 P2P、SAP/ERPNext 部署、大规模 MCP/Memory/Context Compression 重构和真实电商 API。Phase 2A 只补充当前 Case 的权威投影和 Runtime 级上下文门控，不建设通用 Context Provider/Contributor/Plugin 框架；`AgentCanonicalContextProvider` 仅是当前所需的极薄 SPI。
+当前非目标：PO、Receiving、Invoice、Payment、完整 P2P、SAP/ERPNext 部署、大规模 MCP/Memory/Context Compression 重构和真实电商 API。Phase 2A 只补充当前 Case 的权威投影和 Runtime 级上下文门控，不建设通用 Context Provider/Contributor/Plugin 框架；`AgentCanonicalContextProvider` 仅是当前所需的极薄 SPI。
 
 1. Phase 2A（已落地）：权威 Case 上下文重注入、长期记忆门控和压缩可观测性
 2. Phase 2B（已落地）：Typed Durable Memory 的提取边界、user scope 与不可信上下文接入
 3. Phase 3：MCP Runtime 冻结后的 Procurement 只读 Provider 接入
 4. Phase 4A（当前）：Adaptive Multi-Agent 的可选采购 Specialist
-5. Phase 5：HITL + create_rfq
+5. Phase 5A（已落地）：审批绑定的 RFQ 创建与不确定副作用对账
 6. Phase 6：Eval / Ablation / Resume Metrics
 
 ### Phase 4A：采购自适应专家子 Agent
@@ -98,3 +98,15 @@ Phase 1 的 Agent Tool 只有 `procurement_case_patch`、`procurement_supplier_s
 主 Agent 先完成 `procurement_case_patch` 和 `procurement_supplier_search`。单一 Eligible 或明显简单的采购不委派；当多个 Eligible 存在价格/交付 trade-off 时，主 Agent 可在同一模型轮同时调用 Commercial 与 Delivery 两个 Specialist，Runtime 会复用原生并行子 Agent 路径。两个 child 使用隔离的 run/session、focus 对应的 filtered Search/Case facts、无工具、关闭长期记忆，最大 delegation depth 为 1。
 
 Specialist 只返回经过 Java 校验的 advisory 分析：不接 Provider/MCP，不重新查询、不修改 Case、不重算 Eligibility、不创建 Evidence，也不形成最终推荐。主 Agent 综合原始 Search facts 与 advisory 结果后，仍必须调用 `procurement_recommendation_finalize`，由 Java Finalizer 重新验证。当前没有 Risk/Compliance 或 Supplier Performance Specialist，因为 Provider 尚未提供对应的 provenance-backed facts。
+
+### Phase 5A：审批绑定的 RFQ 创建
+
+RFQ 只代表向一个已经推荐并验证的供应商创建询价请求资源，不代表 PO、采购承诺、付款或合同。只有当前 Run 已经成功完成 `procurement_recommendation_finalize`，且用户明确要求发起 RFQ 时，模型才可以提出 `procurement_create_rfq`；Recommendation-only 请求在 Finalize 后直接回答，不会自动创建 RFQ。
+
+模型的 proposal 与最终动作严格分开。模型应使用空 arguments 表达意图；`ProcurementRfqApprovalPreparer` 在写入 `ApprovalRecord` 前，使用可信的 tenant/user/session/run context、当前 Case 和本 Run 原始成功 Finalize ToolResult，重建恰好包含 12 个字段的 canonical request，其中 `approvalId` 由服务端生成，并与 `idempotencyKey=rfq:<approvalId>` 绑定。Supplier 来自 verified Recommendation，quantity、Case version、hard constraints 等来自当前权威 Case，预算、偏好、报价和身份信息不会进入 RFQ payload。
+
+人工批准后，Runtime 在同一个 Run 中执行 ApprovalRecord 保存的 exact request，不会重新生成 payload 或再次询问模型。Case 在等待期间发生版本变化、Finalize 失效或 provenance 不匹配时，动作 fail closed，必须重新 Search、Finalize 并发起新的 Approval。批准前 Gateway create 次数为零。
+
+`ProcurementRfqToolHandler` 每次执行最多调用 Gateway create 一次。若 create 抛出异常，只按同一幂等键调用 `findByIdempotencyKey`，找到 receipt 就返回成功；找不到或查询失败则返回 `manualReview=true`、`retryable=false`、`uncertainExternalState=true`，不把未知状态当作普通可重试失败。Runtime 恢复 RUNNING 的崩溃窗口时，注册的 `UncertainToolExecutionResolver` 也只查询该幂等键，绝不盲目重放 create。
+
+当前 `SimulatedProcurementRfqGateway` 是 process-local 的 simulated external adapter，仅用于验证上述 Harness 与领域安全契约；它不是 SAP、ERPNext、真实供应商 API 或真实邮件服务，也不能证明跨进程 production exactly-once。真实下游适配器未来必须持久化幂等键并提供可查询的事实对账能力。本阶段不创建 PO、不发送供应商邮件、不增加 MCP write、不新增数据库表。

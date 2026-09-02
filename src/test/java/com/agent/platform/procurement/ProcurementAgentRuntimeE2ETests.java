@@ -500,13 +500,11 @@ class ProcurementAgentRuntimeE2ETests {
             }
             Set<String> visibleNames = request.tools().stream().map(ToolDefinition::name)
                     .collect(java.util.stream.Collectors.toSet());
-            assertTrue(Set.of(ProcurementToolCatalog.CASE_PATCH, ProcurementToolCatalog.SUPPLIER_SEARCH,
+                    assertTrue(Set.of(ProcurementToolCatalog.CASE_PATCH, ProcurementToolCatalog.SUPPLIER_SEARCH,
                             ProcurementToolCatalog.COMMERCIAL_ANALYSIS, ProcurementToolCatalog.DELIVERY_ANALYSIS,
-                            ProcurementToolCatalog.RECOMMENDATION_FINALIZE).containsAll(visibleNames),
+                            ProcurementToolCatalog.RECOMMENDATION_FINALIZE, ProcurementToolCatalog.CREATE_RFQ)
+                            .containsAll(visibleNames),
                     "模型可见 capability 不得超出采购 Profile");
-            assertTrue(request.tools().stream().noneMatch(definition ->
-                            definition.name().startsWith("mcp.procurement.")),
-                    "内部 MCP source tool 不得成为模型可见 capability");
             assertTrue(request.tools().stream().noneMatch(definition ->
                             definition.name().startsWith("mcp.procurement.")),
                     "内部 MCP source tool 不得成为模型可见 capability");

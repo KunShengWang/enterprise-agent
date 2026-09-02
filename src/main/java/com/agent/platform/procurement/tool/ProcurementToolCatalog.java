@@ -16,6 +16,7 @@ public class ProcurementToolCatalog implements ToolCatalogContributor {
     public static final String COMMERCIAL_ANALYSIS = "procurement_commercial_analysis";
     public static final String DELIVERY_ANALYSIS = "procurement_delivery_analysis";
     public static final String RECOMMENDATION_FINALIZE = "procurement_recommendation_finalize";
+    public static final String CREATE_RFQ = "procurement_create_rfq";
 
     @Override
     public List<ToolDefinition> definitions() {
@@ -58,7 +59,21 @@ public class ProcurementToolCatalog implements ToolCatalogContributor {
                                   "confidence":{"type":"number","minimum":0,"maximum":1}
                                 },"required":["evaluatedCaseVersion","selectedSupplierId","evidenceRefs","tradeoffDimensions","confidence"]}
                                 """.strip(),
-                        ToolRiskLevel.LOW, metadata("确认供应商推荐", "正在验证供应商推荐与证据", List.of("selectedSupplierId", "evidenceRefs"), true, false))
+                        ToolRiskLevel.LOW, metadata("确认供应商推荐", "正在验证供应商推荐与证据", List.of("selectedSupplierId", "evidenceRefs"), true, false)),
+                new ToolDefinition(CREATE_RFQ,
+                        "提出创建一个受控 RFQ 的意图。模型必须使用空 arguments；服务端会在人工审批前根据当前 Case 和本 Run 已验证的 Recommendation 重建具体 RFQ。只有用户明确要求发起 RFQ 且 Finalize 成功后才可调用；批准前不会创建外部资源。",
+                        """
+                                {"type":"object","additionalProperties":false,"properties":{
+                                  "caseId":{"type":"string"},"caseVersion":{"type":"integer"},"supplierId":{"type":"string"},
+                                  "productCategory":{"type":"string"},"productDescription":{"type":"string"},"quantity":{"type":"integer"},
+                                  "currency":{"type":"string"},"requiredDeliveryDays":{"type":"integer"},"hardConstraints":{"type":"object"},
+                                  "sourceRecommendationToolCallId":{"type":"string"},"idempotencyKey":{"type":"string"},
+                                  "approvalId":{"type":"string"}
+                                }}
+                                """.strip(),
+                        ToolRiskLevel.HIGH,
+                        metadata("创建审批绑定的采购 RFQ", "正在创建审批绑定的采购 RFQ", List.of(), false, true,
+                                "procurement-rfq-v1", true))
         );
     }
 
@@ -83,8 +98,26 @@ public class ProcurementToolCatalog implements ToolCatalogContributor {
 
     private Map<String, Object> metadata(String displayName, String action, List<String> keys,
                                          boolean readOnly, boolean sideEffect) {
-        return Map.of("provider", "procurement", "domain", "procurement", "readOnly", readOnly,
-                "sideEffect", sideEffect, "parallelSafe", false, "contractVersion", "procurement-sourcing-v3",
-                "publicDisplayName", displayName, "publicActionSummary", action, "publicArgumentKeys", keys);
+        return metadata(displayName, action, keys, readOnly, sideEffect,
+                "procurement-sourcing-v3", false);
+    }
+
+    private Map<String, Object> metadata(String displayName, String action, List<String> keys,
+                                         boolean readOnly, boolean sideEffect,
+                                         String contractVersion, boolean singleUse) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("provider", "procurement");
+        metadata.put("domain", "procurement");
+        metadata.put("readOnly", readOnly);
+        metadata.put("sideEffect", sideEffect);
+        metadata.put("parallelSafe", false);
+        if (singleUse) {
+            metadata.put("singleUse", true);
+        }
+        metadata.put("contractVersion", contractVersion);
+        metadata.put("publicDisplayName", displayName);
+        metadata.put("publicActionSummary", action);
+        metadata.put("publicArgumentKeys", keys);
+        return Map.copyOf(metadata);
     }
 }
