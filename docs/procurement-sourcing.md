@@ -93,7 +93,9 @@ Phase 1 的 Agent Tool 只有 `procurement_case_patch`、`procurement_supplier_s
 5. Phase 5A（已冻结）：审批绑定的 RFQ 创建与不确定副作用对账
 6. Phase 6A（已冻结）：Deterministic Eval / Ablation / Resume Metrics，见 [采购评测基线](procurement-evaluation.md)
 7. Phase 6B（当前）：Procurement Benchmark Contract & Ground Truth v1（离线、确定性、可审计）
-8. Phase 6C（未来）：Opt-in Live Model Eval，复用已冻结的 Benchmark v1 与现有 Agent Runtime
+8. Phase 6C（当前）：Opt-in Live Model Eval，复用已冻结的 Benchmark v1 与现有 Agent Runtime；仅在 `PROCUREMENT_LIVE_EVAL=true` 且配置 `DEEPSEEK_API_KEY` 时运行真实 Native Tool Calling，评测仍保持外部只读并输出本地 ignored report。
+
+Phase 6C 不扩展采购生产 capability，不暴露 RFQ、Approval 或其它外部 side effect；Optional Commercial/Delivery Specialist 仍由现有 Runtime 自主决定是否调用。若真实模型暴露问题，应由 ChatGPT 单独判断是否需要新的修正阶段，不能在 Live 结果之后修改 Benchmark、Expected Answer 或生产 Prompt。
 
 ### Phase 4A：采购自适应专家子 Agent
 

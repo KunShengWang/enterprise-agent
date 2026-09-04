@@ -69,9 +69,29 @@ Phase 6B 当前冻结离线 benchmark-v1 的数据契约与 Ground Truth；它�
 
 `preferredSupplierId` 由冻结的用户偏好与 Provider facts 独立策展，不能由 Agent、`ProcurementRecommendationFinalizer` 或之前一次模型运行结果自动生成，否则被测系统会参与生成自己的答案。Benchmark 不保存 `unitPrice`、`totalPrice`、`leadTimeDays`、`warranty`、规格或 evidence ID；这些继续属于 Provider fixture 与 `ProcurementDataProvider`。本阶段不包含 RFQ、approval、risk/compliance、token、child agent 或自然语言标准答案。
 
-合同测试只通过 classpath 资源读取 JSON，并使用 `AwsSyntheticProcurementProvider` + `ProcurementDecisionEngine` 复算 Eligibility；不实例化 Agent Runtime、不调用 LLM、不引入 Eval Runner 或 LLM judge。未来 Phase 6C 的概念路径是：Live model → existing Agent Runtime → frozen Benchmark v1 → deterministic structured grader，本阶段不实现。
+合同测试只通过 classpath 资源读取 JSON，并使用 `AwsSyntheticProcurementProvider` + `ProcurementDecisionEngine` 复算 Eligibility；不实例化 Agent Runtime、不调用 LLM、不引入 Eval Runner 或 LLM judge。Live Model 的实际执行路径见下方 Phase 6C：Live model → existing Agent Runtime → frozen Benchmark v1 → deterministic structured grader。
 
-## 9. 如何运行
+## 9. Phase 6C Opt-in Live Model Evaluation
+
+Phase 6C 在 Phase 6B 冻结的 `procurement-benchmark-v1` 上做一次单模型、单次 rollout 的 Live Benchmark v1 observation。它只复用现有 `NativeToolCallingAgentModelGateway`、`DefaultAgentRuntime`、`AwsSyntheticProcurementProvider` 和测试专用内存 Store；不修改生产代码、Benchmark JSON、通用 Eval Framework 或 POM。
+
+Live 测试类是 `ProcurementLiveModelEvalIT`，默认 `mvn test` 不选择 `*IT`。即使显式选择该类，也必须先通过 `PROCUREMENT_LIVE_EVAL=true` 这一独立 opt-in gate；Gate 不通过时直接 skip，且在 Gate 之前不创建 Spring Context、Gateway、Provider 或模型请求。Gate 通过后才读取 `DEEPSEEK_API_KEY`；已 opt-in 但 Key 缺失时测试失败，不自动 skip、mock 或 fallback。模型名沿用 `DEEPSEEK_CHAT_MODEL`，未配置时为 `deepseek-chat`。
+
+PowerShell 示例（Key 只注入当前进程，不写入仓库）：
+
+```powershell
+$env:DEEPSEEK_API_KEY = '<安全注入当前终端的 Key>'
+$env:PROCUREMENT_LIVE_EVAL = 'true'
+mvn -q -Dtest=ProcurementLiveModelEvalIT test
+```
+
+Live Profile 移除 `procurement_create_rfq`，因此只允许对外部世界只读；`procurement_case_patch` 仅写入当前 Case 的隔离内存 Store。Commercial/Delivery Specialist 保持为可选真实 capability：模型可以调用 0 个或 2 个，若调用由既有 Runtime 保证同轮 native parallel。四个 Case 各自使用独立 conversation、CaseStore、RunStore、TimelineStore 和 ToolExecutionStore。
+
+Grader 只读取 CaseStore 的最终 `ProcurementCaseState`、成功的 Supplier Search ToolResult、成功的 Finalize ToolResult 及其中的 Provider Evidence。Requirement Extraction、Eligibility、Recommendation Outcome 和适用 Case 的 Evidence Grounding 都是结构化精确比较；不读取最终中文文案，不使用关键词、语义相似度、LLM-as-a-Judge 或加权总分。NO_ELIGIBLE Case 不要求 Evidence Grounding，但必须没有成功 Recommendation。
+
+报告只写入 `target/procurement-live-eval/report.json`，这是本地 ignored artifact，不是提交的 Benchmark 结果。报告包含 Parent 与 provenance-backed Child Run 的 model calls、input/output tokens 和 child runs；不会保存 API Key、请求头、完整 Prompt 或凭证。四个 Case、一次 rollout 不具备统计意义，只能称为 Live Benchmark v1 observation，不能称为 production accuracy、真实准确率或 ROI。
+
+## 10. 如何运行
 
 ```text
 mvn -q -Dtest=ProcurementAgentRuntimeE2ETests test
