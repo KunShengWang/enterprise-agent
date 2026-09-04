@@ -344,6 +344,7 @@ class ProcurementAgentRuntimeE2ETests {
                 execution.model().toolNames());
         assertEquals(0, execution.timelineStore().events.stream()
                 .filter(event -> event.type() == AgentEventType.SUB_AGENT_STARTED).count());
+        assertEquals(0, evalUsage(execution).childRunCount());
         assertTrue(execution.model().childRequests().isEmpty());
         assertTrue(execution.toolExecutionStore().records.values().stream()
                 .noneMatch(record -> record.toolName().equals(ProcurementToolCatalog.COMMERCIAL_ANALYSIS)
@@ -463,7 +464,6 @@ class ProcurementAgentRuntimeE2ETests {
                              long parentOutputTokens,
                              long childOutputTokens,
                              long totalOutputTokens,
-                             int parentToolCalls,
                              int childRunCount) {
     }
 
@@ -508,7 +508,7 @@ class ProcurementAgentRuntimeE2ETests {
                 parent.modelCalls(), childModelCalls, parent.modelCalls() + childModelCalls,
                 parent.inputTokens(), childInputTokens, parent.inputTokens() + childInputTokens,
                 parent.outputTokens(), childOutputTokens, parent.outputTokens() + childOutputTokens,
-                parent.toolCalls(), childRunIds.size());
+                childRunIds.size());
     }
 
     private long subAgentStartedCount(RuntimeExecution execution) {
