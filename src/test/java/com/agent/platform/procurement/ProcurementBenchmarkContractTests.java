@@ -18,7 +18,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Comparator;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -65,9 +64,8 @@ class ProcurementBenchmarkContractTests {
             assertTrue(CASE_IDS.contains(caseId), caseId + " is not a fixed v1 case");
             exactFields(caseNode, CASE_FIELDS, caseId);
             assertFalse(caseNode.path("title").asText().isBlank(), caseId + " title is blank");
-            String userMessage = caseNode.path("userMessage").asText().toLowerCase();
-            assertFalse(userMessage.contains("supplier-d") || userMessage.contains("supplier d"),
-                    caseId + " userMessage leaks the preferred answer");
+            String userMessage = caseNode.path("userMessage").asText();
+            assertFalse(userMessage.isBlank(), caseId + " userMessage is blank");
 
             JsonNode expectedCase = caseNode.path("expectedCase");
             exactFields(expectedCase, EXPECTED_CASE_FIELDS, caseId + " expectedCase");
@@ -83,8 +81,33 @@ class ProcurementBenchmarkContractTests {
 
             JsonNode expected = caseNode.path("expected");
             exactFields(expected, EXPECTED_FIELDS, caseId + " expected");
-            assertTrue(Set.of("RECOMMENDABLE", "NO_ELIGIBLE").contains(expected.path("status").asText()), caseId + " status");
-            int eligibleCount = expected.path("eligibleSupplierIds").size();
+            assertFixedCaseSemantics(caseId, expectedCase, expected);
+            String status = expected.path("status").asText();
+            assertTrue(Set.of("RECOMMENDABLE", "NO_ELIGIBLE").contains(status), caseId + " status");
+            JsonNode eligibleIds = expected.path("eligibleSupplierIds");
+            assertTrue(eligibleIds.isArray(), caseId + " eligibleSupplierIds must be an array");
+            List<String> expectedEligibleIds = values(eligibleIds);
+            assertTrue(expectedEligibleIds.stream().noneMatch(String::isBlank), caseId + " eligible supplier id is blank");
+            assertEquals(expectedEligibleIds.size(), new HashSet<>(expectedEligibleIds).size(),
+                    caseId + " eligible supplier ids must be unique");
+            JsonNode preferred = expected.path("preferredSupplierId");
+            if ("RECOMMENDABLE".equals(status)) {
+                assertFalse(expectedEligibleIds.isEmpty(), caseId + " recommendable case has no eligible supplier");
+                assertTrue(!preferred.isNull() && !preferred.asText().isBlank(),
+                        caseId + " recommendable case must have a preferred supplier");
+                assertTrue(expectedEligibleIds.contains(preferred.asText()),
+                        caseId + " preferred supplier is not eligible");
+                String normalizedPreferred = normalizeSupplierToken(preferred.asText());
+                assertFalse(normalizedPreferred.isBlank(), caseId + " preferred supplier is blank after normalization");
+                assertFalse(normalizeSupplierToken(userMessage).contains(normalizedPreferred),
+                        caseId + " userMessage leaks the preferred answer");
+            } else {
+                assertTrue(expectedEligibleIds.isEmpty(), caseId + " no-eligible case has eligible suppliers");
+                assertTrue(preferred.isNull(), caseId + " no-eligible case must have JSON null preferred supplier");
+                assertEquals(List.of(), values(expected.path("requiredTradeoffDimensions")),
+                        caseId + " no-eligible case must have no tradeoff dimensions");
+            }
+            int eligibleCount = expectedEligibleIds.size();
             if (eligibleCount > 1) {
                 assertEquals(1, expectedCase.path("preferences").size(), caseId + " must have one soft priority");
                 assertEquals(List.of("PRICE", "DELIVERY"), values(expected.path("requiredTradeoffDimensions")), caseId + " tradeoff");
@@ -128,7 +151,7 @@ class ProcurementBenchmarkContractTests {
                 assertEquals("NO_ELIGIBLE", caseNode.path("expected").path("status").asText(), caseId + " status");
             } else {
                 String preferred = preferredNode.asText();
-                assertEquals(preferred, preferredSupplierId(caseNode.path("expectedCase"), actualEligible, eligibleOffers),
+                assertEquals(preferred, preferredSupplierId(caseId, caseNode.path("expectedCase"), actualEligible, eligibleOffers),
                         caseId + " preference rubric mismatch");
                 assertTrue(provider.getSupplierEvidence(preferred, state).stream()
                         .anyMatch(evidence -> evidence.evidenceType().equals("OFFER")), caseId + " OFFER evidence");
@@ -197,13 +220,50 @@ class ProcurementBenchmarkContractTests {
     }
 
     // MIN_LEAD_TIME and MIN_TOTAL_PRICE are benchmark rubrics for explicit preferences, not production scoring rules.
-    private String preferredSupplierId(JsonNode expectedCase, Set<String> eligible, Map<String, SupplierOffer> offers) {
+    private void assertFixedCaseSemantics(String caseId, JsonNode expectedCase, JsonNode expected) {
+        switch (caseId) {
+            case "delivery_priority_two_eligible" -> {
+                assertEquals(Map.of("deliveryPriority", "HIGH"), stringMap(expectedCase.path("preferences")), caseId + " preferences");
+                assertEquals("RECOMMENDABLE", expected.path("status").asText(), caseId + " status");
+                assertEquals("supplier-d", expected.path("preferredSupplierId").asText(), caseId + " preferred");
+            }
+            case "price_priority_two_eligible" -> {
+                assertEquals(Map.of("pricePriority", "HIGH"), stringMap(expectedCase.path("preferences")), caseId + " preferences");
+                assertEquals("RECOMMENDABLE", expected.path("status").asText(), caseId + " status");
+                assertEquals("supplier-b", expected.path("preferredSupplierId").asText(), caseId + " preferred");
+            }
+            case "single_eligible_after_exclusions" -> {
+                assertEquals(Map.of(), stringMap(expectedCase.path("preferences")), caseId + " preferences");
+                assertEquals("RECOMMENDABLE", expected.path("status").asText(), caseId + " status");
+                assertEquals("supplier-d", expected.path("preferredSupplierId").asText(), caseId + " preferred");
+            }
+            case "no_eligible_under_hard_constraints" -> {
+                assertEquals(Map.of(), stringMap(expectedCase.path("preferences")), caseId + " preferences");
+                assertEquals("NO_ELIGIBLE", expected.path("status").asText(), caseId + " status");
+                assertTrue(expected.path("preferredSupplierId").isNull(), caseId + " preferred must be null");
+            }
+            default -> throw new AssertionError("unexpected fixed v1 case: " + caseId);
+        }
+    }
+
+    private String normalizeSupplierToken(String value) {
+        return value.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]", "");
+    }
+
+    private String preferredSupplierId(String caseId, JsonNode expectedCase, Set<String> eligible, Map<String, SupplierOffer> offers) {
         if (eligible.size() == 1) return eligible.iterator().next();
-        Comparator<SupplierOffer> comparator;
-        if (expectedCase.path("preferences").has("deliveryPriority")) comparator = Comparator.comparingInt(SupplierOffer::leadTimeDays);
-        else if (expectedCase.path("preferences").has("pricePriority")) comparator = Comparator.comparing(SupplierOffer::totalPrice);
-        else throw new AssertionError("multi-eligible case has no supported preference");
-        return offers.values().stream().min(comparator).orElseThrow().supplierId();
+        List<SupplierOffer> winners;
+        if (expectedCase.path("preferences").has("deliveryPriority")) {
+            int minimumLeadTime = offers.values().stream().mapToInt(SupplierOffer::leadTimeDays).min().orElseThrow();
+            winners = offers.values().stream().filter(offer -> offer.leadTimeDays() == minimumLeadTime).toList();
+        } else if (expectedCase.path("preferences").has("pricePriority")) {
+            BigDecimal minimumPrice = offers.values().stream().map(SupplierOffer::totalPrice).min(BigDecimal::compareTo).orElseThrow();
+            winners = offers.values().stream().filter(offer -> offer.totalPrice().compareTo(minimumPrice) == 0).toList();
+        } else {
+            throw new AssertionError(caseId + " multi-eligible case has no supported preference");
+        }
+        assertEquals(1, winners.size(), caseId + " preference minimum is ambiguous");
+        return winners.get(0).supplierId();
     }
 
     private void assertNoForbiddenKeys(JsonNode node, String path) {
