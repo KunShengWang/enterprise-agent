@@ -91,7 +91,9 @@ Phase 1 的 Agent Tool 只有 `procurement_case_patch`、`procurement_supplier_s
 3. Phase 3：MCP Runtime 冻结后的 Procurement 只读 Provider 接入
 4. Phase 4A（已落地）：Adaptive Multi-Agent 的可选采购 Specialist
 5. Phase 5A（已冻结）：审批绑定的 RFQ 创建与不确定副作用对账
-6. Phase 6A（当前）：Deterministic Eval / Ablation / Resume Metrics，见 [采购评测基线](procurement-evaluation.md)
+6. Phase 6A（已冻结）：Deterministic Eval / Ablation / Resume Metrics，见 [采购评测基线](procurement-evaluation.md)
+7. Phase 6B（当前）：Procurement Benchmark Contract & Ground Truth v1（离线、确定性、可审计）
+8. Phase 6C（未来）：Opt-in Live Model Eval，复用已冻结的 Benchmark v1 与现有 Agent Runtime
 
 ### Phase 4A：采购自适应专家子 Agent
 

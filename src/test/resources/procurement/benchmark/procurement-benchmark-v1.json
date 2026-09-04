@@ -1,0 +1,116 @@
+{
+  "benchmarkVersion": "procurement-benchmark-v1",
+  "providerFixture": {
+    "provider": "synthetic",
+    "scenarioDir": "data/procurement/scenarios",
+    "scenarioFile": "complex_workstation_01.json",
+    "scenarioId": "complex_workstation_01",
+    "sourceAsOf": "2026-01-01T00:00:00Z"
+  },
+  "cases": [
+    {
+      "caseId": "delivery_priority_two_eligible",
+      "title": "交付优先的双候选工作站采购",
+      "userMessage": "需要采购 50 台 CUDA 开发工作站，总预算 60 万 CNY，要求 21 天内交付、GPU 显存至少 24GB，并排除 Supplier A。满足硬约束且不超预算时优先交付；如果更快交付，可以在预算内接受更高价格。",
+      "expectedCase": {
+        "productCategory": "计算工作站",
+        "productDescription": "CUDA 开发工作站",
+        "quantity": 50,
+        "budget": 600000,
+        "currency": "CNY",
+        "requiredDeliveryDays": 21,
+        "hardConstraints": {
+          "gpuMemoryMinGb": "24"
+        },
+        "preferences": {
+          "deliveryPriority": "HIGH"
+        },
+        "excludedSuppliers": ["Supplier A"]
+      },
+      "expected": {
+        "status": "RECOMMENDABLE",
+        "eligibleSupplierIds": ["supplier-b", "supplier-d"],
+        "preferredSupplierId": "supplier-d",
+        "requiredTradeoffDimensions": ["PRICE", "DELIVERY"],
+        "requiredEvidenceTypes": ["OFFER"]
+      }
+    },
+    {
+      "caseId": "price_priority_two_eligible",
+      "title": "价格优先的双候选工作站采购",
+      "userMessage": "需要采购 50 台 CUDA 开发工作站，总预算 60 万 CNY，要求 21 天内交付、GPU 显存至少 24GB，并排除 Supplier A。在满足交付期限和硬约束的前提下，明确优先选择价格更低的方案。",
+      "expectedCase": {
+        "productCategory": "计算工作站",
+        "productDescription": "CUDA 开发工作站",
+        "quantity": 50,
+        "budget": 600000,
+        "currency": "CNY",
+        "requiredDeliveryDays": 21,
+        "hardConstraints": {
+          "gpuMemoryMinGb": "24"
+        },
+        "preferences": {
+          "pricePriority": "HIGH"
+        },
+        "excludedSuppliers": ["Supplier A"]
+      },
+      "expected": {
+        "status": "RECOMMENDABLE",
+        "eligibleSupplierIds": ["supplier-b", "supplier-d"],
+        "preferredSupplierId": "supplier-b",
+        "requiredTradeoffDimensions": ["PRICE", "DELIVERY"],
+        "requiredEvidenceTypes": ["OFFER"]
+      }
+    },
+    {
+      "caseId": "single_eligible_after_exclusions",
+      "title": "排除后仅剩单一合格供应商",
+      "userMessage": "需要采购 50 台 CUDA 开发工作站，总预算 60 万 CNY，要求 21 天内交付、GPU 显存至少 24GB；Supplier A 和 Supplier B 都不要。请基于当前硬约束给出结果，不要为了展示权衡而虚构额外候选。",
+      "expectedCase": {
+        "productCategory": "计算工作站",
+        "productDescription": "CUDA 开发工作站",
+        "quantity": 50,
+        "budget": 600000,
+        "currency": "CNY",
+        "requiredDeliveryDays": 21,
+        "hardConstraints": {
+          "gpuMemoryMinGb": "24"
+        },
+        "preferences": {},
+        "excludedSuppliers": ["Supplier A", "Supplier B"]
+      },
+      "expected": {
+        "status": "RECOMMENDABLE",
+        "eligibleSupplierIds": ["supplier-d"],
+        "preferredSupplierId": "supplier-d",
+        "requiredTradeoffDimensions": [],
+        "requiredEvidenceTypes": ["OFFER"]
+      }
+    },
+    {
+      "caseId": "no_eligible_under_hard_constraints",
+      "title": "硬约束下无合格供应商",
+      "userMessage": "需要采购 50 台 CUDA 开发工作站，预算最多 50 万 CNY，要求 21 天内交付、GPU 显存至少 24GB，并排除 Supplier A。预算、交付期限和显存要求均不可放宽；如果当前没有合格供应商，请明确报告无合格结果，不要擅自放宽约束。",
+      "expectedCase": {
+        "productCategory": "计算工作站",
+        "productDescription": "CUDA 开发工作站",
+        "quantity": 50,
+        "budget": 500000,
+        "currency": "CNY",
+        "requiredDeliveryDays": 21,
+        "hardConstraints": {
+          "gpuMemoryMinGb": "24"
+        },
+        "preferences": {},
+        "excludedSuppliers": ["Supplier A"]
+      },
+      "expected": {
+        "status": "NO_ELIGIBLE",
+        "eligibleSupplierIds": [],
+        "preferredSupplierId": null,
+        "requiredTradeoffDimensions": [],
+        "requiredEvidenceTypes": ["OFFER"]
+      }
+    }
+  ]
+}

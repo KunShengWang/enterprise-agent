@@ -59,9 +59,19 @@ Runtime 的 `estimatedCost` 会被保留，但 scripted model 和测试定价只
 - 真实 ERP latency、production exactly-once 或 Multi-Agent ROI；
 - 统计显著的质量或性能改善。
 
-未来 Phase 6B 才可在真实模型、多案例 ground truth 和明确评测协议基础上研究质量指标；本阶段不实现 Phase 6B。
+Phase 6B 当前冻结离线 benchmark-v1 的数据契约与 Ground Truth；它不运行真实模型，也不声明模型准确率。未来 Phase 6C 才可在该冻结数据集上，以 opt-in 方式研究 live model evaluation。
 
-## 8. 如何运行
+## 8. Phase 6B Benchmark v1
+
+`procurement-benchmark-v1` 在任何 live model rollout 之前冻结，文件位于 `src/test/resources/procurement/benchmark/procurement-benchmark-v1.json`，只引用 `complex_workstation_01.json`，不复制 Provider facts。它是 Benchmark Definition & Validation，不是准确率报告。
+
+四层契约分别是：`userMessage` 代表真实自然语言输入；`expectedCase` 代表 requirement extraction ground truth；`eligibleSupplierIds` 来自 Provider facts 与 Java deterministic eligibility；`preferredSupplierId` 来自明确的 delivery/price preference rubric，不是 Java recommendation engine。四个 case 覆盖双候选交付优先、双候选价格优先、单一 eligible 和无 eligible；后两者分别要求不虚构 trade-off、不得从不合格供应商中强行推荐。
+
+`preferredSupplierId` 由冻结的用户偏好与 Provider facts 独立策展，不能由 Agent、`ProcurementRecommendationFinalizer` 或之前一次模型运行结果自动生成，否则被测系统会参与生成自己的答案。Benchmark 不保存 `unitPrice`、`totalPrice`、`leadTimeDays`、`warranty`、规格或 evidence ID；这些继续属于 Provider fixture 与 `ProcurementDataProvider`。本阶段不包含 RFQ、approval、risk/compliance、token、child agent 或自然语言标准答案。
+
+合同测试只通过 classpath 资源读取 JSON，并使用 `AwsSyntheticProcurementProvider` + `ProcurementDecisionEngine` 复算 Eligibility；不实例化 Agent Runtime、不调用 LLM、不引入 Eval Runner 或 LLM judge。未来 Phase 6C 的概念路径是：Live model → existing Agent Runtime → frozen Benchmark v1 → deterministic structured grader，本阶段不实现。
+
+## 9. 如何运行
 
 ```text
 mvn -q -Dtest=ProcurementAgentRuntimeE2ETests test
