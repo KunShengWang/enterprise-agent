@@ -112,11 +112,24 @@ class ProcurementLiveModelEvalIT {
                 ? evidenceGrounded(search, finalize, recommendation,
                 strings(benchmarkCase.expected().path("requiredEvidenceTypes"))) : null;
         CaseUsage usage = usage(execution);
+        String runtimeErrorType = runtimeErrorType(result, execution);
         return new CaseReport(benchmarkCase.caseId(), result.runId(), result.state().name(),
                 result.stopReason().name(), requirement, requirementMismatchFields, eligibility, recommendationOutcome,
                 evidenceApplicable, evidence, expectedEligible, actualEligible, expectedPreferred,
                 actualPreferred, usage.modelCalls(), usage.inputTokens(), usage.outputTokens(),
-                usage.childRuns(), "");
+                usage.childRuns(), runtimeErrorType);
+    }
+
+    private String runtimeErrorType(AgentRuntimeResult result,
+                                    ProcurementLiveEvalRuntimeHarness.CaseExecution execution) {
+        if (result.state() != AgentRunState.FAILED) return "";
+        return execution.timelineStore().loadEvents(result.runId(), 10_000).stream()
+                .filter(event -> event.type() == AgentEventType.MODEL_FAILED)
+                .map(event -> event.payload().get("errorType"))
+                .filter(Objects::nonNull)
+                .map(Object::toString)
+                .filter(errorType -> !errorType.isBlank())
+                .reduce((previous, current) -> current).orElse("");
     }
 
     private List<String> requirementMismatchFields(ProcurementCaseState actual, JsonNode expected) {
