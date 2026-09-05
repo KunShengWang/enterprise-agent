@@ -1,17 +1,13 @@
 package com.agent.platform.procurement;
 
+import com.agent.platform.EnterpriseAgentApplication;
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.approval.ApprovalService;
 import com.agent.platform.config.AgentProperties;
-import com.agent.platform.config.ResilienceProperties;
-import com.agent.platform.guardrail.GuardrailAction;
 import com.agent.platform.guardrail.GuardrailDecision;
 import com.agent.platform.guardrail.GuardrailService;
 import com.agent.platform.guardrail.GuardrailStage;
 import com.agent.platform.llm.ConfiguredLlmCostCalculator;
-import com.agent.platform.llm.NativeChatModelClient;
-import com.agent.platform.llm.SpringAiLlmService;
-import com.agent.platform.memory.ConversationSummarizer;
 import com.agent.platform.memory.MemoryMessage;
 import com.agent.platform.memory.MemorySearchResult;
 import com.agent.platform.memory.MemoryService;
@@ -59,7 +55,6 @@ import com.agent.platform.runtime.ToolExecutionClaim;
 import com.agent.platform.runtime.ToolExecutionRecord;
 import com.agent.platform.runtime.ToolExecutionState;
 import com.agent.platform.runtime.ToolExecutionStore;
-import com.agent.platform.runtime.TokenEstimator;
 import com.agent.platform.runtime.ConservativeTokenEstimator;
 import com.agent.platform.runtime.ToolResultProjector;
 import com.agent.platform.skill.SkillRegistry;
@@ -72,16 +67,12 @@ import com.agent.platform.tool.ToolCatalogContributor;
 import com.agent.platform.tool.ToolHandler;
 import com.agent.platform.tool.ToolRegistry;
 import com.agent.platform.tool.ToolRunRecorder;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.deepseek.DeepSeekChatModel;
-import org.springframework.ai.deepseek.DeepSeekChatOptions;
-import org.springframework.ai.deepseek.api.DeepSeekApi;
-import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.model.deepseek.autoconfigure.DeepSeekChatProperties;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.mockito.Mockito;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
@@ -106,52 +97,40 @@ final class ProcurementLiveEvalRuntimeHarness implements AutoCloseable {
     private final ConfigurableApplicationContext modelContext;
     private final AgentModelGateway modelGateway;
     private final ProcurementDataProvider provider;
-    private final ProcurementDataProperties dataProperties;
     private final ObjectMapper mapper;
+    private final String modelName;
 
     private ProcurementLiveEvalRuntimeHarness(ConfigurableApplicationContext modelContext,
                                               AgentModelGateway modelGateway,
                                               ProcurementDataProvider provider,
-                                              ProcurementDataProperties dataProperties,
-                                              ObjectMapper mapper) {
+                                              ObjectMapper mapper,
+                                              String modelName) {
         this.modelContext = modelContext;
         this.modelGateway = modelGateway;
         this.provider = provider;
-        this.dataProperties = dataProperties;
         this.mapper = mapper;
+        this.modelName = modelName;
     }
 
-    static ProcurementLiveEvalRuntimeHarness start(String apiKey) {
-        ObjectMapper mapper = MAPPER;
-        String model = env("DEEPSEEK_CHAT_MODEL", "deepseek-chat");
-        DeepSeekChatProperties options = new DeepSeekChatProperties();
-        options.setModel(model);
-        options.setTemperature(0.2);
-        options.setMaxTokens(integerEnv("DEEPSEEK_MAX_TOKENS", 4096));
-        DeepSeekChatModel chatModel = DeepSeekChatModel.builder()
-                .deepSeekApi(DeepSeekApi.builder().apiKey(apiKey).build())
-                .options(options.toOptions())
-                .toolCallingManager(ToolCallingManager.builder().build())
-                .build();
-
-        ResilienceProperties resilience = new ResilienceProperties();
-        resilience.getLlm().setFallbackEnabled(false);
-        resilience.getLlm().setTimeoutMillis(longEnv("LLM_TIMEOUT_MILLIS", 120_000));
-        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
-        context.registerBean(ChatModel.class, () -> chatModel);
-        context.registerBean(ResilienceProperties.class, () -> resilience);
-        context.registerBean(SpringAiLlmService.class);
+    static ProcurementLiveEvalRuntimeHarness start() {
+        ConfigurableApplicationContext context = new SpringApplicationBuilder(EnterpriseAgentApplication.class)
+                .web(WebApplicationType.NONE)
+                .properties(
+                        "spring.main.lazy-initialization=true",
+                        "enterprise-agent.mock-mode=false",
+                        "enterprise-agent.model-tool-calling-mode=native",
+                        "enterprise-agent.workbench.web.enabled=false")
+                .run();
         try {
-            context.refresh();
-            SpringAiLlmService llmService = context.getBean(SpringAiLlmService.class);
-            AgentModelGateway gateway = new com.agent.platform.runtime.NativeToolCallingAgentModelGateway(
-                    llmService, mapper, options.toOptions());
+            AgentModelGateway gateway = context.getBean(AgentModelGateway.class);
             if (!(gateway instanceof com.agent.platform.runtime.NativeToolCallingAgentModelGateway)) {
-                throw new IllegalStateException("live eval requires NativeToolCallingAgentModelGateway");
+                throw new IllegalStateException("Spring AgentModelGateway is not NativeToolCallingAgentModelGateway");
             }
+            ObjectMapper mapper = context.getBean(ObjectMapper.class);
             ProcurementDataProperties dataProperties = new ProcurementDataProperties();
             ProcurementDataProvider provider = new AwsSyntheticProcurementProvider(mapper, dataProperties);
-            return new ProcurementLiveEvalRuntimeHarness(context, gateway, provider, dataProperties, mapper);
+            String modelName = context.getBean(DeepSeekChatProperties.class).getModel();
+            return new ProcurementLiveEvalRuntimeHarness(context, gateway, provider, mapper, modelName);
         }
         catch (RuntimeException failure) {
             context.close();
@@ -229,6 +208,10 @@ final class ProcurementLiveEvalRuntimeHarness implements AutoCloseable {
         modelContext.close();
     }
 
+    String modelName() {
+        return modelName;
+    }
+
     private static GuardrailService allowAllGuardrail() {
         return new GuardrailService() {
             @Override public GuardrailDecision checkInput(String question) { return GuardrailDecision.allow(GuardrailStage.INPUT, "live eval"); }
@@ -266,16 +249,6 @@ final class ProcurementLiveEvalRuntimeHarness implements AutoCloseable {
     private static String env(String name, String fallback) {
         String value = System.getenv(name);
         return value == null || value.isBlank() ? fallback : value.trim();
-    }
-
-    private static int integerEnv(String name, int fallback) {
-        try { return Integer.parseInt(env(name, String.valueOf(fallback))); }
-        catch (RuntimeException ignored) { return fallback; }
-    }
-
-    private static long longEnv(String name, long fallback) {
-        try { return Long.parseLong(env(name, String.valueOf(fallback))); }
-        catch (RuntimeException ignored) { return fallback; }
     }
 
     record CaseExecution(AgentRuntimeResult result,
