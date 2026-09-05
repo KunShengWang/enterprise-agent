@@ -20,6 +20,7 @@ public class ProcurementCasePatchMerger {
     private static final int MAX_PREFERENCES = 32;
     private static final int MAX_EXCLUDED_SUPPLIERS = 128;
     private static final int MAX_FIELDS_TO_CLEAR = 8;
+    private static final Set<String> SUPPORTED_PREFERENCES = Set.of("deliveryPriority", "pricePriority");
     private static final Set<String> CLEARABLE_FIELDS = Set.of(
             "productCategory", "productDescription", "quantity", "budget", "requiredDeliveryDays");
 
@@ -104,6 +105,13 @@ public class ProcurementCasePatchMerger {
         }
         for (String key : patch.hardConstraintsUpsert().keySet()) validateHardConstraint(key, patch.hardConstraintsUpsert().get(key));
         for (String key : patch.hardConstraintsRemove()) validateHardConstraintKey(key);
+        if (!SUPPORTED_PREFERENCES.containsAll(patch.preferencesUpsert().keySet())
+                || !SUPPORTED_PREFERENCES.containsAll(patch.preferencesRemove())) {
+            throw new IllegalArgumentException("unsupported preference key");
+        }
+        if (patch.preferencesUpsert().values().stream().anyMatch(value -> !"HIGH".equals(value))) {
+            throw new IllegalArgumentException("preference value must be HIGH");
+        }
     }
 
     private Map<String, String> mergeMap(Map<String, String> current,

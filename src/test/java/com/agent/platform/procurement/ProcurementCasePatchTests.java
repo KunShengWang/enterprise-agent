@@ -7,7 +7,10 @@ import com.agent.platform.procurement.model.ProcurementCase;
 import com.agent.platform.procurement.model.ProcurementCasePatch;
 import com.agent.platform.procurement.model.ProcurementCaseState;
 import com.agent.platform.procurement.persistence.ProcurementCaseStore;
+import com.agent.platform.procurement.tool.ProcurementToolCatalog;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -30,6 +33,85 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProcurementCasePatchTests {
 
     private final ProcurementCasePatchMerger merger = new ProcurementCasePatchMerger();
+
+    @Test
+    void canonicalConstraintAndPreferencesArePersistedInCase() {
+        ProcurementCaseService service = new ProcurementCaseService(new MemoryCaseStore(), merger);
+        ProcurementCase result = service.applyPatch("tenant", "conversation", "buyer", new ProcurementCasePatch(
+                null, null, null, null, null, null,
+                Map.of("gpuMemoryMinGb", "24"), Set.of(),
+                Map.of("deliveryPriority", "HIGH", "pricePriority", "HIGH"), Set.of(),
+                Set.of(), Set.of(), Set.of()), "canonical-patch");
+        assertEquals(Map.of("gpuMemoryMinGb", "24"), result.state().hardConstraints());
+        assertEquals(Map.of("deliveryPriority", "HIGH", "pricePriority", "HIGH"), result.state().preferences());
+    }
+
+    @Test
+    void unknownPreferenceKeysAndValuesAreRejectedWithoutWritingCase() {
+        MemoryCaseStore store = new MemoryCaseStore();
+        ProcurementCaseService service = new ProcurementCaseService(store, merger);
+        ProcurementCase initial = service.ensureCase("tenant", "conversation", "buyer");
+        for (Map<String, String> preferences : java.util.List.of(
+                Map.of("foo", "HIGH"), Map.of("deliveryPriority", "FAST"), Map.of("pricePriority", "LOW"))) {
+            assertThrows(IllegalArgumentException.class, () -> service.applyPatch(
+                    "tenant", "conversation", "buyer", new ProcurementCasePatch(
+                            null, null, null, null, null, null, Map.of(), Set.of(), preferences,
+                            Set.of(), Set.of(), Set.of(), Set.of()), "invalid-patch"));
+            assertEquals(initial, store.findByTenantUserAndConversationId("tenant", "buyer", "conversation").orElseThrow());
+        }
+    }
+
+    @Test
+    void unknownRemovalKeysAreRejected() {
+        assertThrows(IllegalArgumentException.class, () -> merger.validate(new ProcurementCasePatch(
+                null, null, null, null, null, null, Map.of(), Set.of(), Map.of(), Set.of("foo"),
+                Set.of(), Set.of(), Set.of())));
+        assertThrows(IllegalArgumentException.class, () -> merger.validate(new ProcurementCasePatch(
+                null, null, null, null, null, null, Map.of(), Set.of("iso9001"), Map.of(), Set.of(),
+                Set.of(), Set.of(), Set.of())));
+    }
+
+    @Test
+    void casePatchSchemaExposesExactCanonicalVocabulary() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode properties = mapper.readTree(new ProcurementToolCatalog().definitions().stream()
+                .filter(definition -> ProcurementToolCatalog.CASE_PATCH.equals(definition.name()))
+                .findFirst().orElseThrow().inputSchema()).path("properties");
+        JsonNode hard = properties.path("hardConstraintsUpsert");
+        assertEquals("object", hard.path("type").asText());
+        assertEquals(mapper.readTree("false"), hard.path("additionalProperties"));
+        assertEquals(Set.of("gpuMemoryMinGb"), hard.path("properties").properties().stream()
+                .map(Map.Entry::getKey).collect(java.util.stream.Collectors.toSet()));
+        JsonNode gpu = hard.path("properties").path("gpuMemoryMinGb");
+        assertEquals("string", gpu.path("type").asText());
+        assertEquals("^[1-9][0-9]*$", gpu.path("pattern").asText());
+        assertEquals(mapper.readTree("[\"gpuMemoryMinGb\"]"), properties.path("hardConstraintsRemove").path("items").path("enum"));
+        JsonNode preferences = properties.path("preferencesUpsert");
+        assertEquals("object", preferences.path("type").asText());
+        assertEquals(mapper.readTree("false"), preferences.path("additionalProperties"));
+        assertEquals(Set.of("deliveryPriority", "pricePriority"), preferences.path("properties").properties().stream()
+                .map(Map.Entry::getKey).collect(java.util.stream.Collectors.toSet()));
+        for (String key : Set.of("deliveryPriority", "pricePriority")) {
+            assertEquals("string", preferences.path("properties").path(key).path("type").asText());
+            assertEquals(mapper.readTree("[\"HIGH\"]"), preferences.path("properties").path(key).path("enum"));
+        }
+        assertEquals(mapper.readTree("[\"deliveryPriority\",\"pricePriority\"]"),
+                properties.path("preferencesRemove").path("items").path("enum"));
+    }
+
+    @Test
+    void coreVersionUpgradePreservesSpecialistAndRfqVersions() {
+        Map<String, String> expected = Map.of(
+                ProcurementToolCatalog.CASE_PATCH, "procurement-sourcing-v4",
+                ProcurementToolCatalog.SUPPLIER_SEARCH, "procurement-sourcing-v4",
+                ProcurementToolCatalog.RECOMMENDATION_FINALIZE, "procurement-sourcing-v4",
+                ProcurementToolCatalog.COMMERCIAL_ANALYSIS, "procurement-specialist-v1",
+                ProcurementToolCatalog.DELIVERY_ANALYSIS, "procurement-specialist-v1",
+                ProcurementToolCatalog.CREATE_RFQ, "procurement-rfq-v1");
+        assertEquals(expected, new ProcurementToolCatalog().definitions().stream()
+                .collect(java.util.stream.Collectors.toMap(definition -> definition.name(),
+                        definition -> (String) definition.metadata().get("contractVersion"))));
+    }
 
     @Test
     void partialPatchPreservesExistingFactsAndUpdatesOnlyUserIntent() {

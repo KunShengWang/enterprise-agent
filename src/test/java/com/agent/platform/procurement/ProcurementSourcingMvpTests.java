@@ -90,7 +90,7 @@ class ProcurementSourcingMvpTests {
         assertEquals(Map.of("readOnly", true, "sideEffect", false, "parallelSafe", true,
                         "executionKind", "SUB_AGENT", "singleUse", true),
                 specialistMetadata(definitions, ProcurementToolCatalog.DELIVERY_ANALYSIS));
-        assertEquals(Set.of("procurement-sourcing-v3"), definitions.stream()
+        assertEquals(Set.of("procurement-sourcing-v4"), definitions.stream()
                 .filter(definition -> !definition.name().equals(ProcurementToolCatalog.COMMERCIAL_ANALYSIS)
                         && !definition.name().equals(ProcurementToolCatalog.DELIVERY_ANALYSIS)
                         && !definition.name().equals(ProcurementToolCatalog.CREATE_RFQ))

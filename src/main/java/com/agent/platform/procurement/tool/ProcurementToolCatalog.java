@@ -25,14 +25,21 @@ public class ProcurementToolCatalog implements ToolCatalogContributor {
                         "提交本轮用户采购意图的结构化 Case Patch。Java 会校验、CAS 合并并重新计算 authoritative CaseState；不能携带身份、版本或派生字段。",
                         """
                                 {"type":"object","additionalProperties":false,"properties":{
-                                  "productCategory":{"type":"string","maxLength":100},
-                                  "productDescription":{"type":"string","minLength":1,"maxLength":500},
+                                  "productCategory":{"type":"string","maxLength":100,"description":"采购对象的上位业务或商品类别，不是完整自然语言需求；不要包含数量、预算、交期、约束和偏好。"},
+                                  "productDescription":{"type":"string","minLength":1,"maxLength":500,"description":"具体采购对象的简洁产品描述；不要重复已有独立字段表达的数量、预算、币种、交期、hard constraint 和 preference。"},
                                   "quantity":{"type":"integer","minimum":1,"maximum":100000},
                                   "budget":{"type":"number","minimum":0},
                                   "currency":{"type":"string","pattern":"^[A-Za-z]{3}$"},
                                   "requiredDeliveryDays":{"type":"integer","minimum":1,"maximum":3650},
-                                  "hardConstraintsUpsert":{"type":"object"},"hardConstraintsRemove":{"type":"array","items":{"type":"string"}},
-                                  "preferencesUpsert":{"type":"object"},"preferencesRemove":{"type":"array","items":{"type":"string"}},
+                                  "hardConstraintsUpsert":{"type":"object","additionalProperties":false,"properties":{
+                                    "gpuMemoryMinGb":{"type":"string","pattern":"^[1-9][0-9]*$","description":"GPU 显存最低 GB，使用正整数字符串；这是必须满足的 hard constraint。"}
+                                  }},
+                                  "hardConstraintsRemove":{"type":"array","items":{"type":"string","enum":["gpuMemoryMinGb"]}},
+                                  "preferencesUpsert":{"type":"object","additionalProperties":false,"properties":{
+                                    "deliveryPriority":{"type":"string","enum":["HIGH"],"description":"用户明确把交付速度作为优先权衡维度的软偏好。"},
+                                    "pricePriority":{"type":"string","enum":["HIGH"],"description":"用户明确把价格作为优先权衡维度的软偏好。"}
+                                  }},
+                                  "preferencesRemove":{"type":"array","items":{"type":"string","enum":["deliveryPriority","pricePriority"]}},
                                   "excludedSuppliersAdd":{"type":"array","items":{"type":"string"}},"excludedSuppliersRemove":{"type":"array","items":{"type":"string"}},
                                   "fieldsToClear":{"type":"array","items":{"type":"string","enum":["productCategory","productDescription","quantity","budget","requiredDeliveryDays"]}}
                                 }}
@@ -98,7 +105,7 @@ public class ProcurementToolCatalog implements ToolCatalogContributor {
     private Map<String, Object> metadata(String displayName, String action, List<String> keys,
                                          boolean readOnly, boolean sideEffect) {
         return metadata(displayName, action, keys, readOnly, sideEffect,
-                "procurement-sourcing-v3", false);
+                "procurement-sourcing-v4", false);
     }
 
     private Map<String, Object> metadata(String displayName, String action, List<String> keys,
