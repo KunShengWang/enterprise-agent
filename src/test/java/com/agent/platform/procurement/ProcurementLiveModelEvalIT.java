@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -54,14 +55,9 @@ class ProcurementLiveModelEvalIT {
             modelName = harness.modelName();
             for (BenchmarkCase benchmarkCase : cases) {
                 String conversationId = "procurement-live-" + benchmarkCase.caseId() + "-" + UUID.randomUUID();
-                try {
-                    ProcurementLiveEvalRuntimeHarness.CaseExecution execution = harness.run(
-                            conversationId, benchmarkCase.userMessage());
-                    reports.add(grade(benchmarkCase, execution, conversationId));
-                }
-                catch (RuntimeException failure) {
-                    reports.add(failedCase(benchmarkCase, conversationId, failure));
-                }
+                ProcurementLiveEvalRuntimeHarness.CaseExecution execution = harness.run(
+                        conversationId, benchmarkCase.userMessage());
+                reports.add(grade(benchmarkCase, execution, conversationId));
             }
         }
 
@@ -84,7 +80,6 @@ class ProcurementLiveModelEvalIT {
                              String conversationId) {
         AgentRuntimeResult result = execution.result();
         List<ToolExecutionRecord> records = execution.toolExecutionStore().all();
-        List<ToolExecutionRecord> patches = successful(records, ProcurementToolCatalog.CASE_PATCH);
         List<ToolExecutionRecord> searches = successful(records, ProcurementToolCatalog.SUPPLIER_SEARCH);
         List<ToolExecutionRecord> finalizers = successful(records, ProcurementToolCatalog.RECOMMENDATION_FINALIZE);
         ProcurementCase current = execution.caseStore().findByTenantUserAndConversationId(
@@ -126,17 +121,17 @@ class ProcurementLiveModelEvalIT {
 
     private List<String> requirementMismatchFields(ProcurementCaseState actual, JsonNode expected) {
         List<String> mismatches = new ArrayList<>();
-        if (!actual.productCategory().equals(expected.path("productCategory").asText())) mismatches.add("productCategory");
-        if (!actual.productDescription().equals(expected.path("productDescription").asText())) mismatches.add("productDescription");
-        if (!actual.quantity().equals(expected.path("quantity").asInt())) mismatches.add("quantity");
-        if (actual.budget().compareTo(expected.path("budget").decimalValue()) != 0) mismatches.add("budget");
-        if (!actual.currency().equals(expected.path("currency").asText())) mismatches.add("currency");
-        if (!actual.requiredDeliveryDays().equals(expected.path("requiredDeliveryDays").asInt())) {
+        if (!Objects.equals(actual.productCategory(), expected.path("productCategory").asText())) mismatches.add("productCategory");
+        if (!Objects.equals(actual.productDescription(), expected.path("productDescription").asText())) mismatches.add("productDescription");
+        if (!Objects.equals(actual.quantity(), expected.path("quantity").asInt())) mismatches.add("quantity");
+        if (actual.budget() == null || actual.budget().compareTo(expected.path("budget").decimalValue()) != 0) mismatches.add("budget");
+        if (!Objects.equals(actual.currency(), expected.path("currency").asText())) mismatches.add("currency");
+        if (!Objects.equals(actual.requiredDeliveryDays(), expected.path("requiredDeliveryDays").asInt())) {
             mismatches.add("requiredDeliveryDays");
         }
-        if (!actual.hardConstraints().equals(stringMap(expected.path("hardConstraints")))) mismatches.add("hardConstraints");
-        if (!actual.preferences().equals(stringMap(expected.path("preferences")))) mismatches.add("preferences");
-        if (!actual.excludedSuppliers().equals(strings(expected.path("excludedSuppliers")))) {
+        if (!Objects.equals(actual.hardConstraints(), stringMap(expected.path("hardConstraints")))) mismatches.add("hardConstraints");
+        if (!Objects.equals(actual.preferences(), stringMap(expected.path("preferences")))) mismatches.add("preferences");
+        if (!Objects.equals(actual.excludedSuppliers(), strings(expected.path("excludedSuppliers")))) {
             mismatches.add("excludedSuppliers");
         }
         return List.copyOf(mismatches);
@@ -144,6 +139,7 @@ class ProcurementLiveModelEvalIT {
 
     private boolean evidenceGrounded(JsonNode search, JsonNode finalize, JsonNode recommendation,
                                      Set<String> requiredTypes) {
+        if (search == null) return false;
         Set<String> searchEvidenceIds = evidenceIds(search.path("evidence"));
         Map<String, JsonNode> finalEvidence = evidenceById(finalize.path("evidence"));
         List<String> refs = values(recommendation.path("evidenceRefs"));
@@ -159,16 +155,6 @@ class ProcurementLiveModelEvalIT {
         Set<String> referencedTypes = new HashSet<>();
         refs.forEach(ref -> referencedTypes.add(finalEvidence.get(ref).path("evidenceType").asText()));
         return selectedSupplierOffer && referencedTypes.containsAll(requiredTypes);
-    }
-
-    private CaseReport failedCase(BenchmarkCase benchmarkCase, String conversationId, RuntimeException failure) {
-        return new CaseReport(benchmarkCase.caseId(), "", "FAILED", "INTERNAL_ERROR", false,
-                List.of("caseState"), false, false,
-                "RECOMMENDABLE".equals(benchmarkCase.expected().path("status").asText()), false,
-                strings(benchmarkCase.expected().path("eligibleSupplierIds")), Set.of(),
-                benchmarkCase.expected().path("preferredSupplierId").isNull() ? null
-                        : benchmarkCase.expected().path("preferredSupplierId").asText(), null,
-                0, 0, 0, 0, sanitize(failure));
     }
 
     private CaseUsage usage(ProcurementLiveEvalRuntimeHarness.CaseExecution execution) {
@@ -269,13 +255,6 @@ class ProcurementLiveModelEvalIT {
         Map<String, String> result = new LinkedHashMap<>();
         if (node != null && node.isObject()) node.properties().forEach(entry -> result.put(entry.getKey(), entry.getValue().asText()));
         return result;
-    }
-
-    private String sanitize(Throwable failure) {
-        String message = failure == null ? "" : failure.getMessage();
-        message = message == null ? "" : message.replaceAll("(?i)DEEPSEEK_API_KEY|authorization|bearer", "<redacted>");
-        if (message.length() > 240) message = message.substring(0, 240);
-        return failure == null ? "UNKNOWN" : failure.getClass().getSimpleName() + (message.isBlank() ? "" : ": " + message);
     }
 
     private record BenchmarkCase(String caseId, String userMessage, JsonNode expectedCase, JsonNode expected) { }

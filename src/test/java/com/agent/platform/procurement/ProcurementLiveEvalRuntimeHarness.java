@@ -37,7 +37,6 @@ import com.agent.platform.runtime.AgentContextManager;
 import com.agent.platform.runtime.AgentEvent;
 import com.agent.platform.runtime.AgentEventDraft;
 import com.agent.platform.runtime.AgentEventListener;
-import com.agent.platform.runtime.AgentEventType;
 import com.agent.platform.runtime.AgentExecutionProfile;
 import com.agent.platform.runtime.AgentMessage;
 import com.agent.platform.runtime.AgentMessageDraft;
@@ -88,7 +87,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
-/** Phase 6C 的测试专用真实模型运行时；不扫描生产应用上下文，不连接生产 Store。 */
+/** Phase 6C 使用生产 Spring Model Gateway 装配；Runtime Store / Procurement Store 使用 test-only in-memory 实现，不连接生产持久化 Store。 */
 final class ProcurementLiveEvalRuntimeHarness implements AutoCloseable {
     static final String TENANT_ID = "tenant-1";
     static final String USER_ID = "buyer-1";
@@ -200,7 +199,7 @@ final class ProcurementLiveEvalRuntimeHarness implements AutoCloseable {
         return new AgentExecutionProfile("procurement-benchmark-live-v1", base.systemPrompt(), Set.of(
                 ProcurementToolCatalog.CASE_PATCH, ProcurementToolCatalog.SUPPLIER_SEARCH,
                 ProcurementToolCatalog.COMMERCIAL_ANALYSIS, ProcurementToolCatalog.DELIVERY_ANALYSIS,
-                ProcurementToolCatalog.RECOMMENDATION_FINALIZE), base.limits(), false);
+                ProcurementToolCatalog.RECOMMENDATION_FINALIZE), base.limits(), base.longTermMemoryEnabled());
     }
 
     @Override
@@ -244,11 +243,6 @@ final class ProcurementLiveEvalRuntimeHarness implements AutoCloseable {
                 return new com.agent.platform.tool.ToolRunStats(0, 0, 0, 0, Map.of());
             }
         };
-    }
-
-    private static String env(String name, String fallback) {
-        String value = System.getenv(name);
-        return value == null || value.isBlank() ? fallback : value.trim();
     }
 
     record CaseExecution(AgentRuntimeResult result,
