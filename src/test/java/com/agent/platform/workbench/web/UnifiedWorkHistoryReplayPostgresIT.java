@@ -3,9 +3,6 @@ package com.agent.platform.workbench.web;
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.config.AgentStorageProperties;
 import com.agent.platform.config.WorkbenchStreamProperties;
-import com.agent.platform.ordercare.incident.application.IncidentTraceProjector;
-import com.agent.platform.ordercare.incident.persistence.IncidentStore;
-import com.agent.platform.ordercare.incident.recovery.persistence.IncidentRecoveryPlanStore;
 import com.agent.platform.runtime.AgentEventDraft;
 import com.agent.platform.runtime.AgentEventType;
 import com.agent.platform.runtime.AgentRunPhase;
@@ -132,8 +129,7 @@ class UnifiedWorkHistoryReplayPostgresIT {
 
         RuntimeTraceProjector runtimeTraces = new RuntimeTraceProjector(restartedRunStore, restartedTimeline);
         UnifiedWorkExecutionTreeService treeService = new UnifiedWorkExecutionTreeService(
-                restartedWorkbench, mock(IncidentStore.class), mock(IncidentTraceProjector.class),
-                mock(IncidentRecoveryPlanStore.class), runtimeTraces);
+                restartedWorkbench, runtimeTraces, List.of());
         var tree = treeService.project(principal, workItemId);
         assertEquals("SINGLE_AGENT", tree.treeType());
         assertEquals(runId, tree.agents().get(0).runId());

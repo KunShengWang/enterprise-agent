@@ -1,5 +1,6 @@
 package com.agent.platform.procurement.config;
 
+import com.agent.platform.config.AgentScenarioProfileFactory;
 import com.agent.platform.procurement.tool.ProcurementToolCatalog;
 import com.agent.platform.runtime.AgentExecutionProfile;
 import com.agent.platform.runtime.AgentRunLimits;
@@ -8,9 +9,13 @@ import org.springframework.stereotype.Component;
 import java.util.Set;
 
 @Component
-public class ProcurementSourcingExecutionProfileFactory {
+public class ProcurementSourcingExecutionProfileFactory implements AgentScenarioProfileFactory {
     public static final String PROFILE_NAME = "procurement-sourcing-rfq-v1";
 
+    @Override
+    public String scenarioId() { return PROFILE_NAME; }
+
+    @Override
     public AgentExecutionProfile createProfile() {
         return new AgentExecutionProfile(PROFILE_NAME, """
                 你是企业采购寻源与供应商决策 Agent。采购调查、Search、Specialist 和 Recommendation 是只读分析；procurement_case_patch 只写入本 Agent 的内部 Case 状态。procurement_create_rfq 是唯一外部 side effect，且一定经过人工审批。

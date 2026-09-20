@@ -20,7 +20,7 @@ class WorkbenchBudgetPolicyTests {
     void defaultHierarchyIsValidAndEveryTargetFitsTheWorkItem() {
         WorkbenchBudgetProperties properties = new WorkbenchBudgetProperties();
         properties.validateHierarchy();
-        for (ExecutionTargetId target : ExecutionTargetId.values()) {
+        for (ExecutionTargetId target : new ExecutionTargetId[]{ExecutionTargetId.GENERAL_AGENT, ExecutionTargetId.PROCUREMENT_SOURCING}) {
             assertEquals(true, properties.targetLimit(target).fitsWithin(properties.workItemLimit()));
         }
     }
@@ -28,8 +28,18 @@ class WorkbenchBudgetPolicyTests {
     @Test
     void invalidChildPolicyFailsClosed() {
         WorkbenchBudgetProperties properties = new WorkbenchBudgetProperties();
-        properties.getIncidentAggregate().setMaxTokens(properties.getIncident().getMaxTokens() + 1);
+        properties.getProcurementSourcing().setMaxTokens(properties.getWorkItem().getMaxTokens() + 1);
         assertThrows(IllegalStateException.class, properties::validateHierarchy);
+    }
+
+    @Test
+    void historicalTargetsHaveNoCurrentBudgetPolicy() {
+        var properties = new WorkbenchBudgetProperties();
+        for (var target : new ExecutionTargetId[]{ExecutionTargetId.ORDERCARE_CASE,
+                ExecutionTargetId.INCIDENT_INVESTIGATION, ExecutionTargetId.INCIDENT_RECOVERY_PLAN}) {
+            assertEquals(target, ExecutionTargetId.valueOf(target.name()));
+            assertThrows(com.agent.platform.common.RetiredBusinessException.class, () -> properties.targetLimit(target));
+        }
     }
 
     @Test

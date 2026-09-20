@@ -95,7 +95,7 @@ defineExpose({ focus: () => input.value?.focus() })
         :value="modelValue"
         rows="2"
         aria-label="任务目标或补充要求"
-        :placeholder="waitingForInput ? '补充大致时间、订单号或明确的业务异常现象…' : '描述目标，或为当前任务补充要求…'"
+        :placeholder="waitingForInput ? '补充采购需求、预算或交付条件…' : '描述采购需求，或提出通用问题…'"
         @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
         @keydown.ctrl.enter.prevent="emit('submit')"
       />
@@ -117,7 +117,7 @@ defineExpose({ focus: () => input.value?.focus() })
     <p>
       <span v-if="error" class="composer-error">{{ error }}</span>
       <span v-else-if="attachmentError" class="composer-error">{{ attachmentError }}</span>
-      <span v-else-if="waitingForInput">提交后将继续当前任务，不会新建事故调查。</span>
+      <span v-else-if="waitingForInput">提交后将继续当前任务。</span>
       <span v-else>Ctrl + Enter 发送 · 支持最多 3 个、每个 32 KB 的文本或代码附件</span>
     </p>
   </footer>

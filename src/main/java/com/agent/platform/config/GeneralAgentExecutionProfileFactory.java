@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 import java.util.Set;
 
 @Component
-public class GeneralAgentExecutionProfileFactory {
+public class GeneralAgentExecutionProfileFactory implements AgentScenarioProfileFactory {
 
     public static final String PROFILE_NAME = "general-agent-v1";
 
@@ -18,6 +18,10 @@ public class GeneralAgentExecutionProfileFactory {
         this.properties = properties;
     }
 
+    @Override
+    public String scenarioId() { return PROFILE_NAME; }
+
+    @Override
     public AgentExecutionProfile createProfile() {
         return new AgentExecutionProfile(
                 PROFILE_NAME,

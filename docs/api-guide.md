@@ -1,6 +1,6 @@
 # API 使用指南
 
-> 实现基线：`b6207a4`。统一产品入口和直接 Runtime 调试入口并存，但语义不同。
+> 当前采购版接口说明。统一产品入口与受限 Runtime 调试入口并存；历史报告不代表当前路由注册。
 
 所有普通业务响应使用 `ApiResponse<T>` 包装。当前 Workbench 身份来自服务端 `WorkbenchPrincipalProvider`；本地实现是演示身份，不是生产认证。
 
@@ -14,7 +14,7 @@ Idempotency-Key: <clientInputId>
 Content-Type: application/json
 
 {
-  "content": "介绍 Spring Boot IoC",
+  "content": "为研发团队采购 5 台工作站，预算 10 万元，交期两周，请比较候选",
   "metadata": {}
 }
 ```
@@ -58,11 +58,11 @@ GET /api/agent/work-items/{workItemId}/events/stream?afterSequence=-1&afterRunSe
 Accept: text/event-stream
 ```
 
-复合 cursor 同时跟踪 WorkEvent 和 Primary Run Runtime Event。只允许 Primary Run 的 `MODEL_DELTA` 进入主回答，Child Run delta 由执行树/Inspector 隔离。客户端需要按 eventId 去重并在断线后使用最后 cursor 重连。
+复合 cursor 同时跟踪 WorkEvent 和 Primary Run Runtime Event。只允许 Primary Run 的 `MODEL_DELTA` 进入主回答，Child Run delta 不进入主回答；这不表示当前已实现采购 Child Run 执行树。客户端需要按 eventId 去重并在断线后使用最后 cursor 重连。
 
 ### 路由 Preview 确认
 
-危险目标（当前包括 Incident Investigation）使用 Preview → Explicit Confirmation：
+通用 RoutePreview 确认机制继续保留。只有当前有效目标及有效 Preview 才能确认；旧 Incident/Scope Preview 一律退役拒绝。RFQ 使用独立 HITL 审批，不能由路由确认代替：
 
 ```http
 POST /api/agent/work-items/{workItemId}/confirm-route
@@ -127,7 +127,7 @@ Content-Type: application/json
   "userId": "user-001",
   "question": "介绍 Tool Calling",
   "metadata": {},
-  "scenarioId": ""
+  "scenarioId": "general-agent-v1"
 }
 ```
 
@@ -166,41 +166,15 @@ Content-Type: application/json
 {
   "approved": true,
   "reviewer": "local-reviewer",
-  "reason": "已核对预演版本和影响范围"
+  "reason": "已核对本次 RFQ 的供应商、数量和要求"
 }
 ```
 
-审批等待不阻塞原线程。决定后使用 WorkItem resume 或直接 Runtime resume（取决于入口）继续原执行。Approval 过期、Proposal 漂移或版本不一致时必须重新 Preview/Approval。
+审批等待不阻塞原线程。决定后使用 WorkItem resume 或直接 Runtime resume（取决于入口）继续原执行。RFQ 审批过期、Case 版本变化或 Finalize 证据失效时应重新校验并申请审批；不能将路由 Preview 当作 RFQ 授权。
 
-## 4. Incident 高级接口
+## 4. 退役业务
 
-统一产品入口优先使用 Workbench。以下接口用于测试和高级观测：
-
-```http
-POST /api/incidents/investigate
-GET  /api/incidents/{incidentId}
-GET  /api/incidents/{incidentId}/events?afterSequence=-1&limit=500
-GET  /api/incidents/{incidentId}/events/stream?afterSequence=-1
-GET  /api/incidents/{incidentId}/trace
-```
-
-Recovery Plan：
-
-```http
-POST /api/incidents/{incidentId}/recovery-plans
-GET  /api/incidents/{incidentId}/recovery-plans
-GET  /api/incidents/{incidentId}/recovery-plans/{planId}
-POST /api/incidents/{incidentId}/recovery-plans/{planId}/items/{itemId}/decision
-```
-
-Phase 3 运维：
-
-```http
-GET  /api/incidents/phase3/status
-POST /api/incidents/phase3/scan
-```
-
-这些 Controller 不是自动暴露给模型的 Capability。模型只能调用 Registry 和 Profile 明确允许的 Tool。
+旧 Incident Controller 已删除，/api/incidents 不再是可用业务 API。旧历史从通用 WorkItem/WorkEvent/Run/Trace/审批读取；旧目标、工具、Preview 与恢复明确拒绝，不转换为采购或 RFQ。
 
 ## 5. RAG、Memory、Capability
 
@@ -233,7 +207,7 @@ GET /api/agent/skills
 GET /api/agent/skills/{name}
 ```
 
-项目没有“任意工具直接执行”HTTP API；副作用必须经过 Runtime 或确定性 Recovery Plan 协调器。
+项目没有“任意工具直接执行”HTTP API；副作用必须经过受限 Runtime 与审批边界；RFQ 当前使用模拟网关，不创建真实采购订单。
 
 ## 6. Trace、Eval 与 AgentOps
 
@@ -247,7 +221,7 @@ GET /api/agent/evals/reports
 GET /api/agent/evals/events
 ```
 
-Trace/Eval/Presentation 是权威 Runtime/Work/Incident 事实的投影，不应维护另一套状态机。
+Trace/Eval/Presentation 是权威 Runtime/Work 事实的投影，不应维护另一套状态机。
 
 ## 7. 安全边界
 

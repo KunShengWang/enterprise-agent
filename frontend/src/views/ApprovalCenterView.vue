@@ -6,6 +6,7 @@ import JsonViewer from '../components/JsonViewer.vue'
 import PageIntro from '../components/PageIntro.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import type { ApprovalRecord } from '../types/agent'
+import { isRetiredTool, retiredMessage } from '../utils/retiredBusiness'
 
 const approvals = ref<ApprovalRecord[]>([])
 const router = useRouter()
@@ -15,7 +16,7 @@ const loading = ref(false)
 const error = ref('')
 
 const filtered = computed(() => approvals.value.filter((item) => filter.value === 'ALL' || item.status === filter.value))
-const pendingCount = computed(() => approvals.value.filter((item) => item.status === 'REQUESTED').length)
+const pendingCount = computed(() => approvals.value.filter((item) => item.status === 'REQUESTED' && !isRetiredTool(item.toolCallRequest?.toolName)).length)
 
 function dateTime(value: string | null) {
   return value ? new Intl.DateTimeFormat('zh-CN', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date(value)) : '—'
@@ -103,7 +104,11 @@ onMounted(load)
           <div class="policy-reason"><span>为什么需要审批</span><p>{{ selected.reason }}</p></div>
           <JsonViewer :value="selected.toolCallRequest" :collapsed="false" label="ToolCall 参数" />
 
-          <div v-if="selected.status === 'REQUESTED'" class="decision-form">
+          <div v-if="isRetiredTool(selected.toolCallRequest?.toolName)" class="decision-result">
+            <p role="status">{{ retiredMessage }}</p>
+            <button class="secondary-button" type="button" @click="openInWorkbench">查看已保存的任务历史</button>
+          </div>
+          <div v-else-if="selected.status === 'REQUESTED'" class="decision-form">
             <p>这条 Run 尚未执行高风险工具。进入统一工作台后，可以结合任务上下文和执行时间线继续处理。</p>
             <div class="action-row">
               <button class="primary-button" type="button" @click="openInWorkbench">进入统一工作台处理</button>

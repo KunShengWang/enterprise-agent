@@ -1,5 +1,9 @@
 package com.agent.platform.runtime;
 
+import com.agent.platform.common.RetiredBusinessException;
+
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.approval.ApprovalRecord;
 import com.agent.platform.approval.ApprovalService;
@@ -140,6 +144,10 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         AgentExecutionProfile profile = executionProfile == null
                 ? defaultExecutionProfile()
                 : executionProfile;
+        BusinessRetirementPolicy.requireScenario(originalRequest.scenarioId());
+        BusinessRetirementPolicy.requireTarget(String.valueOf(originalRequest.metadata().get("executionTarget")));
+        BusinessRetirementPolicy.requireScenario(profile.name());
+        if (BusinessRetirementPolicy.retiredInput(originalRequest.question())) throw new RetiredBusinessException();
         // 监听器，用于把事件推送到前端
         AgentEventListener effectiveListener = listener == null ? AgentEventListener.NOOP : listener;
         // 多轮对话的上下文标识——同一会话所有消息共享
@@ -243,6 +251,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         AgentEventListener effectiveListener = listener == null ? AgentEventListener.NOOP : listener;
         AgentRunRecord stored = runStore.find(runId)
                 .orElseThrow(() -> new IllegalArgumentException("agent run not found: " + runId));
+        requireActiveBusiness(stored);
         // 接管崩溃后遗留的 stale Run
         if (stored.state() == AgentRunState.RUNNING) {
             return recoverRunning(stored, effectiveListener);
@@ -429,9 +438,11 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         AgentEventListener effectiveListener = listener == null ? AgentEventListener.NOOP : listener;
         AgentRunRecord stored = runStore.find(runId.trim())
                 .orElseThrow(() -> new IllegalArgumentException("agent run not found: " + runId));
+        requireActiveBusiness(stored);
         if (stored.state() != AgentRunState.WAITING_INPUT) {
             return resultFromStored(stored, inferStoredStopReason(stored));
         }
+        if (BusinessRetirementPolicy.retiredInput(input.question())) throw new RetiredBusinessException();
         validateFollowUpBudget(stored, input);
         GuardrailDecision inputDecision = followUpGuardrailDecision(stored, input)
                 .orElseGet(() -> guardrailService.checkInput(input.question()));
@@ -537,6 +548,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         }
         AgentRunRecord stored = runStore.find(runId.trim())
                 .orElseThrow(() -> new IllegalArgumentException("agent run not found: " + runId));
+        requireActiveBusiness(stored);
         if (stored.state() != AgentRunState.WAITING_INPUT) {
             return resultFromStored(stored, inferStoredStopReason(stored));
         }
@@ -2093,6 +2105,17 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
     /**
      * 默认执行配置文件，包括 agent 能使用的工具、系统提示词、agent 运行时的限制条件、启用长期内存存储
      */
+    private void requireActiveBusiness(AgentRunRecord stored) {
+        if (stored.request() != null) {
+            BusinessRetirementPolicy.requireScenario(stored.request().scenarioId());
+            BusinessRetirementPolicy.requireTarget(String.valueOf(stored.request().metadata().get("executionTarget")));
+            if (BusinessRetirementPolicy.retiredInput(stored.request().question())) throw new RetiredBusinessException();
+        }
+        if (stored.executionProfile() != null) BusinessRetirementPolicy.requireScenario(stored.executionProfile().name());
+        if (stored.pendingToolCall() != null) BusinessRetirementPolicy.requireTool(stored.pendingToolCall().toolName());
+        stored.usedTools().forEach(BusinessRetirementPolicy::requireTool);
+    }
+
     private AgentExecutionProfile defaultExecutionProfile() {
         // 列出 agent 的能力，也就是 agent 能访问的工具，包括本地定义的工具和 mcp 提供的工具，收集成工具名称集合
         Set<String> capabilities = capabilityRegistry.listCapabilities().stream()

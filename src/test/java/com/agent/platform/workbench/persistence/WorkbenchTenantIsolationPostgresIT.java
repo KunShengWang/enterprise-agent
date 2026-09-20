@@ -158,6 +158,22 @@ class WorkbenchTenantIsolationPostgresIT {
                 .orElseThrow().focusedWorkItemId());
     }
 
+    @Test
+    void retiredOwnedPreviewAndDispatchCannotMutateHistoricalRows() throws Exception {
+        JdbcWorkbenchStore store = workbench();
+        JdbcDispatchStore dispatch = dispatch();
+        AuthenticatedPrincipal owner = principal("tenant-s0-retired-" + prefix, "alice");
+        WorkItemCreationResult old = submit(store, owner, "old");
+        PreviewFixture preview = seedIncidentPreview(old.workItem());
+        Snapshot before = snapshot(old.workItem().workItemId());
+        assertThrows(com.agent.platform.common.RetiredBusinessException.class, () -> dispatch.confirmPreview(
+                owner, old.workItem().workItemId(), preview.previewId(), 1, DIGEST_A, DIGEST_B));
+        assertThrows(com.agent.platform.common.RetiredBusinessException.class, () -> dispatch.claimDispatch(
+                owner, old.workItem().workItemId(), Instant.now(), 3));
+        assertEquals(before, snapshot(old.workItem().workItemId()));
+        assertEquals(RoutePreviewStatus.ACTIVE, dispatch.findPreview(owner, old.workItem().workItemId()).orElseThrow().status());
+    }
+
     private WorkItemCreationResult submit(JdbcWorkbenchStore store,
                                           AuthenticatedPrincipal principal,
                                           String suffix) {

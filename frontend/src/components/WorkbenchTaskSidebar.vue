@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { executionTargetLabel } from '../utils/retiredBusiness'
 import { RouterLink } from 'vue-router'
 import type { ConversationHistoryItem, WorkItem } from '../types/workbench'
 
@@ -18,10 +19,7 @@ function stateTone(item: WorkItem) {
   return 'active'
 }
 
-function targetLabel(target: string) {
-  return ({ GENERAL_AGENT: 'General', ORDERCARE_CASE: 'OrderCare', INCIDENT_INVESTIGATION: 'Incident',
-    INCIDENT_RECOVERY_PLAN: 'Planner', PROCUREMENT_SOURCING: 'Procurement Sourcing' } as Record<string, string>)[target] ?? target ?? 'Routing'
-}
+function targetLabel(target: string) { return executionTargetLabel(target) }
 
 function relativeTime(value: string) {
   const seconds = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 1000))
@@ -46,7 +44,6 @@ function relativeTime(value: string) {
     </section>
     <nav class="task-product-nav" aria-label="产品导航">
       <RouterLink to="/approvals"><span>✓</span>审批中心</RouterLink>
-      <RouterLink to="/incident-command"><span>△</span>事故调查</RouterLink>
       <RouterLink to="/capabilities"><span>⌘</span>能力地图</RouterLink>
       <RouterLink to="/knowledge"><span>◇</span>知识与记忆</RouterLink>
       <RouterLink to="/observability"><span>⌁</span>可观测性</RouterLink>

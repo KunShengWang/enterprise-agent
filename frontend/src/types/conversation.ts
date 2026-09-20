@@ -12,7 +12,7 @@ export type ConversationItemType =
   | 'TOOL_CALL'
   | 'TOOL_RESULT'
   | 'AGENT_DELEGATION'
-  | 'INCIDENT_PREVIEW'
+  | 'ROUTE_PREVIEW'
   | 'APPROVAL_REQUEST'
   | 'FINAL_ANSWER'
   | 'ERROR'
@@ -40,6 +40,7 @@ export interface ConversationAttachment {
 }
 
 export interface ConversationItem {
+  readOnly?: boolean
   id: string
   type: ConversationItemType
   createdAt: string

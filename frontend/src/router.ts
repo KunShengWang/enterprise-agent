@@ -5,18 +5,18 @@ import CapabilitiesView from './views/CapabilitiesView.vue'
 import KnowledgeMemoryView from './views/KnowledgeMemoryView.vue'
 import ObservabilityView from './views/ObservabilityView.vue'
 import ApiLabView from './views/ApiLabView.vue'
-import IncidentCommandView from './views/IncidentCommandView.vue'
+import RetiredBusinessView from './views/RetiredBusinessView.vue'
 import UnifiedWorkbench from './views/UnifiedWorkbench.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    { path: '/', name: 'workbench', component: UnifiedWorkbench, meta: { title: '统一 Agent 工作台' } },
+    { path: '/', name: 'workbench', component: UnifiedWorkbench, meta: { title: '采购 Agent 工作台' } },
     { path: '/workbench', redirect: to => ({ name: 'workbench', query: to.query }) },
     { path: '/runtime', name: 'runtime', redirect: to => ({ name: 'workbench', query: to.query }) },
     { path: '/runs', name: 'runs', component: RunHistoryView, meta: { title: 'Run 历史与回放' } },
     { path: '/approvals', name: 'approvals', component: ApprovalCenterView, meta: { title: '人工审批中心' } },
-    { path: '/incident-command', name: 'incident-command', component: IncidentCommandView, meta: { title: '事故调查指挥台' } },
+    { path: '/incident-command', name: 'incident-command', component: RetiredBusinessView, meta: { title: '业务已退役' } },
     { path: '/capabilities', name: 'capabilities', component: CapabilitiesView, meta: { title: 'Tool 与 Skill 能力地图' } },
     { path: '/knowledge', name: 'knowledge', component: KnowledgeMemoryView, meta: { title: 'RAG 与 Memory 实验室' } },
     { path: '/observability', name: 'observability', component: ObservabilityView, meta: { title: 'Trace · Eval · AgentOps' } },

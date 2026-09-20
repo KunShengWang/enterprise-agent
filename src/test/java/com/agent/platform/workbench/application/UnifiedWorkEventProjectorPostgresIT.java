@@ -2,18 +2,6 @@ package com.agent.platform.workbench.application;
 
 import com.agent.platform.config.AgentStorageProperties;
 import com.agent.platform.config.WorkbenchProjectionProperties;
-import com.agent.platform.ordercare.incident.model.IncidentRecord;
-import com.agent.platform.ordercare.incident.model.IncidentSnapshot;
-import com.agent.platform.ordercare.incident.model.IncidentStatus;
-import com.agent.platform.ordercare.incident.model.TaskEventActorType;
-import com.agent.platform.ordercare.incident.model.TaskEventCategory;
-import com.agent.platform.ordercare.incident.model.TaskEventRecord;
-import com.agent.platform.ordercare.incident.model.TaskEventType;
-import com.agent.platform.ordercare.incident.persistence.JdbcIncidentStore;
-import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlanRecord;
-import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanOutcome;
-import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStatus;
-import com.agent.platform.ordercare.incident.recovery.persistence.JdbcIncidentRecoveryPlanStore;
 import com.agent.platform.runtime.AgentEventDraft;
 import com.agent.platform.runtime.AgentEventType;
 import com.agent.platform.runtime.AgentRunPhase;
@@ -88,12 +76,6 @@ class UnifiedWorkEventProjectorPostgresIT {
             execute(connection, "DELETE FROM agent_conversation_work_state WHERE tenant_id = ?", principal.tenantId());
             execute(connection, "DELETE FROM agent_work_item WHERE tenant_id = ?", principal.tenantId());
             execute(connection, "DELETE FROM agent_work_input WHERE tenant_id = ?", principal.tenantId());
-            execute(connection, "DELETE FROM agent_incident_recovery_plan_event WHERE incident_id = ?", incidentId);
-            execute(connection, "DELETE FROM agent_incident_recovery_plan WHERE incident_id = ?", incidentId);
-            execute(connection, "DELETE FROM agent_task_event WHERE incident_id = ?", incidentId);
-            execute(connection, "DELETE FROM agent_evidence WHERE incident_id = ?", incidentId);
-            execute(connection, "DELETE FROM agent_task WHERE incident_id = ?", incidentId);
-            execute(connection, "DELETE FROM agent_incident WHERE incident_id = ?", incidentId);
             execute(connection, "DELETE FROM agent_run_state WHERE run_id = ?", runId);
             execute(connection, "DELETE FROM agent_session WHERE session_id = ?", sessionId);
             connection.commit();
@@ -101,7 +83,72 @@ class UnifiedWorkEventProjectorPostgresIT {
     }
 
     @Test
-    void projectsActualRuntimeIncidentAndRecoverySourcesAndReplayRemainsIdempotent() {
+    void missingLegacyContributorExcludesOldCursorsBeforeLimitAndDoesNotTouchTheirLeases() throws Exception {
+        JdbcWorkbenchStore workbench = new JdbcWorkbenchStore(properties, objectMapper);
+        var input = new WorkInputService(new WorkItemService(workbench));
+        var runWork = input.submit(principal, SubmitWorkInputCommand.direct(
+                "filtered-run-" + suffix, "filtered-run-" + suffix, "run goal", 0));
+        var oldWork = input.submit(principal, SubmitWorkInputCommand.direct(
+                "filtered-old-" + suffix, "filtered-old-" + suffix, "historical goal", 0));
+        var oldRunWork = input.submit(principal, SubmitWorkInputCommand.direct(
+                "filtered-old-run-" + suffix, "filtered-old-run-" + suffix, "historical run", 0));
+        String oldRunWorkId = oldRunWork.workItem().workItemId();
+        insertLink(oldRunWorkId, WorkLinkType.RUN, "old-" + runId, "filtered-old-run");
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(
+                "UPDATE agent_work_item SET active_execution_target='ORDERCARE_CASE' WHERE work_item_id=?")) {
+            statement.setString(1, oldRunWorkId);
+            statement.executeUpdate();
+        }
+        String runWorkId = runWork.workItem().workItemId();
+        String oldWorkId = oldWork.workItem().workItemId();
+        insertLink(runWorkId, WorkLinkType.RUN, runId, "filtered-run");
+        insertLink(oldWorkId, WorkLinkType.INCIDENT, incidentId, "filtered-incident");
+        insertLink(oldWorkId, WorkLinkType.RECOVERY_PLAN, planId, "filtered-plan");
+        var run = new WorkProjectionSource(runWorkId, "AGENT_RUN", runId);
+        var oldRun = new WorkProjectionSource(oldRunWorkId, "AGENT_RUN", "old-" + runId);
+        var sources = List.of(run, oldRun, new WorkProjectionSource(oldWorkId, "INCIDENT", incidentId),
+                new WorkProjectionSource(oldWorkId, "RECOVERY_PLAN", planId));
+        seedProjectionCursors(sources);
+        handoffProjectionLease(sources, "expired-owner", 5, Instant.EPOCH);
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(
+                "UPDATE agent_work_projection_cursor SET updated_at=? WHERE work_item_id=?")) {
+            statement.setTimestamp(1, java.sql.Timestamp.from(Instant.EPOCH.plusSeconds(2)));
+            statement.setString(2, runWorkId);
+            statement.executeUpdate();
+        }
+        var claims = workbench.claimProjectionSources("run-only", Instant.now().plusSeconds(30),
+                1, Set.of("AGENT_RUN", "INCIDENT", "RECOVERY_PLAN"));
+        assertEquals(1, claims.size());
+        assertEquals(run, claims.get(0).source());
+        assertEquals(6, claims.get(0).fencingToken());
+        workbench.releaseProjectionClaim(new WorkProjectionClaim(oldRun, "expired-owner", 5, Instant.EPOCH));
+        assertThrows(com.agent.platform.workbench.persistence.WorkbenchAccessDeniedException.class,
+                () -> workbench.advanceProjectionCursor(oldRunWorkId, "AGENT_RUN", "old-" + runId, 10));
+        assertThrows(com.agent.platform.workbench.persistence.WorkbenchAccessDeniedException.class,
+                () -> workbench.appendProjectedEvent(oldRunWorkId, new ProjectedWorkEventDraft(
+                        "AGENT_RUN", "old-" + runId, "new-event", 10, WorkEventType.RUN_EVENT_PROJECTED,
+                        "RUN_COMPLETED", "must not write", Map.of(), oldRunWorkId, "", Instant.now())));
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(
+                "SELECT lease_owner, lease_until, fencing_token, last_source_sequence FROM agent_work_projection_cursor WHERE work_item_id=? OR work_item_id=?")) {
+            statement.setString(1, oldWorkId);
+            statement.setString(2, oldRunWorkId);
+            try (var rows = statement.executeQuery()) {
+                int count = 0;
+                while (rows.next()) {
+                    count++;
+                    assertEquals("expired-owner", rows.getString("lease_owner"));
+                    assertEquals(Instant.EPOCH, rows.getTimestamp("lease_until").toInstant());
+                    assertEquals(5, rows.getLong("fencing_token"));
+                    assertEquals(-1, rows.getLong("last_source_sequence"));
+                }
+                assertEquals(3, count);
+            }
+        }
+        workbench.releaseProjectionClaim(claims.get(0));
+    }
+
+    @Test
+    void projectsRuntimeOnlyWhileOldSourcesRemainUntouchedAndReplayRemainsIdempotent() {
         JdbcWorkbenchStore workbench = new JdbcWorkbenchStore(properties, objectMapper);
         WorkInputService inputService = new WorkInputService(new WorkItemService(workbench));
         var runWork = inputService.submit(principal, SubmitWorkInputCommand.direct(
@@ -132,20 +179,8 @@ class UnifiedWorkEventProjectorPostgresIT {
         timeline.appendEvent(sessionId, principal.principalId(), runId,
                 new AgentEventDraft(AgentEventType.RUN_COMPLETED, "run completed", Map.of()));
 
-        JdbcIncidentStore incidents = new JdbcIncidentStore(properties, objectMapper);
-        incidents.create(incident());
-        incidents.appendEvent(new TaskEventRecord(
-                "incident-event-" + suffix, incidentId, null, null, 0,
-                TaskEventType.INCIDENT_STATE_CHANGED, TaskEventCategory.LIFECYCLE,
-                TaskEventActorType.SYSTEM, "incident-store", null, null, 0,
-                incidentId, null, "incident-event-key-" + suffix,
-                Map.of("summary", "incident assessed"), Instant.now()));
-
-        JdbcIncidentRecoveryPlanStore plans = new JdbcIncidentRecoveryPlanStore(properties, objectMapper);
-        plans.create(new IncidentRecoveryPlanRecord(
-                planId, incidentId, "request-" + suffix, "", "digest-" + suffix,
-                RecoveryPlanStatus.CREATED, RecoveryPlanOutcome.NOT_STARTED, null,
-                List.of(), List.of(), 0, Instant.now(), Instant.now()));
+        seedMaterializedHistory(incidentWork.workItem().workItemId(), "INCIDENT", incidentId);
+        seedMaterializedHistory(planWork.workItem().workItemId(), "RECOVERY_PLAN", planId);
 
         List<WorkProjectionSource> sources = List.of(
                 new WorkProjectionSource(runWork.workItem().workItemId(), "AGENT_RUN", runId),
@@ -181,14 +216,14 @@ class UnifiedWorkEventProjectorPostgresIT {
         var projector = new UnifiedWorkEventProjector(
                 new FixedSourceProjectionStore(workbench, sources), timeline,
                 runs,
-                incidents, incidents, plans, projectionProperties);
+                List.of(), projectionProperties);
 
         var first = projector.projectOnce();
         var completedRunWork = workbench.findWorkItem(principal, runWork.workItem().workItemId()).orElseThrow();
         long completedVersion = completedRunWork.version();
         for (int attempt = 0; attempt < 10; attempt++) projector.projectOnce();
 
-        assertEquals(4, first.projectedEventCount());
+        assertEquals(2, first.projectedEventCount());
         var runEvents = workbench.loadEvents(principal, runWork.workItem().workItemId(), -1, 100);
         assertEquals(2, runEvents.stream()
                 .filter(event -> event.eventType() == WorkEventType.RUN_EVENT_PROJECTED).count());
@@ -202,7 +237,7 @@ class UnifiedWorkEventProjectorPostgresIT {
         assertEquals(WorkOutcome.ANSWERED, completedRunWork.outcome());
         assertEquals(completedVersion,
                 workbench.findWorkItem(principal, runWork.workItem().workItemId()).orElseThrow().version());
-        assertEquals(WorkOutcome.ASSESSED,
+        assertEquals(WorkOutcome.UNDETERMINED,
                 workbench.findWorkItem(principal, incidentWork.workItem().workItemId()).orElseThrow().outcome());
 
         runs.update(runId, AgentRunRecord::claimedForRecovery);
@@ -244,8 +279,7 @@ class UnifiedWorkEventProjectorPostgresIT {
         projectionProperties.setInstanceId("projector-test");
         var projector = new UnifiedWorkEventProjector(
                 new FixedSourceProjectionStore(workbench, List.of(source)), timeline, runs,
-                new JdbcIncidentStore(properties, objectMapper), new JdbcIncidentStore(properties, objectMapper),
-                new JdbcIncidentRecoveryPlanStore(properties, objectMapper), projectionProperties);
+                List.of(), projectionProperties);
 
         projector.projectOnce();
         AgentWorkItem failed = workbench.findWorkItem(principal, created.workItem().workItemId()).orElseThrow();
@@ -261,17 +295,24 @@ class UnifiedWorkEventProjectorPostgresIT {
         assertEquals(WorkExecutionState.FAILED, replayed.executionState());
     }
 
-    private IncidentRecord incident() {
-        Instant now = Instant.now();
-        IncidentSnapshot snapshot = new IncidentSnapshot(
-                "snapshot-" + suffix, incidentId, "alert", "DLQ", principal.tenantId(),
-                new IncidentSnapshot.IncidentOrderScope(List.of("REQ-1")),
-                new IncidentSnapshot.IncidentBusinessScope(List.of()),
-                new IncidentSnapshot.IncidentTimeWindow(now.minusSeconds(60), now),
-                now, now, now.plusSeconds(60), "scope-" + suffix);
-        return new IncidentRecord(
-                incidentId, null, null, "incident:" + incidentId, "scenario",
-                IncidentStatus.ASSESSED, snapshot, Map.of(), Map.of(), 0, 1, 1, 0, now, now);
+    private void seedMaterializedHistory(String workId, String type, String sourceId) {
+        // Fixture for an event written before retirement; never call the retired projection writer.
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement("""
+                INSERT INTO agent_work_event(event_id, work_item_id, sequence, source_type, source_id,
+                    source_event_id, source_sequence, event_type, correlation_id, source_created_at, projected_at)
+                VALUES (?, ?, 1, ?, ?, ?, 0, ?, ?, NOW(), NOW())
+                """)) {
+            statement.setString(1, "historical-" + sourceId);
+            statement.setString(2, workId);
+            statement.setString(3, type);
+            statement.setString(4, sourceId);
+            statement.setString(5, "historical-" + sourceId);
+            statement.setString(6, type + "_EVENT_PROJECTED");
+            statement.setString(7, workId);
+            statement.executeUpdate();
+        } catch (Exception exception) {
+            throw new AgentStorageException("failed to seed materialized history", exception);
+        }
     }
 
     private void seedProjectionCursors(List<WorkProjectionSource> sources) {
@@ -391,8 +432,8 @@ class UnifiedWorkEventProjectorPostgresIT {
             List<WorkProjectionSource> sources
     ) implements WorkEventProjectionStore {
         @Override public List<WorkProjectionSource> listProjectionSources(int limit) { return sources; }
-        @Override public List<WorkProjectionClaim> claimProjectionSources(String owner, Instant until, int limit) {
-            List<WorkProjectionClaim> claimed = delegate.claimProjectionSources(owner, until, 1000);
+        @Override public List<WorkProjectionClaim> claimProjectionSources(String owner, Instant until, int limit, java.util.Set<String> supportedSourceTypes) {
+            List<WorkProjectionClaim> claimed = delegate.claimProjectionSources(owner, until, 1000, supportedSourceTypes);
             claimed.stream().filter(claim -> !sources.contains(claim.source())).forEach(delegate::releaseProjectionClaim);
             return claimed.stream().filter(claim -> sources.contains(claim.source())).toList();
         }

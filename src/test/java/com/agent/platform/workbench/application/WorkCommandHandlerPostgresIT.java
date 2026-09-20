@@ -88,21 +88,21 @@ class WorkCommandHandlerPostgresIT {
                 command.input(), command.commandDecision(), "", before.version()));
 
         assertFalse(result.success());
-        assertEquals("UNSUPPORTED_FOR_TARGET", result.code());
+        assertEquals("TARGET_RETIRED", result.code());
         assertFalse(result.underlyingExecutionChanged());
         AgentWorkItem after = workbench.findWorkItem(principal, incident.workItemId()).orElseThrow();
         assertEquals(before.version(), after.version());
         assertEquals(before.controlState(), after.controlState());
         assertEquals(before.executionState(), after.executionState());
         verify(runCommands, never()).execute(any(), any(), any());
-        assertEquals(1, workbench.loadEvents(principal, incident.workItemId(), -1, 100).stream()
+        assertEquals(0, workbench.loadEvents(principal, incident.workItemId(), -1, 100).stream()
                 .filter(event -> event.eventType() == WorkEventType.WORK_COMMAND_REJECTED).count());
     }
 
     @Test
     void repeatedAbandonReturnsTheOriginalResultAndAdvancesVersionOnlyOnce() throws Exception {
         AgentWorkItem work = createWork("abandon");
-        setTarget(work.workItemId(), "INCIDENT_INVESTIGATION", "", "incident-2");
+        setTarget(work.workItemId(), "GENERAL_AGENT", "", "");
         AgentWorkItem admitted = workbench.findWorkItem(principal, work.workItemId()).orElseThrow();
         UnifiedWorkIntakeResult command = command(admitted.conversationId(), WorkCommandType.ABANDON_ACTIVE_WORK, "abandon-once");
         WorkCommandRequest request = new WorkCommandRequest(
@@ -176,8 +176,8 @@ class WorkCommandHandlerPostgresIT {
         AgentWorkItem first = createWork("first", conversation);
         AgentWorkItem second = createWork("second", conversation);
         assertNotEquals(first.workItemId(), second.workItemId());
-        setTarget(first.workItemId(), "INCIDENT_INVESTIGATION", "", "incident-first");
-        setTarget(second.workItemId(), "INCIDENT_INVESTIGATION", "", "incident-second");
+        setTarget(first.workItemId(), "GENERAL_AGENT", "", "");
+        setTarget(second.workItemId(), "GENERAL_AGENT", "", "");
         UnifiedWorkIntakeResult command = command(conversation, WorkCommandType.ABANDON_ACTIVE_WORK, "abandon-focus");
 
         WorkCommandResult result = handler.handle(principal, new WorkCommandRequest(
@@ -199,7 +199,7 @@ class WorkCommandHandlerPostgresIT {
     @Test
     void twoStoreInstancesCannotOwnTheSameCommandAtTheSameTime() throws Exception {
         AgentWorkItem work = createWork("multi-instance");
-        setTarget(work.workItemId(), "INCIDENT_INVESTIGATION", "", "incident-multi");
+        setTarget(work.workItemId(), "GENERAL_AGENT", "", "");
         AgentWorkItem admitted = workbench.findWorkItem(principal, work.workItemId()).orElseThrow();
         UnifiedWorkIntakeResult command = command(admitted.conversationId(),
                 WorkCommandType.PAUSE_ACTIVE_WORK, "multi-instance-pause");

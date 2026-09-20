@@ -1,6 +1,5 @@
 package com.agent.platform.procurement;
 
-import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
 import com.agent.platform.procurement.application.ProcurementCasePatchMerger;
 import com.agent.platform.procurement.application.ProcurementCaseService;
 import com.agent.platform.procurement.application.ProcurementDecisionEngine;
@@ -45,8 +44,7 @@ class ProcurementSourcingMvpTests {
 
     @Test
     void targetProfileAndToolMetadataMatchTheInternalStateBoundary() {
-        IncidentCommandProperties incident = new IncidentCommandProperties();
-        var target = new ExecutionTargetRegistry(incident).findEnabled(
+        var target = new ExecutionTargetRegistry().findEnabled(
                 new com.agent.platform.workbench.security.AuthenticatedPrincipal("tenant", "buyer", Set.of("USER")),
                 ExecutionTargetId.PROCUREMENT_SOURCING.name()).orElseThrow();
         assertEquals("procurement-sourcing-rfq-v1", target.executionProfileId());

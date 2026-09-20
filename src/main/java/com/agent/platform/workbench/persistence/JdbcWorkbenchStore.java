@@ -581,7 +581,8 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
                             WHEN 'RECOVERY_PLAN' THEN 'RECOVERY_PLAN'
                           END
                       AND c.source_id = l.linked_id
-                     WHERE l.link_type IN ('RUN', 'INCIDENT', 'RECOVERY_PLAN')
+                     WHERE l.link_type = 'RUN'
+                       AND EXISTS (SELECT 1 FROM agent_work_item w WHERE w.work_item_id=l.work_item_id AND COALESCE(w.active_execution_target, '') NOT IN ('ORDERCARE_CASE', 'INCIDENT_INVESTIGATION', 'INCIDENT_RECOVERY_PLAN'))
                      ORDER BY c.updated_at NULLS FIRST, l.created_at, l.work_item_id, l.link_type, l.linked_id
                      LIMIT ?
                      """)) {
@@ -602,18 +603,24 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
     }
 
     @Override
-    public List<WorkProjectionClaim> claimProjectionSources(String leaseOwner, Instant leaseUntil, int limit) {
+    public List<WorkProjectionClaim> claimProjectionSources(String leaseOwner, Instant leaseUntil, int limit,
+                                                             java.util.Set<String> supportedSourceTypes) {
         if (!hasText(leaseOwner) || leaseUntil == null || !leaseUntil.isAfter(Instant.now())) {
             throw new IllegalArgumentException("projection lease owner and future leaseUntil are required");
         }
+        if (supportedSourceTypes.isEmpty()) return List.of();
+        if (!java.util.Set.of("AGENT_RUN", "INCIDENT", "RECOVERY_PLAN").containsAll(supportedSourceTypes)) {
+            throw new IllegalArgumentException("unsupported projection source types");
+        }
+        if (!supportedSourceTypes.contains("AGENT_RUN")) return List.of();
+        supportedSourceTypes = java.util.Set.of("AGENT_RUN");
         ensureSchema();
         int safeLimit = Math.max(1, Math.min(limit, 1000));
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
                 Instant now = Instant.now();
-                try (Statement statement = connection.createStatement()) {
-                    statement.executeUpdate("""
+                try (PreparedStatement statement = connection.prepareStatement("""
                             INSERT INTO agent_work_projection_cursor(
                                 work_item_id, source_type, source_id, last_source_sequence, updated_at)
                             SELECT l.work_item_id,
@@ -622,21 +629,31 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
                                         WHEN 'RECOVERY_PLAN' THEN 'RECOVERY_PLAN' END,
                                    l.linked_id, -1, l.created_at
                             FROM agent_work_link l
-                            WHERE l.link_type IN ('RUN', 'INCIDENT', 'RECOVERY_PLAN')
+                            WHERE ((l.link_type='RUN' AND ?)
+                               OR (l.link_type='INCIDENT' AND ?)
+                               OR (l.link_type='RECOVERY_PLAN' AND ?))
+                              AND EXISTS (SELECT 1 FROM agent_work_item w WHERE w.work_item_id=l.work_item_id AND COALESCE(w.active_execution_target, '') NOT IN ('ORDERCARE_CASE', 'INCIDENT_INVESTIGATION', 'INCIDENT_RECOVERY_PLAN'))
                             ON CONFLICT(work_item_id, source_type, source_id) DO NOTHING
-                            """);
+                            """)) {
+                    statement.setBoolean(1, supportedSourceTypes.contains("AGENT_RUN"));
+                    statement.setBoolean(2, supportedSourceTypes.contains("INCIDENT"));
+                    statement.setBoolean(3, supportedSourceTypes.contains("RECOVERY_PLAN"));
+                    statement.executeUpdate();
                 }
                 List<WorkProjectionClaim> claims = new ArrayList<>();
                 try (PreparedStatement statement = connection.prepareStatement("""
                         SELECT work_item_id, source_type, source_id, fencing_token
                         FROM agent_work_projection_cursor
-                        WHERE lease_until IS NULL OR lease_until <= ? OR lease_owner = ?
+                        WHERE (lease_until IS NULL OR lease_until <= ? OR lease_owner = ?)
+                          AND source_type = ANY (?)
+                          AND EXISTS (SELECT 1 FROM agent_work_item w WHERE w.work_item_id=agent_work_projection_cursor.work_item_id AND COALESCE(w.active_execution_target, '') NOT IN ('ORDERCARE_CASE', 'INCIDENT_INVESTIGATION', 'INCIDENT_RECOVERY_PLAN'))
                         ORDER BY updated_at, work_item_id, source_type, source_id
                         FOR UPDATE SKIP LOCKED LIMIT ?
                         """)) {
                     statement.setTimestamp(1, Timestamp.from(now));
                     statement.setString(2, leaseOwner);
-                    statement.setInt(3, safeLimit);
+                    statement.setArray(3, connection.createArrayOf("text", supportedSourceTypes.toArray(String[]::new)));
+                    statement.setInt(4, safeLimit);
                     try (ResultSet resultSet = statement.executeQuery()) {
                         while (resultSet.next()) {
                             WorkProjectionSource source = new WorkProjectionSource(
@@ -709,6 +726,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
         if (!hasText(workItemId) || draft == null) {
             throw new IllegalArgumentException("workItemId and projected event are required");
         }
+        requireCurrentProjectionSource(draft.sourceType());
         ensureSchema();
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
@@ -767,6 +785,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
         if (!hasText(workItemId) || !hasText(sourceType) || !hasText(sourceId) || sourceSequence < -1) {
             throw new IllegalArgumentException("projection cursor identity and sequence are required");
         }
+        requireCurrentProjectionSource(sourceType);
         ensureSchema();
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
@@ -787,7 +806,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
 
     @Override
     public void releaseProjectionClaim(WorkProjectionClaim claim) {
-        if (claim == null) return;
+        if (claim == null || !"AGENT_RUN".equals(claim.source().sourceType())) return;
         ensureSchema();
         WorkProjectionSource source = claim.source();
         try (Connection connection = openConnection();
@@ -795,6 +814,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
                      UPDATE agent_work_projection_cursor SET lease_owner=NULL, lease_until=NULL
                      WHERE work_item_id=? AND source_type=? AND source_id=?
                        AND lease_owner=? AND fencing_token=?
+                       AND EXISTS (SELECT 1 FROM agent_work_item w WHERE w.work_item_id=agent_work_projection_cursor.work_item_id AND COALESCE(w.active_execution_target, '') NOT IN ('ORDERCARE_CASE', 'INCIDENT_INVESTIGATION', 'INCIDENT_RECOVERY_PLAN'))
                      """)) {
             statement.setString(1, source.workItemId());
             statement.setString(2, source.sourceType());
@@ -814,12 +834,17 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
                 || !claim.source().sourceId().equals(projection.sourceId())) {
             throw new IllegalArgumentException("projection claim and execution snapshot must identify one source");
         }
+        requireCurrentProjectionSource(projection.sourceType());
         ensureSchema();
         try (Connection connection = openConnection()) {
             connection.setAutoCommit(false);
             try {
                 requireProjectionClaim(connection, claim);
                 AgentWorkItem work = lockProjectionWorkItem(connection, claim.source().workItemId());
+                if (com.agent.platform.common.BusinessRetirementPolicy.retiredTarget(work.activeExecutionTarget())) {
+                    connection.commit();
+                    return false;
+                }
                 requireProjectionSourceLink(connection, work.workItemId(), projection.sourceType(), projection.sourceId());
                 if (!isActiveProjectionSource(work, projection) || suppressForControlIntent(work, projection)) {
                     connection.commit();
@@ -871,13 +896,8 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
     }
 
     private boolean isActiveProjectionSource(AgentWorkItem work, WorkExecutionProjection projection) {
-        String activeId = switch (projection.sourceType()) {
-            case "AGENT_RUN" -> work.activeRunId();
-            case "INCIDENT" -> work.activeIncidentId();
-            case "RECOVERY_PLAN" -> work.activeRecoveryPlanId();
-            default -> "";
-        };
-        return projection.sourceId().equals(activeId);
+        return "AGENT_RUN".equals(projection.sourceType())
+                && projection.sourceId().equals(work.activeRunId());
     }
 
     private boolean suppressForControlIntent(AgentWorkItem work, WorkExecutionProjection projection) {
@@ -888,18 +908,18 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
                 || work.controlState() == WorkControlState.PAUSE_REQUESTED);
     }
 
+    private static void requireCurrentProjectionSource(String sourceType) {
+        if (!"AGENT_RUN".equals(sourceType)) {
+            throw new IllegalArgumentException("historical projection source is read-only: " + sourceType);
+        }
+    }
+
     private AuthoritativeProjection readAuthoritativeProjection(Connection connection,
                                                                 WorkExecutionProjection projection) throws SQLException {
-        String sql = switch (projection.sourceType()) {
-            case "AGENT_RUN" -> "SELECT status, COALESCE(record_json::jsonb ->> 'failureReason', '') AS outcome, version, "
-                    + "COALESCE((record_json::jsonb ->> 'resumeCount')::int, 0) AS source_attempt, updated_at "
-                    + "FROM agent_run_state WHERE run_id=?";
-            case "INCIDENT" -> "SELECT status, NULL::text AS outcome, version, 0 AS source_attempt, updated_at "
-                    + "FROM agent_incident WHERE incident_id=?";
-            case "RECOVERY_PLAN" -> "SELECT status, outcome, version, 0 AS source_attempt, updated_at "
-                    + "FROM agent_incident_recovery_plan WHERE plan_id=?";
-            default -> throw new IllegalArgumentException("unsupported execution projection source");
-        };
+        requireCurrentProjectionSource(projection.sourceType());
+        String sql = "SELECT status, COALESCE(record_json::jsonb ->> 'failureReason', '') AS outcome, version, "
+                + "COALESCE((record_json::jsonb ->> 'resumeCount')::int, 0) AS source_attempt, updated_at "
+                + "FROM agent_run_state WHERE run_id=?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, projection.sourceId());
             try (ResultSet resultSet = statement.executeQuery()) {
@@ -1535,6 +1555,7 @@ public class JdbcWorkbenchStore implements WorkbenchStore, WorkEventProjectionSt
         try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT 1 FROM agent_work_link
                 WHERE work_item_id = ? AND link_type = ? AND linked_id = ?
+                  AND EXISTS (SELECT 1 FROM agent_work_item w WHERE w.work_item_id=agent_work_link.work_item_id AND COALESCE(w.active_execution_target, '') NOT IN ('ORDERCARE_CASE', 'INCIDENT_INVESTIGATION', 'INCIDENT_RECOVERY_PLAN'))
                 """)) {
             statement.setString(1, workItemId);
             statement.setString(2, linkType);

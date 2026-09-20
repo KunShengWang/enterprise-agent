@@ -1,5 +1,7 @@
 package com.agent.platform.workbench.application;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.config.WorkbenchRoutingProperties;
 import com.agent.platform.procurement.application.ProcurementCaseService;
 import com.agent.platform.workbench.model.ExecutionDecision;
@@ -59,6 +61,11 @@ public class RoutePolicyValidator {
         if (decision == null) {
             return rejected("STRUCTURED_OUTPUT_INVALID", "routing decision is absent");
         }
+        if (BusinessRetirementPolicy.retiredTarget(decision.targetId())
+                || BusinessRetirementPolicy.retiredInput(context.originalGoal())) {
+            return rejected(BusinessRetirementPolicy.CODE,
+                    BusinessRetirementPolicy.MESSAGE);
+        }
         ExecutionTargetDefinition target = targetRegistry.findEnabled(context.principal(), decision.targetId())
                 .orElse(null);
         if (target == null) {
@@ -67,13 +74,7 @@ public class RoutePolicyValidator {
         if (decision.extractedInputs().keySet().stream().anyMatch(FORBIDDEN_MODEL_FIELDS::contains)) {
             return rejected("POLICY_REJECTED", "model attempted to set a protected execution field");
         }
-        boolean incidentWithExplicitScope = "INCIDENT_INVESTIGATION".equals(decision.targetId())
-                && !values(decision.extractedInputs().get("requestIds")).isEmpty();
-        List<String> effectiveMissing = incidentWithExplicitScope
-                ? decision.missingInputs().stream()
-                        .filter(value -> !Set.of("requestIds", "queueName", "queueNames").contains(value))
-                        .toList()
-                : decision.missingInputs();
+        List<String> effectiveMissing = decision.missingInputs();
         if (!effectiveMissing.isEmpty()) {
             return clarified("missing required inputs: " + String.join(",", effectiveMissing));
         }
@@ -112,15 +113,6 @@ public class RoutePolicyValidator {
         }
 
         ExecutionTargetId targetId = target.targetId();
-        ExecutionTargetCandidateResolver.ScopeEvidence scope =
-                ExecutionTargetCandidateResolver.analyze(context.originalGoal());
-        if (targetId == ExecutionTargetId.ORDERCARE_CASE
-                && (requestsIncidentScope(context.originalGoal()) || scope.incidentScope())) {
-            return clarified("incident or batch scope cannot be downgraded to one OrderCare case");
-        }
-        if (targetId == ExecutionTargetId.INCIDENT_INVESTIGATION && scope.boundedSingleCase()) {
-            return clarified("one bounded OrderCare case cannot be upgraded to incident investigation");
-        }
         List<String> reasons = new ArrayList<>();
         RouteDisposition disposition;
         switch (targetId) {
@@ -128,43 +120,9 @@ public class RoutePolicyValidator {
                 disposition = RouteDisposition.AUTO_DISPATCH;
                 reasons.add("registered low-risk general target");
             }
-            case ORDERCARE_CASE -> {
-                long count = Set.of("requestId", "orderNo", "deductNo").stream()
-                        .filter(key -> typed.containsKey(key)).count();
-                if (count != 1) return clarified("exactly one requestId, orderNo or deductNo is required");
-                disposition = RouteDisposition.AUTO_DISPATCH;
-                reasons.add("one bounded OrderCare identifier passed source validation");
-            }
-            case INCIDENT_INVESTIGATION -> {
-                boolean scopePresent = !values(typed.get("requestIds")).isEmpty();
-                if (!scopePresent) {
-                    return clarified("requestIds or discoverable business conditions are required");
-                }
-                int requestCount = values(typed.get("requestIds")).size();
-                if (requestCount > properties.getMaxIncidentRequestIds()) {
-                    return rejected("POLICY_REJECTED", "incident requestId scope exceeds configured maximum");
-                }
-                if (identifiers.values().stream().anyMatch(identifier ->
-                        identifier.source() != IdentifierSource.EXPLICIT_USER_INPUT
-                                && identifier.source() != IdentifierSource.SERVER_RESOLVED_FROM_BATCH
-                                && identifier.source() != IdentifierSource.SERVER_RESOLVED_FROM_SCOPE_DISCOVERY)) {
-                    return clarified("incident identifiers require explicit or server-resolved sources");
-                }
-                disposition = RouteDisposition.REQUIRE_CONFIRMATION;
-                reasons.add("all incident starts require immutable preview and explicit confirmation");
-            }
-            case INCIDENT_RECOVERY_PLAN -> {
-                ValidatedIdentifier incidentId = identifiers.get("incidentId");
-                if (incidentId == null
-                        || incidentId.source() != IdentifierSource.TRUSTED_CONVERSATION_CONTEXT) {
-                    return clarified("recovery incidentId must come from trusted WorkRelation/WorkLink context");
-                }
-                disposition = RouteDisposition.REQUIRE_CONFIRMATION;
-                reasons.add("recovery planning requires an accessible ASSESSED parent incident");
-            }
             case PROCUREMENT_SOURCING -> {
                 disposition = RouteDisposition.AUTO_DISPATCH;
-                reasons.add("复杂采购使用只读寻源与证据工具，推荐不产生采购副作用");
+                reasons.add("采购寻源和推荐为只读分析；RFQ 创建必须经人工审批，不支持创建采购订单");
             }
             default -> { return rejected("TARGET_DISABLED", "target is unsupported"); }
         }
@@ -189,18 +147,6 @@ public class RoutePolicyValidator {
 
     private RouteValidationResult rejected(String code, String reason) {
         return new RouteValidationResult(RouteDisposition.REJECT, null, List.of(reason), code);
-    }
-
-    private boolean requestsIncidentScope(String goal) {
-        if (goal == null || goal.isBlank()) return false;
-        String normalized = goal.toLowerCase().replaceAll("[\\s_-]+", "");
-        return normalized.contains("批量")
-                || normalized.contains("批次")
-                || normalized.contains("事故调查")
-                || normalized.contains("多agent")
-                || normalized.contains("multiagent")
-                || normalized.contains("incidentinvestigation")
-                || normalized.contains("batchrecovery");
     }
 
     private List<String> values(Object raw) {

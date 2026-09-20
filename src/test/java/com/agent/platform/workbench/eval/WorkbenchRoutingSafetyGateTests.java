@@ -3,7 +3,6 @@ package com.agent.platform.workbench.eval;
 import com.agent.platform.config.WorkbenchRoutingProperties;
 import com.agent.platform.llm.LlmCallException;
 import com.agent.platform.llm.LlmService;
-import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
 import com.agent.platform.prompt.PromptRequest;
 import com.agent.platform.workbench.application.LlmUnifiedTaskRouter;
 import com.agent.platform.workbench.application.RoutePolicyValidator;
@@ -63,7 +62,7 @@ class WorkbenchRoutingSafetyGateTests {
                         Map.of("requestId", "INVENTED-REQUEST"), List.of(), ""),
                 context("帮我看看这个订单"));
 
-        assertEquals(RouteDisposition.REQUIRE_CLARIFICATION, validation.disposition());
+        assertEquals(RouteDisposition.REJECT, validation.disposition());
         assertNull(validation.validatedInput());
     }
 
@@ -93,7 +92,7 @@ class WorkbenchRoutingSafetyGateTests {
                         Map.of("requestIds", List.of("REQ-1"), "queueName", "floworder.incident.e2e.dlq"),
                         List.of(), ""), context(goal));
 
-        assertEquals(RouteDisposition.REQUIRE_CONFIRMATION, validation.disposition());
+        assertEquals(RouteDisposition.REJECT, validation.disposition());
     }
 
     @Test
@@ -103,7 +102,7 @@ class WorkbenchRoutingSafetyGateTests {
                         "ORDERCARE_CASE", .99, "single identifier",
                         Map.of("requestId", "ORDERCARE-M05-REQUEST"), List.of(), ""), context(goal));
 
-        assertEquals(RouteDisposition.REQUIRE_CLARIFICATION, validation.disposition());
+        assertEquals(RouteDisposition.REJECT, validation.disposition());
         assertNull(validation.validatedInput());
     }
 
@@ -116,7 +115,7 @@ class WorkbenchRoutingSafetyGateTests {
                         Map.of("requestIds", List.of("ORDERCARE-M05-REQUEST")), List.of(), ""),
                 context(goal));
 
-        assertEquals(RouteDisposition.REQUIRE_CLARIFICATION, validation.disposition());
+        assertEquals(RouteDisposition.REJECT, validation.disposition());
         assertNull(validation.validatedInput());
     }
 
@@ -125,10 +124,7 @@ class WorkbenchRoutingSafetyGateTests {
     }
 
     private ExecutionTargetRegistry registry() {
-        IncidentCommandProperties properties = new IncidentCommandProperties();
-        properties.setEnabled(true);
-        properties.setRecoveryPlannerEnabled(true);
-        return new ExecutionTargetRegistry(properties);
+        return new ExecutionTargetRegistry();
     }
 
     private RouteValidationContext context(String goal) {

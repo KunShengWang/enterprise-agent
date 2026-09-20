@@ -29,7 +29,7 @@ class DefaultAgentToolRuntimeReconciliationTests {
                 .thenReturn(GuardrailDecision.allow(GuardrailStage.TOOL, "allowed"));
         when(store.claim(anyString(), any())).thenReturn(ToolExecutionClaim.acquired());
         when(executor.execute(any())).thenReturn(new ToolCallResult(
-                "floworder_recovery_execute", false, "", "outcome unknown",
+                "fixture_recovery_execute", false, "", "outcome unknown",
                 Map.of("retryable", false, "manualReview", true)
         ));
         DefaultAgentToolRuntime runtime = new DefaultAgentToolRuntime(
@@ -39,8 +39,8 @@ class DefaultAgentToolRuntimeReconciliationTests {
 
         AgentToolRuntimeResult result = runtime.execute(
                 "run-1", "session-1", "user-1", Map.of(),
-                new AgentToolCall("tool-1", "floworder_recovery_execute", Map.of(), "execute"),
-                new ToolDefinition("floworder_recovery_execute", "execute", "{}", ToolRiskLevel.LOW, Map.of())
+                new AgentToolCall("tool-1", "fixture_recovery_execute", Map.of(), "execute"),
+                new ToolDefinition("fixture_recovery_execute", "execute", "{}", ToolRiskLevel.LOW, Map.of())
         );
 
         assertEquals(AgentToolExecutionStatus.MANUAL_REVIEW, result.status());
@@ -52,7 +52,7 @@ class DefaultAgentToolRuntimeReconciliationTests {
     void uncertainResolverMustPersistProvenResultForRuntimeRestart() {
         ToolExecutionStore store = mock(ToolExecutionStore.class);
         ToolCallRequest request = new ToolCallRequest(
-                "floworder_recovery_execute", "tool-2", Map.of("proposalId", "prop-1")
+                "fixture_recovery_execute", "tool-2", Map.of("proposalId", "prop-1")
         );
         ToolExecutionRecord running = ToolExecutionRecord.running("run-2", request);
         ToolCallResult resolved = new ToolCallResult(

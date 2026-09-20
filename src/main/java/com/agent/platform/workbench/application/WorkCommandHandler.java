@@ -1,5 +1,7 @@
 package com.agent.platform.workbench.application;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.runtime.AgentRunRecord;
 import com.agent.platform.runtime.AgentRunState;
 import com.agent.platform.workbench.model.AgentConversationTurn;
@@ -81,6 +83,10 @@ public class WorkCommandHandler {
         catch (WorkbenchCasConflictException exception) {
             return unboundError(principal, input, decision,
                     "COMMAND_CAS_CONFLICT", exception.getMessage());
+        }
+        if (BusinessRetirementPolicy.retiredTarget(work.activeExecutionTarget())) {
+            return error(BusinessRetirementPolicy.CODE, BusinessRetirementPolicy.MESSAGE,
+                    input, decision, work.activeExecutionTarget(), work.workItemId(), WorkCommandExecutionStatus.REJECTED);
         }
         long expectedVersion = request.expectedWorkVersion() == null ? work.version() : request.expectedWorkVersion();
         String leaseOwner = "work-command-" + UUID.randomUUID();

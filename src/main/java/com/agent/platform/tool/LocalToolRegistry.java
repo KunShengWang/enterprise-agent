@@ -1,5 +1,7 @@
 package com.agent.platform.tool;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.mcp.McpToolGateway;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -89,7 +91,7 @@ public class LocalToolRegistry implements ToolRegistry {
         if (gateway != null) {
             gateway.discoverTools().forEach(tool -> addUnique(mergedTools, tool, "mcp"));
         }
-        return List.copyOf(mergedTools.values());
+        return mergedTools.values().stream().filter(tool -> !BusinessRetirementPolicy.retiredTool(tool.name())).toList();
     }
 
     /**

@@ -15,6 +15,13 @@ import org.springframework.web.server.ServerWebInputException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(RetiredBusinessException.class)
+    @ResponseStatus(HttpStatus.GONE)
+    public ApiResponse<Void> handleRetiredBusiness(RetiredBusinessException exception) {
+        return new ApiResponse<>(false, BusinessRetirementPolicy.CODE, exception.getMessage(), null);
+    }
+
+
     @ExceptionHandler({IllegalArgumentException.class, ServerWebInputException.class, MethodArgumentNotValidException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> handleBadRequest(Exception exception) {

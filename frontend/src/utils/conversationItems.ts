@@ -1,3 +1,4 @@
+import { isRetiredWork, isRetiredPreview, isRetiredTool, retiredMessage } from './retiredBusiness'
 import type { ApprovalRecord } from '../types/agent'
 import type { AgentConversationMessage } from '../types/agent'
 import type { ConversationEntry, ConversationItem, ConversationItemStatus, PrimaryAnswerView } from '../types/conversation'
@@ -163,14 +164,10 @@ export function projectConversationItems(source: ConversationProjectionInput): C
 
   if (detail.preview) items.push({
     id: `preview-${detail.preview.previewId}`,
-    type: 'INCIDENT_PREVIEW',
+    type: 'ROUTE_PREVIEW',
     createdAt: work.updatedAt,
-    title: detail.preview.targetId === 'INCIDENT_INVESTIGATION'
-      ? scopeDiscoveryPreview(detail.preview) ? '确认候选事故范围' : '启动只读 Multi-Agent 事故调查'
-      : '需要确认执行范围',
-    content: detail.preview.targetId === 'INCIDENT_INVESTIGATION'
-      ? incidentPreviewSummary(detail.preview)
-      : '开始执行前，请核对目标、范围和风险边界。',
+    title: '执行范围确认',
+    content: '开始执行前，请核对目标、范围和风险边界。',
     status: detail.preview.status === 'ACTIVE' ? 'waiting' : 'completed',
     preview: detail.preview,
   })
@@ -199,7 +196,7 @@ export function projectConversationItems(source: ConversationProjectionInput): C
     answerState: answer.state,
   })
 
-  return items
+  return protectHistory(items, source)
 }
 
 export interface TurnConversationProjectionInput extends Omit<ConversationProjectionInput, 'workItems'> {
@@ -240,14 +237,10 @@ export function projectTurnConversationItems(source: TurnConversationProjectionI
 
   if (detail.preview) items.push({
     id: `preview-${detail.preview.previewId}`,
-    type: 'INCIDENT_PREVIEW',
+    type: 'ROUTE_PREVIEW',
     createdAt: work.updatedAt,
-    title: detail.preview.targetId === 'INCIDENT_INVESTIGATION'
-      ? scopeDiscoveryPreview(detail.preview) ? '确认候选事故范围' : '启动只读 Multi-Agent 事故调查'
-      : '需要确认执行范围',
-    content: detail.preview.targetId === 'INCIDENT_INVESTIGATION'
-      ? incidentPreviewSummary(detail.preview)
-      : '开始执行前，请核对目标、范围和风险边界。',
+    title: '执行范围确认',
+    content: '开始执行前，请核对目标、范围和风险边界。',
     status: detail.preview.status === 'ACTIVE' ? 'waiting' : 'completed',
     preview: detail.preview,
   })
@@ -272,23 +265,17 @@ export function projectTurnConversationItems(source: TurnConversationProjectionI
     live: answer.state === 'STREAMING' || answer.state === 'FINALIZING',
     answerState: answer.state,
   })
-  return items
+  return protectHistory(items, source)
 }
 
-function previewInput(preview: import('../types/workbench').RoutePreview) {
-  const value = preview.payload.validatedInput
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown> : {}
-}
-
-function scopeDiscoveryPreview(preview: import('../types/workbench').RoutePreview) {
-  return Boolean(previewInput(preview).scopeSnapshotId)
-}
-
-function incidentPreviewSummary(preview: import('../types/workbench').RoutePreview) {
-  const input = previewInput(preview)
-  const queues = Array.isArray(input.queueNames) ? input.queueNames : []
-  const specialists = queues.length ? '订单、库存和消息链路 Specialist' : '订单和库存 Specialist'
-  const prefix = scopeDiscoveryPreview(preview) ? '系统已从 FlowOrder 权威只读事实生成候选范围。' : ''
-  return `${prefix}确认后将调度${specialists}收集证据，再由 Reviewer 检查冲突并生成 Assessment。不会执行恢复。`
+function protectHistory(items: ConversationItem[], source: ConversationProjectionInput & { tree?: WorkExecutionTree | null }): ConversationItem[] {
+  const retired = isRetiredWork(source.detail.workItem, source.tree) || isRetiredPreview(source.detail.preview)
+    || isRetiredTool(source.approval?.toolCallRequest?.toolName)
+  if (!retired) return items
+  return [...items.filter(item => item.type !== 'FINAL_ANSWER' || Boolean(item.content))
+    .map(item => ({ ...item, readOnly: true, live: false })), {
+      id: `retired-${source.detail.workItem.workItemId}`, type: 'AGENT_STATUS',
+      createdAt: source.detail.workItem.updatedAt, title: '业务已退役', content: retiredMessage,
+      status: 'completed', readOnly: true,
+    }]
 }

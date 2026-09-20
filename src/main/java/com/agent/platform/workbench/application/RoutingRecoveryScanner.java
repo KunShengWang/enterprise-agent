@@ -1,5 +1,7 @@
 package com.agent.platform.workbench.application;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.config.WorkbenchRoutingProperties;
 import com.agent.platform.workbench.model.RoutingRecoveryCandidate;
 import com.agent.platform.workbench.persistence.RoutingStore;
@@ -29,6 +31,8 @@ public class RoutingRecoveryScanner {
         Instant staleBefore = Instant.now().minusMillis(properties.getStaleAfterMillis());
         for (RoutingRecoveryCandidate candidate
                 : store.findStaleRouting(staleBefore, properties.getScanBatchSize())) {
+            if (BusinessRetirementPolicy.retiredTarget(candidate.workItem().activeExecutionTarget())
+                    || BusinessRetirementPolicy.retiredInput(candidate.workItem().originalGoal())) continue;
             try {
                 coordinator.route(candidate.principal(), candidate.workItem().workItemId(),
                         candidate.workItem().routingRequestId());

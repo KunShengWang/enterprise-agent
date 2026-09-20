@@ -51,7 +51,7 @@ watch(() => [props.turns.length,
 
 <template>
   <section ref="feed" class="task-conversation-feed" @scroll.passive="handleScroll">
-    <div v-if="!hasWork" class="task-welcome"><span>A</span><h2>今天要完成什么？</h2><p>直接描述目标。普通问答、OrderCare、事故调查和恢复规划都从这里开始。</p></div>
+    <div v-if="!hasWork" class="task-welcome"><span>A</span><h2>今天要完成什么？</h2><p>直接描述目标。采购寻源、供应商比较与受控 RFQ 从这里开始；也支持受限通用问答。</p></div>
     <div v-else class="conversation-stream">
       <ConversationTurnSection v-for="(turn, index) in turns" :key="turn.turn.turnId"
         :view="turn" :index="index" :selected="turn.turn.turnId === selectedTurnId"

@@ -11,7 +11,7 @@ public class WorkbenchWebProperties {
     private boolean enabled;
     private String localTenantId = "local-tenant";
     private String localPrincipalId = "local-user";
-    private Set<String> localRoles = new LinkedHashSet<>(Set.of("USER", "INCIDENT_OPERATOR"));
+    private Set<String> localRoles = new LinkedHashSet<>(Set.of("USER"));
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }

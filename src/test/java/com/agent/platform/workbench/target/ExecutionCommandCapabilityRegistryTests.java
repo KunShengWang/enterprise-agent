@@ -13,12 +13,11 @@ class ExecutionCommandCapabilityRegistryTests {
     void commandMatrixExposesRuntimeControlsForRunBackedTargets() {
         for (ExecutionTargetId target : ExecutionTargetId.values()) {
             ExecutionCommandCapabilities capabilities = registry.require(target);
-            assertEquals(ExecutionCommandSupport.PRODUCT_ONLY,
+            assertEquals(target.executable() ? ExecutionCommandSupport.PRODUCT_ONLY : ExecutionCommandSupport.UNSUPPORTED,
                     capabilities.support(WorkCommandType.ABANDON_ACTIVE_WORK));
             assertEquals(ExecutionCommandSupport.UNSUPPORTED,
                     capabilities.support(WorkCommandType.ADD_INPUT_TO_ACTIVE_WORK));
             ExecutionCommandSupport expected = target == ExecutionTargetId.GENERAL_AGENT
-                    || target == ExecutionTargetId.ORDERCARE_CASE
                     || target == ExecutionTargetId.PROCUREMENT_SOURCING
                     ? ExecutionCommandSupport.SUPPORTED_EXISTING_RUNTIME
                     : ExecutionCommandSupport.UNSUPPORTED;

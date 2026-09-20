@@ -2,20 +2,6 @@ package com.agent.platform.workbench.application;
 
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.config.AgentStorageProperties;
-import com.agent.platform.ordercare.incident.application.IncidentTraceProjector;
-import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
-import com.agent.platform.ordercare.incident.model.AgentTaskRecord;
-import com.agent.platform.ordercare.incident.model.AgentTaskStatus;
-import com.agent.platform.ordercare.incident.model.EvidenceSubtype;
-import com.agent.platform.ordercare.incident.model.IncidentRecord;
-import com.agent.platform.ordercare.incident.model.IncidentSnapshot;
-import com.agent.platform.ordercare.incident.model.IncidentStatus;
-import com.agent.platform.ordercare.incident.model.TaskEventActorType;
-import com.agent.platform.ordercare.incident.model.TaskEventCategory;
-import com.agent.platform.ordercare.incident.model.TaskEventRecord;
-import com.agent.platform.ordercare.incident.model.TaskEventType;
-import com.agent.platform.ordercare.incident.persistence.JdbcIncidentStore;
-import com.agent.platform.ordercare.incident.recovery.persistence.JdbcIncidentRecoveryPlanStore;
 import com.agent.platform.runtime.AgentEventDraft;
 import com.agent.platform.runtime.AgentEventType;
 import com.agent.platform.runtime.AgentRunPhase;
@@ -72,10 +58,6 @@ class UnifiedWorkExecutionTreePostgresIT {
             execute(connection, "DELETE FROM agent_conversation_work_state WHERE tenant_id=?", principal.tenantId());
             execute(connection, "DELETE FROM agent_work_item WHERE tenant_id=?", principal.tenantId());
             execute(connection, "DELETE FROM agent_work_input WHERE tenant_id=?", principal.tenantId());
-            execute(connection, "DELETE FROM agent_task_event WHERE incident_id=?", incidentId);
-            execute(connection, "DELETE FROM agent_evidence WHERE incident_id=?", incidentId);
-            execute(connection, "DELETE FROM agent_task WHERE incident_id=?", incidentId);
-            execute(connection, "DELETE FROM agent_incident WHERE incident_id=?", incidentId);
             execute(connection, "DELETE FROM agent_session WHERE session_id=?", sessionId);
             for (String runId : List.of(commanderRunId, firstRunId, secondRunId, reviewerRunId)) {
                 execute(connection, "DELETE FROM agent_run_state WHERE run_id=?", runId);
@@ -84,20 +66,13 @@ class UnifiedWorkExecutionTreePostgresIT {
     }
 
     @Test
-    void projectsPersistedIncidentAttemptsEvidenceConflictAndZeroCallCoordinator() throws Exception {
+    void readsRetiredLinkAndPreservedRunTraceWithoutAnyDomainStore() throws Exception {
         JdbcWorkbenchStore workbench = new JdbcWorkbenchStore(storage, objectMapper);
         var created = new WorkInputService(new WorkItemService(workbench)).submit(
                 principal, SubmitWorkInputCommand.direct(
                         "client-m2c-" + suffix, "conversation-m2c-" + suffix, "investigate incident", 0));
         String workItemId = created.workItem().workItemId();
         insertWorkLink(workItemId);
-
-        JdbcIncidentStore incidentStore = new JdbcIncidentStore(storage, objectMapper);
-        incidentStore.create(incident());
-        incidentStore.create(task());
-        insertEvidence("evidence-first-" + suffix, firstRunId);
-        insertEvidence("evidence-second-" + suffix, secondRunId);
-        incidentStore.appendEvent(conflict());
 
         JdbcAgentRuntimeStore runStore = new JdbcAgentRuntimeStore(storage, objectMapper);
         JdbcAgentTimelineStore timeline = new JdbcAgentTimelineStore(storage, objectMapper);
@@ -107,65 +82,21 @@ class UnifiedWorkExecutionTreePostgresIT {
         persistedRun(runStore, timeline, secondRunId, 2);
         persistedRun(runStore, timeline, reviewerRunId, 1);
         RuntimeTraceProjector runtimeTraces = new RuntimeTraceProjector(runStore, timeline);
-        JdbcIncidentRecoveryPlanStore planStore = new JdbcIncidentRecoveryPlanStore(storage, objectMapper);
-        IncidentCommandProperties properties = new IncidentCommandProperties();
-        IncidentTraceProjector incidentTraces = new IncidentTraceProjector(
-                incidentStore, runtimeTraces, planStore, properties);
         UnifiedWorkExecutionTreeService service = new UnifiedWorkExecutionTreeService(
-                workbench, incidentStore, incidentTraces, planStore, runtimeTraces);
+                workbench, runtimeTraces, List.of());
 
         var tree = service.project(principal, workItemId);
 
-        assertEquals("MULTI_AGENT", tree.treeType());
-        assertTrue(tree.coordinator().synthetic());
-        assertEquals(0, tree.coordinator().modelCalls());
-        assertEquals(0, tree.metrics().syntheticCoordinatorModelCalls());
-        assertEquals(List.of(1, 2), tree.agents().stream()
-                .filter(node -> node.role().startsWith("SPECIALIST:"))
-                .map(node -> node.attempt()).toList());
-        assertEquals(2, tree.evidence().size());
-        assertEquals(1, tree.conflicts().size());
-        assertEquals("COUNT_MISMATCH", tree.conflicts().get(0).conflictType());
-        assertEquals("RESOLVED", tree.assessment().get("outcome"));
-        assertEquals(5, tree.metrics().modelCalls());
-    }
-
-    private IncidentRecord incident() {
-        Instant now = Instant.now();
-        IncidentSnapshot snapshot = new IncidentSnapshot(
-                "snapshot-m2c-" + suffix, incidentId, "batch-m2c", "ORDER_STATE_INCONSISTENCY",
-                principal.tenantId(), new IncidentSnapshot.IncidentOrderScope(List.of("REQ-M2C")),
-                new IncidentSnapshot.IncidentBusinessScope(List.of("orders.dlq")),
-                new IncidentSnapshot.IncidentTimeWindow(now.minusSeconds(60), now),
-                now.minusSeconds(30), now, now.plusSeconds(300), "scope-m2c-" + suffix);
-        return new IncidentRecord(
-                incidentId, commanderRunId, reviewerRunId, "incident-conversation-m2c-" + suffix,
-                "ordercare-incident-command-v1", IncidentStatus.ASSESSED, snapshot,
-                Map.of("tasks", 1), Map.of("outcome", "RESOLVED", "riskLevel", "MEDIUM"),
-                0, 1, 1, 0, now.minusSeconds(30), now);
-    }
-
-    private AgentTaskRecord task() {
-        Instant now = Instant.now();
-        return new AgentTaskRecord(
-                taskId, incidentId, "order-analysis", "SPECIALIST_INVESTIGATION", "ORDER_ANALYST",
-                "Compare order facts", 100, List.of(), List.of(EvidenceSubtype.ORDER_STATUS_SET),
-                Map.of(), Map.of("recordCount", 2), AgentTaskStatus.SUCCEEDED,
-                1, 2, secondRunId, firstRunId, now.plusSeconds(120),
-                null, null, 0, null, null, 0, now.minusSeconds(20), now);
-    }
-
-    private TaskEventRecord conflict() {
-        return new TaskEventRecord(
-                "conflict-event-m2c-" + suffix, incidentId, taskId, secondRunId, 0,
-                TaskEventType.EVIDENCE_CONFLICT_DETECTED, TaskEventCategory.CONTROL,
-                TaskEventActorType.SYSTEM, "checker", null, null, 0,
-                incidentId, "", "conflict-m2c-" + suffix,
-                Map.of("conflictId", "conflict-m2c-" + suffix,
-                        "conflictType", "COUNT_MISMATCH", "severity", "HIGH",
-                        "metricKey", "recordCount", "relatedEvidenceIds",
-                        List.of("evidence-first-" + suffix, "evidence-second-" + suffix)),
-                Instant.now());
+        assertEquals("RETIRED", tree.treeType());
+        assertEquals(true, tree.assessment().get("readOnly"));
+        assertEquals("RUNNING", tree.assessment().get("historicalExecutionState"));
+        assertTrue(tree.agents().isEmpty());
+        assertEquals(com.agent.platform.workbench.model.WorkExecutionState.RUNNING,
+                workbench.findWorkItem(principal, workItemId).orElseThrow().executionState());
+        assertEquals(2L, ((Number) runtimeTraces.project(secondRunId).orElseThrow().metrics().get("modelCalls")).longValue());
+        var foreign = new AuthenticatedPrincipal("other-tenant", "tree-user", Set.of("USER"));
+        org.junit.jupiter.api.Assertions.assertThrows(com.agent.platform.workbench.persistence.WorkbenchNotFoundException.class,
+                () -> service.project(foreign, workItemId));
     }
 
     private void persistedRun(JdbcAgentRuntimeStore runStore,
@@ -205,21 +136,6 @@ class UnifiedWorkExecutionTreePostgresIT {
                         active_incident_id=?, control_state='DISPATCHED', execution_state='RUNNING'
                     WHERE work_item_id=?
                     """, incidentId, workItemId);
-        }
-    }
-
-    private void insertEvidence(String evidenceId, String runId) throws Exception {
-        try (Connection connection = openConnection()) {
-            execute(connection, """
-                    INSERT INTO agent_evidence(
-                        evidence_id, incident_id, task_id, child_run_id, evidence_class,
-                        evidence_subtype, source_system, source_reference, query_parameters_json,
-                        observed_at, facts_json, payload_hash, status, supersedes_evidence_id,
-                        idempotency_key, created_at
-                    ) VALUES (?, ?, ?, ?, 'FACT', 'ORDER_STATUS_SET', 'floworder', 'orders',
-                        '{}'::jsonb, ?, '{"recordCount":1}'::jsonb, ?, 'ACCEPTED', NULL, ?, ?)
-                    """, evidenceId, incidentId, taskId, runId, java.sql.Timestamp.from(Instant.now()),
-                    "0".repeat(64), "idempotency-" + evidenceId, java.sql.Timestamp.from(Instant.now()));
         }
     }
 

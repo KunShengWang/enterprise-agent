@@ -12,10 +12,13 @@ import java.util.List;
 public interface WorkEventProjectionStore {
     List<WorkProjectionSource> listProjectionSources(int limit);
     default List<WorkProjectionClaim> claimProjectionSources(String leaseOwner, Instant leaseUntil, int limit) {
-        return listProjectionSources(limit).stream()
-                .map(source -> new WorkProjectionClaim(source, leaseOwner, 1, leaseUntil))
-                .toList();
+        return claimProjectionSources(leaseOwner, leaseUntil, limit,
+                java.util.Set.of("AGENT_RUN"));
     }
+    /** Only AGENT_RUN may be claimed; historical sources are read-only. Filter before leases and limits. */
+    List<WorkProjectionClaim> claimProjectionSources(String leaseOwner, Instant leaseUntil, int limit,
+                                                       java.util.Set<String> supportedSourceTypes);
+
     long projectionCursor(String workItemId, String sourceType, String sourceId);
     WorkEvent appendProjectedEvent(String workItemId, ProjectedWorkEventDraft event);
     default WorkEvent appendProjectedEvent(WorkProjectionClaim claim, ProjectedWorkEventDraft event) {

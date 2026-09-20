@@ -21,8 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "enterprise-agent.resilience.llm.fallback-enabled=false",
         "enterprise-agent.resilience.llm.timeout-millis=30000",
         "enterprise-agent.resilience.llm.max-attempts=2",
-        "enterprise-agent.ordercare.incident-command.enabled=true",
-        "enterprise-agent.ordercare.incident-command.recovery-planner-enabled=true",
         "enterprise-agent.workbench.routing.enabled=false"
 })
 @EnabledIfEnvironmentVariable(named = "WORKBENCH_ROUTING_EVAL", matches = "true")
@@ -35,7 +33,7 @@ class WorkbenchRoutingRealModelEvalIT {
     @Test
     void evaluatesWorkbenchRoutingWithRealModel() throws Exception {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(
-                "eval-tenant", "eval-user", Set.of("USER", "INCIDENT_OPERATOR"));
+                "eval-tenant", "eval-user", Set.of("USER"));
         WorkbenchRoutingEvalReport report = runner.run(principal, suite.cases());
         Path reportPath = Path.of("target", "workbench-routing-m1-e-model-eval.json");
         Files.createDirectories(reportPath.getParent());

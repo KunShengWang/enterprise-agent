@@ -4,7 +4,6 @@ import com.agent.platform.config.AgentStorageProperties;
 import com.agent.platform.config.WorkbenchDispatchProperties;
 import com.agent.platform.config.WorkbenchRoutingProperties;
 import com.agent.platform.llm.LlmService;
-import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
 import com.agent.platform.prompt.PromptRequest;
 import com.agent.platform.workbench.application.DefaultWorkCommandClassifier;
 import com.agent.platform.workbench.application.DispatchPreparationService;
@@ -175,18 +174,17 @@ class JdbcDispatchStorePostgresIT {
     }
 
     @Test
-    void incidentPreviewIsImmutableAndNoAdapterRunsBeforeExplicitConfirmation() {
-        Map<String, Object> inputs = Map.of(
-                "requestIds", List.of("REQ-M1C-1"), "queueName", "floworder.incident.e2e.dlq");
-        Fixture fixture = fixture("INCIDENT_INVESTIGATION", inputs, new NoopDispatchFailureInjector());
+    void genericPreviewIsImmutableAndNoAdapterRunsBeforeExplicitConfirmation() {
+        Map<String, Object> inputs = Map.of("fixtureRequireConfirmation", "yes");
+        Fixture fixture = fixture("GENERAL_AGENT", inputs, new NoopDispatchFailureInjector());
         AgentWorkItem work = routedWork(fixture,
-                "调查 requestId=REQ-M1C-1，队列 floworder.incident.e2e.dlq 的事故");
+                "解释需要确认的通用操作");
 
         AgentWorkItem waiting = fixture.workbench.findWorkItem(principal, work.workItemId()).orElseThrow();
         var preview = fixture.dispatchStore.findPreview(principal, work.workItemId()).orElseThrow();
         assertEquals(WorkControlState.WAITING_CONFIRMATION, waiting.controlState());
         assertEquals(RoutePreviewStatus.ACTIVE, preview.status());
-        assertEquals(0, fixture.adapters.get(ExecutionTargetId.INCIDENT_INVESTIGATION).dispatchCalls.get());
+        assertEquals(0, fixture.adapters.get(ExecutionTargetId.GENERAL_AGENT).dispatchCalls.get());
         assertTrue(fixture.workbench.listLinks(principal, work.workItemId()).isEmpty());
 
         assertThrows(WorkbenchIdempotencyConflictException.class, () -> fixture.dispatchStore.confirmPreview(
@@ -199,16 +197,16 @@ class JdbcDispatchStorePostgresIT {
         assertFalse(ready.dispatchRequestId().isBlank());
 
         fixture.coordinator.dispatch(principal, work.workItemId());
-        assertEquals(1, fixture.adapters.get(ExecutionTargetId.INCIDENT_INVESTIGATION).dispatchCalls.get());
+        assertEquals(1, fixture.adapters.get(ExecutionTargetId.GENERAL_AGENT).dispatchCalls.get());
     }
 
     @Test
     void expiredPreviewCannotReuseOldHumanConfirmation() throws Exception {
-        Fixture fixture = fixture("INCIDENT_INVESTIGATION",
-                Map.of("requestIds", List.of("REQ-M1C-2"), "queueName", "floworder.incident.e2e.dlq"),
+        Fixture fixture = fixture("GENERAL_AGENT",
+                Map.of("fixtureRequireConfirmation", "yes"),
                 new NoopDispatchFailureInjector());
         AgentWorkItem work = routedWork(fixture,
-                "调查 requestId=REQ-M1C-2，队列 floworder.incident.e2e.dlq 的事故");
+                "解释通用预览过期行为");
         var preview = fixture.dispatchStore.findPreview(principal, work.workItemId()).orElseThrow();
         try (Connection connection = openConnection()) {
             execute(connection, "UPDATE agent_route_preview SET expires_at=? WHERE preview_id=?",
@@ -228,9 +226,7 @@ class JdbcDispatchStorePostgresIT {
         JdbcWorkbenchStore workbench = new JdbcWorkbenchStore(storage, objectMapper);
         JdbcRoutingStore routing = new JdbcRoutingStore(storage, objectMapper);
         JdbcDispatchStore dispatch = new JdbcDispatchStore(storage, objectMapper);
-        IncidentCommandProperties incident = new IncidentCommandProperties();
-        incident.setEnabled(true); incident.setRecoveryPlannerEnabled(true);
-        ExecutionTargetRegistry targets = new ExecutionTargetRegistry(incident);
+        ExecutionTargetRegistry targets = new ExecutionTargetRegistry();
         WorkbenchDispatchProperties dispatchProperties = new WorkbenchDispatchProperties();
         dispatchProperties.setEnabled(true); dispatchProperties.setStaleAfterMillis(1_000);
         WorkbenchRoutingProperties routingProperties = new WorkbenchRoutingProperties();
@@ -240,7 +236,19 @@ class JdbcDispatchStorePostgresIT {
                 "fixture-model", "prompt", "raw", "{}", 10, 5, 1);
         RoutingCoordinator routingCoordinator = new RoutingCoordinator(
                 routing, workbench, routerModel,
-                new RoutePolicyValidator(targets, routingProperties, objectMapper),
+                new RoutePolicyValidator(targets, routingProperties, objectMapper) {
+                    @Override
+                    public com.agent.platform.workbench.model.RouteValidationResult validate(
+                            ExecutionDecision decision, com.agent.platform.workbench.application.RouteValidationContext context) {
+                        var result = super.validate(decision, context);
+                        // Exercise the generic preview contract without re-enabling a retired business.
+                        return inputs.containsKey("fixtureRequireConfirmation")
+                                ? new com.agent.platform.workbench.model.RouteValidationResult(
+                                    com.agent.platform.workbench.model.RouteDisposition.REQUIRE_CONFIRMATION,
+                                    result.validatedInput(), result.reasons(), result.failureCode())
+                                : result;
+                    }
+                },
                 new RouteContextResolver(workbench), targets, routingProperties,
                 new NoopRoutingFailureInjector(), new DispatchPreparationService(dispatch, dispatchProperties));
         LlmService unused = new LlmService() {

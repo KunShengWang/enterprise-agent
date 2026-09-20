@@ -1,5 +1,7 @@
 package com.agent.platform.workbench.persistence;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.config.AgentStorageProperties;
 import com.agent.platform.storage.AgentStorageException;
 import com.agent.platform.workbench.dispatch.DispatchClaim;
@@ -154,7 +156,9 @@ public class JdbcDispatchStore implements DispatchStore {
             connection.setAutoCommit(false);
             try {
                 AgentWorkItem work = requireWork(connection, principal, workItemId, true);
+                if (confirm) BusinessRetirementPolicy.requireTarget(work.activeExecutionTarget());
                 RoutePreview preview = requirePreview(connection, principal, workItemId, true);
+                if (confirm) BusinessRetirementPolicy.requireTarget(preview.targetId());
                 if (!preview.previewId().equals(previewId)) throw new WorkbenchIdempotencyConflictException("previewId mismatch");
                 if (preview.status() != RoutePreviewStatus.ACTIVE) {
                     if (confirm && preview.status() == RoutePreviewStatus.CONFIRMED) {
@@ -246,6 +250,7 @@ public class JdbcDispatchStore implements DispatchStore {
             connection.setAutoCommit(false);
             try {
                 AgentWorkItem work = requireWork(connection, principal, workItemId, true);
+                BusinessRetirementPolicy.requireTarget(work.activeExecutionTarget());
                 if (effectiveAttempt(connection, workItemId).isPresent()
                         || (work.controlState() != WorkControlState.READY_TO_DISPATCH
                         && work.controlState() != WorkControlState.DISPATCHING)) {
@@ -475,6 +480,8 @@ public class JdbcDispatchStore implements DispatchStore {
                      SELECT w.*, i.principal_roles AS recovery_principal_roles
                      FROM agent_work_item w JOIN agent_work_input i ON i.input_id=w.source_input_id
                      WHERE w.control_state='DISPATCHING'
+                       AND COALESCE(w.active_execution_target, '') NOT IN
+                           ('ORDERCARE_CASE', 'INCIDENT_INVESTIGATION', 'INCIDENT_RECOVERY_PLAN')
                        AND NOT EXISTS (SELECT 1 FROM agent_dispatch_attempt e WHERE e.work_item_id=w.work_item_id AND e.status='EFFECTIVE')
                        AND EXISTS (SELECT 1 FROM agent_dispatch_attempt a WHERE a.work_item_id=w.work_item_id
                                    AND ((a.status='STARTED' AND a.created_at<=?)

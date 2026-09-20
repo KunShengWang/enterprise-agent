@@ -1,5 +1,9 @@
 package com.agent.platform.workbench.application;
 
+import com.agent.platform.common.RetiredBusinessException;
+
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.workbench.model.AgentConversationTurn;
 import com.agent.platform.workbench.model.AgentWorkItem;
 import com.agent.platform.workbench.model.ClassifierType;
@@ -34,6 +38,11 @@ public class UnifiedWorkIntakeService {
     }
 
     public UnifiedWorkIntakeResult accept(AuthenticatedPrincipal principal, UnifiedWorkInputRequest request) {
+        // Check raw input before a classifier can rewrite it into an unrelated goal.
+        if (BusinessRetirementPolicy.retiredInput(request.content())
+                || BusinessRetirementPolicy.retiredInput(request.explicitGoalText())) {
+            throw new RetiredBusinessException();
+        }
         // 路由方案扩展了 Workbench 基础表，因此首先在新数据库上初始化基础所有者
         workbenchStore.findConversationState(principal, request.conversationId());
         // 持久化用户输入，当前是未分类消息，先落库是为了不丢请求（幂等：同一个 clientInputId 只存一次）

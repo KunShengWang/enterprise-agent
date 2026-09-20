@@ -12,7 +12,7 @@ import java.util.ArrayList;
 @Component
 public class WorkbenchRoutingEvalSuite {
 
-    public static final String VERSION = "workbench-routing-m3-d-v3";
+    public static final String VERSION = "workbench-routing-retirement-v4";
     private static final String FOCUS = "work-focus-001";
 
     public List<WorkbenchRoutingEvalCase> cases() {
@@ -131,7 +131,7 @@ public class WorkbenchRoutingEvalSuite {
                     "m3d-recovery-%02d".formatted(index), WorkbenchEvalCaseKind.ROUTE,
                     "基于刚才已评估的事故生成受控恢复计划，仍需人工确认",
                     "", "", null, ExecutionTargetId.INCIDENT_RECOVERY_PLAN,
-                    RouteDisposition.REQUIRE_CONFIRMATION, Map.of("incidentId", incidentId),
+                    RouteDisposition.REJECT, Map.of("incidentId", incidentId),
                     index > 3, "parameter-extraction"));
         }
     }
@@ -148,13 +148,13 @@ public class WorkbenchRoutingEvalSuite {
                                            RouteDisposition disposition, boolean adversarial, String category) {
         return new WorkbenchRoutingEvalCase(
                 id, WorkbenchEvalCaseKind.ROUTE, input, "", "", null,
-                target, disposition, Map.of(), adversarial, category);
+                target, target.executable() ? disposition : RouteDisposition.REJECT, Map.of(), adversarial, category);
     }
 
     private WorkbenchRoutingEvalCase recovery(String id, String input, String incidentId, boolean adversarial) {
         return new WorkbenchRoutingEvalCase(
                 id, WorkbenchEvalCaseKind.ROUTE, input, "", "", null,
-                ExecutionTargetId.INCIDENT_RECOVERY_PLAN, RouteDisposition.REQUIRE_CONFIRMATION,
+                ExecutionTargetId.INCIDENT_RECOVERY_PLAN, RouteDisposition.REJECT,
                 Map.of("incidentId", incidentId), adversarial, "recovery-plan");
     }
 }

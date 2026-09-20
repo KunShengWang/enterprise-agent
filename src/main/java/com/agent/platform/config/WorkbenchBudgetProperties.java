@@ -12,11 +12,6 @@ public class WorkbenchBudgetProperties {
     private final Limit workItem = new Limit(48, 220_000, 24, 900_000, 48);
     private final Limit routerAttempt = new Limit(1, 12_000, 0, 45_000, 2);
     private final Limit general = new Limit(12, 48_000, 10, 240_000, 12);
-    private final Limit orderCare = new Limit(16, 72_000, 14, 360_000, 18);
-    private final Limit incident = new Limit(32, 170_000, 8, 720_000, 36);
-    private final Limit recoveryPlan = new Limit(6, 36_000, 20, 300_000, 10);
-    private final Limit incidentAggregate = new Limit(32, 170_000, 8, 720_000, 36);
-    private final Limit recoveryPlanAggregate = new Limit(6, 36_000, 20, 300_000, 10);
     private final Limit procurementSourcing = new Limit(10, 48_000, 8, 240_000, 12);
 
     public boolean isEnabled() { return enabled; }
@@ -26,24 +21,15 @@ public class WorkbenchBudgetProperties {
     public Limit getWorkItem() { return workItem; }
     public Limit getRouterAttempt() { return routerAttempt; }
     public Limit getGeneral() { return general; }
-    public Limit getOrderCare() { return orderCare; }
-    public Limit getIncident() { return incident; }
-    public Limit getRecoveryPlan() { return recoveryPlan; }
-    public Limit getIncidentAggregate() { return incidentAggregate; }
-    public Limit getRecoveryPlanAggregate() { return recoveryPlanAggregate; }
     public Limit getProcurementSourcing() { return procurementSourcing; }
 
     public BudgetLimit workItemLimit() { return workItem.toLimit(); }
     public BudgetLimit routerAttemptLimit() { return routerAttempt.toLimit(); }
-    public BudgetLimit incidentAggregateLimit() { return incidentAggregate.toLimit(); }
-    public BudgetLimit recoveryPlanAggregateLimit() { return recoveryPlanAggregate.toLimit(); }
 
     public BudgetLimit targetLimit(ExecutionTargetId targetId) {
         return switch (targetId) {
             case GENERAL_AGENT -> general.toLimit();
-            case ORDERCARE_CASE -> orderCare.toLimit();
-            case INCIDENT_INVESTIGATION -> incident.toLimit();
-            case INCIDENT_RECOVERY_PLAN -> recoveryPlan.toLimit();
+            case ORDERCARE_CASE, INCIDENT_INVESTIGATION, INCIDENT_RECOVERY_PLAN -> throw new com.agent.platform.common.RetiredBusinessException();
             case PROCUREMENT_SOURCING -> procurementSourcing.toLimit();
         };
     }
@@ -51,13 +37,9 @@ public class WorkbenchBudgetProperties {
     public void validateHierarchy() {
         BudgetLimit root = workItemLimit();
         requireFits(routerAttemptLimit(), root, "routerAttempt");
-        for (ExecutionTargetId target : ExecutionTargetId.values()) {
+        for (ExecutionTargetId target : new ExecutionTargetId[]{ExecutionTargetId.GENERAL_AGENT, ExecutionTargetId.PROCUREMENT_SOURCING}) {
             requireFits(targetLimit(target), root, target.name());
         }
-        requireFits(incidentAggregateLimit(), targetLimit(ExecutionTargetId.INCIDENT_INVESTIGATION),
-                "incidentAggregate");
-        requireFits(recoveryPlanAggregateLimit(), targetLimit(ExecutionTargetId.INCIDENT_RECOVERY_PLAN),
-                "recoveryPlanAggregate");
     }
 
     private void requireFits(BudgetLimit child, BudgetLimit parent, String name) {

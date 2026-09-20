@@ -2,7 +2,7 @@ package com.agent.platform.workbench.dispatch;
 
 import com.agent.platform.agent.AgentExecutor;
 import com.agent.platform.runtime.AgentRunStore;
-import com.agent.platform.ordercare.config.AgentScenarioProfileResolver;
+import com.agent.platform.config.AgentScenarioProfileResolver;
 import com.agent.platform.workbench.target.ExecutionTargetId;
 import org.springframework.stereotype.Component;
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { executionTargetLabel, isRetiredWork, isRetiredPreview, isRetiredTool } from '../utils/retiredBusiness'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ExecutionInspector from '../components/ExecutionInspector.vue'
@@ -15,7 +16,6 @@ import { useWorkbenchData } from '../composables/useWorkbenchData'
 import { useWorkbenchSelection } from '../composables/useWorkbenchSelection'
 import { useWorkbenchTurnHistory } from '../composables/useWorkbenchTurnHistory'
 import { useTurnSelection } from '../composables/useTurnSelection'
-import { incidentAssessmentMarkdown } from '../utils/incidentAssessment'
 import { projectTurnConversationItems } from '../utils/conversationItems'
 import type { PresentationLocator } from '../types/conversation'
 import type { ComposerAttachment, ConversationHistoryItem, WorkItem } from '../types/workbench'
@@ -70,6 +70,8 @@ let terminalRefreshGeneration = 0
 const selected = computed(() => selection.history.value.find(item =>
   item.workItemId === selection.selectedWorkItemId.value)
   ?? data.workItems.value.find(item => item.workItemId === selection.selectedWorkItemId.value) ?? null)
+const retiredHistory = computed(() => isRetiredWork(data.detail.value?.workItem, data.tree.value)
+  || isRetiredPreview(data.detail.value?.preview) || isRetiredTool(data.approval.value?.toolCallRequest?.toolName))
 const turnViews = computed(() => turnHistory.orderedSnapshots.value.map(snapshot => {
   const active = snapshot.turn.turnId === data.detail.value?.workItem.sourceInputId
   const answer = active ? conversation.answer.value : snapshot.answer
@@ -113,10 +115,7 @@ const stopAvailable = computed(() => {
     && !['CLOSED', 'ABANDONED', 'WAITING_INPUT', 'WAITING_CONFIRMATION', 'MANUAL_REVIEW'].includes(work.controlState)
 })
 
-function targetLabel(target: string) {
-  return ({ GENERAL_AGENT: 'General', ORDERCARE_CASE: 'OrderCare', INCIDENT_INVESTIGATION: 'Incident',
-    INCIDENT_RECOVERY_PLAN: 'Planner', PROCUREMENT_SOURCING: 'Procurement Sourcing' } as Record<string, string>)[target] ?? target ?? 'Routing'
-}
+function targetLabel(target: string) { return executionTargetLabel(target) }
 
 function stopWorkItemResources() {
   terminalRefreshGeneration += 1
@@ -142,16 +141,11 @@ async function loadHistory(current: WorkItem[]) {
 function synchronizeAnswer() {
   const work = data.detail.value?.workItem
   if (!work) return
-  const waiting = Boolean(work.activeRunId)
+  const waiting = !retiredHistory.value && Boolean(work.activeRunId)
     && !['COMPLETED', 'FAILED', 'CANCELLED', 'UNKNOWN'].includes(work.executionState.toUpperCase())
   conversation.prepareWork(work.workItemId, work.activeRunId, waiting)
   const persisted = conversation.applyPersisted(data.messages.value, work.activeRunId)
   if (persisted) return
-  if (work.activeExecutionTarget === 'INCIDENT_INVESTIGATION'
-      && work.outcome.toUpperCase() === 'ASSESSED') {
-    const assessment = incidentAssessmentMarkdown(data.tree.value)
-    if (conversation.applyProjectedResult(assessment, work.updatedAt)) return
-  }
   const terminal = `${work.controlState} ${work.executionState} ${work.outcome}`.toUpperCase()
   if (terminal.includes('CANCELLED')) conversation.markTerminal('CANCELLED')
   else if (terminal.includes('FAILED')) conversation.markTerminal('FAILED')
@@ -274,6 +268,7 @@ async function choose(item: ConversationHistoryItem) {
 }
 
 async function submit() {
+  if (retiredHistory.value) return
   if (!content.value.trim() || busy.value) return
   busy.value = true
   launchPending.value = true
@@ -332,6 +327,7 @@ async function locatePresentations(locator: PresentationLocator) {
 }
 
 async function terminateTask() {
+  if (retiredHistory.value) return
   if (terminationBusy.value) return
   terminationRequested.value = true
   error.value = ''
@@ -361,7 +357,7 @@ async function terminateWhenRunnable(workItemId: string) {
         await refresh()
         return
       }
-      const runtimeTarget = ['GENERAL_AGENT', 'ORDERCARE_CASE', 'PROCUREMENT_SOURCING'].includes(work.activeExecutionTarget)
+      const runtimeTarget = ['GENERAL_AGENT', 'PROCUREMENT_SOURCING'].includes(work.activeExecutionTarget)
       const cancellableRuntime = Boolean(work.activeRunId)
         || (runtimeTarget && Boolean(work.dispatchRequestId) && work.executionState === 'STARTING')
       if (cancellableRuntime && ['STARTING', 'RUNNING', 'PAUSED', 'WAITING_APPROVAL'].includes(work.executionState)) {
@@ -391,6 +387,7 @@ function serializeSubmission(goal: string, files: ComposerAttachment[]) {
 }
 
 async function retryTask() {
+  if (retiredHistory.value) return
   if (!selected.value || busy.value) return
   content.value = selected.value.originalGoal
   await submit()
@@ -409,6 +406,7 @@ async function makeFocus() {
 }
 
 async function decidePreview(approved: boolean) {
+  if (retiredHistory.value) return
   if (!data.detail.value?.preview || !selected.value || busy.value) return
   busy.value = true
   try {
@@ -421,6 +419,7 @@ async function decidePreview(approved: boolean) {
 }
 
 async function decideApproval(approved: boolean) {
+  if (retiredHistory.value) return
   if (!data.approval.value || !selected.value || controlBusy.value) return
   controlBusy.value = true
   try {
@@ -439,6 +438,7 @@ async function copyAnswer(value: string) {
 }
 
 async function focusClarificationInput() {
+  if (retiredHistory.value) return
   await nextTick()
   composer.value?.focus()
 }
@@ -510,8 +510,9 @@ onBeforeUnmount(() => {
         <div class="task-header-actions"><span v-if="copied" class="copy-confirmation">已复制</span><StatusBadge v-if="selected" :value="selected.executionState" compact /><button v-if="data.focus.value && selected && data.focus.value.focusedWorkItemId !== selected.workItemId" type="button" aria-label="设为当前任务" @click="makeFocus">聚焦</button><button class="inspector-mobile-toggle" type="button" aria-label="打开执行检查器" @click="openDrawer('right')">◎</button></div>
       </header>
 
-      <WorkbenchConversationPanel :turns="turnViews" :selected-turn-id="turnSelection.selectedTurnId.value" :has-work="Boolean(data.workItems.value.length)" :busy="busy || controlBusy" :reviewer="reviewer" :decision-reason="decisionReason" @select-turn="selectTurn" @update:reviewer="reviewer = $event" @update:decision-reason="decisionReason = $event" @confirm-preview="decidePreview" @decide-approval="decideApproval" @copy="copyAnswer" @retry="retryTask" @diagnostics="showDiagnostics" @supply-input="focusClarificationInput" @locate-presentations="locatePresentations" />
-      <WorkbenchComposer ref="composer" v-model="content" v-model:attachments="attachments" :busy="busy" :stop-available="stopAvailable" :stopping="terminationBusy" :error="error" :waiting-for-input="waitingForInput" :control-mode="composerControlMode" @submit="submit" @stop="terminateTask" />
+      <p v-if="retiredHistory" role="status">业务已退役、不能继续执行。当前仅展示已保存的历史记录；原任务状态保持不变。</p>
+      <WorkbenchConversationPanel :turns="turnViews" :selected-turn-id="turnSelection.selectedTurnId.value" :has-work="Boolean(data.workItems.value.length)" :busy="busy || controlBusy || retiredHistory" :reviewer="reviewer" :decision-reason="decisionReason" @select-turn="selectTurn" @update:reviewer="reviewer = $event" @update:decision-reason="decisionReason = $event" @confirm-preview="decidePreview" @decide-approval="decideApproval" @copy="copyAnswer" @retry="retryTask" @diagnostics="showDiagnostics" @supply-input="focusClarificationInput" @locate-presentations="locatePresentations" />
+      <WorkbenchComposer v-if="!retiredHistory" ref="composer" v-model="content" v-model:attachments="attachments" :busy="busy" :stop-available="stopAvailable" :stopping="terminationBusy" :error="error" :waiting-for-input="waitingForInput" :control-mode="composerControlMode" @submit="submit" @stop="terminateTask" />
     </main>
 
     <ExecutionInspector v-if="data.detail.value" ref="inspector" :detail="data.detail.value" :tree="data.tree.value" :events="primaryStream.rawEvents.value" :budget="data.budget.value" :approval="data.approval.value" :inspector-presentations="presentationStream.inspectorPresentations.value" :turn-snapshots="turnHistory.orderedSnapshots.value" :selected-turn-id="turnSelection.selectedTurnId.value" :follow-current="turnSelection.followCurrent.value" :delta-stream-state="primaryStream.connectionState.value" :presentation-stream-state="presentationStream.connectionState.value" :work-cursor="primaryStream.workCursor.value" :run-cursor="primaryStream.runCursor.value" :presentation-cursor="presentationStream.presentationCursor.value" :reconnect-count="primaryStream.reconnectCount.value + presentationStream.reconnectCount.value" :last-event-at="primaryStream.lastEventAt.value || presentationStream.lastEventAt.value" :gap="primaryStream.gap.value || presentationStream.gap.value" :sync-error="primaryStream.syncError.value || presentationStream.syncError.value" :final-answer-at="finalAnswerAt" @select-turn="selectTurn" @follow-current="followCurrentTurn" />

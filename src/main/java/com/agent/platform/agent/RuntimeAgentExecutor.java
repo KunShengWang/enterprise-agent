@@ -6,7 +6,7 @@ import com.agent.platform.runtime.AgentRunState;
 import com.agent.platform.runtime.AgentEventListener;
 import com.agent.platform.runtime.AgentRuntime;
 import com.agent.platform.runtime.AgentRuntimeResult;
-import com.agent.platform.ordercare.config.AgentScenarioProfileResolver;
+import com.agent.platform.config.AgentScenarioProfileResolver;
 import com.agent.platform.trace.TraceEvent;
 import com.agent.platform.trace.TraceSummary;
 import org.springframework.context.annotation.Primary;

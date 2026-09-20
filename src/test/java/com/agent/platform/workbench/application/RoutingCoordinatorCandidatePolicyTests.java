@@ -1,7 +1,6 @@
 package com.agent.platform.workbench.application;
 
 import com.agent.platform.config.WorkbenchRoutingProperties;
-import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
 import com.agent.platform.workbench.model.AgentWorkItem;
 import com.agent.platform.workbench.model.DecisionStatus;
 import com.agent.platform.workbench.model.RoutingAttempt;
@@ -37,7 +36,7 @@ import static org.mockito.Mockito.when;
 class RoutingCoordinatorCandidatePolicyTests {
 
     @Test
-    void completeSingleCaseBypassesModelAndPersistsOrderCareDecision() {
+    void retiredSingleCaseBypassesModelAndPersistsRejection() {
         String goal = "请处理一个唯一的 OrderCare 单案例。案例标识：requestId=ORDERCARE-M05-REQUEST。"
                 + "请查询订单、库存扣减和死信事实并检索 SOP；满足条件时创建恢复预演，"
                 + "申请审批，审批后执行恢复并验证最终收敛。";
@@ -48,10 +47,7 @@ class RoutingCoordinatorCandidatePolicyTests {
         WorkbenchStore workbenchStore = mock(WorkbenchStore.class);
         UnifiedTaskRouter modelRouter = mock(UnifiedTaskRouter.class);
         RouteContextResolver contextResolver = mock(RouteContextResolver.class);
-        IncidentCommandProperties incident = new IncidentCommandProperties();
-        incident.setEnabled(true);
-        incident.setRecoveryPlannerEnabled(true);
-        ExecutionTargetRegistry registry = new ExecutionTargetRegistry(incident);
+        ExecutionTargetRegistry registry = new ExecutionTargetRegistry();
         WorkbenchRoutingProperties properties = new WorkbenchRoutingProperties();
         properties.setEnabled(true);
 
@@ -88,9 +84,9 @@ class RoutingCoordinatorCandidatePolicyTests {
         verify(modelRouter, never()).route(any());
         ArgumentCaptor<RouterModelResult> resultCaptor = ArgumentCaptor.forClass(RouterModelResult.class);
         verify(routingStore).completeRouting(eq(principal), eq(attempt), resultCaptor.capture(), any());
-        assertEquals(ExecutionTargetId.ORDERCARE_CASE.name(), resultCaptor.getValue().decision().targetId());
-        assertEquals("ORDERCARE-M05-REQUEST",
-                resultCaptor.getValue().decision().extractedInputs().get("requestId"));
+        assertEquals("", resultCaptor.getValue().decision().targetId());
+        assertEquals("TARGET_RETIRED", completed.failureCode());
+        assertEquals("REJECT", completed.validation().get("disposition"));
         assertEquals(ExecutionTargetCandidateResolver.POLICY_VERSION, completed.modelName());
     }
 

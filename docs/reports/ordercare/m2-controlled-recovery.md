@@ -1,3 +1,5 @@
+> 历史版本/阶段资料，非当前运行说明。涉及 FlowOrder/OrderCare 的业务已退役；其他能力以当前代码和采购指南为准。原始正文、成绩和结论保留，正文相对路径以原文件位置为准。当前入口见仓库 README 与 docs/documentation-index.md。
+
 # OrderCare M2：受控恢复闭环证据
 
 > 本文保留 M2 阶段证据。M3 UNKNOWN 对账、Action 租约和崩溃恢复现已完成，当前状态见 [M3 故障正确性报告](m3-fault-correctness.md)。

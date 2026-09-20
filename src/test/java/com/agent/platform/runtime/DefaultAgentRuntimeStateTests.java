@@ -823,10 +823,10 @@ class DefaultAgentRuntimeStateTests {
     }
 
     @Test
-    void staleOrderCareToolCanBeReconciledBeforeManualReview() {
+    void staleGenericToolCanBeReconciledBeforeManualReview() {
         Fixture fixture = new Fixture();
         ToolCallResult reconciled = new ToolCallResult(
-                "floworder_recovery_execute", true, "reconciled", "",
+                "fixture_recovery_execute", true, "reconciled", "",
                 Map.of("recoveredAfterCrash", true, "actionRequestId", "act-1")
         );
 
@@ -923,11 +923,11 @@ class DefaultAgentRuntimeStateTests {
         private AgentRuntimeResult recoverUncertainToolExecution(ToolCallResult resolvedResult) {
             AgentRunLimits limits = AgentRunLimits.from(properties);
             AgentExecutionProfile profile = new AgentExecutionProfile(
-                    "ordercare", "prompt", Set.of("floworder_recovery_execute"), limits, false
+                    "ordercare", "prompt", Set.of("fixture_recovery_execute"), limits, false
             );
             AgentRunBudget budget = new AgentRunBudget(limits);
             ToolCallRequest pending = new ToolCallRequest(
-                    "floworder_recovery_execute", "tool-exec-1", Map.of("proposalId", "prop-1")
+                    "fixture_recovery_execute", "tool-exec-1", Map.of("proposalId", "prop-1")
             );
             persisted.set(AgentRunRecord.create(
                             "run-1", "run-1", "session-1",

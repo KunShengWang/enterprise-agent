@@ -33,8 +33,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "enterprise-agent.resilience.llm.fallback-enabled=false",
         "enterprise-agent.resilience.llm.timeout-millis=30000",
         "enterprise-agent.resilience.llm.max-attempts=2",
-        "enterprise-agent.ordercare.incident-command.enabled=true",
-        "enterprise-agent.ordercare.incident-command.recovery-planner-enabled=true",
         "enterprise-agent.workbench.routing.enabled=false"
 })
 @EnabledIfEnvironmentVariable(named = "WORKBENCH_REAL_MODEL_IT", matches = "true")
@@ -46,13 +44,13 @@ class M1BRealModelRoutingIT {
     @Autowired private RoutePolicyValidator validator;
 
     private final AuthenticatedPrincipal principal = new AuthenticatedPrincipal(
-            "real-model-tenant", "eval-user", Set.of("USER", "INCIDENT_OPERATOR"));
+            "real-model-tenant", "eval-user", Set.of("USER"));
 
     @Test
     void realModelReturnsAuditableCommandClassification() {
         CommandClassifierResult result = classifier.classify(new CommandClassificationRequest(
                 input("请继续执行刚才暂停的任务"),
-                "work-existing", "调查异常订单", ClassifierType.MODEL, null, ""));
+                "work-existing", "解释 Java CAS 的原理", ClassifierType.MODEL, null, ""));
 
         assertEquals(WorkCommandType.RESUME_ACTIVE_WORK, result.classification().commandType());
         assertFalse(result.modelName().isBlank());
@@ -76,7 +74,7 @@ class M1BRealModelRoutingIT {
     }
 
     @Test
-    void realModelIncidentRouteStillStopsAtJavaConfirmationGate() {
+    void realModelCannotOverrideRetiredIncidentRejection() {
         String goal = "调查批次 BATCH-20260720-01 在队列 floworder.incident.e2e.dlq 的异常订单事故，"
                 + "候选 requestId 为 IC-HAPPY-REQ-001";
         AgentWorkItem work = work(goal);
@@ -85,8 +83,14 @@ class M1BRealModelRoutingIT {
         RouteValidationResult validation = validator.validate(result.decision(),
                 new RouteValidationContext(principal, work, goal, Map.of(), Map.of()));
 
-        assertEquals("INCIDENT_INVESTIGATION", result.decision().targetId());
-        assertEquals(RouteDisposition.REQUIRE_CONFIRMATION,
+        var candidates = new ExecutionTargetCandidateResolver().resolve(goal, registry.enabledTargets(principal));
+        assertTrue(candidates.retiredBusiness());
+        assertTrue(candidates.candidates().stream().allMatch(target -> target.targetId().executable()));
+        assertEquals("", candidates.deterministicResult().orElseThrow().decision().targetId());
+        // Raw model output is untrusted: no General, Procurement or retired target is accepted.
+        assertEquals("TARGET_RETIRED", validation.failureCode());
+        org.junit.jupiter.api.Assertions.assertNull(validation.validatedInput());
+        assertEquals(RouteDisposition.REJECT,
                 validation.disposition(), () -> "decision=" + result.decision() + ", validation=" + validation);
     }
 
