@@ -199,3 +199,67 @@ Ground Truth 继续由冻结 Benchmark 及其独立合同测试管理。手工�
 - Comparator 先核对逐项状态、structuredStatus、报告计数和 Grader 标识的一致性。空报告、伪造 PASS 或计数拒绝；缺少 Artifact 指纹不可比较。SKIP/NOT_APPLICABLE 不计为 PASS，不生成混合“成功率”。
 - 指纹是完整 Artifact 内容哈希，不是业务等价哈希：证据中的真实时间戳、模型/运行元数据发生变化时指纹应变；重评分不注入当前时间或输出绝对路径。移动同一文件、对象属性及已声明 Set 顺序变化不影响重评。工具 content 字符串、事件顺序仍保留原样，不把不同执行伪装成同一证据。
 - 身份和哈希验证用于检测不一致或误混用，不是加密签名。无法证明同时伪造所有字段的 Artifact 来自真实执行；生产数据、完整多租户认证链仍未纳入此测试侧闭环。
+
+### Phase 7B-1：独立回答事实 sidecar
+
+本节新增的测试侧闭环不修改以上 Phase 7A schema v2、Grader v2、聚合规则或历史 Artifact。
+`ProcurementAnswerGrader` 读取已保存回答，生成 `procurement-answer-v1` sidecar；提取器为
+`procurement-claims-v1.1`，评分器为 `procurement-answer-grader-v1.1`。没有模型、Agent、工具执行器依赖。
+
+流程：`readArtifact → 7A 身份校验 → 独立 ReferenceFacts / ObservedEvidence → AnswerClaimExtractor → 逐主张双维度评分 → write(sidecar)`。
+7A 的 structuredStatus 原样保留；最终回答错误不会反向修改结构化报告。
+
+- ReferenceFacts 核对冻结 Benchmark 字节哈希及 case 的实际 expected/expectedCase/input/providerFixture，核对输入 Fixture 字节与 case/artifact fixtureSha256 及 scenario/sourceAsOf。缺失、错版或不匹配不回退其他 Fixture。单价、币种、报价交期来自 Fixture；总价用 Fixture 单价乘冻结数量，以 BigDecimal 计算；推荐及备选资格来自 Benchmark。
+- ObservedEvidence 独立读取本次成功工具的原始 JSON、最终 Case 数量和要求期限。报价必须具有匹配的 supplierId/productId；Search 与 Finalize 的多份证据若互相冲突，不取第一份放行。不从工具请求、拒绝或失败记录推导成功事实。
+- 工具报价始终保留原始 totalPrice，不反序列化为会重新计算总价的 SupplierOffer。小数采用 BigDecimal；工具与答案相同但与 Fixture 矛盾时，事实 FAIL，支持判定标为 `CAPTURED_MATCH_CONFLICTS_WITH_REFERENCE`，不当作可信支持。
+- Faithfulness 的范围是“已捕获执行证据是否支持该主张”，不是已证明模型实际看到了完整原始工具结果；生产 ToolResultProjector 可能裁剪模型上下文。
+
+AnswerClaim 保存原文、Java UTF-16 字符区间 `[start,end)`、主体、属性、BigDecimal 数值、单位/币种、语气、提取器版本及未决原因。
+逐主张分别输出 factualCorrectness 和 faithfulness 的 status/reason/evidencePaths，路径以 `fixture:`、`benchmark:`、`artifact:` 区分来源。
+sidecar 关联 caseId/datasetSha256/artifactSha256/fixtureSha256 和两种规则版本，不注入重评时间戳、输出路径。
+
+支持的有限表达：
+
+| 类型 | 示例与限制 |
+| --- | --- |
+| 推荐 / 备选 | `推荐 Supplier D`、`推荐供应商 Supplier D`、`备选 Supplier B`；备选事实正确表示冻结 eligible 集合中非首选成员，执行支持仍须 Finalize 中明确列出 |
+| 单价 / 总价 | `总价 580000 元`、`总价 58 万元`、`单价为 11600 CNY`；支持阿拉伯数字、十进制小数、万倍率 |
+| 币种 | 元/人民币/CNY、美元/USD、欧元/EUR，及 `币种 USD`；scripted 无币种金额显式记为 CASE_CURRENCY，按冻结 case 币种解析，仍须与报价币种吻合 |
+| 数量 / 期限 | `采购数量 50 台`、`数量 50 台`、`采购 50 台`、`用户要求期限 21 天`；与供应商 `交期 12 天`、`报价交期 12 天` 分开 |
+| 状态识别 | `本阶段仅完成只读推荐`、`待审批`、`RFQ 已创建`、`RFQ 创建成功`、`执行失败`；现阶段识别状态主张但不裁定外部事件真实性，双维度 SKIP 并记录缺少权威事件真值/充分状态证据 |
+
+供应商仅在逗号连接的明确语句内继承；句号、分号、未知子句清除主体。否定、条件、将来/过去、模糊语气及问句保留原文并标为未决；条件作用于整个逗号连接句，避免把条件结果识别为已执行。
+所有无法完整消费的非标点文本都会形成未决项，不静默跳过。中文数字、复杂表格、代词消解、多商品、混合币种换算、比较理由、开放语义和完整性不支持。
+
+状态和报告口径：
+
+- 逐主张 PASS：该维度有足够匹配依据；FAIL：与明确事实或捕获证据矛盾。
+- SKIP + reason：无法解析、主体未决、证据不足、状态缺少权威真值等；不等于事实为假，也不等于通过。
+- ERROR：Artifact 身份、Fixture/Benchmark 错配、原始数字损坏等基础设施问题。证据索引损坏时，独立事实判定仍可保留，证据判定 ERROR。
+- completeAnswerStatus 始终 SKIP。evaluationStatus 是局部诊断汇总：ERROR 优先，其次 FAIL，否则 SKIP；即使所有可识别主张通过，也没有整篇 PASS 或成功率。未实现的完整性不能由非空主张集合替代。7A 中原有最终回答指标仍然 SKIP，应另读 sidecar。
+- 无 RFQ 成功记录不是“RFQ 绝未发生”的证明。Run COMPLETED、Finalize 成功、approvalId 和模拟 RFQ 成功记录也不是外部创建凭证。本阶段状态表述的证据不足会被显式暴露，不判定完整 HITL、权限或副作用。
+
+离线运行：
+
+```powershell
+# 端到端手工正反例，包含同一 Artifact 两次磁盘重评与输入不变检查
+mvn -o '-Dtest=ProcurementAnswerGraderTests' test
+
+# 读取已有 scripted Artifact；不生成新执行，不调用模型或业务工具
+mvn -o '-Dtest=ProcurementAnswerReplayTests' '-Danswer.artifact=target/procurement-evaluation/runtime-artifact.json' test
+# 可额外指定 -Danswer.fixture=<匹配原始哈希的文件> -Danswer.report=<独立输出文件>
+```
+
+未指定 answer.artifact 时显式 Replay 测试跳过；输入文件无法读取时抛出 IOException，不报告通过。已加载输入的评分错误写入 sidecar。
+Replay 遇到 FAIL/ERROR 先保存报告再使测试失败，SKIP 是预期的局部覆盖结果；它不证明最终回答完整正确。
+输出默认 `target/procurement-evaluation/answer-sidecar.json`，手工重评样例为 `answer-replay-report.json`。
+禁止 sidecar 覆盖 Artifact 或 Fixture（包含同文件链接检查）；两次重评 JSON 字节必须相同。规则升级与比较留待后续阶段，现有 7A Comparator 不接受此独立 sidecar。
+
+Phase 7B-1 最终复核修正（规则 v1.1，sidecar schema v1 不变）：
+
+- 不再从不支持的主体语句截取一个推荐前缀并判定通过；整段原文转为未决。显式条件的跨句作用域不做推理，出现条件标记时整个回答保守未决。疑问和否定限定同样不转为确定事实。Emoji 和补充平面字符使用原始 UTF-16 区间，不做字符串规范化或截断代理对。
+- 显式供应商主体的数量或用户要求期限不再静默改绑为 Case 主体；这种归属歧义保留 supplier 主体并标为未决。
+- 报价支持必须具有匹配冻结快照时间及 snapshot 的来源字段，且能关联同工具 payload 内、同供应商/sourceRecordId 的 OFFER 证据；校验其内容派生 evidenceId 以及 source/digest 等来源字段。来源缺失不计支持，过期或冲突来源产生 ERROR；来源哈希不是防伪签名。
+- 总价支持必须具有匹配采购数量；原始单价、数量、总价互相矛盾时为 ERROR，保留原始值而不修正。内部数值一致、但与冻结事实矛盾的工具断言仍为事实 FAIL，不反向成为 Ground Truth。
+- 无法通过 7A evidenceGrounding 的推荐结果不提供推荐/备选支持；多个成功 Finalize 的类别结论视为歧义证据。事实判定、证据判定和回答摘要分开保留，摘要 ERROR 不抹除逐主张 FAIL，完整回答仍为 SKIP。
+- 修复改变提取和评分结果，因此只提升独立规则版本；历史 Artifact、Phase 7A schema v2 和 Grader v2 均不迁移、不修改。旧规则报告与 v1.1 报告不能直接解释成模型能力变化。
