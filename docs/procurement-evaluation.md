@@ -329,3 +329,54 @@ mvn -o '-Dtest=ProcurementAnswerPolicyTests#explicitHistoricalArtifactReplay' '-
 下一批次可复用 Coverage Analysis、带来源的 Policy.forCase(...).elements()、旧逐主张结果及 v2 身份绑定。本批次没有 Completeness Grader、关系型解析、推荐理由评分、统一报告比较或 LLM Judge。
 
 7B-2A 最终契约复核补充：Coverage 构造及反序列化校验连续区间、原文长度、Claim ID/区间关联、Unicode 边界和统计标志；NON_FACTUAL 仍须满足完整片段白名单。v2 同时核对内嵌旧结果的身份、版本、Claim 列表，以及覆盖原文的回答哈希，拒绝互相矛盾的状态与错误列表。人工场景约定的引用原文必须与指定约定一致。这些校验不增加字段、不改变 schema 或评分口径，也不构成对外部 JSON 的真实性签名：重放时仍需通过原始 Artifact、冻结 Fixture 和 Policy 加载入口验证来源。
+
+### Phase 7B-2B-1：独立关系主张评测
+
+本批次新增 `ProcurementAnswerRelationExtractor`、`ProcurementAnswerRelationGrader` 和端到端测试。
+不修改旧 Claim、Grader、Coverage 或 v1/v2 sidecar，不实现必答元素匹配、偏好理由聚合、完整性、完整回答 PASS 或统一 Comparator。
+关系结果采用独立的 `procurement-answer-relations-v1` 临时子结果契约，尚非完整 `procurement-answer-v3`。
+
+关系 Claim 保存原文与 UTF-16 区间、left/right、scope、property、operator、BigDecimal difference、unit/currency、modality 和 unresolvedReason。
+每个原始非分隔符片段必须整段匹配，否则保留未决。条件、问句和引用范围保守处理；不靠截取正确前缀提升通过结果。
+普通标量和礼貌语也可能在关系结果中未决：这是关系专用提取器，不替代旧 Coverage 的分类。
+
+有限语法示例（主体为 `Supplier B` 或明确的单字母 `B`）：
+
+- `D 比 B 快 6 天`、`D 的报价交期比 B 的报价交期更快`；快=交期小于，慢=大于。
+- `D 比 B 贵 3 万元`、`D 的总价比 B 的总价高 30000 CNY`；该有限语法中的裸“贵/便宜”明确约定为本次采购总价，不支持单价比较。
+- `D 的总价满足本次预算`、`D 的总价在本次预算内`、`D 的总价超出本次预算`。
+- `D 的报价交期满足本次交付期限`、`D 的交期超出本次交付期限`。
+- `当前原始硬约束下仅 D 合格`（亦支持“当前约束下”）、`当前原始硬约束下无合格供应商`。
+
+差值金额支持元/人民币/CNY、美元/USD、欧元/EUR 及万倍换算；无显式差值币种时绑定 Case 币种，不做汇率换算。
+代词、跨句指代、全体最值、单价比较、自由形式理由和混合复杂句保留未决。价格/期限关系不会额外推断该主体就是最终推荐者。
+
+事实侧复用冻结 Benchmark/Fixture 校验与事实索引，增加冻结预算和合格集合；总价由冻结单价乘冻结数量计算，不从工具结果建立真值。
+证据侧复用原始工具 JSON 数值与报价来源校验，不经过 SupplierOffer 构造器；从本次最终 Case 获取预算/期限，关系每侧操作数均须有支持并与冻结事实一致。
+即使错误工具数值恰好得到相同差值，也不能得到证据支持 PASS。工具 JSON 的重复键、尾随文档、显式错误 caseId 均拒绝。
+
+关系入口限定复用 Phase 7A `procurement-deterministic-v2`，要求九项需求检查各出现一次，以确认此前的 schema、Case/Dataset/Fixture、Run/session、工具请求/结果身份与业务归属校验均已完成。
+使用执行证据前，九项检查必须全部 PASS：产品类别/描述非空、quantity、budget、currency、requiredDeliveryDays、hardConstraints、preferences、excludedSuppliers。不以 structuredStatus 或单个检查项存在代替这些门槛。
+需求不匹配产生证据 ERROR，但冻结事实仍独立评分；身份校验未完成则整体 ERROR，不继续使用该 Artifact 的业务事实。
+旧 Grader 将工具结果解析错误也归入 artifactValidity，因此新入口不将该汇总直接作为所有关系的事实结论；成功越过身份门槛后，工具载荷由关系证据校验独立处理，保留独立事实结果。
+Search 必须成功且版本有效；缺少 Search、失败 Search、缺少 eligibleSuppliers 为支持不足；显式空数组才是空集合。
+数组类型错误、重复 ID、错误 Case/Run/版本、原始金额自相矛盾、来源过期或多次成功 Search 为 ERROR。
+合格集合还需原始约束范围匹配，排除名单按集合比较；缺少 Search 的 offers/evidence 字段不支持合格集合断言。
+Search 集合或报价与冻结事实明确冲突为 FAIL；本阶段不重新执行供应商排名或资格算法。
+
+每条结果分别记录 factualDirection、factualDifference、evidenceDirection、evidenceDifference，并附原因和证据路径。
+方向和差值绝对值独立判断：`D 比 B 快 5 天` 的方向 PASS、差值 FAIL；没有差值主张时差值为 NOT_APPLICABLE。
+PASS 表示该关系检查通过；FAIL 表示可证实的矛盾；SKIP 表示未决或缺少支持；ERROR 表示输入/证据结构或身份异常。
+relationStatus 按 ERROR > FAIL > SKIP > PASS 汇总且保留逐项结果，NOT_APPLICABLE 不视作已评分通过；completeAnswerStatus 始终 SKIP。
+schema、提取器/评分器版本、Case/Run、Dataset 版本与哈希、Fixture/Artifact/回答哈希随结果保存；无当前时间和输出路径参与指纹。
+
+`replay(case, artifactPath, fixturePath, outputPath)` 只读已有输入，要求输出是新文件；不调用 Agent、模型或业务工具。
+
+```powershell
+mvn -o '-Dtest=ProcurementAnswerRelationTests' '-Drelation.artifact=target/procurement-evaluation/runtime-artifact.json' test
+```
+
+后续 7B-2B-2 可使用 `extract(answer)` 的原文区间及 `grade(...)` 的独立关系判定关联旧覆盖片段；本批次没有把旧 UNRESOLVED/SKIP 改写为 PASS。
+
+最终复核将独立关系 Grader 提升为 `procurement-relation-grader-v1.1`：修复缺少 eligibleSuppliers 时可能绕过 Case 需求范围检查的问题。提取语法和关系 schema 不变。
+关系 Claim 构造/反序列化检查原文长度与区间、语气和差值基本约束；逐项结果禁止未决 Claim 获得 PASS，已解析但无差值的关系强制差值为 NOT_APPLICABLE，方向不能标成 NOT_APPLICABLE。输出仍非真实性签名，应通过原始 Artifact 重评核验绑定，而非信任任意外部修改的 JSON。
