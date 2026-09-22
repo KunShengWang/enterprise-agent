@@ -263,3 +263,69 @@ Phase 7B-1 最终复核修正（规则 v1.1，sidecar schema v1 不变）：
 - 总价支持必须具有匹配采购数量；原始单价、数量、总价互相矛盾时为 ERROR，保留原始值而不修正。内部数值一致、但与冻结事实矛盾的工具断言仍为事实 FAIL，不反向成为 Ground Truth。
 - 无法通过 7A evidenceGrounding 的推荐结果不提供推荐/备选支持；多个成功 Finalize 的类别结论视为歧义证据。事实判定、证据判定和回答摘要分开保留，摘要 ERROR 不抹除逐主张 FAIL，完整回答仍为 SKIP。
 - 修复改变提取和评分结果，因此只提升独立规则版本；历史 Artifact、Phase 7A schema v2 和 Grader v2 均不迁移、不修改。旧规则报告与 v1.1 报告不能直接解释成模型能力变化。
+
+### Phase 7B-2A：回答覆盖与独立 Answer Policy
+
+本批次仅增加覆盖记账和必答元素定义，不实现完整性、比较关系或推荐理由评分，不开放完整回答 PASS。
+原 `ProcurementAnswerClaimExtractor` v1.1、`ProcurementAnswerGrader` v1.1、sidecar v1 和旧重评入口均保持原样。
+
+执行流程：历史 Artifact → 复用旧身份/事实校验与逐主张评分 → 验证 Policy 与冻结数据绑定 → 调用原 Extractor 分析完整回答 → 覆盖片段与规则定义 → 独立 `procurement-answer-v2` sidecar。
+
+覆盖由 `ProcurementAnswerCoverage.analyze(answer)` 提供：
+
+| 分类 | 判定边界 |
+| --- | --- |
+| PARSED_CLAIM | 原提取器已可靠解析该片段中的主张；仅表示解析成功，不表示事实、证据支持或业务执行成功 |
+| UNRESOLVED_BUSINESS | 主体/语气等未决，或明确涉及供应商、金额、交期、状态、承诺等业务内容但无法解析 |
+| NON_FACTUAL | 完整片段严格匹配有限白名单，或纯分隔符/空白；绝不使用 contains 抹除文字 |
+| UNKNOWN_CONTENT | 既未可靠解析，也无法证明是非事实文本；默认阻断未来完整回答 PASS |
+
+白名单仅为 `谢谢`、`谢谢您`、`感谢您的帮助`、`您好`、`你好`、`以下是建议`；仅忽略片段首尾空白用于匹配，输出仍保留原文。
+例如“谢谢，保证绝不延期”会保留后半句；“谢谢供应商保证交付”整段不能进入白名单。业务词提示仅用于区分未决业务与未知文本，不用于将文本判为无害。
+先对完整回答调用旧 Extractor，再分段关联结果，不先删礼貌语或重排回答；因此礼貌语介入导致的旧主体绑定未决不会被薄适配层偷偷修复。
+显式条件/否定/问句沿用旧保守行为；复杂引述标记使内容保守进入未决/未知，不从引用中截取确定事实。
+
+每个片段记录 text、UTF-16 `[start,end)`、kind、reason 和 claimIds；连续片段拼接必须精确恢复整个回答，包括 Emoji、补充平面字符、分隔符和空白。
+同一语句中被 Extractor 消费的供应商前缀纳入该片段，关联原始 Claim；分隔符无需虚构 Claim。
+Analysis 的 `counts`、`emptyAnswer` 和 `hasUnresolvedContent` 是诊断信息，不是质量评分或完整覆盖通过率。
+纯礼貌/纯标点回答可能没有未决内容，但 PARSED_CLAIM 数量为零，不能推出回答完整。状态主张即便已解析，旧逐主张证据判定仍保留 SKIP。
+
+Policy 资源位于 `src/test/resources/procurement/evaluation/procurement-answer-policy-v1.json`：
+
+- schemaVersion=`procurement-answer-policy-v1`，policyVersion=`procurement-answer-requirements-v1`；固定绑定 Benchmark 与 Fixture 原始字节 SHA-256，不自动替换为当前文件哈希。换行或字节内容变化也需显式检查。
+- 每个 case 有 elements；每项含 elementId、requirement、sources、rationale、acceptedClaimTypes。加载后显式附带 caseId。
+- USER_REQUEST 来源引用该 case 的 userMessage 及原文摘录；BENCHMARK 来源引用该 case 的 JSON pointer 和标量值；SCENARIO_POLICY 是明确约定：`decision-summary-v1` 要求推荐报价/交期摘要，`preference-explanation-v1` 要求双候选解释主要偏好。这两条约定不是由 Agent 回答生成。
+- 校验四个 case 恰好覆盖、元素 ID 唯一、必填字段、来源可追溯、已声明 Claim 类型、规则适用性；无合格场景不能要求推荐，单候选不能要求成对比较，非单候选不能要求唯一合格。
+- Policy 内容指纹按实际资源字节计算；即使未改版本号，内容修改仍改变指纹。未来比较不能仅检查版本标签。
+
+四个 case 的人工审定要求：
+
+| Case | 必答元素定义 |
+| --- | --- |
+| delivery_priority_two_eligible | 推荐供应商、其总价、其报价交期、相对另一合格候选交付更快、仍满足预算 |
+| price_priority_two_eligible | 推荐供应商、其总价、其报价交期、相对另一合格候选价格更低、仍满足交付期限 |
+| single_eligible_after_exclusions | 推荐供应商、其总价、其报价交期、当前约束下仅有一个合格供应商 |
+| no_eligible_under_hard_constraints | 明确当前原始硬约束下没有合格供应商 |
+
+没有统一强制业务执行阶段、全部输入字段或全部供应商报价。Policy 中比较、预算/期限、唯一/无合格等 Claim 类型只是声明，7B-2A 不提取或评分这些关系，也不判定必答元素是否缺失。
+
+新版 `ProcurementAnswerEvaluationV2` 关联 case/run、Artifact/回答/Dataset/Fixture SHA-256、Policy 版本和哈希、提取器与覆盖分析器版本、组合评测版本。
+`legacyEvaluation` 原样保留旧逐主张事实/支持结果；coverage 的 `claim-N` 与旧 claims 的第 N 项对应，组合时校验两者完全一致。
+礼貌片段在旧结果中仍可能是未决，v2 不反写旧结果；后续 B 批次需按覆盖分类区分实质性内容，不能直接把旧所有 SKIP 当成同一种业务阻断。
+`requiredAnswerElements` 只是定义，`completenessStatus` 和 `completeAnswerStatus` 强制 SKIP；构造/反序列化均禁止提前设置 PASS。
+组合 evaluationStatus 仅保留旧 FAIL/ERROR/SKIP，并补充 Policy/关联异常 ERROR，不产生完整回答结论。覆盖尚未执行时 coverage 为 null，不能当作空的成功覆盖。
+
+`ProcurementAnswerCoverageEvaluator.replay(...)` 只读取 Artifact、Fixture、Policy；输出必须是新文件，已有 v1/v2 报告或输入文件均拒绝覆盖。
+未知 Policy 版本、坏哈希、损坏规则等已加载输入问题产生 ERROR sidecar；文件缺失/无法读取则抛出 IOException，不报告通过。JSON 不注入当前时间或输出绝对路径。
+
+```powershell
+# 新覆盖/规则测试
+mvn -o '-Dtest=ProcurementAnswerCoverageTests,ProcurementAnswerPolicyTests' test
+
+# 用历史 Artifact 显式离线重评；输出必须尚不存在，重复重评请换输出文件名
+mvn -o '-Dtest=ProcurementAnswerPolicyTests#explicitHistoricalArtifactReplay' '-Danswer.v2.artifact=target/procurement-evaluation/runtime-artifact.json' '-Danswer.v2.report=target/procurement-evaluation-v2/answer-2a.json' test
+```
+
+下一批次可复用 Coverage Analysis、带来源的 Policy.forCase(...).elements()、旧逐主张结果及 v2 身份绑定。本批次没有 Completeness Grader、关系型解析、推荐理由评分、统一报告比较或 LLM Judge。
+
+7B-2A 最终契约复核补充：Coverage 构造及反序列化校验连续区间、原文长度、Claim ID/区间关联、Unicode 边界和统计标志；NON_FACTUAL 仍须满足完整片段白名单。v2 同时核对内嵌旧结果的身份、版本、Claim 列表，以及覆盖原文的回答哈希，拒绝互相矛盾的状态与错误列表。人工场景约定的引用原文必须与指定约定一致。这些校验不增加字段、不改变 schema 或评分口径，也不构成对外部 JSON 的真实性签名：重放时仍需通过原始 Artifact、冻结 Fixture 和 Policy 加载入口验证来源。
