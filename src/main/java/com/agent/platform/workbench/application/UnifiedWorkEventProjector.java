@@ -1,13 +1,6 @@
 package com.agent.platform.workbench.application;
 
 import com.agent.platform.config.WorkbenchProjectionProperties;
-import com.agent.platform.ordercare.incident.model.TaskEventRecord;
-import com.agent.platform.ordercare.incident.model.IncidentRecord;
-import com.agent.platform.ordercare.incident.persistence.IncidentStore;
-import com.agent.platform.ordercare.incident.persistence.TaskEventStore;
-import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlanRecord;
-import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanEventRecord;
-import com.agent.platform.ordercare.incident.recovery.persistence.IncidentRecoveryPlanStore;
 import com.agent.platform.runtime.AgentEvent;
 import com.agent.platform.runtime.AgentEventType;
 import com.agent.platform.runtime.AgentTimelineStore;
@@ -41,25 +34,31 @@ public class UnifiedWorkEventProjector {
     private final WorkEventProjectionStore projectionStore;
     private final AgentTimelineStore timelineStore;
     private final AgentRunStore runStore;
-    private final TaskEventStore taskEventStore;
-    private final IncidentStore incidentStore;
-    private final IncidentRecoveryPlanStore recoveryPlanStore;
     private final WorkbenchProjectionProperties properties;
     private final String leaseOwner;
+    private final Map<String, WorkEventProjectionContributor> contributors;
+    private final java.util.Set<String> supportedSourceTypes;
 
     public UnifiedWorkEventProjector(WorkEventProjectionStore projectionStore,
                                      AgentTimelineStore timelineStore,
                                      AgentRunStore runStore,
-                                     TaskEventStore taskEventStore,
-                                     IncidentStore incidentStore,
-                                     IncidentRecoveryPlanStore recoveryPlanStore,
+                                     List<WorkEventProjectionContributor> contributors,
                                      WorkbenchProjectionProperties properties) {
         this.projectionStore = projectionStore;
         this.timelineStore = timelineStore;
         this.runStore = runStore;
-        this.taskEventStore = taskEventStore;
-        this.incidentStore = incidentStore;
-        this.recoveryPlanStore = recoveryPlanStore;
+        Map<String, WorkEventProjectionContributor> indexed = new LinkedHashMap<>();
+        for (WorkEventProjectionContributor contributor : contributors) {
+            for (String type : contributor.sourceTypes()) {
+                if (!java.util.Set.of("INCIDENT", "RECOVERY_PLAN").contains(type)
+                        || indexed.putIfAbsent(type, contributor) != null) {
+                    throw new IllegalArgumentException("unsupported or duplicate historical projection contributor: " + type);
+                }
+            }
+        }
+        this.contributors = Map.copyOf(indexed);
+        // Historical contributors cannot opt old sources back into background projection.
+        this.supportedSourceTypes = java.util.Set.of("AGENT_RUN");
         this.properties = properties;
         this.leaseOwner = properties.getInstanceId().isBlank()
                 ? "work-projector-" + UUID.randomUUID()
@@ -77,8 +76,9 @@ public class UnifiedWorkEventProjector {
         int projected = 0;
         int failed = 0;
         List<WorkProjectionClaim> claims = projectionStore.claimProjectionSources(
-                leaseOwner, Instant.now().plusMillis(properties.getLeaseMillis()), properties.getSourceBatchSize());
+                leaseOwner, Instant.now().plusMillis(properties.getLeaseMillis()), properties.getSourceBatchSize(), supportedSourceTypes);
         for (WorkProjectionClaim claim : claims) {
+            if (!supportedSourceTypes.contains(claim.source().sourceType())) continue;
             try {
                 projected += projectSource(claim);
             } catch (RuntimeException exception) {
@@ -105,9 +105,8 @@ public class UnifiedWorkEventProjector {
                 source.workItemId(), source.sourceType(), source.sourceId());
         int projected = switch (source.sourceType()) {
             case "AGENT_RUN" -> projectRun(claim, cursor);
-            case "INCIDENT" -> projectIncident(claim, cursor);
-            case "RECOVERY_PLAN" -> projectRecoveryPlan(claim, cursor);
-            default -> throw new IllegalArgumentException("unsupported work event source: " + source.sourceType());
+            default -> contributors.get(source.sourceType()).projectEvents(
+                    claim, cursor, properties.getEventBatchSize(), projectionStore);
         };
         if (projected == 0) {
             projectionStore.advanceProjectionCursor(claim, cursor);
@@ -120,10 +119,7 @@ public class UnifiedWorkEventProjector {
         WorkProjectionSource source = claim.source();
         WorkExecutionProjection projection = switch (source.sourceType()) {
             case "AGENT_RUN" -> runStore.find(source.sourceId()).map(this::runProjection).orElse(null);
-            case "INCIDENT" -> incidentStore.find(source.sourceId()).map(this::incidentProjection).orElse(null);
-            case "RECOVERY_PLAN" -> recoveryPlanStore.find(source.sourceId())
-                    .map(this::recoveryPlanProjection).orElse(null);
-            default -> null;
+            default -> contributors.get(source.sourceType()).executionProjection(source);
         };
         if (projection != null) projectionStore.reconcileExecutionState(claim, projection);
     }
@@ -149,42 +145,6 @@ public class UnifiedWorkEventProjector {
         };
         return projection("AGENT_RUN", run.runId(), run.version(), run.resumeCount(), run.state().name(),
                 run.failureReason(), run.updatedAt(), state);
-    }
-
-    private WorkExecutionProjection incidentProjection(IncidentRecord incident) {
-        ProjectionState state = switch (incident.status()) {
-            case CREATED, PLANNING, INVESTIGATING, CHECKING_CONSISTENCY, REVIEWING -> active();
-            case CLARIFYING -> state(WorkControlState.WAITING_INPUT,
-                    WorkExecutionState.WAITING_INPUT, WorkOutcome.UNDETERMINED, false);
-            case ASSESSED -> terminal(WorkExecutionState.COMPLETED, WorkOutcome.ASSESSED);
-            case PARTIAL -> terminal(WorkExecutionState.COMPLETED, WorkOutcome.NOT_CONVERGED);
-            case MANUAL_REVIEW -> state(WorkControlState.MANUAL_REVIEW,
-                    WorkExecutionState.UNKNOWN, WorkOutcome.MANUAL_REVIEW, true);
-            case FAILED -> terminal(WorkExecutionState.FAILED, WorkOutcome.FAILED);
-            case CANCELLED -> terminal(WorkExecutionState.CANCELLED, WorkOutcome.CANCELLED);
-        };
-        return projection("INCIDENT", incident.incidentId(), incident.version(), 0, incident.status().name(),
-                "", incident.updatedAt(), state);
-    }
-
-    private WorkExecutionProjection recoveryPlanProjection(IncidentRecoveryPlanRecord plan) {
-        ProjectionState state = switch (plan.status()) {
-            case CREATED, PLANNING, PREVIEWING, EXECUTING -> active();
-            case WAITING_APPROVAL -> state(WorkControlState.DISPATCHED,
-                    WorkExecutionState.WAITING_APPROVAL, WorkOutcome.UNDETERMINED, false);
-            case FAILED -> terminal(WorkExecutionState.FAILED, WorkOutcome.FAILED);
-            case CANCELLED -> terminal(WorkExecutionState.CANCELLED, WorkOutcome.CANCELLED);
-            case COMPLETED -> switch (plan.outcome()) {
-                case RESOLVED -> terminal(WorkExecutionState.COMPLETED, WorkOutcome.RESOLVED);
-                case PARTIAL -> terminal(WorkExecutionState.COMPLETED, WorkOutcome.NOT_CONVERGED);
-                case REJECTED -> terminal(WorkExecutionState.COMPLETED, WorkOutcome.REJECTED);
-                case MANUAL_REVIEW -> state(WorkControlState.MANUAL_REVIEW,
-                        WorkExecutionState.UNKNOWN, WorkOutcome.MANUAL_REVIEW, true);
-                case READY, NOT_STARTED -> terminal(WorkExecutionState.COMPLETED, WorkOutcome.ASSESSED);
-            };
-        };
-        return projection("RECOVERY_PLAN", plan.planId(), plan.version(), 0, plan.status().name(),
-                plan.outcome().name(), plan.updatedAt(), state);
     }
 
     private WorkExecutionProjection projection(String sourceType, String sourceId, long sourceVersion,
@@ -228,54 +188,6 @@ public class UnifiedWorkEventProjector {
             projected++;
         }
         return projected;
-    }
-
-    private int projectIncident(WorkProjectionClaim claim, long cursor) {
-        WorkProjectionSource source = claim.source();
-        int projected = 0;
-        for (TaskEventRecord event : taskEventStore.loadEventsAfter(
-                source.sourceId(), cursor, properties.getEventBatchSize())) {
-            Map<String, Object> payload = new LinkedHashMap<>(event.payload());
-            put(payload, "incidentEventType", event.eventType().name());
-            put(payload, "eventCategory", event.eventCategory().name());
-            put(payload, "actorType", event.actorType().name());
-            put(payload, "actorId", event.actorId());
-            put(payload, "taskId", event.taskId());
-            put(payload, "childRunId", event.childRunId());
-            put(payload, "senderRole", event.senderRole());
-            put(payload, "recipientRole", event.recipientRole());
-            payload.put("messageDepth", event.messageDepth());
-            projectionStore.appendProjectedEvent(claim, new ProjectedWorkEventDraft(
-                    source.sourceType(), source.sourceId(), event.eventId(), event.eventSequence(),
-                    WorkEventType.INCIDENT_EVENT_PROJECTED, event.eventType().name(),
-                    eventSummary(event), payload, event.correlationId(), event.causationId(), event.createdAt()));
-            projected++;
-        }
-        return projected;
-    }
-
-    private int projectRecoveryPlan(WorkProjectionClaim claim, long cursor) {
-        WorkProjectionSource source = claim.source();
-        int projected = 0;
-        for (RecoveryPlanEventRecord event : recoveryPlanStore.loadEventsAfter(
-                source.sourceId(), cursor, properties.getEventBatchSize())) {
-            projectionStore.appendProjectedEvent(claim, new ProjectedWorkEventDraft(
-                    source.sourceType(), source.sourceId(), event.eventId(), event.sequence(),
-                    WorkEventType.RECOVERY_PLAN_EVENT_PROJECTED, event.eventType(),
-                    "Recovery plan state snapshot persisted", event.payload(),
-                    source.workItemId(), event.planId(), event.createdAt()));
-            projected++;
-        }
-        return projected;
-    }
-
-    private String eventSummary(TaskEventRecord event) {
-        Object summary = event.payload().get("summary");
-        return summary == null ? event.eventType().name() : String.valueOf(summary);
-    }
-
-    private void put(Map<String, Object> payload, String key, Object value) {
-        if (value != null && !String.valueOf(value).isBlank()) payload.put(key, value);
     }
 
     private String text(Object value) {

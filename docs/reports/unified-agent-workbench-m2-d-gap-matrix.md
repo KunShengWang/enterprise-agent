@@ -1,3 +1,5 @@
+> 历史版本/阶段资料，非当前运行说明。涉及 FlowOrder/OrderCare 的业务已退役；其他能力以当前代码和采购指南为准。原始正文、成绩和结论保留，正文相对路径以原文件位置为准。当前入口见仓库 README 与 docs/documentation-index.md。
+
 # Unified Agent Workbench M2-D 历史回放与前端回归缺口矩阵
 
 > 基线：M2-C `77f7a50`；本阶段只固化刷新、重启、历史分页和现有页面兼容性。

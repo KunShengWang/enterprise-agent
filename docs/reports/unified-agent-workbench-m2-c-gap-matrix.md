@@ -1,3 +1,5 @@
+> 历史版本/阶段资料，非当前运行说明。涉及 FlowOrder/OrderCare 的业务已退役；其他能力以当前代码和采购指南为准。原始正文、成绩和结论保留，正文相对路径以原文件位置为准。当前入口见仓库 README 与 docs/documentation-index.md。
+
 # Unified Agent Workbench M2-C 聊天内执行树缺口矩阵
 
 > 基线：M2-B `9b662d3`；范围仅限现有权威执行事实的只读树投影与统一页面展示。

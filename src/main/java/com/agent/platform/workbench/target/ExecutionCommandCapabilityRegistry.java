@@ -17,17 +17,16 @@ public class ExecutionCommandCapabilityRegistry {
                 new EnumMap<>(ExecutionTargetId.class);
         values.put(ExecutionTargetId.GENERAL_AGENT, runtimeCapabilities(
                 Set.of("NO_GENERAL_ADD_INPUT_CHECKPOINT")));
-        values.put(ExecutionTargetId.ORDERCARE_CASE, runtimeCapabilities(
-                Set.of("DO_NOT_MUTATE_APPROVED_PROPOSAL", "DO_NOT_ROLL_BACK_SUBMITTED_SIDE_EFFECT")));
-        values.put(ExecutionTargetId.INCIDENT_INVESTIGATION, unsupportedCapabilities(
-                Set.of("NO_INCIDENT_LEVEL_COMMAND_SERVICE", "DO_NOT_BROADCAST_INPUT_TO_SPECIALISTS")));
-        values.put(ExecutionTargetId.INCIDENT_RECOVERY_PLAN, unsupportedCapabilities(
-                Set.of("NO_PLAN_LEVEL_COMMAND_SERVICE", "CONTINUE_UNKNOWN_RECONCILIATION")));
+        for (ExecutionTargetId id : ExecutionTargetId.values()) {
+            if (!id.executable()) values.put(id, new ExecutionCommandCapabilities(defaults(), Set.of("TARGET_RETIRED", "HISTORY_READ_ONLY")));
+        }
+        values.put(ExecutionTargetId.PROCUREMENT_SOURCING, runtimeCapabilities(
+                Set.of("READ_ONLY_RECOMMENDATION", "APPROVAL_BOUND_RFQ_CREATION", "NO_PURCHASE_ORDER_CREATION")));
         capabilities = Map.copyOf(values);
     }
 
     /**
-     * 返回某个执行目标（如 ORDERCARE_CASE）对每一种命令（暂停/继续/取消/放弃）支持到什么程度（SUPPORTED_EXISTING_RUNTIME / PRODUCT_ONLY / UNSUPPORTED），以及它有哪些约束
+     * 返回某个执行目标（如 PROCUREMENT_SOURCING）对每一种命令（暂停/继续/取消/放弃）支持到什么程度（SUPPORTED_EXISTING_RUNTIME / PRODUCT_ONLY / UNSUPPORTED），以及它有哪些约束
      */
     public ExecutionCommandCapabilities require(ExecutionTargetId targetId) {
         ExecutionCommandCapabilities value = capabilities.get(targetId);

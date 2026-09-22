@@ -106,7 +106,7 @@ function compactId(value?: string) {
   return value.length > 24 ? `${value.slice(0, 10)}…${value.slice(-8)}` : value
 }
 function roleLabel(role: string) {
-  const labels: Record<string, string> = { COMMANDER: 'Commander', REVIEWER: 'Reviewer', RECOVERY_PLANNER: 'Planner', GENERAL_AGENT: 'General Agent', ORDERCARE_CASE: 'OrderCare Agent' }
+  const labels: Record<string, string> = { GENERAL_AGENT: 'General Agent', PROCUREMENT_SOURCING: 'Procurement Sourcing Agent' }
   return labels[role] ?? role.match(/^SPECIALIST:([^:]+)/)?.[1] ?? role
 }
 function number(value?: number) { return new Intl.NumberFormat('zh-CN').format(value ?? 0) }
@@ -215,13 +215,10 @@ watch(() => props.selectedTurnId, () => {
         <template v-for="snapshot in scopedSnapshots" :key="snapshot.turn.turnId">
           <h3 v-if="scope === 'CONVERSATION'" class="inspector-turn-title">{{ snapshot.turn.userMessage }}</h3>
           <section><h3>Evidence <span>{{ snapshot.tree?.evidence.length ?? 0 }}</span></h3><article v-for="item in snapshot.tree?.evidence" :key="item.evidenceId"><strong>{{ item.evidenceSubtype }}</strong><small>{{ item.evidenceClass }} · {{ compactId(item.evidenceId) }}</small></article></section>
-          <section><h3>Conflict <span>{{ snapshot.tree?.conflicts.length ?? 0 }}</span></h3><article v-for="item in snapshot.tree?.conflicts" :key="item.conflictId"><strong>{{ item.severity }} · {{ item.conflictType }}</strong><small>{{ item.metricKey }} · {{ item.status }}</small></article></section>
-          <section v-if="snapshot.tree && Object.keys(snapshot.tree.assessment).length"><h3>Assessment</h3><pre>{{ JSON.stringify(snapshot.tree.assessment, null, 2) }}</pre></section>
           <section v-if="snapshot.detail.preview"><h3>Proposal / Preview</h3><article><strong>{{ snapshot.detail.preview.status }} · v{{ snapshot.detail.preview.previewVersion }}</strong><small>{{ compactId(snapshot.detail.preview.previewId) }}</small></article></section>
-          <section v-if="snapshot.tree?.recoveryPlans.length"><h3>Recovery Plan <span>{{ snapshot.tree.recoveryPlans.length }}</span></h3><article v-for="plan in snapshot.tree.recoveryPlans" :key="plan.planId"><strong>{{ plan.status }} · {{ plan.outcome }}</strong><small>{{ plan.items.length }} 个处置项</small></article></section>
           <section v-if="snapshot.approval"><h3>Approval</h3><article><strong>{{ snapshot.approval.status }} · {{ snapshot.approval.toolCallRequest.toolName }}</strong><small>{{ snapshot.approval.reason }}</small></article></section>
         </template>
-        <p v-if="!scopedSnapshots.some(snapshot => snapshot.tree?.evidence.length || snapshot.tree?.conflicts.length || snapshot.tree?.recoveryPlans.length || snapshot.detail.preview || snapshot.approval)" class="inspector-empty">当前范围没有证据、Proposal 或审批记录。</p>
+        <p v-if="!scopedSnapshots.some(snapshot => snapshot.tree?.evidence.length || snapshot.tree?.conflicts.length || snapshot.detail.preview || snapshot.approval)" class="inspector-empty">当前范围没有证据、Proposal 或审批记录。</p>
       </section>
 
       <section v-else class="inspector-diagnostics">

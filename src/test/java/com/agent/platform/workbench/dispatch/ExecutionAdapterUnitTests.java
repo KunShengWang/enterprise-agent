@@ -4,16 +4,7 @@ import com.agent.platform.agent.AgentExecutor;
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.agent.AgentResponse;
 import com.agent.platform.agent.AgentRunStatus;
-import com.agent.platform.ordercare.incident.application.IncidentInvestigationLauncher;
-import com.agent.platform.ordercare.incident.model.IncidentInvestigationRequest;
-import com.agent.platform.ordercare.incident.model.IncidentStartResponse;
-import com.agent.platform.ordercare.incident.model.IncidentStatus;
-import com.agent.platform.ordercare.incident.recovery.application.IncidentRecoveryPlanLauncher;
-import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStartRequest;
-import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStartResponse;
-import com.agent.platform.ordercare.incident.recovery.model.RecoveryPlanStatus;
-import com.agent.platform.ordercare.incident.recovery.persistence.IncidentRecoveryPlanStore;
-import com.agent.platform.ordercare.config.AgentScenarioProfileResolver;
+import com.agent.platform.config.AgentScenarioProfileResolver;
 import com.agent.platform.runtime.AgentRunStore;
 import com.agent.platform.workbench.model.ValidatedExecutionInput;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
@@ -37,40 +28,34 @@ import static org.mockito.Mockito.when;
 class ExecutionAdapterUnitTests {
 
     @Test
-    void generalAndOrderCareUseTheirFrozenProfilesAndProtectedDispatchMetadata() {
+    void generalUsesFrozenProfile() {
         AgentExecutor executor = mock(AgentExecutor.class);
         AgentRunStore runStore = mock(AgentRunStore.class);
         when(runStore.findByDispatchRequestId("dispatch-general")).thenReturn(Optional.empty());
-        when(runStore.findByDispatchRequestId("dispatch-ordercare")).thenReturn(Optional.empty());
         when(executor.execute(org.mockito.ArgumentMatchers.any())).thenReturn(
                 new AgentResponse("run-1", "conversation-1", AgentRunStatus.COMPLETED,
                         "done", "", List.of(), null));
 
         new GeneralAgentExecutionAdapter(executor, runStore).dispatch(request(
                 "dispatch-general", ExecutionTargetId.GENERAL_AGENT, Map.of()));
-        new OrderCareExecutionAdapter(executor, runStore).dispatch(request(
-                "dispatch-ordercare", ExecutionTargetId.ORDERCARE_CASE,
-                Map.of("requestId", "ORDERCARE-M05-REQUEST")));
-
         ArgumentCaptor<AgentRequest> requests = ArgumentCaptor.forClass(AgentRequest.class);
-        verify(executor, org.mockito.Mockito.times(2)).execute(requests.capture());
+        verify(executor, org.mockito.Mockito.times(1)).execute(requests.capture());
         AgentRequest general = requests.getAllValues().get(0);
-        AgentRequest orderCare = requests.getAllValues().get(1);
         assertEquals(AgentScenarioProfileResolver.GENERAL_AGENT_V1, general.scenarioId());
-        assertEquals("ordercare-floworder-v1", orderCare.scenarioId());
         assertEquals("dispatch-general",
                 general.metadata().get(AgentRunStore.DISPATCH_REQUEST_METADATA_KEY));
-        assertEquals("dispatch-ordercare",
-                orderCare.metadata().get(AgentRunStore.DISPATCH_REQUEST_METADATA_KEY));
         assertEquals(ExecutionTargetId.GENERAL_AGENT.name(), general.metadata().get("executionTarget"));
-        assertEquals(ExecutionTargetId.ORDERCARE_CASE.name(), orderCare.metadata().get("executionTarget"));
     }
 
     @Test
-    void registryRejectsAnyCatalogOtherThanTheFourFrozenAdapters() {
+    void registryRejectsAnyCatalogOtherThanTheRegisteredAdapters() {
         List<ExecutionAdapter> all = new ArrayList<>();
         for (ExecutionTargetId id : ExecutionTargetId.values()) all.add(fake(id));
-        assertEquals(4, new ExecutionAdapterRegistry(all).size());
+        assertEquals(2, new ExecutionAdapterRegistry(all).size());
+        assertEquals(2, new ExecutionAdapterRegistry(List.of(fake(ExecutionTargetId.GENERAL_AGENT),
+                fake(ExecutionTargetId.PROCUREMENT_SOURCING))).size());
+        assertThrows(com.agent.platform.common.RetiredBusinessException.class,
+                () -> new ExecutionAdapterRegistry(all).require("ORDERCARE_CASE"));
         assertThrows(IllegalStateException.class,
                 () -> new ExecutionAdapterRegistry(all.subList(0, 3)));
         assertThrows(IllegalStateException.class,
@@ -81,71 +66,37 @@ class ExecutionAdapterUnitTests {
                         fake(ExecutionTargetId.INCIDENT_RECOVERY_PLAN))));
     }
 
-    @Test
-    void incidentAdapterPreservesStableRequestedAtAndValidatedScope() {
-        IncidentInvestigationLauncher launcher = mock(IncidentInvestigationLauncher.class);
-        Instant requestedAt = Instant.parse("2026-07-19T00:00:00Z");
-        when(launcher.findByDispatchRequestId("dispatch-incident")).thenReturn(Optional.empty());
-        when(launcher.startForDispatch(org.mockito.ArgumentMatchers.eq("dispatch-incident"),
-                org.mockito.ArgumentMatchers.any())).thenReturn(
-                new IncidentStartResponse("incident-1", IncidentStatus.CREATED, requestedAt));
-        DispatchRequest request = new DispatchRequest(
-                "dispatch-incident", "work-1", "conversation-1", "investigate",
-                ExecutionTargetId.INCIDENT_INVESTIGATION.name(),
-                new AuthenticatedPrincipal("tenant-1", "alice", Set.of("INCIDENT_OPERATOR")),
-                new ValidatedExecutionInput(ExecutionTargetId.INCIDENT_INVESTIGATION.name(), Map.of(),
-                        Map.of("batchId", "BATCH-1", "requestIds", List.of("REQ-1"),
-                                "queueNames", List.of("orders.dlq")), "digest-1"),
-                requestedAt);
-
-        DispatchResult result = new IncidentInvestigationExecutionAdapter(launcher).dispatch(request);
-
-        ArgumentCaptor<IncidentInvestigationRequest> captured =
-                ArgumentCaptor.forClass(IncidentInvestigationRequest.class);
-        verify(launcher).startForDispatch(org.mockito.ArgumentMatchers.eq("dispatch-incident"), captured.capture());
-        assertEquals("incident-1", result.linkedId());
-        assertEquals(requestedAt, captured.getValue().detectedAt());
-        assertEquals(List.of("REQ-1"), captured.getValue().candidateRequestIds());
-        assertEquals(List.of("orders.dlq"), captured.getValue().queueNames());
-    }
-
-    @Test
-    void incidentAdapterRejectsUnresolvedBatchBeforeCreatingIncident() {
-        IncidentInvestigationLauncher launcher = mock(IncidentInvestigationLauncher.class);
-        DispatchRequest request = new DispatchRequest(
-                "dispatch-batch", "work-1", "conversation-1", "investigate batch",
-                ExecutionTargetId.INCIDENT_INVESTIGATION.name(),
-                new AuthenticatedPrincipal("tenant-1", "alice", Set.of("INCIDENT_OPERATOR")),
-                new ValidatedExecutionInput(ExecutionTargetId.INCIDENT_INVESTIGATION.name(), Map.of(),
-                        Map.of("batchId", "BATCH-1", "queueNames", List.of("orders.dlq")), "digest-1"),
-                Instant.parse("2026-07-19T00:00:00Z"));
-
-        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> new IncidentInvestigationExecutionAdapter(launcher).dispatch(request));
-
-        assertEquals("validated incident investigation requires explicit requestIds; batchId resolution is unavailable",
-                failure.getMessage());
-    }
-
-    @Test
-    void recoveryPlanAdapterUsesDispatchRequestAsExistingPlannerIdempotencyKey() {
-        IncidentRecoveryPlanLauncher launcher = mock(IncidentRecoveryPlanLauncher.class);
-        IncidentRecoveryPlanStore store = mock(IncidentRecoveryPlanStore.class);
-        when(store.findByRequestKey("incident-1", "dispatch-plan")).thenReturn(Optional.empty());
-        when(launcher.start(org.mockito.ArgumentMatchers.eq("incident-1"),
-                org.mockito.ArgumentMatchers.any())).thenReturn(
-                new RecoveryPlanStartResponse("plan-1", "incident-1",
-                        RecoveryPlanStatus.PLANNING, Instant.parse("2026-07-19T00:00:00Z"), true));
-
-        DispatchResult result = new IncidentRecoveryPlanExecutionAdapter(launcher, store).dispatch(
-                request("dispatch-plan", ExecutionTargetId.INCIDENT_RECOVERY_PLAN,
-                        Map.of("incidentId", "incident-1")));
-
-        ArgumentCaptor<RecoveryPlanStartRequest> captured =
-                ArgumentCaptor.forClass(RecoveryPlanStartRequest.class);
-        verify(launcher).start(org.mockito.ArgumentMatchers.eq("incident-1"), captured.capture());
-        assertEquals("dispatch-plan", captured.getValue().requestKey());
-        assertEquals("plan-1", result.linkedId());
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"ORDERCARE_CASE", "INCIDENT_INVESTIGATION", "INCIDENT_RECOVERY_PLAN"})
+    void historicalTargetsCannotReachAdaptersEvenWithCompleteOrIncompleteInput(String historicalId) {
+        ExecutionTargetId target = ExecutionTargetId.valueOf(historicalId);
+        var registry = new ExecutionAdapterRegistry(List.of(fake(ExecutionTargetId.GENERAL_AGENT),
+                fake(ExecutionTargetId.PROCUREMENT_SOURCING)));
+        assertThrows(com.agent.platform.common.RetiredBusinessException.class, () -> registry.require(target.name()));
+        for (Map<String, Object> input : List.of(Map.<String, Object>of(),
+                Map.<String, Object>of("batchId", "BATCH-1", "queueNames", List.of("orders.dlq")),
+                Map.<String, Object>of("requestIds", List.of("REQ-1"), "incidentId", "incident-1",
+                        "batchId", "BATCH-1", "queueNames", List.of("orders.dlq")))) {
+            var store = mock(com.agent.platform.workbench.persistence.DispatchStore.class);
+            var adapters = mock(ExecutionAdapterRegistry.class);
+            var budgets = mock(com.agent.platform.workbench.budget.WorkItemBudgetGate.class);
+            var properties = new com.agent.platform.config.WorkbenchDispatchProperties();
+            properties.setEnabled(true);
+            var request = request("old-dispatch", target, input);
+            when(store.claimDispatch(org.mockito.ArgumentMatchers.eq(request.principal()),
+                    org.mockito.ArgumentMatchers.eq("work-1"), org.mockito.ArgumentMatchers.any(),
+                    org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyString(),
+                    org.mockito.ArgumentMatchers.any())).thenReturn(Optional.of(new DispatchClaim(null, request)));
+            var coordinator = new DispatchCoordinator(store, adapters, properties, (claim, result) -> {}, budgets);
+            assertThrows(com.agent.platform.common.RetiredBusinessException.class,
+                    () -> coordinator.dispatch(request.principal(), "work-1"));
+            org.mockito.Mockito.verifyNoInteractions(adapters, budgets);
+            verify(store).claimDispatch(org.mockito.ArgumentMatchers.eq(request.principal()),
+                    org.mockito.ArgumentMatchers.eq("work-1"), org.mockito.ArgumentMatchers.any(),
+                    org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyString(),
+                    org.mockito.ArgumentMatchers.any());
+            org.mockito.Mockito.verifyNoMoreInteractions(store);
+        }
     }
 
     private DispatchRequest request(String dispatchRequestId,

@@ -50,7 +50,7 @@ class AgentRunWorkCommandAdapterTests {
         when(runs.find("run-1")).thenReturn(Optional.of(completed));
 
         AgentRunCommandResult result = new AgentRunWorkCommandAdapter(runtime, runs).execute(
-                principal(), work("ORDERCARE_CASE", "run-1"), WorkCommandType.CANCEL_ACTIVE_WORK);
+                principal(), work("PROCUREMENT_SOURCING", "run-1"), WorkCommandType.CANCEL_ACTIVE_WORK);
 
         assertEquals(false, result.accepted());
         assertEquals("INVALID_TARGET_STATE", result.code());

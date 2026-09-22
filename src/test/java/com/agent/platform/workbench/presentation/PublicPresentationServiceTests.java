@@ -344,6 +344,20 @@ class PublicPresentationServiceTests {
                 () -> fixture.service.publicTimeline(attacker, "work-1", -1, 100));
     }
 
+    @Test
+    void retiredRoutingShowsAnUnsupportedMessageWithoutASuccessfulGeneralRoute() {
+        Fixture fixture = fixture(List.of(event(2, WorkEventType.ROUTING_DECIDED, "CLOSED", Map.of())));
+        fixture.routingDecision = mock(RoutingDecisionRecord.class);
+        when(fixture.routingDecision.validation()).thenReturn(Map.of("failureCode", "TARGET_RETIRED", "disposition", "REJECT"));
+        when(fixture.routingDecision.decisionId()).thenReturn("retired-decision");
+        fixture.stub();
+        var result = fixture.service.publicTimeline(principal, "work-1", -1, 100);
+        assertEquals(1, result.size());
+        assertEquals(PublicPresentationKind.ERROR, result.get(0).kind());
+        assertEquals(PublicPresentationStatus.FAILED, result.get(0).status());
+        assertEquals(com.agent.platform.common.BusinessRetirementPolicy.MESSAGE, result.get(0).summary());
+    }
+
     private Fixture fixture(List<WorkEvent> events) {
         return new Fixture(events);
     }

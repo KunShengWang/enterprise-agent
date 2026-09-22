@@ -57,55 +57,6 @@ function normalizedAction(item: PublicPresentation, turn: ConversationTurn) {
   return { key: `${item.kind}-${item.title}`, summary: item.title || item.summary, detail: item.summary }
 }
 
-function safeValues(value: unknown) {
-  if (!Array.isArray(value)) return ''
-  return value.filter(item => ['string', 'number'].includes(typeof item)).slice(0, 10).join('、')
-}
-
-function evidenceFindings(item: PublicPresentation, tree?: WorkExecutionTree | null) {
-  if (!tree) return []
-  const ids = new Set((item.detail.attributes.evidenceIds ?? '').split(',').map(value => value.trim()).filter(Boolean))
-  const evidence = tree.evidence.filter(value => ids.has(value.evidenceId))
-  const labels: Array<[string, string]> = [
-    ['terminalDistinctRequestIdCount', '终态请求'],
-    ['unreleasedDistinctRequestIdCount', '未释放请求'],
-    ['recordCount', '事实记录'],
-    ['duplicateRecordCount', '重复记录'],
-    ['messagesReady', '队列就绪消息'],
-    ['messagesUnacknowledged', '未确认消息'],
-    ['consumerCount', '消费者'],
-    ['violationCount', '不变量冲突'],
-  ]
-  return evidence.flatMap(record => {
-    const metrics = labels.flatMap(([key, label]) => {
-      const value = record.facts[key]
-      return typeof value === 'number' ? [`${label} ${value}`] : []
-    })
-    const requestIds = safeValues(record.facts.requestIds)
-    const queueNames = safeValues(record.facts.queueNames)
-    const parts = [record.evidenceSubtype, ...metrics]
-    if (requestIds) parts.push(`requestIds：${requestIds}`)
-    if (queueNames) parts.push(`queueNames：${queueNames}`)
-    return [parts.join('；')]
-  }).slice(0, 6)
-}
-
-function assessmentFindings(item: PublicPresentation, tree?: WorkExecutionTree | null) {
-  if (item.kind !== 'FINAL_RESULT' || !tree || !Object.keys(tree.assessment).length) return []
-  const assessment = tree.assessment as Record<string, unknown>
-  const facts = Array.isArray(assessment.confirmedFacts) ? assessment.confirmedFacts : []
-  const statements = facts.flatMap(value => {
-    if (typeof value === 'string') return [value]
-    if (!value || typeof value !== 'object') return []
-    const record = value as Record<string, unknown>
-    const text = record.statement ?? record.summary ?? record.description
-    return typeof text === 'string' ? [text] : []
-  }).slice(0, 4)
-  const risk = typeof assessment.riskLevel === 'string' ? `风险等级：${assessment.riskLevel}` : ''
-  const conflictCount = tree.conflicts.length ? `冲突数量：${tree.conflicts.length}` : '未发现公开冲突'
-  return [risk, conflictCount, ...statements].filter(Boolean)
-}
-
 function semanticMetadata(item: PublicPresentation, turn: ConversationTurn) {
   const attributes = item.detail.attributes
   const actor = attributes.actorType || (item.sourceType === 'AGENT_RUN' ? 'Agent Runtime'
@@ -137,7 +88,7 @@ function semanticMetadata(item: PublicPresentation, turn: ConversationTurn) {
 
 export function aggregateExecutionNarrative(turn: ConversationTurn,
                                             presentations: PublicPresentation[],
-                                            tree?: WorkExecutionTree | null): ExecutionNarrativeGroup[] {
+                                            _tree?: WorkExecutionTree | null): ExecutionNarrativeGroup[] {
   const publicItems = presentations
     .filter(item => item.visibility === 'PUBLIC')
     .filter(item => !['TOOL_ACTIVITY', 'APPROVAL_REQUIRED', 'WAITING_FOR_USER', 'ERROR'].includes(item.kind))
@@ -156,7 +107,7 @@ export function aggregateExecutionNarrative(turn: ConversationTurn,
       sourcePresentationIds: sourceIds,
       occurredAt: existing?.occurredAt ?? presentation.occurredAt,
       metadata: semanticMetadata(presentation, turn),
-      findings: [...evidenceFindings(presentation, tree), ...assessmentFindings(presentation, tree)],
+      findings: [],
     })
   }
   const items = [...merged.values()]

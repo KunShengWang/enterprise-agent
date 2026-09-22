@@ -11,7 +11,6 @@ public class WorkbenchRoutingProperties {
     private long leaseMillis = 15_000;
     private long retryBackoffMillis = 1_000;
     private int scanBatchSize = 20;
-    private int maxIncidentRequestIds = 100;
     private long unknownResultTokenReserve = 8_192;
     private String catalogVersion = "workbench-v1";
 
@@ -30,8 +29,6 @@ public class WorkbenchRoutingProperties {
     public void setRetryBackoffMillis(long value) { this.retryBackoffMillis = Math.max(0, value); }
     public int getScanBatchSize() { return scanBatchSize; }
     public void setScanBatchSize(int value) { this.scanBatchSize = Math.max(1, Math.min(100, value)); }
-    public int getMaxIncidentRequestIds() { return maxIncidentRequestIds; }
-    public void setMaxIncidentRequestIds(int value) { this.maxIncidentRequestIds = Math.max(1, Math.min(100, value)); }
     public long getUnknownResultTokenReserve() { return unknownResultTokenReserve; }
     public void setUnknownResultTokenReserve(long value) { this.unknownResultTokenReserve = Math.max(0, value); }
     public String getCatalogVersion() { return catalogVersion; }

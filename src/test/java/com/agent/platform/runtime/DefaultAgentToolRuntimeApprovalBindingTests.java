@@ -38,7 +38,7 @@ class DefaultAgentToolRuntimeApprovalBindingTests {
         ApprovalToolCallRequestPreparer preparer = new ApprovalToolCallRequestPreparer() {
             @Override
             public boolean supports(String toolName) {
-                return "floworder_recovery_execute".equals(toolName);
+                return "fixture_recovery_execute".equals(toolName);
             }
 
             @Override
@@ -63,12 +63,12 @@ class DefaultAgentToolRuntimeApprovalBindingTests {
         );
         AgentToolCall call = new AgentToolCall(
                 "tool-call-1",
-                "floworder_recovery_execute",
+                "fixture_recovery_execute",
                 Map.of("proposalId", "prop-1", "stateFingerprint", "model-tampered"),
                 "execute"
         );
         ToolDefinition definition = new ToolDefinition(
-                "floworder_recovery_execute", "execute", "{}", ToolRiskLevel.HIGH, Map.of()
+                "fixture_recovery_execute", "execute", "{}", ToolRiskLevel.HIGH, Map.of()
         );
 
         AgentToolRuntimeResult result = runtime.execute(

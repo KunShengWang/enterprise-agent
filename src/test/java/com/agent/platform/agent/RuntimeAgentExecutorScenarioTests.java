@@ -1,6 +1,11 @@
 package com.agent.platform.agent;
 
-import com.agent.platform.ordercare.config.AgentScenarioProfileResolver;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.ParameterizedTest;
+import com.agent.platform.procurement.config.ProcurementSourcingExecutionProfileFactory;
+import com.agent.platform.config.AgentProperties;
+import com.agent.platform.config.GeneralAgentExecutionProfileFactory;
+import com.agent.platform.config.AgentScenarioProfileResolver;
 import com.agent.platform.runtime.AgentEventListener;
 import com.agent.platform.runtime.AgentExecutionProfile;
 import com.agent.platform.runtime.AgentRunLimits;
@@ -22,6 +27,23 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RuntimeAgentExecutorScenarioTests {
+
+    @ParameterizedTest
+    @ValueSource(strings = { "general-agent-v1", "procurement-sourcing-rfq-v1" })
+    void migratedResolverPassesUnchangedGeneralAndProcurementProfilesToRuntime(String scenarioId) {
+        var resolver = new AgentScenarioProfileResolver(List.of(
+                new GeneralAgentExecutionProfileFactory(new AgentProperties()),
+                new ProcurementSourcingExecutionProfileFactory()));
+        var runtime = mock(AgentRuntime.class);
+        var profile = resolver.resolve(scenarioId).orElseThrow();
+        var request = new AgentRequest("session", "user", "question", Map.of(), scenarioId);
+        when(runtime.run(request, profile, AgentEventListener.NOOP)).thenReturn(new AgentRuntimeResult(
+                "run", "session", AgentRunState.COMPLETED, AgentStopReason.COMPLETED,
+                "done", "", null, List.of()));
+
+        assertEquals("done", new RuntimeAgentExecutor(runtime, resolver).execute(request).answer());
+        verify(runtime).run(request, profile, AgentEventListener.NOOP);
+    }
 
     @Test
     void resolvesTrustedProfileBeforeEnteringSharedRuntime() {

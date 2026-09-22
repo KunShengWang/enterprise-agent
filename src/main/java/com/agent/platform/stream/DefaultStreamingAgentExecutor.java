@@ -2,7 +2,7 @@ package com.agent.platform.stream;
 
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.config.AgentProperties;
-import com.agent.platform.ordercare.config.AgentScenarioProfileResolver;
+import com.agent.platform.config.AgentScenarioProfileResolver;
 import com.agent.platform.runtime.AgentEvent;
 import com.agent.platform.runtime.AgentEventListener;
 import com.agent.platform.runtime.AgentRuntime;

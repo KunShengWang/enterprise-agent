@@ -1,5 +1,7 @@
 package com.agent.platform.runtime;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.approval.ApprovalRecord;
 import com.agent.platform.approval.ApprovalRequest;
 import com.agent.platform.approval.ApprovalService;
@@ -81,6 +83,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                                           Map<String, Object> attributes,// 刚开始请求传来的元数据
                                           AgentToolCall toolCall,
                                           ToolDefinition definition) {
+        BusinessRetirementPolicy.requireTool(toolCall.toolName());
         ToolCallRequest request = new ToolCallRequest(toolCall.toolName(), toolCall.toolCallId(), toolCall.arguments());
         // 把当前 Agent Run、会话、用户、租户、角色和请求属性封装成统一的工具策略上下文，供后续 Guardrail 权限判断和审批请求绑定使用
         ToolPolicyContext policyContext = ToolPolicyContext.from(runId, sessionId, userId, attributes);
@@ -171,6 +174,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         }
         // 工具调用的参数
         ToolCallRequest request = approval.toolCallRequest();
+        if (request != null) BusinessRetirementPolicy.requireTool(request.toolName());
         if (request == null || definition == null || !definition.name().equals(request.toolName())) {
             throw new IllegalArgumentException("approval tool does not match capability definition");
         }
@@ -269,6 +273,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         if (execution == null || execution.state() != ToolExecutionState.RUNNING) {
             return execution;
         }
+        BusinessRetirementPolicy.requireTool(execution.toolName());
         for (UncertainToolExecutionResolver resolver : uncertainExecutionResolvers) {
             if (!resolver.supports(execution)) continue;
             try {

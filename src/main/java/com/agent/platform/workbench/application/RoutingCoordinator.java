@@ -1,5 +1,7 @@
 package com.agent.platform.workbench.application;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.config.WorkbenchRoutingProperties;
 import com.agent.platform.llm.LlmCallException;
 import com.agent.platform.workbench.model.AgentWorkItem;
@@ -46,7 +48,6 @@ public class RoutingCoordinator {
     private final RoutingFailureInjector failureInjector;
     private final RouteDecisionPostProcessor postProcessor;
     private final WorkItemBudgetGate budgets;
-    private final IncidentScopeRoutePreflight incidentScopePreflight;
     private final ExecutionTargetCandidateResolver candidateResolver;
 
     @Autowired
@@ -60,7 +61,6 @@ public class RoutingCoordinator {
                               RoutingFailureInjector failureInjector,
                               RouteDecisionPostProcessor postProcessor,
                               WorkItemBudgetGate budgets,
-                              IncidentScopeRoutePreflight incidentScopePreflight,
                               ExecutionTargetCandidateResolver candidateResolver) {
         this.routingStore = routingStore;
         this.workbenchStore = workbenchStore;
@@ -72,7 +72,6 @@ public class RoutingCoordinator {
         this.failureInjector = failureInjector;
         this.postProcessor = postProcessor;
         this.budgets = budgets;
-        this.incidentScopePreflight = incidentScopePreflight;
         this.candidateResolver = candidateResolver;
     }
 
@@ -86,7 +85,7 @@ public class RoutingCoordinator {
                               RoutingFailureInjector failureInjector) {
         this(routingStore, workbenchStore, router, validator, contextResolver, targetRegistry,
                 properties, failureInjector, (principal, workItem, decision) -> { }, WorkItemBudgetGate.NOOP,
-                IncidentScopeRoutePreflight.NOOP, new ExecutionTargetCandidateResolver());
+                new ExecutionTargetCandidateResolver());
     }
 
     public RoutingCoordinator(RoutingStore routingStore,
@@ -100,7 +99,7 @@ public class RoutingCoordinator {
                               RouteDecisionPostProcessor postProcessor) {
         this(routingStore, workbenchStore, router, validator, contextResolver, targetRegistry,
                 properties, failureInjector, postProcessor, WorkItemBudgetGate.NOOP,
-                IncidentScopeRoutePreflight.NOOP, new ExecutionTargetCandidateResolver());
+                new ExecutionTargetCandidateResolver());
     }
 
     public RoutingCoordinator(RoutingStore routingStore,
@@ -114,7 +113,7 @@ public class RoutingCoordinator {
                               RouteDecisionPostProcessor postProcessor,
                               WorkItemBudgetGate budgets) {
         this(routingStore, workbenchStore, router, validator, contextResolver, targetRegistry,
-                properties, failureInjector, postProcessor, budgets, IncidentScopeRoutePreflight.NOOP,
+                properties, failureInjector, postProcessor, budgets,
                 new ExecutionTargetCandidateResolver());
     }
 
@@ -124,6 +123,7 @@ public class RoutingCoordinator {
         if (!properties.isEnabled()) return Optional.empty();
         AgentWorkItem workItem = workbenchStore.findWorkItem(principal, workItemId)
                 .orElseThrow(() -> new IllegalArgumentException("work item not found"));
+        if (BusinessRetirementPolicy.retiredTarget(workItem.activeExecutionTarget())) return Optional.empty();
         String leaseOwner = "routing-" + UUID.randomUUID();
         // 抢占路由执行权
         Optional<RoutingAttempt> claimed = routingStore.claimRouting(
@@ -158,7 +158,7 @@ public class RoutingCoordinator {
             List<ExecutionTargetDefinition> targets = targetRegistry.enabledTargets(principal);
             ExecutionTargetCandidateResolver.Resolution candidates = candidateResolver.resolve(
                     claimedWork.originalGoal(), targets);
-            // 明确单案例由确定性业务边界直接路由；只有剩余歧义才交给 LLM。
+            // 退役业务由确定性边界拒绝；其余目标交给受限目录中的模型路由。
             RouterModelResult modelResult = candidates.deterministicResult().orElseGet(() ->
                     router.route(new RoutingModelRequest(
                             claimedWork, claimedWork.normalizedGoal(), candidates.candidates(),
@@ -167,7 +167,14 @@ public class RoutingCoordinator {
             failureInjector.afterModelResult(attempt, modelResult);
             // 校验决策合法性（防止越权路由到事故调查等）
             RouteValidationResult validation;
-            if (candidates.requiresClarification()) {
+            RouteValidationContext validationContext = new RouteValidationContext(
+                    principal, claimedWork, claimedWork.originalGoal(),
+                    context.trustedIdentifiers(), context.serverResolvedIdentifiers());
+            if (candidates.retiredBusiness()) {
+                validation = new RouteValidationResult(RouteDisposition.REJECT, null,
+                        List.of(BusinessRetirementPolicy.MESSAGE), BusinessRetirementPolicy.CODE);
+            }
+            else if (candidates.requiresClarification()) {
                 validation = new RouteValidationResult(
                         RouteDisposition.REQUIRE_CLARIFICATION,
                         null, List.of(candidates.clarificationReason()), "");
@@ -179,13 +186,10 @@ public class RoutingCoordinator {
                         "TARGET_OUTSIDE_CANDIDATE_SET");
             }
             else {
-                validation = incidentScopePreflight
-                        .resolve(principal, claimedWork, modelResult.decision(), context)
-                        .orElseGet(() -> validator.validate(
-                                modelResult.decision(),
-                                new RouteValidationContext(
-                                        principal, claimedWork, claimedWork.originalGoal(),
-                                        context.trustedIdentifiers(), context.serverResolvedIdentifiers())));
+                validation = validator.validate(modelResult.decision(), validationContext);
+            }
+            if (validation.disposition() != RouteDisposition.REJECT) {
+                validator.ensureProcurementCase(modelResult.decision(), validationContext);
             }
             // 落库路由决策
             completed = routingStore.completeRouting(principal, attempt, modelResult, validation);

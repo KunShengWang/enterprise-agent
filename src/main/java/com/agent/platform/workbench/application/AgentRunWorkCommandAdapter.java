@@ -1,5 +1,7 @@
 package com.agent.platform.workbench.application;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.runtime.AgentRunRecord;
 import com.agent.platform.runtime.AgentRunState;
 import com.agent.platform.runtime.AgentRunStore;
@@ -32,6 +34,9 @@ public class AgentRunWorkCommandAdapter {
     public AgentRunCommandResult execute(AuthenticatedPrincipal principal,
                                          AgentWorkItem work,
                                          WorkCommandType commandType) {
+        if (BusinessRetirementPolicy.retiredTarget(work.activeExecutionTarget())) {
+            return rejected(BusinessRetirementPolicy.CODE, BusinessRetirementPolicy.MESSAGE, null);
+        }
         // 找出当前 WorkItem 对应的底层 Agent Run（运行记录），以便后续对其实施命令（如取消/暂停）
         AgentRunRecord before = resolveRun(work, commandType);
         // Run 必须存在

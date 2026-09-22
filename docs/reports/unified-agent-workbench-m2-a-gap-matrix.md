@@ -1,3 +1,5 @@
+> 历史版本/阶段资料，非当前运行说明。涉及 FlowOrder/OrderCare 的业务已退役；其他能力以当前代码和采购指南为准。原始正文、成绩和结论保留，正文相对路径以原文件位置为准。当前入口见仓库 README 与 docs/documentation-index.md。
+
 # Unified Agent Workbench M2-A 跨源 WorkEvent Projector 缺口矩阵
 
 > 基线：M1-E `2c5701e`；范围仅限持久化跨源投影，不实现 M2-B SSE/Replay 或 M2-C 前端执行树。

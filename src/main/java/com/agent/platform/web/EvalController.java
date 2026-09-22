@@ -10,7 +10,6 @@ import com.agent.platform.eval.EvalEventRecorder;
 import com.agent.platform.eval.EvalReport;
 import com.agent.platform.eval.EvalReportRecorder;
 import com.agent.platform.eval.EvalRunner;
-import com.agent.platform.eval.OrderCareM1EvalSuite;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,20 +38,16 @@ public class EvalController {
 
     private final AdversarialEvalSuite adversarialEvalSuite;
 
-    private final OrderCareM1EvalSuite orderCareM1EvalSuite;
-
     public EvalController(EvalRunner evalRunner,
                            EvalCaseRepository evalCaseRepository,
                            EvalReportRecorder evalReportRecorder,
                            EvalEventRecorder evalEventRecorder,
-                           AdversarialEvalSuite adversarialEvalSuite,
-                           OrderCareM1EvalSuite orderCareM1EvalSuite) {
+                           AdversarialEvalSuite adversarialEvalSuite) {
         this.evalRunner = evalRunner;
         this.evalCaseRepository = evalCaseRepository;
         this.evalReportRecorder = evalReportRecorder;
         this.evalEventRecorder = evalEventRecorder;
         this.adversarialEvalSuite = adversarialEvalSuite;
-        this.orderCareM1EvalSuite = orderCareM1EvalSuite;
     }
 
     @GetMapping("/cases")
@@ -97,16 +92,6 @@ public class EvalController {
     public Mono<ApiResponse<EvalReport>> adversarial() {
         return Mono.fromSupplier(() -> {
                     EvalReport report = evalRunner.run(adversarialEvalSuite.cases());
-                    evalReportRecorder.record(report);
-                    return ApiResponse.success(report);
-                })
-                .subscribeOn(Schedulers.boundedElastic());
-    }
-
-    @PostMapping("/ordercare/m1")
-    public Mono<ApiResponse<EvalReport>> orderCareM1() {
-        return Mono.fromSupplier(() -> {
-                    EvalReport report = evalRunner.run(orderCareM1EvalSuite.cases());
                     evalReportRecorder.record(report);
                     return ApiResponse.success(report);
                 })

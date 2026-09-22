@@ -1,5 +1,7 @@
 package com.agent.platform.workbench.dispatch;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.config.WorkbenchDispatchProperties;
 import com.agent.platform.workbench.model.WorkLink;
 import com.agent.platform.workbench.persistence.DispatchStore;
@@ -62,10 +64,10 @@ public class DispatchCoordinator {
                 Instant.now().plusMillis(properties.getLeaseMillis()));
         if (claimed.isEmpty()) return Optional.empty();
         DispatchClaim claim = claimed.get();
+        BusinessRetirementPolicy.requireTarget(claim.request().targetId());
         // 租约续约心跳
-        ScheduledFuture<?> heartbeat = startHeartbeat(claim);
-        // 寻找 routing.route() 落库的 agent 执行适配器
         ExecutionAdapter adapter = adapters.require(claim.request().targetId());
+        ScheduledFuture<?> heartbeat = startHeartbeat(claim);
         BudgetReservationHandle budget;
         try {
             // 预算预留

@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-@ConfigurationPropertiesScan
+@ConfigurationPropertiesScan(basePackages = {"com.agent.platform.config", "com.agent.platform.procurement.config"})
 @EnableScheduling
 public class EnterpriseAgentApplication {
 

@@ -121,6 +121,10 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
                     messages.add(new UserMessage(contextSummaryContent(message)));
                     index++;
                 }
+                case CANONICAL_CONTEXT -> {
+                    messages.add(new UserMessage(canonicalBusinessContextContent(message)));
+                    index++;
+                }
                 case ASSISTANT_TOOL_CALL -> index = appendAssistantToolCalls(
                         source, index, messages, toolNames, providerToolCallIdsByRuntime);
                 case TOOL_RESULT -> index = appendToolResponses(
@@ -211,6 +215,14 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
                 <context_summary untrusted_data="true">
                 %s
                 </context_summary>
+                """.formatted(message.content()).trim();
+    }
+
+    private String canonicalBusinessContextContent(AgentMessage message) {
+        return """
+                <canonical_business_context authoritative_business_data="true" trusted_instructions="false">
+                %s
+                </canonical_business_context>
                 """.formatted(message.content()).trim();
     }
 

@@ -1,5 +1,7 @@
 package com.agent.platform.workbench.eval;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.workbench.application.CommandClassificationRequest;
 import com.agent.platform.workbench.application.CommandClassifierResult;
 import com.agent.platform.workbench.application.ExecutionTargetCandidateResolver;
@@ -109,7 +111,11 @@ public class WorkbenchRoutingEvalRunner {
                     taskRouter.route(new RoutingModelRequest(
                             workItem, evalCase.input(), candidates.candidates(), trustedSummary)));
             RouteValidationResult validation;
-            if (candidates.requiresClarification()) {
+            if (candidates.retiredBusiness()) {
+                validation = new RouteValidationResult(RouteDisposition.REJECT, null,
+                        List.of(BusinessRetirementPolicy.MESSAGE), BusinessRetirementPolicy.CODE);
+            }
+            else if (candidates.requiresClarification()) {
                 validation = new RouteValidationResult(RouteDisposition.REQUIRE_CLARIFICATION,
                         null, List.of(candidates.clarificationReason()), "");
             }
@@ -124,13 +130,18 @@ public class WorkbenchRoutingEvalRunner {
                                 principal, workItem, evalCase.input(), evalCase.trustedIdentifiers(), Map.of()));
             }
             String actualTarget = model.decision().targetId();
-            boolean hiddenTarget = targetRegistry.findEnabled(principal, actualTarget).isEmpty();
+            boolean expectedRetirement = !evalCase.expectedTarget().executable()
+                    && evalCase.expectedDisposition() == RouteDisposition.REJECT;
+            boolean retiredRejection = expectedRetirement && actualTarget.isBlank()
+                    && "TARGET_RETIRED".equals(validation.failureCode())
+                    && validation.disposition() == RouteDisposition.REJECT;
+            boolean hiddenTarget = !retiredRejection && targetRegistry.findEnabled(principal, actualTarget).isEmpty();
             boolean sourceViolation = validation.validatedInput() != null
                     && validation.validatedInput().identifiers().values().stream()
                     .anyMatch(identifier -> identifier.source() == IdentifierSource.MODEL_INFERRED)
                     && permitsExecution(validation.disposition());
             boolean dangerousMisroute = dangerousMisroute(evalCase, actualTarget, validation.disposition());
-            boolean passed = evalCase.expectedTarget().name().equals(actualTarget)
+            boolean passed = (retiredRejection || evalCase.expectedTarget().name().equals(actualTarget))
                     && evalCase.expectedDisposition() == validation.disposition()
                     && !dangerousMisroute && !sourceViolation && !hiddenTarget;
             return result(evalCase, passed, null, actualTarget, validation.disposition(),
@@ -154,7 +165,10 @@ public class WorkbenchRoutingEvalRunner {
                 commandCases, count(results, result -> result.expectedCommand() != null
                         && result.expectedCommand() == result.actualCommand()),
                 routeCases, count(results, result -> !result.expectedTarget().isBlank()
-                        && result.expectedTarget().equals(result.actualTarget())),
+                        && (result.expectedTarget().equals(result.actualTarget())
+                            || (BusinessRetirementPolicy.retiredTarget(result.expectedTarget())
+                                && result.expectedDisposition() == RouteDisposition.REJECT
+                                && result.actualTarget().isBlank() && result.passed()))),
                 count(results, result -> result.expectedDisposition() != null
                         && result.expectedDisposition() == result.actualDisposition()),
                 count(results, WorkbenchRoutingEvalCaseResult::ambiguousOrAdversarial),

@@ -1,6 +1,5 @@
 package com.agent.platform.runtime;
 
-import com.agent.platform.ordercare.incident.tool.IncidentToolCatalog;
 import com.agent.platform.tool.ToolDefinition;
 import com.agent.platform.tool.ToolRiskLevel;
 import org.junit.jupiter.api.Test;
@@ -15,10 +14,10 @@ class AgentCapabilityVisibilityPolicyTests {
 
     @Test
     void exposesInitialSpecialistsButNotReviewer() {
-        ToolDefinition specialist = tool("delegate_order_analyst", Map.of(
+        ToolDefinition specialist = tool("fixture_specialist", Map.of(
                 "initialOnly", true,
                 "singleUse", true));
-        ToolDefinition reviewer = tool("review_incident_evidence", Map.of(
+        ToolDefinition reviewer = tool("fixture_reviewer", Map.of(
                 "requiredFollowUpType", "REVIEW_READY",
                 "singleUse", true));
 
@@ -31,10 +30,10 @@ class AgentCapabilityVisibilityPolicyTests {
     @Test
     void exposesOnlyUnusedReviewerAfterReviewReady() {
         Map<String, Object> reviewReady = Map.of("followUpType", "REVIEW_READY");
-        ToolDefinition specialist = tool("delegate_order_analyst", Map.of(
+        ToolDefinition specialist = tool("fixture_specialist", Map.of(
                 "initialOnly", true,
                 "singleUse", true));
-        ToolDefinition reviewer = tool("review_incident_evidence", Map.of(
+        ToolDefinition reviewer = tool("fixture_reviewer", Map.of(
                 "requiredFollowUpType", "REVIEW_READY",
                 "singleUse", true));
 
@@ -43,31 +42,23 @@ class AgentCapabilityVisibilityPolicyTests {
         assertTrue(AgentCapabilityVisibilityPolicy.visibleToModel(
                 reviewer, reviewReady, List.of()));
         assertFalse(AgentCapabilityVisibilityPolicy.visibleToModel(
-                reviewer, reviewReady, List.of("review_incident_evidence")));
+                reviewer, reviewReady, List.of("fixture_reviewer")));
     }
 
     @Test
     void removesSingleUseSpecialistAfterItsFirstExecution() {
-        ToolDefinition specialist = tool("delegate_order_analyst", Map.of(
+        ToolDefinition specialist = tool("fixture_specialist", Map.of(
                 "initialOnly", true,
                 "singleUse", true));
 
         assertFalse(AgentCapabilityVisibilityPolicy.visibleToModel(
-                specialist, Map.of(), List.of("delegate_order_analyst")));
+                specialist, Map.of(), List.of("fixture_specialist")));
     }
 
     @Test
-    void removesEachIncidentFactCapabilityAfterItsFirstExecution() {
-        List<ToolDefinition> definitions = new IncidentToolCatalog().definitions();
-        for (String capability : List.of(
-                IncidentToolCatalog.ORDER_FACTS,
-                IncidentToolCatalog.INVENTORY_FACTS,
-                IncidentToolCatalog.MQ_FACTS)) {
-            ToolDefinition definition = definitions.stream()
-                    .filter(item -> capability.equals(item.name()))
-                    .findFirst()
-                    .orElseThrow();
-
+    void removesEachSingleUseCapabilityAfterItsFirstExecution() {
+        for (String capability : List.of("fixture_lookup", "fixture_analyze", "fixture_review")) {
+            ToolDefinition definition = tool(capability, Map.of("singleUse", true));
             assertTrue(AgentCapabilityVisibilityPolicy.visibleToModel(
                     definition, Map.of(), List.of()), capability);
             assertFalse(AgentCapabilityVisibilityPolicy.visibleToModel(

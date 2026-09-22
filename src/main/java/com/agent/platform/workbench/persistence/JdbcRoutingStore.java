@@ -1,5 +1,7 @@
 package com.agent.platform.workbench.persistence;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.config.AgentStorageProperties;
 import com.agent.platform.storage.AgentStorageException;
 import com.agent.platform.workbench.application.CommandClassifierResult;
@@ -369,6 +371,7 @@ public class JdbcRoutingStore implements RoutingStore {
             connection.setAutoCommit(false);
             try {
                 AgentWorkItem work = requireWork(connection, principal, workItemId, true);
+                BusinessRetirementPolicy.requireTarget(work.activeExecutionTarget());
                 if (!work.routingRequestId().equals(routingRequestId)) {
                     throw new WorkbenchIdempotencyConflictException("routingRequestId cannot be replaced");
                 }
@@ -480,6 +483,7 @@ public class JdbcRoutingStore implements RoutingStore {
             connection.setAutoCommit(false);
             try {
                 AgentWorkItem work = requireWork(connection, principal, attempt.workItemId(), true);
+                BusinessRetirementPolicy.requireTarget(work.activeExecutionTarget());
                 RoutingDecisionRecord current = requireRouting(connection, principal, attempt.decisionId(), true);
                 if (!current.workItemId().equals(work.workItemId())) {
                     throw new WorkbenchNotFoundException("routing decision not found for work item");
@@ -649,6 +653,8 @@ public class JdbcRoutingStore implements RoutingStore {
                      FROM agent_work_item w
                      JOIN agent_work_input i ON i.input_id = w.source_input_id
                      WHERE w.control_state='ROUTING'
+                       AND COALESCE(w.active_execution_target, '') NOT IN
+                           ('ORDERCARE_CASE', 'INCIDENT_INVESTIGATION', 'INCIDENT_RECOVERY_PLAN')
                        AND (w.routing_next_retry_at IS NULL OR w.routing_next_retry_at <= ?)
                        AND (w.routing_last_attempt_at IS NULL OR w.routing_last_attempt_at <= ?)
                        AND NOT EXISTS (SELECT 1 FROM agent_routing_decision d
@@ -656,16 +662,22 @@ public class JdbcRoutingStore implements RoutingStore {
                        AND NOT EXISTS (SELECT 1 FROM agent_routing_decision d
                                        WHERE d.work_item_id=w.work_item_id AND d.decision_status='STARTED'
                                          AND d.lease_until>?)
-                     ORDER BY w.created_at LIMIT ?
+                     ORDER BY w.created_at
                      """)) {
             statement.setTimestamp(1, Timestamp.from(Instant.now()));
             statement.setTimestamp(2, Timestamp.from(staleBefore));
             statement.setTimestamp(3, Timestamp.from(Instant.now()));
-            statement.setInt(4, Math.max(1, Math.min(100, limit)));
+            // Apply the limit after retirement filtering, so old unresolved goals cannot starve active work.
+            // PostgreSQL fetches bounded pages inside this read-only transaction.
+            int batchSize = Math.max(1, Math.min(100, limit));
+            connection.setReadOnly(true);
+            connection.setAutoCommit(false);
+            statement.setFetchSize(batchSize);
             try (ResultSet rs = statement.executeQuery()) {
                 List<RoutingRecoveryCandidate> result = new ArrayList<>();
-                while (rs.next()) {
+                while (result.size() < batchSize && rs.next()) {
                     AgentWorkItem workItem = mapWork(rs);
+                    if (BusinessRetirementPolicy.retiredInput(workItem.originalGoal())) continue;
                     result.add(new RoutingRecoveryCandidate(
                             workItem,
                             new AuthenticatedPrincipal(workItem.tenantId(), workItem.ownerPrincipalId(),

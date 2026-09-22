@@ -1,5 +1,7 @@
 package com.agent.platform.workbench.dispatch;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.workbench.target.ExecutionTargetId;
 import org.springframework.stereotype.Component;
 
@@ -18,15 +20,17 @@ public class ExecutionAdapterRegistry {
                 throw new IllegalStateException("duplicate ExecutionAdapter: " + adapter.targetId());
             }
         }
-        if (indexed.size() != ExecutionTargetId.values().length) {
-            throw new IllegalStateException("all four frozen ExecutionAdapters must be registered; found "
+        if (!indexed.keySet().containsAll(ExecutionTargetId.executableTargets())) {
+            throw new IllegalStateException("all executable ExecutionAdapters must be registered; found "
                     + indexed.keySet());
         }
+        indexed.keySet().removeIf(id -> !id.executable());
         this.adapters = Map.copyOf(indexed);
     }
 
     public ExecutionAdapter require(String targetId) {
         ExecutionTargetId id = ExecutionTargetId.valueOf(targetId);
+        BusinessRetirementPolicy.requireTarget(id.name());
         ExecutionAdapter adapter = adapters.get(id);
         if (adapter == null) throw new IllegalStateException("ExecutionAdapter is not registered: " + id);
         return adapter;

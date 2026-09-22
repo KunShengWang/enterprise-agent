@@ -5,8 +5,16 @@ package com.agent.platform.workbench.target;
  */
 public enum ExecutionTargetId {
     GENERAL_AGENT,             // 总代理（通用 Agent），最纯粹的 Agent Runtime 主流程
-    ORDERCARE_CASE,            // 订单护理案例（OrderCare 案例诊断/恢复），学习“通用 Runtime 如何承载真实业务”的最佳路径
-    INCIDENT_INVESTIGATION,    // 事件调查（Incident Command），Multi-Agent
-    INCIDENT_RECOVERY_PLAN     // 事件恢复计划（Recovery Plan）
+    ORDERCARE_CASE,            // 历史 ID：只供读取与 TARGET_RETIRED 拒绝，不可执行
+    INCIDENT_INVESTIGATION,    // 历史 ID：只供读取与退役拒绝，不可执行
+    INCIDENT_RECOVERY_PLAN,    // 历史 ID：只供读取与退役拒绝，不可执行
+    PROCUREMENT_SOURCING;      // 复杂/非标采购供应商寻源与决策
+
+    /** Historical enum values are deliberately retained; only these two targets can execute. */
+    public boolean executable() { return this == GENERAL_AGENT || this == PROCUREMENT_SOURCING; }
+
+    public static java.util.Set<ExecutionTargetId> executableTargets() {
+        return java.util.Set.of(GENERAL_AGENT, PROCUREMENT_SOURCING);
+    }
 }
 

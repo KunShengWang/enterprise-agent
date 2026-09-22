@@ -8,7 +8,6 @@ import type {
   WorkInput, WorkItem, WorkItemBudget, WorkItemDetail,
 } from '../types/workbench'
 import { projectConversationTurns } from '../utils/conversationTurns'
-import { incidentAssessmentMarkdown } from '../utils/incidentAssessment'
 import { isToolCallProtocolEnvelope, normalizeAssistantContent } from '../utils/publicContent'
 
 function terminalState(work: WorkItem) {
@@ -19,20 +18,13 @@ function terminalState(work: WorkItem) {
   return 'WAITING' as const
 }
 
-function persistedAnswer(work: WorkItem, messages: AgentConversationMessage[], tree: WorkExecutionTree | null): PrimaryAnswerView {
+function persistedAnswer(work: WorkItem, messages: AgentConversationMessage[], _tree: WorkExecutionTree | null): PrimaryAnswerView {
   const message = messages.filter(item => item.role === 'ASSISTANT' && item.runId === work.activeRunId)
     .sort((left, right) => right.sequence - left.sequence)[0]
   if (message) {
     const content = normalizeAssistantContent(message.content)
     if (content && !isToolCallProtocolEnvelope(content)) return {
       state: 'COMPLETED', content, persistedMessageId: message.messageId, createdAt: message.createdAt,
-    }
-  }
-  if (work.activeExecutionTarget === 'INCIDENT_INVESTIGATION' && work.outcome.toUpperCase() === 'ASSESSED') {
-    const content = incidentAssessmentMarkdown(tree)
-    if (content) return {
-      state: 'COMPLETED', content,
-      persistedMessageId: `projected-assessment-${work.workItemId}`, createdAt: work.updatedAt,
     }
   }
   return { state: terminalState(work), content: '', persistedMessageId: '', createdAt: work.updatedAt }

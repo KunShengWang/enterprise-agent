@@ -1,3 +1,5 @@
+> 历史版本/阶段资料，非当前运行说明。涉及 FlowOrder/OrderCare 的业务已退役；其他能力以当前代码和采购指南为准。原始正文、成绩和结论保留，正文相对路径以原文件位置为准。当前入口见仓库 README 与 docs/documentation-index.md。
+
 # Unified Agent Workbench M1-E 路由 Eval 缺口矩阵
 
 > 基线：M1-D `af964e8`；范围仅限路由、命令分类和 Java 安全处置 Eval，不进入 M2 事件投影。

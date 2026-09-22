@@ -1,5 +1,10 @@
 package com.agent.platform.stream;
 
+import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.ParameterizedTest;
+import com.agent.platform.procurement.config.ProcurementSourcingExecutionProfileFactory;
+import com.agent.platform.config.GeneralAgentExecutionProfileFactory;
+import com.agent.platform.config.AgentScenarioProfileResolver;
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.config.AgentProperties;
 import com.agent.platform.runtime.AgentEvent;
@@ -28,6 +33,34 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class DefaultStreamingAgentExecutorTests {
+
+    @ParameterizedTest
+    @ValueSource(strings = { "general-agent-v1", "procurement-sourcing-rfq-v1" })
+    void migratedResolverPreservesProfileAndPersistedEventsInStreamingExecution(String scenarioId) {
+        var properties = new AgentProperties();
+        var resolver = new AgentScenarioProfileResolver(List.of(
+                new GeneralAgentExecutionProfileFactory(properties),
+                new ProcurementSourcingExecutionProfileFactory()));
+        var runtime = mock(AgentRuntime.class);
+        var profile = resolver.resolve(scenarioId).orElseThrow();
+        var request = new AgentRequest("session", "user", "question", Map.of(), scenarioId);
+        when(runtime.run(eq(request), eq(profile), any(AgentEventListener.class))).thenAnswer(invocation -> {
+            AgentEventListener listener = invocation.getArgument(2);
+            listener.onEvent(new AgentEvent("event", "run", "session", 17,
+                    AgentEventType.RUN_COMPLETED, "done", Map.of(), Instant.now()));
+            return new AgentRuntimeResult("run", "session", AgentRunState.COMPLETED,
+                    AgentStopReason.COMPLETED, "done", "", null, List.of());
+        });
+
+        var events = new DefaultStreamingAgentExecutor(runtime, properties, resolver)
+                .stream(request).collectList().block(Duration.ofSeconds(3));
+
+        assertEquals(1, events.size());
+        assertEquals("run_completed", events.get(0).type());
+        assertEquals(17, events.get(0).sequence());
+        verify(runtime).run(eq(request), eq(profile), any(AgentEventListener.class));
+        verify(runtime, never()).run(eq(request), any(AgentEventListener.class));
+    }
 
     @Test
     void exposesPersistedSequenceAndEmitsHeartbeatWithLastSequence() {

@@ -81,15 +81,15 @@ class BudgetAdmissionCoordinatorTests {
         WorkItemBudgetGate budgets = mock(WorkItemBudgetGate.class);
         AuthenticatedPrincipal principal = principal();
         DispatchAttempt attempt = new DispatchAttempt("attempt-1", "work-1", "dispatch-1", 1,
-                false, "INCIDENT_INVESTIGATION", DispatchAttemptStatus.STARTED, "", "", Instant.now(), null);
+                false, "PROCUREMENT_SOURCING", DispatchAttemptStatus.STARTED, "", "", Instant.now(), null);
         DispatchRequest request = new DispatchRequest("dispatch-1", "work-1", "conversation-1", "goal",
-                "INCIDENT_INVESTIGATION", principal,
-                new ValidatedExecutionInput("INCIDENT_INVESTIGATION", Map.of(), Map.of(), "digest"), Instant.now());
+                "PROCUREMENT_SOURCING", principal,
+                new ValidatedExecutionInput("PROCUREMENT_SOURCING", Map.of(), Map.of(), "digest"), Instant.now());
         when(store.claimDispatch(any(), anyString(), any(), anyInt(), anyString(), any()))
                 .thenReturn(Optional.of(new DispatchClaim(attempt, request)));
-        when(adapters.require("INCIDENT_INVESTIGATION")).thenReturn(adapter);
+        when(adapters.require("PROCUREMENT_SOURCING")).thenReturn(adapter);
         when(budgets.reserveTarget(principal, "work-1",
-                com.agent.platform.workbench.target.ExecutionTargetId.INCIDENT_INVESTIGATION,
+                com.agent.platform.workbench.target.ExecutionTargetId.PROCUREMENT_SOURCING,
                 "dispatch:dispatch-1")).thenThrow(
                 new BudgetExceededException("BUDGET_EXHAUSTED", "no remaining budget"));
         WorkbenchDispatchProperties properties = new WorkbenchDispatchProperties();

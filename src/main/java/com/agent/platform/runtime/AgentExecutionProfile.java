@@ -10,7 +10,7 @@ public record AgentExecutionProfile(
         String systemPrompt,// 系统提示词
         Set<String> allowedCapabilities,// agent 能使用的工具
         AgentRunLimits limits,// agent 运行时的限制条件
-        boolean longTermMemoryEnabled// 启用长期内存存储
+        boolean longTermMemoryEnabled// 启用长期记忆读写、recall、User Profile 和 memory_context
 ) {
 
     public AgentExecutionProfile {

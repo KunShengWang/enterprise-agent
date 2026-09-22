@@ -69,7 +69,7 @@ const publicItems = [
 ]
 publicItems[3].detail = { ...publicItems[3].detail, targetLabel: 'Order', referenceType: 'INCIDENT_TASK',
   referenceId: 'task-order', attributes: { role: 'Order', incidentId: 'incident-3', evidenceCount: '1', evidenceIds: 'evidence-order' } }
-const incidentTree = { workItemId: 'work-3', executionTarget: 'INCIDENT_INVESTIGATION', treeType: 'INCIDENT',
+const incidentTree = { workItemId: 'work-3', executionTarget: 'INCIDENT_INVESTIGATION', treeType: 'RETIRED',
   executionId: 'incident-3', agents: [], conflicts: [], assessment: { riskLevel: 'LOW',
     confirmedFacts: [{ statement: '三笔订单均已进入终态。' }] }, recoveryPlans: [], metrics: {},
   evidence: [{ evidenceId: 'evidence-order', taskId: 'task-order', childRunId: 'run-order',
@@ -87,8 +87,8 @@ assert.ok(!JSON.stringify(narrative).includes('system prompt'))
 const orderNarrative = narrative[0].items.find(item => item.summary.includes('Order Specialist'))
 assert.equal(orderNarrative.metadata.find(item => item.label === '证据数量').value, '1')
 assert.ok(orderNarrative.metadata.some(item => item.label === 'Incident' && item.value === 'incident-3'))
-assert.ok(orderNarrative.findings.some(item => item.includes('终态请求 3')))
-assert.ok(orderNarrative.findings.some(item => item.includes('REQ-1')))
+assert.deepEqual(orderNarrative.findings, []) // Never regenerate old domain facts.
+
 
 const { projectTurnConversationItems } = await loadModule('../src/utils/conversationItems.ts')
 const turnViews = turns.map((turn, index) => {

@@ -1,5 +1,7 @@
 package com.agent.platform.tool;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.mcp.McpToolGateway;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
@@ -79,6 +81,10 @@ public class LocalToolExecutor implements ToolExecutor {
         if (request == null || request.toolName() == null || request.toolName().isBlank()) {
             return new ToolCallResult("", false, "", "toolName must not be blank", Map.of("provider", "unknown"));
         }
+        if (BusinessRetirementPolicy.retiredTool(request.toolName())) {
+            return new ToolCallResult(request.toolName(), false, "", BusinessRetirementPolicy.MESSAGE,
+                    Map.of("errorCode", BusinessRetirementPolicy.CODE));
+        }
         // 找 ToolDefinition
         Optional<ToolDefinition> definition = toolRegistry.findTool(request.toolName());
         if (definition.isEmpty()) {
@@ -100,7 +106,7 @@ public class LocalToolExecutor implements ToolExecutor {
             if (gateway == null) {
                 return new ToolCallResult(request.toolName(), false, "", "MCP gateway is not configured", Map.of("provider", "mcp"));
             }
-            return gateway.callTool(request);
+            return gateway.callTool(definition.get(), request);
         }
 
         Optional<ToolHandler> businessHandler = toolHandlers.orderedStream()

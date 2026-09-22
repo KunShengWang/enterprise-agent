@@ -1,5 +1,7 @@
 package com.agent.platform.workbench.application;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.config.WorkbenchDispatchProperties;
 import com.agent.platform.workbench.model.AgentWorkItem;
 import com.agent.platform.workbench.model.RoutingDecisionRecord;
@@ -23,6 +25,7 @@ public class DispatchPreparationService implements RouteDecisionPostProcessor {
     public void afterEffectiveDecision(AuthenticatedPrincipal principal,
                                        AgentWorkItem workItem,
                                        RoutingDecisionRecord decision) {
+        if (BusinessRetirementPolicy.retiredTarget(workItem.activeExecutionTarget())) return;
         if (workItem.controlState() == WorkControlState.WAITING_CONFIRMATION) {
             store.ensurePreview(principal, workItem, decision, properties.getPreviewTtlSeconds());
         }

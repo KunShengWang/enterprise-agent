@@ -91,8 +91,8 @@ const confirmationItems = projectConversationItems({
   answer: { state: 'IDLE', content: '', persistedMessageId: '', createdAt: '' },
 })
 assert.equal(confirmationItems.filter(item => item.type === 'APPROVAL_REQUEST').length, 0)
-assert.equal(confirmationItems.filter(item => item.type === 'INCIDENT_PREVIEW').length, 1)
-assert.equal(confirmationItems.find(item => item.type === 'INCIDENT_PREVIEW')?.title, '启动只读 Multi-Agent 事故调查')
+assert.equal(confirmationItems.filter(item => item.type === 'ROUTE_PREVIEW').length, 1)
+assert.equal(confirmationItems.find(item => item.type === 'ROUTE_PREVIEW')?.title, '执行范围确认')
 
 const discoveredScopeItems = projectConversationItems({
   detail: { workItem: incidentWork, routingDecision: null, links: [], events: [], preview: {
@@ -111,10 +111,9 @@ const discoveredScopeItems = projectConversationItems({
   inputs: [], presentations: [...presentations, routeConfirmation], approval: null,
   answer: { state: 'IDLE', content: '', persistedMessageId: '', createdAt: '' },
 })
-const discoveredPreview = discoveredScopeItems.find(item => item.type === 'INCIDENT_PREVIEW')
-assert.equal(discoveredPreview?.title, '确认候选事故范围')
-assert.ok(discoveredPreview?.content.includes('FlowOrder 权威只读事实'))
-assert.ok(discoveredPreview?.content.includes('订单和库存 Specialist'))
+const discoveredPreview = discoveredScopeItems.find(item => item.type === 'ROUTE_PREVIEW')
+assert.equal(discoveredPreview.readOnly, true)
+assert.ok(discoveredScopeItems.every(item => item.readOnly))
 
 const phantomApprovalItems = projectConversationItems({
   detail: { workItem: incidentWork, routingDecision: null, links: [], events: [] }, inputs: [],

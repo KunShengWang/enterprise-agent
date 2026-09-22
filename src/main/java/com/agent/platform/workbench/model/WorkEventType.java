@@ -1,6 +1,6 @@
 package com.agent.platform.workbench.model;
 
-/** M1 product-control events. Cross-source projection remains an M2 concern. */
+/** Persisted event IDs. Legacy Scope/Incident/Recovery values are retained for history reads only. */
 public enum WorkEventType {
     WORK_ITEM_CREATED,
     ROUTING_STARTED,

@@ -182,7 +182,7 @@ export interface ExecutionAgentNode {
   error: string
   runtimeWarning: string
   trace?: RuntimeRunTrace
-  evidence: IncidentEvidence[]
+  evidence: LegacyEvidenceView[]
   metrics: ExecutionNodeMetrics
 }
 export interface ExecutionConflict {
@@ -201,10 +201,10 @@ export interface WorkExecutionTree {
   executionId: string
   coordinator?: ExecutionCoordinatorNode
   agents: ExecutionAgentNode[]
-  evidence: IncidentEvidence[]
+  evidence: LegacyEvidenceView[]
   conflicts: ExecutionConflict[]
   assessment: Record<string, unknown>
-  recoveryPlans: IncidentRecoveryPlan[]
+  recoveryPlans: ReadonlyArray<Record<string, unknown>>
   metrics: ExecutionTreeMetrics
 }
 export interface WorkLink { linkType: string; linkedId: string; relation: string }
@@ -255,4 +255,16 @@ export interface WorkItemBudget {
   version: number
   updatedAt: string
 }
-import type { IncidentEvidence, IncidentRecoveryPlan, RuntimeRunTrace, RuntimeTraceSpan } from './incident'
+/** Minimal persisted legacy evidence view; never procurement evidence. */
+export interface LegacyEvidenceView {
+  evidenceId: string
+  taskId: string
+  childRunId: string
+  evidenceClass: string
+  evidenceSubtype: string
+  sourceSystem: string
+  observedAt: string
+  facts: Record<string, unknown>
+  status: string
+}
+import type { RuntimeRunTrace, RuntimeTraceSpan } from './trace'

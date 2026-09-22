@@ -4,5 +4,6 @@ public enum MultiAgentRole {
     PLANNER,
     RAG_WORKER,
     TOOL_WORKER,
-    REVIEWER
+    REVIEWER,
+    PROCUREMENT_ANALYST
 }

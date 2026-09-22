@@ -3,7 +3,6 @@ package com.agent.platform.workbench.application;
 import com.agent.platform.config.WorkbenchRoutingProperties;
 import com.agent.platform.llm.LlmService;
 import com.agent.platform.llm.LlmUsage;
-import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
 import com.agent.platform.prompt.PromptRequest;
 import com.agent.platform.workbench.model.AgentConversationTurn;
 import com.agent.platform.workbench.model.AgentWorkItem;
@@ -71,32 +70,23 @@ class M1BRoutingUnitTests {
     }
 
     @Test
-    void registryContainsOnlyFourTargetsAndGeneralProfileIsRestricted() {
-        IncidentCommandProperties incident = new IncidentCommandProperties();
-        incident.setEnabled(true);
-        incident.setRecoveryPlannerEnabled(true);
-        ExecutionTargetRegistry registry = new ExecutionTargetRegistry(incident);
+    void registryContainsOnlyTwoActiveTargetsAndGeneralProfileIsRestricted() {
+        ExecutionTargetRegistry registry = new ExecutionTargetRegistry();
 
         var targets = registry.enabledTargets(principal());
 
-        assertEquals(4, targets.size());
+        assertEquals(2, targets.size());
         var general = registry.findEnabled(principal(), ExecutionTargetId.GENERAL_AGENT.name()).orElseThrow();
         assertEquals("general-safe-v1", general.executionProfileId());
         assertFalse(general.supportedIntents().stream().anyMatch(value -> value.contains("INCIDENT")));
-        var investigation = registry.findEnabled(
-                principal(), ExecutionTargetId.INCIDENT_INVESTIGATION.name()).orElseThrow();
-        assertTrue(investigation.requiredInputs().contains("oneOf:requestIds,timeExpression,orderNo"));
-        assertFalse(investigation.requiredInputs().contains("oneOf:batchId,requestIds"));
+        assertTrue(registry.findEnabled(principal(), ExecutionTargetId.INCIDENT_INVESTIGATION.name()).isEmpty());
     }
 
     @Test
-    void incidentAlwaysRequiresConfirmationAndModelInferredIdentifiersCannotPass() {
-        IncidentCommandProperties incident = new IncidentCommandProperties();
-        incident.setEnabled(true);
-        incident.setRecoveryPlannerEnabled(true);
+    void retiredIncidentCannotExecuteEvenWithExplicitOrModelInferredIdentifiers() {
         WorkbenchRoutingProperties properties = new WorkbenchRoutingProperties();
         RoutePolicyValidator validator = new RoutePolicyValidator(
-                new ExecutionTargetRegistry(incident), properties, objectMapper);
+                new ExecutionTargetRegistry(), properties, objectMapper);
         AgentWorkItem work = work("调查 REQ-1，队列 q.incident");
         ExecutionDecision valid = new ExecutionDecision(
                 "INCIDENT_INVESTIGATION", .99, "incident",
@@ -104,14 +94,14 @@ class M1BRoutingUnitTests {
 
         var accepted = validator.validate(valid,
                 new RouteValidationContext(principal(), work, work.originalGoal(), Map.of(), Map.of()));
-        assertEquals(RouteDisposition.REQUIRE_CONFIRMATION, accepted.disposition());
+        assertEquals(RouteDisposition.REJECT, accepted.disposition());
 
         ExecutionDecision invented = new ExecutionDecision(
                 "INCIDENT_INVESTIGATION", .99, "incident",
                 Map.of("requestIds", List.of("REQ-INVENTED"), "queueName", "q.incident"), List.of(), "preview");
         var clarified = validator.validate(invented,
                 new RouteValidationContext(principal(), work, work.originalGoal(), Map.of(), Map.of()));
-        assertEquals(RouteDisposition.REQUIRE_CLARIFICATION, clarified.disposition());
+        assertEquals(RouteDisposition.REJECT, clarified.disposition());
 
         ExecutionDecision unresolvedBatch = new ExecutionDecision(
                 "INCIDENT_INVESTIGATION", .99, "incident",
@@ -119,16 +109,15 @@ class M1BRoutingUnitTests {
         var batchClarification = validator.validate(unresolvedBatch,
                 new RouteValidationContext(principal(), work,
                         "调查 BATCH-1，队列 q.incident", Map.of(), Map.of()));
-        assertEquals(RouteDisposition.REQUIRE_CLARIFICATION, batchClarification.disposition());
-        assertTrue(batchClarification.reasons().get(0).contains("requestIds"));
+        assertEquals(RouteDisposition.REJECT, batchClarification.disposition());
+        assertEquals("TARGET_RETIRED", batchClarification.failureCode());
     }
 
     @Test
     void routerRejectsFallbackAndPreservesObservableUsage() {
         FakeLlm llm = new FakeLlm("{}", new LlmUsage(55, 9, 64, 0, 0, "deepseek-chat", "fallback"));
         LlmUnifiedTaskRouter router = new LlmUnifiedTaskRouter(llm, objectMapper);
-        IncidentCommandProperties incident = new IncidentCommandProperties();
-        var registry = new ExecutionTargetRegistry(incident);
+        var registry = new ExecutionTargetRegistry();
 
         RouterInvocationException failure = assertThrows(RouterInvocationException.class,
                 () -> router.route(new RoutingModelRequest(
@@ -143,12 +132,11 @@ class M1BRoutingUnitTests {
     void invalidStructuredOutputPreservesTokensAndGetsDistinctFailureCode() {
         FakeLlm llm = new FakeLlm("not-json", usage("deepseek-chat", 44, 7));
         LlmUnifiedTaskRouter router = new LlmUnifiedTaskRouter(llm, objectMapper);
-        IncidentCommandProperties incident = new IncidentCommandProperties();
 
         RouterInvocationException failure = assertThrows(RouterInvocationException.class,
                 () -> router.route(new RoutingModelRequest(
                         work("解释 CAS"), "解释 CAS",
-                        new ExecutionTargetRegistry(incident).enabledTargets(principal()), "")));
+                        new ExecutionTargetRegistry().enabledTargets(principal()), "")));
 
         assertEquals("STRUCTURED_OUTPUT_INVALID", failure.failureCode());
         assertEquals(51, failure.observation().promptTokens() + failure.observation().completionTokens());

@@ -1,5 +1,7 @@
 package com.agent.platform.approval;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.config.AgentProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ public class LocalApprovalService implements ApprovalService {
 
     @Override
     public ApprovalDecision requestApproval(ApprovalRequest request) {
+        if (request.toolCallRequest() != null) BusinessRetirementPolicy.requireTool(request.toolCallRequest().toolName());
         Instant createdAt = request.createdAt() == null ? clock.instant() : request.createdAt();
         ApprovalRecord requested = new ApprovalRecord(
                 request.approvalId(),
@@ -58,6 +61,7 @@ public class LocalApprovalService implements ApprovalService {
         // 按 approvalId 找审批记录
         ApprovalRecord current = find(approvalId)
                 .orElseThrow(() -> new IllegalArgumentException("approval request not found: " + approvalId));
+        if (current.toolCallRequest() != null) BusinessRetirementPolicy.requireTool(current.toolCallRequest().toolName());
         // 计算目标状态
         ApprovalStatus targetStatus = approved ? ApprovalStatus.APPROVED : ApprovalStatus.REJECTED;
         if (current.status() != ApprovalStatus.REQUESTED) {
@@ -135,6 +139,8 @@ public class LocalApprovalService implements ApprovalService {
      * 读取审批记录时，顺便检查审批是否已经过期，并通过并发安全的方式把状态从 REQUESTED 更新为 EXPIRED。
      */
     private ApprovalRecord expireIfNecessary(ApprovalRecord current) {
+        if (current.toolCallRequest() != null
+                && BusinessRetirementPolicy.retiredTool(current.toolCallRequest().toolName())) return current;
         // 取当前时间，类似 Instant.now()，但是可以注入模拟时间
         Instant checkedAt = clock.instant();
         // 检查当前状态和过期时间：审批已经不是等待状态，直接返回，不能再把它改成过期 || 当前时间还早于过期时间

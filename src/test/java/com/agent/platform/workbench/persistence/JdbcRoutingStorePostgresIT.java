@@ -3,7 +3,6 @@ package com.agent.platform.workbench.persistence;
 import com.agent.platform.config.AgentStorageProperties;
 import com.agent.platform.config.WorkbenchRoutingProperties;
 import com.agent.platform.llm.LlmService;
-import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
 import com.agent.platform.prompt.PromptRequest;
 import com.agent.platform.workbench.application.DefaultWorkCommandClassifier;
 import com.agent.platform.workbench.application.CommandClassifierResult;
@@ -178,20 +177,28 @@ class JdbcRoutingStorePostgresIT {
     }
 
     @Test
-    void incidentRouteStopsAtConfirmationAndCreatesNoChildExecution() {
+    void retiredUnresolvedGoalDoesNotConsumeTheActiveRecoveryBatch() throws Exception {
+        Fixture fixture = fixture(successRouter("GENERAL_AGENT", Map.of(), 10, 5), new NoopRoutingFailureInjector());
+        AgentWorkItem old = createWork(fixture, "old pending fixture");
+        AgentWorkItem active = createWork(fixture, "采购笔记本");
+        try (Connection connection = openConnection()) {
+            execute(connection, "UPDATE agent_work_item SET original_goal=?, created_at=? WHERE work_item_id=?",
+                    "diagnose requestId=OLD", Instant.now().minusSeconds(60), old.workItemId());
+        }
+        var candidates = fixture.routing.findStaleRouting(Instant.now(), 1);
+        assertEquals(List.of(active.workItemId()), candidates.stream().map(c -> c.workItem().workItemId()).toList());
+        assertEquals(old.version(), fixture.workbench.findWorkItem(principal, old.workItemId()).orElseThrow().version());
+    }
+
+    @Test
+    void incidentInputIsRejectedBeforeModelOrChildExecution() {
         Fixture fixture = fixture(successRouter(
                 "INCIDENT_INVESTIGATION",
                 Map.of("requestIds", List.of("REQ-1"), "queueName", "floworder.incident.e2e.dlq"), 50, 20),
                 new NoopRoutingFailureInjector());
-        AgentWorkItem work = createWork(fixture,
-                "调查 requestId=REQ-1，队列 floworder.incident.e2e.dlq 的异常订单事故");
-
-        fixture.coordinator.route(principal, work.workItemId(), work.routingRequestId());
-
-        AgentWorkItem routed = fixture.workbench.findWorkItem(principal, work.workItemId()).orElseThrow();
-        assertEquals(WorkControlState.WAITING_CONFIRMATION, routed.controlState());
-        assertTrue(routed.dispatchRequestId().isBlank());
-        assertTrue(fixture.workbench.listLinks(principal, work.workItemId()).isEmpty());
+        assertThrows(com.agent.platform.common.RetiredBusinessException.class,
+                () -> createWork(fixture, "调查 requestId=REQ-1，队列 floworder.incident.e2e.dlq 的异常订单事故"));
+        assertEquals(0, fixture.routerCalls.get());
     }
 
     @Test
@@ -223,10 +230,7 @@ class JdbcRoutingStorePostgresIT {
     private Fixture fixture(UnifiedTaskRouter router, RoutingFailureInjector injector) {
         JdbcWorkbenchStore workbench = new JdbcWorkbenchStore(storage, objectMapper);
         JdbcRoutingStore routing = new JdbcRoutingStore(storage, objectMapper);
-        IncidentCommandProperties incident = new IncidentCommandProperties();
-        incident.setEnabled(true);
-        incident.setRecoveryPlannerEnabled(true);
-        ExecutionTargetRegistry registry = new ExecutionTargetRegistry(incident);
+        ExecutionTargetRegistry registry = new ExecutionTargetRegistry();
         WorkbenchRoutingProperties properties = new WorkbenchRoutingProperties();
         properties.setEnabled(true);
         properties.setStaleAfterMillis(1_000);

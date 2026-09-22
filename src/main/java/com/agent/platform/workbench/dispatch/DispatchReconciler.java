@@ -1,5 +1,7 @@
 package com.agent.platform.workbench.dispatch;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.config.WorkbenchDispatchProperties;
 import com.agent.platform.workbench.model.DispatchRecoveryCandidate;
 import com.agent.platform.workbench.persistence.DispatchStore;
@@ -27,6 +29,7 @@ public class DispatchReconciler {
         if (!properties.isEnabled()) return;
         Instant staleBefore = Instant.now().minusMillis(properties.getStaleAfterMillis());
         for (DispatchRecoveryCandidate candidate : store.findStaleDispatch(staleBefore, properties.getScanBatchSize())) {
+            if (BusinessRetirementPolicy.retiredTarget(candidate.workItem().activeExecutionTarget())) continue;
             try { coordinator.dispatch(candidate.principal(), candidate.workItem().workItemId()); }
             catch (RuntimeException ignored) { }
         }

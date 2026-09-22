@@ -1,0 +1,38 @@
+package com.agent.platform.workbench.dispatch;
+
+import com.agent.platform.agent.AgentExecutor;
+import com.agent.platform.procurement.config.ProcurementSourcingExecutionProfileFactory;
+import com.agent.platform.procurement.model.ProcurementCase;
+import com.agent.platform.procurement.persistence.ProcurementCaseStore;
+import com.agent.platform.runtime.AgentRunStore;
+import com.agent.platform.workbench.target.ExecutionTargetId;
+import org.springframework.stereotype.Component;
+
+import java.util.Map;
+
+@Component
+public class ProcurementSourcingExecutionAdapter extends AbstractAgentRunExecutionAdapter {
+    private final ProcurementCaseStore caseStore;
+
+    public ProcurementSourcingExecutionAdapter(AgentExecutor executor, AgentRunStore runStore,
+                                               ProcurementCaseStore caseStore) {
+        super(executor, runStore); this.caseStore = caseStore;
+    }
+
+    @Override public ExecutionTargetId targetId() { return ExecutionTargetId.PROCUREMENT_SOURCING; }
+    @Override protected String scenarioId() { return ProcurementSourcingExecutionProfileFactory.PROFILE_NAME; }
+
+    @Override
+    protected Map<String, Object> additionalMetadata(DispatchRequest request) {
+        ProcurementCase value = caseStore.findByTenantUserAndConversationId(request.principal().tenantId(),
+                request.principal().principalId(), request.conversationId()).orElse(null);
+        if (value == null) {
+            return Map.of("tenantId", request.principal().tenantId(),
+                    "authenticatedRoles", request.principal().roles());
+        }
+        return Map.of("tenantId", request.principal().tenantId(),
+                "authenticatedRoles", request.principal().roles(),
+                "procurementCaseId", value.caseId(),
+                "procurementCaseVersion", value.version());
+    }
+}

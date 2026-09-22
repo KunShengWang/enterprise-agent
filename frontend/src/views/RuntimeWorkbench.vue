@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isRetiredRun, retiredMessage } from '../utils/retiredBusiness'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { agentApi } from '../api/agent'
@@ -12,10 +13,6 @@ import { resolveRuntimeActivity } from '../utils/runtimeActivity'
 import type {
   AgentConversationMessage,
   AgentRequest,
-  OrderCareCaseSnapshot,
-  OrderCareRecoveryExecutionSnapshot,
-  OrderCareRecoveryReconciliationSnapshot,
-  OrderCareRecoveryProposalSnapshot,
 } from '../types/agent'
 
 const stream = useAgentStream()
@@ -31,9 +28,9 @@ function newConversationId() {
 
 const conversationId = ref(newConversationId())
 const userId = ref('student-001')
-const scenarioId = ref('ordercare-floworder-v1')
-const question = ref('请诊断 requestId=ORDERCARE-M05-REQUEST；若 FlowOrder 判定可恢复，请创建预演并请求人工审批，审批后执行并验证业务是否收敛。')
-const metadataText = ref('{\n  "source": "ordercare-workbench",\n  "mode": "controlled-recovery"\n}')
+const scenarioId = ref('general-agent-v1')
+const question = ref('说明工具调用与人工审批的区别。')
+const metadataText = ref('{}')
 const showAdvanced = ref(false)
 const formError = ref('')
 const decisionBusy = ref(false)
@@ -49,55 +46,9 @@ const followConversation = ref(true)
 const ambiguousPausedInput = ref('')
 let clock: number | undefined
 
-const examples = [
-  { label: 'requestId 诊断', value: '请诊断 requestId=ORDERCARE-M05-REQUEST，列出关键事实、风险和下一步建议。' },
-  { label: '受控恢复闭环', value: '请诊断 requestId=ORDERCARE-M05-REQUEST；若 FlowOrder 判定可恢复，请创建预演并请求人工审批，审批后执行并验证业务是否收敛。' },
-  { label: 'orderNo 定位', value: '订单号 ORDERCARE-M05-ORDER 的库存为什么没有释放？请基于证据诊断。' },
-  { label: 'deductNo 定位', value: '检查扣减流水 ORDERCARE-M05-DEDUCT 是否存在可恢复的死信。' },
-  { label: '解释恢复 SOP', value: '诊断 requestId=ORDERCARE-M05-REQUEST，并结合 OrderCare SOP 解释为什么当前允许或禁止恢复。' },
-]
-const orderCareCase = computed<OrderCareCaseSnapshot | null>(() => {
-  const result = stream.runRecord.value?.toolResults.find((item) => item.toolName === 'floworder_case_inspect')
-  if (!result?.success || !result.content) return null
-  try {
-    return JSON.parse(result.content) as OrderCareCaseSnapshot
-  } catch {
-    return null
-  }
-})
-
-function parseToolResult<T>(toolName: string): T | null {
-  const result = [...(stream.runRecord.value?.toolResults ?? [])]
-    .reverse()
-    .find((item) => item.toolName === toolName)
-  if (!result?.success || !result.content) return null
-  try {
-    return JSON.parse(result.content) as T
-  } catch {
-    return null
-  }
-}
-
-const recoveryPreview = computed(() => parseToolResult<OrderCareRecoveryProposalSnapshot>('floworder_recovery_preview'))
-const recoveryExecutionRaw = computed(() => parseToolResult<OrderCareRecoveryExecutionSnapshot | OrderCareRecoveryReconciliationSnapshot>('floworder_recovery_execute'))
-const recoveryExecution = computed(() => recoveryExecutionRaw.value && 'execution' in recoveryExecutionRaw.value
-  ? recoveryExecutionRaw.value as OrderCareRecoveryExecutionSnapshot
-  : null)
-const recoveryReconciliation = computed(() => recoveryExecutionRaw.value && 'responseLost' in recoveryExecutionRaw.value
-  ? recoveryExecutionRaw.value as OrderCareRecoveryReconciliationSnapshot
-  : null)
-const recoveryProposal = computed(() => recoveryExecution.value?.execution ?? recoveryPreview.value)
-const convergence = computed(() => recoveryExecution.value?.convergence ?? recoveryReconciliation.value?.convergence ?? null)
-const approvalSnapshot = computed(() => {
-  const pending = stream.runRecord.value?.pendingToolCall
-  return pending?.toolName === 'floworder_recovery_execute' ? pending.arguments : null
-})
-const approvalEffects = computed(() => Array.isArray(approvalSnapshot.value?.effects)
-  ? approvalSnapshot.value.effects.map(String)
-  : [])
-const approvalWarnings = computed(() => Array.isArray(approvalSnapshot.value?.warnings)
-  ? approvalSnapshot.value.warnings.map(String)
-  : [])
+const examples = [{ label: '受限通用问答', value: '说明工具调用与人工审批的区别。' }]
+const retiredHistory = computed(() => isRetiredRun(stream.runRecord.value?.request,
+  stream.runRecord.value?.pendingToolCall?.toolName))
 
 const currentState = computed(() => {
   if (stream.running.value) return 'RUNNING'
@@ -185,6 +136,7 @@ const stages = computed(() => {
 })
 
 async function submit() {
+  if (retiredHistory.value) return
   formError.value = ''
   if (!question.value.trim()) {
     formError.value = '请输入要交给 Agent 的任务。'
@@ -231,6 +183,7 @@ function parseMetadata(): Record<string, unknown> | null {
 }
 
 async function startNewTask(metadata: Record<string, unknown>, abandonPausedRun: boolean) {
+  if (retiredHistory.value) return
   if (abandonPausedRun) {
     try {
       await stream.abandon()
@@ -260,6 +213,7 @@ async function startNewTask(metadata: Record<string, unknown>, abandonPausedRun:
 }
 
 async function submitAmbiguousInputAsNewTask() {
+  if (retiredHistory.value) return
   formError.value = ''
   const metadata = parseMetadata()
   if (!metadata) return
@@ -267,6 +221,7 @@ async function submitAmbiguousInputAsNewTask() {
 }
 
 async function resumeOriginalRun() {
+  if (retiredHistory.value) return
   if (stream.runRecord.value?.state !== 'PAUSED') return
   formError.value = ''
   ambiguousPausedInput.value = ''
@@ -279,6 +234,7 @@ async function resumeOriginalRun() {
 }
 
 async function abandonOriginalRun() {
+  if (retiredHistory.value) return
   if (stream.runRecord.value?.state !== 'PAUSED') return
   formError.value = ''
   ambiguousPausedInput.value = ''
@@ -293,6 +249,7 @@ async function abandonOriginalRun() {
 }
 
 async function pauseCurrentRun() {
+  if (retiredHistory.value) return
   formError.value = ''
   ambiguousPausedInput.value = ''
   await stream.pause()
@@ -313,6 +270,7 @@ function resetWorkbench() {
 }
 
 async function decide(approved: boolean) {
+  if (retiredHistory.value) return
   if (!stream.approvalId.value) return
   decisionBusy.value = true
   formError.value = ''
@@ -354,7 +312,7 @@ async function openPersistedRun(targetRunId: string) {
     userId.value = run.userId
     question.value = run.state === 'PAUSED' ? '' : run.request?.question ?? ''
     metadataText.value = JSON.stringify(run.request?.metadata ?? {}, null, 2)
-    scenarioId.value = run.request?.scenarioId || 'ordercare-floworder-v1'
+    scenarioId.value = run.request?.scenarioId || 'general-agent-v1'
     startedAt.value = 0
     await refreshConversationMessages()
     await scrollConversationToBottom(true)
@@ -416,7 +374,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (clock) window.clearInterval(clock)
-  if (stream.running.value) void stream.pause()
+  if (!retiredHistory.value && stream.running.value) void stream.pause()
 })
 </script>
 
@@ -427,8 +385,8 @@ onBeforeUnmount(() => {
         <div class="conversation-title">
           <span class="assistant-avatar">✦</span>
           <div>
-            <strong>OrderCare Incident Agent</strong>
-            <small>FlowOrder 异常订单 · 诊断、预演、审批、执行与收敛验证</small>
+            <strong>General Agent · 受限调试</strong>
+            <small>采购任务请使用统一工作台；此处保留通用 Runtime 调试和历史查看。</small>
           </div>
         </div>
         <StatusBadge :value="currentState" />
@@ -485,93 +443,6 @@ onBeforeUnmount(() => {
               <p>Runtime 尚未返回最终回答。你可以在右侧查看它停在了哪个阶段。</p>
             </div>
 
-            <section v-if="orderCareCase" class="ordercare-case-card">
-              <div class="case-card-heading">
-                <div>
-                  <span>FLOWORDER CASE</span>
-                  <strong>{{ orderCareCase.diagnosisCode }}</strong>
-                </div>
-                <StatusBadge :value="orderCareCase.recoveryEligible ? 'CANDIDATE' : 'READ_ONLY'" />
-              </div>
-              <div class="case-fact-grid">
-                <div><span>Request</span><code>{{ orderCareCase.canonicalRequestId || '未定位' }}</code></div>
-                <div><span>Order</span><strong>{{ orderCareCase.order?.statusName || orderCareCase.order?.queryError || 'UNKNOWN' }}</strong></div>
-                <div><span>Deduct</span><strong>{{ orderCareCase.deduct?.statusName || 'NOT_FOUND' }}</strong></div>
-                <div><span>Inventory</span><strong>{{ orderCareCase.inventory?.invariantOk ? 'INVARIANT_OK' : 'CHECK_REQUIRED' }}</strong></div>
-              </div>
-              <div class="case-evidence">
-                <span v-for="item in orderCareCase.evidence" :key="item">{{ item }}</span>
-              </div>
-              <div v-if="orderCareCase.hardRisks.length" class="case-risks">
-                <strong>硬风险</strong>
-                <span v-for="risk in orderCareCase.hardRisks" :key="risk">{{ risk }}</span>
-              </div>
-              <div v-if="orderCareCase.candidates.length" class="case-candidate">
-                <span>候选动作由 FlowOrder 生成</span>
-                <code>{{ orderCareCase.candidates[0].candidateId }}</code>
-                <strong>{{ orderCareCase.candidates[0].eligible ? '可进入预演' : `阻断：${orderCareCase.candidates[0].blockedBy}` }}</strong>
-              </div>
-            </section>
-
-            <section v-if="recoveryProposal" class="ordercare-proposal-card">
-              <div class="case-card-heading">
-                <div>
-                  <span>IMMUTABLE RECOVERY PROPOSAL · V{{ recoveryProposal.proposalVersion }}</span>
-                  <strong>{{ recoveryProposal.proposalId }}</strong>
-                </div>
-                <StatusBadge :value="recoveryProposal.proposalStatus" />
-              </div>
-              <div class="proposal-state-grid">
-                <div><span>Proposal</span><strong>{{ recoveryProposal.proposalStatus }}</strong></div>
-                <div><span>Action</span><strong>{{ recoveryProposal.actionStatus }}</strong></div>
-                <div><span>Case outcome</span><strong>{{ recoveryProposal.caseOutcome }}</strong></div>
-                <div><span>Expires</span><strong>{{ recoveryProposal.expiresAt || '—' }}</strong></div>
-              </div>
-              <div class="proposal-target">
-                <span>权威目标</span>
-                <code>{{ recoveryProposal.targetType }} / {{ recoveryProposal.targetKey }}</code>
-                <small>actionRequestId {{ recoveryProposal.actionRequestId }}</small>
-              </div>
-              <div class="proposal-columns">
-                <div>
-                  <strong>执行影响</strong>
-                  <p v-for="effect in recoveryProposal.effects" :key="effect">{{ effect }}</p>
-                </div>
-                <div class="proposal-warnings">
-                  <strong>审批警告</strong>
-                  <p v-for="warning in recoveryProposal.warnings" :key="warning">{{ warning }}</p>
-                </div>
-              </div>
-              <div class="proposal-digests">
-                <code>fingerprint {{ recoveryProposal.stateFingerprint }}</code>
-                <code>preview {{ recoveryProposal.previewDigest }}</code>
-              </div>
-              <div v-if="convergence" class="convergence-result" :class="`is-${convergence.status.toLowerCase()}`">
-                <div>
-                  <span>DETERMINISTIC CONVERGENCE</span>
-                  <strong>{{ convergence.status }}</strong>
-                </div>
-                <p>{{ convergence.attempts }} 次回查 · 扣减 {{ convergence.deductReleased ? '已释放' : '未释放' }} · 库存守恒 {{ convergence.inventoryInvariantOk ? '通过' : '失败' }} · 相关死信 {{ convergence.relatedDeadLettersTerminal ? '已终结' : '未终结' }}</p>
-              </div>
-
-              <div v-if="recoveryReconciliation" class="convergence-result" :class="`is-${recoveryReconciliation.status.toLowerCase()}`">
-                <div>
-                  <span>UNKNOWN / CRASH RECONCILIATION</span>
-                  <strong>{{ recoveryReconciliation.status }}</strong>
-                </div>
-                <p>
-                  {{ recoveryReconciliation.attempts }} 次对账 ·
-                  响应丢失 {{ recoveryReconciliation.responseLost ? '是' : '否' }} ·
-                  原 ID 补发 {{ recoveryReconciliation.executeReissuedWithSameId ? '是' : '否' }}
-                </p>
-                <p v-if="recoveryReconciliation.action">
-                  Action {{ recoveryReconciliation.action.actionRequestId }} ·
-                  {{ recoveryReconciliation.action.actionStatus }} / {{ recoveryReconciliation.action.caseOutcome }} ·
-                  对账 {{ recoveryReconciliation.action.reconciliationStatus }}
-                </p>
-              </div>
-            </section>
-
             <div v-if="budget" class="budget-grid">
               <div><span>Turns</span><strong>{{ budget.turns }}</strong></div>
               <div><span>Model calls</span><strong>{{ budget.modelCalls }}</strong></div>
@@ -585,7 +456,8 @@ onBeforeUnmount(() => {
         </article>
       </div>
 
-      <div class="composer-area">
+      <p v-if="retiredHistory" role="status">{{ retiredMessage }}</p>
+      <div v-if="!retiredHistory" class="composer-area">
         <div class="example-row">
           <button v-for="example in examples" :key="example.label" type="button" :disabled="stream.running.value || loadingRun" @click="question = example.value">
             {{ example.label }}
@@ -604,8 +476,7 @@ onBeforeUnmount(() => {
           <label>
             <span>scenarioId（服务端白名单）</span>
             <select v-model="scenarioId" :disabled="stream.running.value">
-              <option value="ordercare-floworder-v1">ordercare-floworder-v1</option>
-              <option value="">默认学习场景</option>
+              <option value="general-agent-v1">General（受限通用）</option>
             </select>
           </label>
           <label class="metadata-field">
@@ -687,24 +558,16 @@ onBeforeUnmount(() => {
         <p>{{ stream.error.value }}</p>
       </div>
 
-      <div v-if="stream.approvalId.value && currentState === 'WAITING_APPROVAL'" class="approval-callout">
+      <div v-if="!retiredHistory && stream.approvalId.value && currentState === 'WAITING_APPROVAL'" class="approval-callout">
         <div>
           <p class="eyebrow">HUMAN IN THE LOOP</p>
           <h3>高风险工具等待审批</h3>
           <code>{{ stream.approvalId.value }}</code>
         </div>
-        <div v-if="approvalSnapshot" class="approval-snapshot">
-          <span>批准的是不可变预演快照</span>
-          <strong>Proposal V{{ approvalSnapshot.proposalVersion }}</strong>
-          <code>{{ approvalSnapshot.proposalId }}</code>
-          <small>到期：{{ approvalSnapshot.expiresAt }}</small>
-        </div>
+
         <label>审批人<input v-model="reviewer" /></label>
         <label>决策理由<input v-model="decisionReason" /></label>
-        <div v-if="approvalSnapshot" class="approval-impact-list">
-          <div><strong>影响</strong><p v-for="item in approvalEffects" :key="item">{{ item }}</p></div>
-          <div><strong>警告</strong><p v-for="item in approvalWarnings" :key="item">{{ item }}</p></div>
-        </div>
+
         <div class="approval-actions">
           <button class="primary-button" type="button" :disabled="decisionBusy" @click="decide(true)">批准并继续执行</button>
           <button class="danger-button" type="button" :disabled="decisionBusy" @click="decide(false)">拒绝并结束</button>

@@ -1,5 +1,7 @@
 package com.agent.platform.workbench.presentation;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.runtime.AgentCapabilityRegistry;
 import com.agent.platform.tool.ToolDefinition;
 import com.agent.platform.workbench.model.AgentWorkItem;
@@ -94,6 +96,12 @@ public class PublicPresentationService {
                     PublicPresentationStatus.ACTIVE, "正在理解目标", "系统正在判断适合的执行方式。",
                     List.of(), PublicPresentationDetail.empty(), PublicVisibility.PUBLIC));
             return result;
+        }
+        if (event.eventType() == WorkEventType.ROUTING_DECIDED
+                && routing != null && BusinessRetirementPolicy.CODE.equals(routing.validation().get("failureCode"))) {
+            return List.of(item(work, event, 0, PublicPresentationKind.ERROR,
+                    PublicPresentationStatus.FAILED, "业务已退役", BusinessRetirementPolicy.MESSAGE,
+                    List.of(), reference("ROUTING_DECISION", routing.decisionId()), PublicVisibility.PUBLIC));
         }
         if (event.eventType() == WorkEventType.ROUTING_DECIDED) {
             String targetId = work.activeExecutionTarget();

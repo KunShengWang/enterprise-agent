@@ -1,3 +1,5 @@
+> 历史版本/阶段资料，非当前运行说明。涉及 FlowOrder/OrderCare 的业务已退役；其他能力以当前代码和采购指南为准。原始正文、成绩和结论保留，正文相对路径以原文件位置为准。当前入口见仓库 README 与 docs/documentation-index.md。
+
 # OrderCare Incident Command V1：事故调查与受控恢复 Multi-Agent 设计
 
 > 文档状态：`M0_FROZEN / M1-C_GATE_PASSED / PHASE_1_IMPLEMENTED / PHASE_2_IMPLEMENTED / PHASE_3_RELIABILITY_KERNEL_IMPLEMENTED`

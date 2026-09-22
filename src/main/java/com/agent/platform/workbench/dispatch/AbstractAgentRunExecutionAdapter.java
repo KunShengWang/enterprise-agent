@@ -1,5 +1,7 @@
 package com.agent.platform.workbench.dispatch;
 
+import com.agent.platform.common.BusinessRetirementPolicy;
+
 import com.agent.platform.agent.AgentExecutor;
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.agent.AgentResponse;
@@ -26,6 +28,8 @@ abstract class AbstractAgentRunExecutionAdapter implements ExecutionAdapter {
 
     @Override
     public DispatchResult dispatch(DispatchRequest request) {
+        BusinessRetirementPolicy.requireTarget(targetId().name());
+        BusinessRetirementPolicy.requireTarget(request.targetId());
         // 先对账（幂等）
         Optional<DispatchResult> existing = reconcile(request);
         if (existing.isPresent()) return existing.get();// 已经派发过 → 直接复用
@@ -36,6 +40,7 @@ abstract class AbstractAgentRunExecutionAdapter implements ExecutionAdapter {
         metadata.put("executionTarget", targetId().name());
         metadata.put("validatedInputDigest", request.validatedInput().inputDigest());
         metadata.put("validatedInput", request.validatedInput().typedPayload());
+        metadata.putAll(additionalMetadata(request));
         try {
             // 启动 Agent Run
             AgentResponse response = executor.execute(new AgentRequest(
@@ -46,6 +51,10 @@ abstract class AbstractAgentRunExecutionAdapter implements ExecutionAdapter {
         catch (RuntimeException exception) {
             return reconcile(request).orElseThrow(() -> exception);
         }
+    }
+
+    protected Map<String, Object> additionalMetadata(DispatchRequest request) {
+        return Map.of();
     }
 
     @Override

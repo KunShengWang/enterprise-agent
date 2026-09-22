@@ -179,7 +179,8 @@ class AgentContinuationRuntimePostgresIT {
                                         String answer) {
         AgentProperties properties = new AgentProperties();
         AgentContextManager contextManager = mock(AgentContextManager.class);
-        when(contextManager.project(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.anyLong()))
+        when(contextManager.project(anyString(), anyString(), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any(AgentExecutionProfile.class)))
                 .thenReturn(new AgentContextView(List.of(), 0, 0, false));
         GuardrailService guardrail = mock(GuardrailService.class);
         when(guardrail.checkInput(anyString()))

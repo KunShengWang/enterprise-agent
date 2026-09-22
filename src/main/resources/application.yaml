@@ -69,56 +69,6 @@ enterprise-agent:
   default-system-prompt: >
     你是企业知识库与支持工单 Agent。
     请遵循编排好的执行流程，不得绕过安全护栏。
-  ordercare:
-    incident-command:
-      enabled: ${ORDERCARE_INCIDENT_COMMAND_ENABLED:false}
-      max-request-ids: ${ORDERCARE_INCIDENT_MAX_REQUEST_IDS:100}
-      deadline-seconds: ${ORDERCARE_INCIDENT_DEADLINE_SECONDS:120}
-      max-parallel-specialists: ${ORDERCARE_INCIDENT_MAX_PARALLEL_SPECIALISTS:3}
-      sub-agent-tools-enabled: ${ORDERCARE_INCIDENT_SUB_AGENT_TOOLS_ENABLED:true}
-      recovery-planner-enabled: ${ORDERCARE_INCIDENT_RECOVERY_PLANNER_ENABLED:false}
-      max-recovery-plan-items: ${ORDERCARE_INCIDENT_MAX_RECOVERY_PLAN_ITEMS:5}
-      phase3-enabled: ${ORDERCARE_INCIDENT_PHASE3_ENABLED:false}
-      execution-kill-switch: ${ORDERCARE_INCIDENT_EXECUTION_KILL_SWITCH:false}
-      instance-id: ${ORDERCARE_INCIDENT_INSTANCE_ID:}
-      task-lease-seconds: ${ORDERCARE_INCIDENT_TASK_LEASE_SECONDS:30}
-      recovery-lease-seconds: ${ORDERCARE_INCIDENT_RECOVERY_LEASE_SECONDS:30}
-      lease-heartbeat-seconds: ${ORDERCARE_INCIDENT_LEASE_HEARTBEAT_SECONDS:10}
-      stale-scan-interval-millis: ${ORDERCARE_INCIDENT_STALE_SCAN_INTERVAL_MILLIS:5000}
-      stale-scan-batch-size: ${ORDERCARE_INCIDENT_STALE_SCAN_BATCH_SIZE:20}
-      tenant-scope: ${ORDERCARE_INCIDENT_TENANT_SCOPE:local-demo-tenant}
-      allowed-queues:
-        - floworder.order.create.dlq
-        - floworder.order.result.dlq
-        - floworder.order.state.dlq
-        - floworder.incident.e2e.dlq
-    floworder-base-url: ${FLOWORDER_BASE_URL:http://localhost:8081}
-    floworder-order-base-url: ${FLOWORDER_ORDER_BASE_URL:http://localhost:8082}
-    incident-scope-internal-token: ${FLOWORDER_INCIDENT_SCOPE_INTERNAL_TOKEN:}
-    incident-scope-default-timezone: ${INCIDENT_SCOPE_DEFAULT_TIMEZONE:Asia/Shanghai}
-    incident-scope-max-candidates: ${INCIDENT_SCOPE_MAX_CANDIDATES:100}
-    incident-scope-lease-seconds: ${INCIDENT_SCOPE_LEASE_SECONDS:30}
-    incident-scope-snapshot-ttl-minutes: ${INCIDENT_SCOPE_SNAPSHOT_TTL_MINUTES:15}
-    connect-timeout-millis: ${FLOWORDER_CONNECT_TIMEOUT_MILLIS:1000}
-    read-timeout-millis: ${FLOWORDER_READ_TIMEOUT_MILLIS:3000}
-    inspect-max-attempts: ${FLOWORDER_INSPECT_MAX_ATTEMPTS:2}
-    inspect-retry-backoff-millis: ${FLOWORDER_INSPECT_RETRY_BACKOFF_MILLIS:150}
-    convergence-max-attempts: ${ORDERCARE_CONVERGENCE_MAX_ATTEMPTS:8}
-    convergence-interval-millis: ${ORDERCARE_CONVERGENCE_INTERVAL_MILLIS:500}
-    reconciliation-max-attempts: ${ORDERCARE_RECONCILIATION_MAX_ATTEMPTS:8}
-    reconciliation-interval-millis: ${ORDERCARE_RECONCILIATION_INTERVAL_MILLIS:500}
-    incident:
-      rabbitmq-management:
-        base-url: ${RABBITMQ_MANAGEMENT_BASE_URL:http://localhost:15672/api}
-        virtual-host: ${RABBITMQ_MANAGEMENT_VHOST:/}
-        username: ${RABBITMQ_MANAGEMENT_USERNAME:guest}
-        password: ${RABBITMQ_MANAGEMENT_PASSWORD:guest}
-        connect-timeout-millis: ${RABBITMQ_MANAGEMENT_CONNECT_TIMEOUT_MILLIS:1000}
-        read-timeout-millis: ${RABBITMQ_MANAGEMENT_READ_TIMEOUT_MILLIS:1500}
-        max-attempts: ${RABBITMQ_MANAGEMENT_MAX_ATTEMPTS:2}
-        retry-backoff-millis: ${RABBITMQ_MANAGEMENT_RETRY_BACKOFF_MILLIS:100}
-        backlog-threshold: ${RABBITMQ_BACKLOG_THRESHOLD:50}
-        unacknowledged-threshold: ${RABBITMQ_UNACKNOWLEDGED_THRESHOLD:20}
   memory:
     long-term-candidate-limit: 40
     profile-item-limit: 30
@@ -129,6 +79,10 @@ enterprise-agent:
       url: ${MEMORY_POSTGRES_URL:${RAG_POSTGRES_URL:jdbc:postgresql://localhost:5432/enterprise_agent}}
       username: ${MEMORY_POSTGRES_USERNAME:${RAG_POSTGRES_USERNAME:postgres}}
       password: ${MEMORY_POSTGRES_PASSWORD:${RAG_POSTGRES_PASSWORD:}}
+  procurement:
+    data-dir: ${PROCUREMENT_DATA_DIR:data/procurement/aws-synthetic}
+    scenario-dir: ${PROCUREMENT_SCENARIO_DIR:data/procurement/scenarios}
+    scenario-file: ${PROCUREMENT_SCENARIO_FILE:complex_workstation_01.json}
   storage:
     datasource:
       url: ${AGENT_STORAGE_POSTGRES_URL:${RAG_POSTGRES_URL:jdbc:postgresql://localhost:5432/enterprise_agent}}
@@ -216,7 +170,7 @@ enterprise-agent:
       enabled: ${WORKBENCH_WEB_ENABLED:false}
       local-tenant-id: ${WORKBENCH_LOCAL_TENANT_ID:local-tenant}
       local-principal-id: ${WORKBENCH_LOCAL_PRINCIPAL_ID:local-user}
-      local-roles: ${WORKBENCH_LOCAL_ROLES:USER,INCIDENT_OPERATOR}
+      local-roles: ${WORKBENCH_LOCAL_ROLES:USER}
     routing:
       enabled: ${WORKBENCH_ROUTING_ENABLED:false}
       max-attempts: ${WORKBENCH_ROUTING_MAX_ATTEMPTS:2}
@@ -225,7 +179,6 @@ enterprise-agent:
       retry-backoff-millis: ${WORKBENCH_ROUTING_RETRY_BACKOFF_MILLIS:1000}
       scan-delay-millis: ${WORKBENCH_ROUTING_SCAN_DELAY_MILLIS:5000}
       scan-batch-size: ${WORKBENCH_ROUTING_SCAN_BATCH_SIZE:20}
-      max-incident-request-ids: ${WORKBENCH_MAX_INCIDENT_REQUEST_IDS:100}
       unknown-result-token-reserve: ${WORKBENCH_ROUTING_UNKNOWN_TOKEN_RESERVE:8192}
       catalog-version: ${WORKBENCH_ROUTING_CATALOG_VERSION:workbench-v1}
     dispatch:
@@ -269,36 +222,12 @@ enterprise-agent:
         max-tool-calls: 10
         max-duration-millis: 240000
         max-estimated-cost: 12
-      order-care:
-        max-model-calls: 16
-        max-tokens: 72000
-        max-tool-calls: 14
-        max-duration-millis: 360000
-        max-estimated-cost: 18
-      incident:
-        max-model-calls: 32
-        max-tokens: 170000
+      procurement-sourcing:
+        max-model-calls: 10
+        max-tokens: 48000
         max-tool-calls: 8
-        max-duration-millis: 720000
-        max-estimated-cost: 36
-      recovery-plan:
-        max-model-calls: 6
-        max-tokens: 36000
-        max-tool-calls: 20
-        max-duration-millis: 300000
-        max-estimated-cost: 10
-      incident-aggregate:
-        max-model-calls: 32
-        max-tokens: 170000
-        max-tool-calls: 8
-        max-duration-millis: 720000
-        max-estimated-cost: 36
-      recovery-plan-aggregate:
-        max-model-calls: 6
-        max-tokens: 36000
-        max-tool-calls: 20
-        max-duration-millis: 300000
-        max-estimated-cost: 10
+        max-duration-millis: 240000
+        max-estimated-cost: 12
 llm:
   http-log:
     enabled: ${LLM_HTTP_LOG_ENABLED:true}

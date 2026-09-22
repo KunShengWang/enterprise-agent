@@ -1,7 +1,5 @@
 package com.agent.platform.workbench.model;
 
-import com.agent.platform.ordercare.incident.model.EvidenceRecord;
-import com.agent.platform.ordercare.incident.recovery.model.IncidentRecoveryPlanRecord;
 import com.agent.platform.trace.TraceRun;
 import com.agent.platform.trace.TraceSpan;
 
@@ -15,10 +13,10 @@ public record UnifiedWorkExecutionTree(
         String executionId,
         CoordinatorNode coordinator,
         List<AgentNode> agents,
-        List<EvidenceRecord> evidence,
+        List<ExecutionTreeEvidenceView> evidence,
         List<ConflictView> conflicts,
         Map<String, Object> assessment,
-        List<IncidentRecoveryPlanRecord> recoveryPlans,
+        List<ExecutionTreeRecoveryPlanView> recoveryPlans,
         TreeMetrics metrics
 ) {
     public UnifiedWorkExecutionTree {
@@ -52,7 +50,7 @@ public record UnifiedWorkExecutionTree(
             String error,
             String runtimeWarning,
             TraceRun trace,
-            List<EvidenceRecord> evidence,
+            List<ExecutionTreeEvidenceView> evidence,
             NodeMetrics metrics
     ) {
         public AgentNode {

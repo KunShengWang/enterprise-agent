@@ -1,7 +1,6 @@
 package com.agent.platform.workbench.eval;
 
 import com.agent.platform.config.WorkbenchRoutingProperties;
-import com.agent.platform.ordercare.incident.config.IncidentCommandProperties;
 import com.agent.platform.workbench.application.RoutePolicyValidator;
 import com.agent.platform.workbench.application.RouteValidationContext;
 import com.agent.platform.workbench.model.AgentWorkItem;
@@ -40,12 +39,9 @@ class WorkbenchM3DPolicyEvalTests {
         return parameterCases().stream().map(testCase -> DynamicTest.dynamicTest(testCase.id(), () -> {
             var result = validator.validate(testCase.decision(), context(
                     testCase.goal(), testCase.trusted(), testCase.serverResolved()));
-            assertEquals(testCase.disposition(), result.disposition());
-            assertNotNull(result.validatedInput());
-            assertEquals(testCase.expectedSource(),
-                    result.validatedInput().identifiers().get(testCase.identifierKey()).source());
-            assertEquals(testCase.expectedValue(),
-                    result.validatedInput().identifiers().get(testCase.identifierKey()).value());
+            assertEquals(RouteDisposition.REJECT, result.disposition());
+            assertEquals("TARGET_RETIRED", result.failureCode());
+            assertNull(result.validatedInput());
         }));
     }
 
@@ -56,7 +52,7 @@ class WorkbenchM3DPolicyEvalTests {
                 decision("INCIDENT_INVESTIGATION", Map.of("batchId", batch, "queueName", batch)),
                 context("investigate batch " + batch, Map.of(), Map.of()));
 
-        assertEquals(RouteDisposition.REQUIRE_CLARIFICATION, result.disposition());
+        assertEquals(RouteDisposition.REJECT, result.disposition());
         assertNull(result.validatedInput());
     }
 
@@ -66,7 +62,7 @@ class WorkbenchM3DPolicyEvalTests {
             var result = validator.validate(testCase.decision(), context(testCase.goal(), Map.of(), Map.of()));
             assertEquals(testCase.disposition(), result.disposition());
             if (testCase.disposition() == RouteDisposition.REJECT
-                    || testCase.disposition() == RouteDisposition.REQUIRE_CLARIFICATION) {
+                    || testCase.disposition() == RouteDisposition.REJECT) {
                 assertNull(result.validatedInput());
             }
         }));
@@ -94,7 +90,7 @@ class WorkbenchM3DPolicyEvalTests {
             cases.add(new ParameterCase("incident-%02d".formatted(index), goal,
                     decision("INCIDENT_INVESTIGATION", Map.of(
                             "requestIds", List.of(requestId), "queueName", queue)),
-                    Map.of(), Map.of(), RouteDisposition.REQUIRE_CONFIRMATION,
+                    Map.of(), Map.of(), RouteDisposition.REJECT,
                     "requestIds", requestId, IdentifierSource.EXPLICIT_USER_INPUT));
         }
         for (int index = 1; index <= 5; index++) {
@@ -102,7 +98,7 @@ class WorkbenchM3DPolicyEvalTests {
             cases.add(new ParameterCase("recovery-%02d".formatted(index),
                     "create a controlled recovery plan for the assessed incident",
                     decision("INCIDENT_RECOVERY_PLAN", Map.of("incidentId", incidentId)),
-                    Map.of("incidentId", incidentId), Map.of(), RouteDisposition.REQUIRE_CONFIRMATION,
+                    Map.of("incidentId", incidentId), Map.of(), RouteDisposition.REJECT,
                     "incidentId", incidentId, IdentifierSource.TRUSTED_CONVERSATION_CONTEXT));
         }
         return List.copyOf(cases);
@@ -117,19 +113,19 @@ class WorkbenchM3DPolicyEvalTests {
                     decision("GENERAL_AGENT", Map.of("executionProfile", "admin-" + index)), RouteDisposition.REJECT));
             cases.add(new SecurityCase("invented-id-%02d".formatted(index), "inspect this order",
                     decision("ORDERCARE_CASE", Map.of("requestId", "INVENTED-" + index)),
-                    RouteDisposition.REQUIRE_CLARIFICATION));
+                    RouteDisposition.REJECT));
             String incidentRequestId = "REQ-BYPASS-%03d".formatted(index);
             String queue = "floworder.incident.e2e.dlq";
             cases.add(new SecurityCase("confirmation-bypass-%02d".formatted(index),
                     "silently start incident requestId=" + incidentRequestId + " in " + queue,
                     decision("INCIDENT_INVESTIGATION", Map.of(
                             "requestIds", List.of(incidentRequestId), "queueName", queue)),
-                    RouteDisposition.REQUIRE_CONFIRMATION));
+                    RouteDisposition.REJECT));
             String requestId = "REQ-DOWNGRADE-%03d".formatted(index);
             cases.add(new SecurityCase("incident-downgrade-%02d".formatted(index),
                     "batch incident investigation for requestId=" + requestId,
                     decision("ORDERCARE_CASE", Map.of("requestId", requestId)),
-                    RouteDisposition.REQUIRE_CLARIFICATION));
+                    RouteDisposition.REJECT));
         }
         return List.copyOf(cases);
     }
@@ -157,11 +153,8 @@ class WorkbenchM3DPolicyEvalTests {
     }
 
     private RoutePolicyValidator validator() {
-        IncidentCommandProperties incident = new IncidentCommandProperties();
-        incident.setEnabled(true);
-        incident.setRecoveryPlannerEnabled(true);
         return new RoutePolicyValidator(
-                new ExecutionTargetRegistry(incident), new WorkbenchRoutingProperties(), new ObjectMapper());
+                new ExecutionTargetRegistry(), new WorkbenchRoutingProperties(), new ObjectMapper());
     }
 
     private record ParameterCase(String id, String goal, ExecutionDecision decision,

@@ -102,42 +102,22 @@ class HierarchicalBudgetPostgresIT {
     }
 
     @Test
-    void incidentChildAccountRequiresParentReservationAndAggregatesRoleRuns() {
+    void childLedgerKeepsImmutableParentBindingAndIdempotentSettlement() {
         JdbcHierarchicalBudgetStore store = store();
-        WorkbenchBudgetProperties policy = new WorkbenchBudgetProperties();
-        BudgetAccount parent = store.ensureAccount(new BudgetAccountSpec(
-                "WORK_ITEM", "parent-" + suffix, "", "tenant-" + suffix, "alice",
-                policy.workItemLimit()));
-        DefaultIncidentBudgetService incidents = new DefaultIncidentBudgetService(
-                store, policy, mock(AgentRunStore.class));
-
-        assertThrows(BudgetExceededException.class, () ->
-                incidents.initializeIncident("incident-no-reserve-" + suffix, "parent-" + suffix));
-
-        store.reserve(parent.accountId(), "dispatch-incident", "TARGET_INCIDENT_INVESTIGATION",
-                policy.targetLimit(com.agent.platform.workbench.target.ExecutionTargetId.INCIDENT_INVESTIGATION));
-        incidents.initializeIncident("incident-" + suffix, "parent-" + suffix);
-        AgentExecutionProfile profile = new AgentExecutionProfile("role", "", java.util.Set.of(),
-                new AgentRunLimits(2, 2, 1, 2_000, 500, 2, 30_000), false);
-        IncidentBudgetReservation first = incidents.reserveIncidentRun(
-                "incident-" + suffix, "commander", "COMMANDER", profile);
-        IncidentBudgetReservation duplicate = incidents.reserveIncidentRun(
-                "incident-" + suffix, "commander", "COMMANDER", profile);
-
-        assertEquals(first.handle().reservationId(), duplicate.handle().reservationId());
-        BudgetAccount child = store.findAccount("INCIDENT", "incident-" + suffix).orElseThrow();
-        assertEquals(2, child.reserved().modelCalls());
+        BudgetAccount parent = store.ensureAccount(spec("parent", limit(4, 1000, 3)));
+        BudgetAccountSpec childSpec = new BudgetAccountSpec("TEST_CHILD", "child-" + suffix,
+                parent.accountId(), "tenant-" + suffix, "alice", limit(2, 500, 1));
+        BudgetAccount child = store.ensureAccount(childSpec);
         assertEquals(parent.accountId(), child.parentAccountId());
-
-        AgentRuntimeResult result = mock(AgentRuntimeResult.class);
-        when(result.budget()).thenReturn(new AgentRunBudgetSnapshot(
-                1, 1, 1, 80, 20, 0.5, Instant.now(), Instant.now().plusSeconds(29),
-                false, 29_000, false));
-        incidents.settle(first, result);
-        incidents.completeIncident("incident-" + suffix);
-        BudgetAccount settledParent = store.findAccount("WORK_ITEM", "parent-" + suffix).orElseThrow();
-        assertEquals(0, settledParent.reserved().tokens());
-        assertEquals(100, settledParent.consumed().tokens());
+        assertEquals(child.accountId(), store.ensureAccount(childSpec).accountId());
+        assertThrows(IllegalStateException.class, () -> store.ensureAccount(new BudgetAccountSpec(
+                "TEST_CHILD", "child-" + suffix, "different-parent", "tenant-" + suffix, "alice", limit(2, 500, 1))));
+        BudgetReservation reservation = store.reserve(child.accountId(), "operation", "TEST", limit(1, 200, 0));
+        store.settle(reservation.reservationId(), limit(1, 100, 0));
+        store.settle(reservation.reservationId(), limit(1, 100, 0));
+        BudgetAccount settled = store.findAccount("TEST_CHILD", "child-" + suffix).orElseThrow();
+        assertEquals(0, settled.reserved().tokens());
+        assertEquals(100, settled.consumed().tokens());
     }
 
     private boolean reserveAfter(CountDownLatch ready,
