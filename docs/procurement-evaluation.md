@@ -380,3 +380,58 @@ mvn -o '-Dtest=ProcurementAnswerRelationTests' '-Drelation.artifact=target/procu
 
 最终复核将独立关系 Grader 提升为 `procurement-relation-grader-v1.1`：修复缺少 eligibleSuppliers 时可能绕过 Case 需求范围检查的问题。提取语法和关系 schema 不变。
 关系 Claim 构造/反序列化检查原文长度与区间、语气和差值基本约束；逐项结果禁止未决 Claim 获得 PASS，已解析但无差值的关系强制差值为 NOT_APPLICABLE，方向不能标成 NOT_APPLICABLE。输出仍非真实性签名，应通过原始 Artifact 重评核验绑定，而非信任任意外部修改的 JSON。
+
+### Phase 7B-2B-2：必要元素匹配与有效覆盖
+
+新增测试侧 `ProcurementAnswerCompletenessGrader` 和 `ProcurementAnswerEffectiveCoverage`，复用旧标量、关系、Coverage 和 Policy 入口。
+独立输出 schema=`procurement-completeness-coverage-v1`，matcherVersion=`procurement-completeness-v1.1`，覆盖适配器版本=`procurement-effective-coverage-v1`。
+内嵌 baseEvaluation（原 v2）和 relationEvaluation（独立关系结果），保留原有 Case/Run、Artifact/回答、Dataset/Fixture、Policy 哈希及所有评分版本与逐主张结论。
+这不是完整 v3 聚合：completeAnswerStatus 强制 SKIP，evaluationStatus 仅为 SKIP 或 ERROR，不提供完整回答 PASS。
+
+匹配器仅接受已审定的 Policy v1 原始内容指纹 `2588b6a4c336df497390dadf3fa91e312a2f81e6be3f43c473f9d5c365bfe8c4`。
+即使版本号不变，内容或换行改变也不能静默沿用旧匹配语义；未知指纹、版本、数据绑定产生 ERROR，不回退规则。
+四个 Case 的原有 15 项定义保持不变。具体匹配是 Java 中有限的逐元素规则，不是 acceptedClaimTypes/关键词自动匹配，也不是通用规则 DSL。
+
+| 元素 | 明确的匹配约束 |
+| --- | --- |
+| recommendation | 旧标量解析出的确定推荐，所有明确推荐必须指向唯一主体；备选不算推荐 |
+| selected_total | 明确推荐主体的 TOTAL_PRICE；其他供应商的报价不能替代 |
+| selected_lead_time | 明确推荐主体的 LEAD_TIME；用户期限或成对交期比较不能替代 |
+| delivery_advantage / price_advantage | 对应属性的 PAIRWISE 关系，双方是冻结合格集合中的不同候选，其中一方是回答明确推荐者；支持比较双方反向表述 |
+| budget_compliance / delivery_compliance | 推荐主体的 CASE_BUDGET / CASE_DELIVERY 关系 |
+| unique_eligible | 当前原始约束范围中的 ONLY 关系，唯一主体与明确推荐者一致 |
+| no_eligible | 当前原始约束范围中的 EMPTY 关系，不要求推荐或报价 |
+
+主体角色来自明确回答，但规则和适用范围来自固定 Policy/冻结 Case；不会用预期推荐者补全缺失或歧义推荐。
+没有明确推荐、却报告了独立报价/交期时，相关 selected 元素标 UNRESOLVED；多个不同推荐也不自动选一个。
+同一原子 Claim 不跨元素重复使用；推荐 Claim 只用于确定其他元素的主体角色，不重复计作其他元素的 matchedClaimRefs。
+单候选不增加备选要求；无合格 Case 只匹配其已有 no_eligible 元素。
+
+每项输出 elementId、presence、matchedClaimRefs、candidateFragmentRefs 和 reason：
+
+- PRESENT：类型、角色、范围和原文关联明确匹配。错误金额、交期、方向、差值或明确的超预算断言仍可表示内容已表达，事实/关系 FAIL 原样保留。
+- MISSING：没有匹配，且不存在剩余实质性未知/未决片段或相关主体歧义。空回答可确定缺少必答内容。
+- UNRESOLVED：内容可能表达在未知/未决文本中，或推荐角色无法确定。第一版保守地把所有剩余实质性未知片段关联到每个未匹配元素，不通过关键词猜测其含义。
+- NOT_APPLICABLE：契约预留为场景规则明确不适用；当前固定 Policy 已按场景排除不适用元素，因此本版不会生成该状态，也不把规则错误转为不适用。
+
+completenessStatus 只表示信息表达：有 MISSING 为 FAIL；否则有 UNRESOLVED 为 SKIP；全部 PRESENT 为 PASS；匹配未执行为 SKIP。
+即使 completenessStatus=PASS，事实仍可能 FAIL、执行证据仍可能 SKIP/ERROR，完整回答仍为 SKIP。各维度不做加权或互相覆盖。
+
+有效覆盖是独立适配结果：保留 original Analysis，每个 Segment 通过 originalFragmentIndex 指向原文 UTF-16 区间，引用 `scalar:claim-N` 或 `relation:N`。
+旧 PARSED_CLAIM 保留为 PARSED_SCALAR，NON_FACTUAL 原样保留；只有旧 UNKNOWN_CONTENT/UNRESOLVED_BUSINESS 被确定关系完整消费（仅允许边界空白）时，才标成 PARSED_RELATION。
+适配前校验完整回答与旧 Analysis、关系 Claim 列表完全一致；输出反序列化核对身份、原始 Coverage、覆盖解释和元素引用。
+关系 FAIL 或证据 SKIP 不阻止“语法已解析”，也不会被改写成业务 PASS。无法解析的相邻保证、未知语句和复杂作用域继续保留。
+例如 `D 比 B 快 6 天，但保证绝不延期` 只解析前半片段，后半片段仍未决，hasUnresolvedContent=true。
+
+`grade(case, artifact, fixtureBytes, policyBytes)` 和 `replay(case, artifactPath, fixturePath, policyPath, newOutputPath)` 均离线执行。
+replay 要求新输出文件，不覆盖 Artifact、旧 sidecar 或已有报告；同输入同规则输出稳定，无时间戳或输出绝对路径加入评分。
+
+```powershell
+mvn -o '-Dtest=ProcurementAnswerCompletenessTests' '-Dcompleteness.artifact=target/procurement-evaluation/runtime-artifact.json' test
+```
+
+7B-2B-3 可复用 elements、effectiveCoverage、内嵌旧评分及全部身份/版本绑定。本阶段没有完整回答状态聚合、有效覆盖通过率门槛、统一 Comparator、LLM Judge 或任何生产语义修改。
+
+最终复核：明确推荐存在多个不同主体时，所有依赖推荐角色的未匹配元素保持 UNRESOLVED，并关联推荐片段，不把主体歧义误报为确定遗漏；因此匹配规则提升为 v1.1，schema 不变。
+独立 Effective Coverage 构造/反序列化也从原文核对关系引用、完整区间与语气，不只依赖外层结果校验。完整性结果反序列化校验内嵌规则定义与随程序提供的冻结 Policy 一致，并按同一匹配函数核对逐元素结果，拒绝将已有总价/交期引用互换等语义错误。验证只读 classpath 中已绑定哈希的 Benchmark/Policy，不依赖当前工作目录中的 Fixture，也不重新执行 Agent 或业务工具。
+保守策略会降低可判定率：即使未知片段实际上无关，未匹配元素仍可能从 MISSING 变为 UNRESOLVED；没有通过语义消歧缩小候选片段。不提供该比例的实测结论，也不会据此将未知内容计成 PRESENT。此契约仍非外部 JSON 真实性签名，Artifact/执行证据真实性须经原始输入重评核对。
