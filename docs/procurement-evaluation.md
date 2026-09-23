@@ -520,3 +520,28 @@ artifactIdentity 前置检查的 reason 保留原始门禁观察到的 session/�
 最终定向审计补充反例：相同原文区间但篡改关系差值并复制 PASS 评分，反序列化必须拒绝；不分隔的关系后缀业务保证必须保留阻断；Artifact metadata 注入外部 v1/v2/关系 PASS 标签不影响原文重新评分。15 项删除变形同时检查必要元素诊断和旧成功匹配引用撤销；同一事实 FAIL+评分 ERROR 样例再破坏基础身份时，只输出基础 ERROR，不沿用不可信局部 FAIL。
 
 PASS 只表示当前版本规则、有限确定性表达和有效捕获证据范围内通过，不代表任务完成、模型实际看到了全部证据或外部副作用证明。未知实质片段仍会使完整性匹配保守 UNRESOLVED。Step 2 不提供 v3 磁盘重评入口、文件不覆盖验收、统一 Comparator 或历史 v3 迁移；这些不由内存聚合替代。
+
+### Phase 7B-2B-3 Step 3：独立 v3 磁盘重评与兼容验收
+
+新增 `ProcurementAnswerV3Reports`，不修改 Step 2 的评分器、版本或状态规则。
+`replay(artifactPath, fixturePath, policyPath, outputDirectory)` 从原始 Artifact 选择冻结 Dataset Case，读取 Fixture/Policy 实际字节，调用原有 `ProcurementCompleteAnswerEvaluator.evaluate(...)`，返回新 Sidecar 的 Path。
+不接受历史评分 JSON 作为输入，不调用 Agent、模型或采购工具。`read(sidecarPath)` 独立读取并验证当前 v3 契约。
+
+文件名为 `procurement-answer-v3-<SHA-256 of canonical result bytes>.json`。指纹覆盖完整结果（含输入身份、评分版本、诊断、原文引用），不只是 Case 名或回答文本。
+相同输入/版本在不同目录输出相同文件名和完全相同字节；不加入评测时间、随机数或绝对环境路径。相同目录重复输出抛出 FileAlreadyExistsException，不静默覆盖。
+读取时同时验证文件名指纹、schema、record 契约与规范化字节，拒绝改名、篡改、重复 JSON 字段、尾随内容和伪造 PASS 的 v1/v2 文件；即使将旧文件重命名为正确内容指纹也不能升级为 v3。
+JSON 数字直接从原始字节绑定到 record，避免通用树转换改变 BigDecimal scale 而破坏旧 Coverage 的精确一致性。
+
+先在输出目录创建 `.answer-v3-*.pending` 文件，写完并核对完整字节后，通过同目录硬链接发布正式文件。创建链接不替换已有文件，能拒绝并发占用、输入或历史文件的别名；无覆盖式 move 回退。
+写入异常或短写清理 pending，正式名称不会暴露半成品。进程被强制终止可能遗留 pending，但其名称不能由 v3 读取器接受。此方案要求文件系统支持硬链接；不支持时明确失败，不保证断电持久性，也不提供来源真实性签名。
+输出目录参数指向已有文件时直接失败。Artifact JSON 损坏、重复字段或未知 Case 在输出前拒绝；可解析但未通过原有可信门禁的输入保留 BLOCKED/ERROR 结果，不补默认事实。
+
+定向验收入口（测试使用独立临时输出目录）：
+
+```powershell
+mvn -o '-Dtest=ProcurementAnswerV3ReplayTests' '-Danswer.v3.artifact=target/procurement-evaluation/runtime-artifact.json' test
+```
+
+四个 HANDCRAFTED 合成 Artifact 的 PASS、未知保证撤销 PASS、重复字节、UTF-16 原文与阻断引用均经磁盘往返验证；合成证据不代表真实执行验收。
+保存的 scripted Runtime 回答重评仍为 FAIL，并与 Step 2 内存结果逐字段相等，原始文件不变。
+兼容验收继续显式运行 Phase 7A、标量 v1、Coverage v2、关系及完整性五个旧重评入口；旧 Sidecar 的完整回答 SKIP 不改写，历史文件不迁移。本步不实现 Comparator。

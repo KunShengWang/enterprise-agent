@@ -339,7 +339,7 @@ class ProcurementAnswerAggregationTests {
         return change(a, n -> { var r = (ObjectNode)n.path("toolExecutions").get(i).path("result");
             ObjectNode p = (ObjectNode)json.readTree(r.path("content").asText()); edit.accept(p); r.put("content", json.writeValueAsString(p)); });
     }
-    private ExecutionArtifact good(int i, String answer) throws Exception {
+    ExecutionArtifact good(int i, String answer) throws Exception {
         var c = definition(i); var state = json.treeToValue(c.expectedCase(), ProcurementCaseState.class);
         var business = new ProcurementCase("business-case", "tenant", "conversation", "buyer", ProcurementCaseStatus.values()[0], state, TIME, TIME, 1, "input");
         List<SupplierEvidence> evidence = new ArrayList<>(); var offers = json.createArrayNode();
