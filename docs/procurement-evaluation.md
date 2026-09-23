@@ -483,3 +483,40 @@ NOT_APPLICABLE 不算 PASS，空检查集和仅有 NOT_APPLICABLE 的集合不�
 Step 1 最终复核补强：成功载荷的 caseVersion 必须可无损转换为 long，防止溢出后碰巧等于当前版本；存在的 caseId 必须为字符串。
 artifactIdentity 前置检查的 reason 保留原始门禁观察到的 session/业务 Case/version 规范化快照，构造及反序列化与顶层对应字段交叉核对，拒绝只改动顶层额外身份字段。该冗余校验仍不是真实性签名，协同伪造两处必须通过原始 Artifact 重评识别。
 即使旧结果因异常缺少 Effective Coverage，新待承接结构也核对原 Coverage 与原文重解析一致、关系 Claim 列表与同一原文提取一致，不能靠异常分支绕过原文约束。
+
+### Phase 7B-2B-3 Step 2：逐片段承接与完整回答聚合
+
+本节描述当前实现；上一节保留 Step 1 历史语义。schema 仍为 `procurement-answer-v3`，评测器升级为 `procurement-complete-answer-step2-v1`，承接规则为 `procurement-assessment-coverage-v1`，决策表为 `procurement-complete-answer-decision-v2`。当前读取器拒绝以 Step 1 版本标识实际聚合结果，不重写任何历史文件。
+
+正式入口仍仅为 `evaluate(case, artifact, fixtureBytes, policyBytes)`。它核验原始输入后重新运行旧 Completeness Evaluation，再由包内 `ProcurementAnswerAssessment` 组合逐项结果；没有外部中间 JSON 组合入口。旧标量、关系、完整性和 Effective Coverage 评分器及版本不变，内嵌结果的完整回答 SKIP 原样保留。
+
+每个 assessment fragment 保存原 Coverage 片段号、原文及 UTF-16 区间、scalar/relation 候选与实际评分引用、必要元素引用、阻断项。评分路径区分标量、关系、非事实、执行状态、条件/引用等限定内容、未知业务和其他未知文本。checks 保存适用评分结果及旧 evidencePaths；承接记录保存被承接引用、支持它的全部 check 引用与确定的承接规则。构造和 JSON 读取重新验证覆盖、引用、findings 和决策一致性；这种校验不是真实性签名，外部 JSON 不能替代原始输入重评。
+
+合法重复 SKIP 承接仅限同一原文片段：
+
+- 标量路径已经完整解析且事实/证据均 PASS，才能承接同片段关系提取器的 `UNKNOWN / UNSUPPORTED_WHOLE_CLAUSE`。
+- 完整、明确的有限关系通过全部方向、差值及证据检查，才能承接同区间旧标量解析未决；没有断言差值时，只允许明确的 `NO_DIFFERENCE_ASSERTED` 为 NOT_APPLICABLE，不算一次 PASS。
+- 支持检查出现 FAIL、SKIP、ERROR，或组合评分存在异常时，不解除重复未决。仅文本相似、元素 PRESENT 或另一个片段 PASS 均不构成承接依据。
+- 旧标量对“原始硬约束”中“约”的保守限定，可由完整且已验证的有限关系消歧；真实条件、问句、引用或跨句限定仍由关系提取器保守保留。相邻业务保证不会随前半句解除。
+
+`supersededUnresolvedRefs` 与 handoffs 一一对应。旧 NON_FACTUAL 完整片段白名单属于适用性分类，使用单独 `nonFactualClaimRefs`，不会伪造事实承接记录；限定语句不适用此豁免。当前 Policy 的 15 项必答元素均依赖事实或关系，没有凭空新增“礼貌表达可满足的必要元素”。
+
+| 条件（优先级从上到下） | completeAnswerStatus | assessmentExecutionStatus |
+| --- | --- | --- |
+| 基础身份或冻结资源不可信 | ERROR | ERROR |
+| 身份可信，存在确定适用 FAIL 或必要元素 MISSING | FAIL | 存在独立异常时 ERROR，否则 COMPLETE |
+| 无 FAIL，存在必要评分异常 | NEEDS_REVIEW | ERROR |
+| 无 FAIL/ERROR，存在证据不足、未知/限定内容或必要元素 UNRESOLVED | NEEDS_REVIEW | COMPLETE |
+| 全部适用必要元素 PRESENT、全部实质主张已可信评分、事实与证据通过、无剩余阻断 | PASS | COMPLETE |
+
+上述独立评分异常规则采用 Step 2 审定表，与 Step 1 决策 v1 区别由版本显式表达。基础异常为 BLOCKED，身份可信后的实际评测为 ASSESSED。空检查集合、纯 NOT_APPLICABLE、纯礼貌或空回答不能 PASS。执行状态主张仍受旧证据能力限制，不因其他事实正确而豁免。旧评分异常可能留下 coverage 缺失及 policyVersion=UNKNOWN；仅允许其原有错误分支原样内嵌，顶层 Policy 仍经原始字节核验，评分异常阻止 PASS。
+
+测试从原始回答和 Artifact 到最终 v3 结论：四个 Case 的人工正确回答各自有撤销 PASS 的变形测试，覆盖全部 15 个必要元素删除、事实/方向/差值/主体错误、证据删除、额外未知保证、执行状态、条件和引用。另验证独立 FAIL+ERROR、重复解析隔离、同输入输出字节稳定、JSON 字段重排及工具顺序变化后的引用与证据重绑定。
+
+人工答案与真实输出分别报告：四个人工构造回答及合成执行证据的正例可以 PASS；已保存 scripted Runtime 的 delivery_priority_two_eligible 原始回答为 FAIL，缺少 delivery_advantage 和 budget_compliance，“仅完成只读推荐”仍有执行状态证据未决。这不是四个 Runtime/真实模型通过的结论，没有重新运行 Agent 或真实模型。
+
+证据来源补充：上述四个正例是 `executionMode=HANDCRAFTED` 的合成 Artifact，不是只替换历史 Artifact 的回答。测试从冻结 Fixture 生成报价，并自行构造 Search、Finalize、OFFER 证据、时间及来源字段；其 runId=run、sessionId=conversation、businessCaseId=business-case。它们仅验证确定性评分与撤销条件，不能作为真实执行证据验收或真实 Runtime PASS 结论。正式调用方必须提供真实捕获的 Artifact；当前门禁验证内容一致性和身份绑定，不证明 Artifact 外部来源真实性，也不会自动区分精心构造的合成输入和真实捕获输入。
+
+最终定向审计补充反例：相同原文区间但篡改关系差值并复制 PASS 评分，反序列化必须拒绝；不分隔的关系后缀业务保证必须保留阻断；Artifact metadata 注入外部 v1/v2/关系 PASS 标签不影响原文重新评分。15 项删除变形同时检查必要元素诊断和旧成功匹配引用撤销；同一事实 FAIL+评分 ERROR 样例再破坏基础身份时，只输出基础 ERROR，不沿用不可信局部 FAIL。
+
+PASS 只表示当前版本规则、有限确定性表达和有效捕获证据范围内通过，不代表任务完成、模型实际看到了全部证据或外部副作用证明。未知实质片段仍会使完整性匹配保守 UNRESOLVED。Step 2 不提供 v3 磁盘重评入口、文件不覆盖验收、统一 Comparator 或历史 v3 迁移；这些不由内存聚合替代。

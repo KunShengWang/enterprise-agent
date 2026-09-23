@@ -4,9 +4,9 @@ import java.util.*;
 import static com.agent.platform.procurement.ProcurementEvaluation.Status;
 import static com.agent.platform.procurement.ProcurementAnswerEvaluationV3.CompleteAnswerStatus;
 
-/** Internal decision table only. The Step 1 raw-input evaluator never claims applicability is complete. */
+/** Foundation errors are ERROR; trusted scoring errors require review, with FAIL retaining precedence. */
 final class ProcurementCompleteAnswerDecision {
-    static final String VERSION = "procurement-complete-answer-decision-v1";
+    static final String VERSION = "procurement-complete-answer-decision-v2";
     record Decision(CompleteAnswerStatus status, boolean executionError) { }
     private ProcurementCompleteAnswerDecision() { }
 
@@ -25,7 +25,7 @@ final class ProcurementCompleteAnswerDecision {
             if ((applicableChecks.get(i) == Status.NOT_APPLICABLE) != noDifferenceChecks.contains(i)) error = true;
         for (int i : noDifferenceChecks) if (i < 0 || i >= applicableChecks.size()) error = true;
         if (applicableChecks.contains(Status.FAIL)) return new Decision(CompleteAnswerStatus.FAIL, error);
-        if (error) return new Decision(CompleteAnswerStatus.ERROR, true);
+        if (error) return new Decision(CompleteAnswerStatus.NEEDS_REVIEW, true);
         if (!applicabilityCompleted || applicableChecks.contains(Status.SKIP) || !applicableChecks.contains(Status.PASS))
             return new Decision(CompleteAnswerStatus.NEEDS_REVIEW, false);
         return new Decision(CompleteAnswerStatus.PASS, false);

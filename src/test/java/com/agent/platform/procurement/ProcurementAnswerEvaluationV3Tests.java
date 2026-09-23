@@ -22,20 +22,20 @@ class ProcurementAnswerEvaluationV3Tests {
     private static final Path FIXTURE = Path.of("data/procurement/scenarios/complex_workstation_01.json");
     private static final String ANSWER = "推荐 Supplier D，总价 58 万元，交期 12 天。D 比 B 快 6 天。D 的总价满足本次预算。";
 
-    @Test void rawInputProducesPendingContractAndStableJsonWithoutWholeAnswerVerdict() throws Exception {
+    @Test void rawInputProducesAssessedContractAndStableJsonWithInsufficientEvidence() throws Exception {
         var c = definition(); var a = artifact(ANSWER);
         var old = new ProcurementAnswerCompletenessGrader().grade(c, a, fixture(), policy());
         String artifactBefore = json.writeValueAsString(a), oldBefore = json.writeValueAsString(old);
         var result = evaluator.evaluate(c, a, fixture(), policy());
-        assertEquals(Stage.NOT_IMPLEMENTED, result.assessmentStage(), result.findings().toString());
-        assertNull(result.completeAnswerStatus()); assertEquals(ExecutionStatus.NOT_IMPLEMENTED, result.assessmentExecutionStatus());
+        assertEquals(Stage.ASSESSED, result.assessmentStage(), result.findings().toString());
+        assertEquals(CompleteAnswerStatus.NEEDS_REVIEW, result.completeAnswerStatus()); assertEquals(ExecutionStatus.COMPLETE, result.assessmentExecutionStatus());
         assertEquals(old, result.completenessEvaluation());
         assertEquals(result, json.readValue(json.writeValueAsString(result), ProcurementAnswerEvaluationV3.class));
         assertEquals(ProcurementEvaluationReports.canonicalJson(json.valueToTree(result)),
                 ProcurementEvaluationReports.canonicalJson(json.valueToTree(evaluator.evaluate(c, a, fixture(), policy()))));
         assertEquals(artifactBefore, json.writeValueAsString(a)); assertEquals(oldBefore, json.writeValueAsString(old));
         assertTrue(result.assessmentCoverage().fragments().stream().allMatch(f -> f.supersededUnresolvedRefs().isEmpty()
-                && f.scoringPath() == ScoringPath.PENDING && !f.blockers().isEmpty()));
+                && f.handoffs().isEmpty()));
         assertTrue(result.findings().stream().anyMatch(f -> f.kind() == FindingKind.NEEDS_REVIEW));
     }
 
@@ -66,7 +66,7 @@ class ProcurementAnswerEvaluationV3Tests {
             case "stage" -> n.put("assessmentStage", "COMPLETE");
             case "execution" -> n.put("assessmentExecutionStatus", "ERROR");
             case "pass" -> n.put("completeAnswerStatus", "PASS");
-            case "review" -> n.put("completeAnswerStatus", "NEEDS_REVIEW");
+            case "review" -> n.putNull("completeAnswerStatus");
             case "scope" -> n.put("scope", "all business operations verified");
             case "identity" -> ((ObjectNode)n.path("inputBinding")).put("runId", "another");
             case "component" -> ((ObjectNode)n.path("inputBinding").path("componentVersions")).put("matcher", "future");
@@ -120,7 +120,7 @@ class ProcurementAnswerEvaluationV3Tests {
         var a = change(artifact(ANSWER), n -> ((ObjectNode)n.path("runtime")).putNull("answer"));
         assertEquals("", a.runtime().answer());
         var r = evaluator.evaluate(definition(), a, fixture(), policy());
-        assertNull(r.completeAnswerStatus());
+        assertNotEquals(CompleteAnswerStatus.PASS, r.completeAnswerStatus());
         assertTrue(r.completenessEvaluation().baseEvaluation().coverage().emptyAnswer());
         assertTrue(r.findings().stream().anyMatch(f -> f.kind() == FindingKind.FAIL));
     }
@@ -130,7 +130,7 @@ class ProcurementAnswerEvaluationV3Tests {
         assertTrue(missing.findings().stream().anyMatch(f -> f.kind() == FindingKind.FAIL && f.sourceRefs().contains("element:selected_total")));
         var unresolved = evaluate("推荐 Supplier D。总价五十八万元。");
         assertTrue(unresolved.findings().stream().anyMatch(f -> f.kind() == FindingKind.NEEDS_REVIEW && f.sourceRefs().contains("element:selected_total")));
-        assertNull(missing.completeAnswerStatus()); assertNull(unresolved.completeAnswerStatus());
+        assertEquals(CompleteAnswerStatus.FAIL, missing.completeAnswerStatus()); assertEquals(CompleteAnswerStatus.NEEDS_REVIEW, unresolved.completeAnswerStatus());
     }
 
     @Test void isolatedDecisionTableUsesTrustedApplicabilityAndPreservesErrors() {
@@ -138,14 +138,14 @@ class ProcurementAnswerEvaluationV3Tests {
         assertEquals(CompleteAnswerStatus.ERROR, d.status()); assertTrue(d.executionError());
         d = ProcurementCompleteAnswerDecision.decide(true, true, List.of(Status.FAIL, Status.ERROR, Status.PASS));
         assertEquals(CompleteAnswerStatus.FAIL, d.status()); assertTrue(d.executionError());
-        assertEquals(CompleteAnswerStatus.ERROR, ProcurementCompleteAnswerDecision.decide(true, true, List.of(Status.ERROR)).status());
+        assertEquals(CompleteAnswerStatus.NEEDS_REVIEW, ProcurementCompleteAnswerDecision.decide(true, true, List.of(Status.ERROR)).status());
         assertEquals(CompleteAnswerStatus.FAIL, ProcurementCompleteAnswerDecision.decide(true, true, List.of(Status.FAIL)).status());
         assertEquals(CompleteAnswerStatus.NEEDS_REVIEW, ProcurementCompleteAnswerDecision.decide(true, true, List.of(Status.PASS, Status.SKIP)).status());
         assertEquals(CompleteAnswerStatus.NEEDS_REVIEW, ProcurementCompleteAnswerDecision.decide(true, false, List.of(Status.PASS)).status());
-        assertEquals(CompleteAnswerStatus.ERROR, ProcurementCompleteAnswerDecision.decide(true, true, List.of(Status.NOT_APPLICABLE)).status());
+        assertEquals(CompleteAnswerStatus.NEEDS_REVIEW, ProcurementCompleteAnswerDecision.decide(true, true, List.of(Status.NOT_APPLICABLE)).status());
         assertEquals(CompleteAnswerStatus.NEEDS_REVIEW, ProcurementCompleteAnswerDecision.decide(true, true, List.of(Status.NOT_APPLICABLE), Set.of(0)).status());
         assertEquals(CompleteAnswerStatus.NEEDS_REVIEW, ProcurementCompleteAnswerDecision.decide(true, true, List.of()).status());
-        assertEquals(CompleteAnswerStatus.ERROR, ProcurementCompleteAnswerDecision.decide(true, true, List.of(Status.PASS, Status.NOT_APPLICABLE)).status());
+        assertEquals(CompleteAnswerStatus.NEEDS_REVIEW, ProcurementCompleteAnswerDecision.decide(true, true, List.of(Status.PASS, Status.NOT_APPLICABLE)).status());
         assertEquals(CompleteAnswerStatus.PASS, ProcurementCompleteAnswerDecision.decide(true, true, List.of(Status.PASS, Status.NOT_APPLICABLE), Set.of(1)).status());
         assertThrows(NullPointerException.class, () -> ProcurementCompleteAnswerDecision.decide(true, true, Arrays.asList(Status.PASS, null)));
     }
@@ -176,17 +176,17 @@ class ProcurementAnswerEvaluationV3Tests {
                 .filter(x -> x.claim().scope().equals("PAIRWISE")).findFirst().orElseThrow();
         assertEquals(Status.NOT_APPLICABLE, relation.factualDifference().status());
         assertEquals(Status.NOT_APPLICABLE, relation.evidenceDifference().status());
-        assertNull(r.completeAnswerStatus());
+        assertNotEquals(CompleteAnswerStatus.PASS, r.completeAnswerStatus());
     }
 
     @Test void unicodePendingSpansAndAllOldUnresolvedReferencesRemainIntact() throws Exception {
         String answer = "😀𠮷。D 比 B 快 6 天，但保证绝不延期。";
         var r = evaluate(answer);
-        assertEquals(answer, r.assessmentCoverage().fragments().stream().map(PendingFragment::text).collect(java.util.stream.Collectors.joining()));
+        assertEquals(answer, r.assessmentCoverage().fragments().stream().map(AssessedFragment::text).collect(java.util.stream.Collectors.joining()));
         for (var f : r.assessmentCoverage().fragments()) {
             assertEquals(f.text(), answer.substring(f.start(), f.end())); assertTrue(f.supersededUnresolvedRefs().isEmpty());
         }
-        assertNull(r.completeAnswerStatus());
+        assertNotEquals(CompleteAnswerStatus.PASS, r.completeAnswerStatus());
     }
 
     @Test void diagnosticScalarReferencesUseTheSameClaimNamespaceAsCoverage() throws Exception {
@@ -215,14 +215,14 @@ class ProcurementAnswerEvaluationV3Tests {
 
     @Test void invalidNotApplicableDeclarationCannotBeUsedAsExemption() {
         for (var declared : List.of(Set.of(-1), Set.of(2), Set.of(0)))
-            assertEquals(CompleteAnswerStatus.ERROR, ProcurementCompleteAnswerDecision.decide(true, true,
+            assertEquals(CompleteAnswerStatus.NEEDS_REVIEW, ProcurementCompleteAnswerDecision.decide(true, true,
                     List.of(Status.PASS, Status.NOT_APPLICABLE), declared).status());
         var d = ProcurementCompleteAnswerDecision.decide(true, true, List.of(Status.FAIL, Status.NOT_APPLICABLE));
         assertEquals(CompleteAnswerStatus.FAIL, d.status()); assertTrue(d.executionError());
     }
 
-    @ParameterizedTest @ValueSource(strings = {"PASS", "FAIL", "NEEDS_REVIEW", "ERROR"})
-    void allNonNullWholeAnswerStatesAreRejectedForUnimplementedResult(String status) throws Exception {
+    @ParameterizedTest @ValueSource(strings = {"PASS", "FAIL", "ERROR"})
+    void inconsistentWholeAnswerStatesAreRejected(String status) throws Exception {
         ObjectNode n = json.valueToTree(evaluate(ANSWER)); n.put("completeAnswerStatus", status);
         assertThrows(RuntimeException.class, () -> json.treeToValue(n, ProcurementAnswerEvaluationV3.class));
     }
@@ -251,7 +251,7 @@ class ProcurementAnswerEvaluationV3Tests {
             if (claim.path("scope").asText().equals("PAIRWISE")) claim.put("difference", 5);
         }
         var modified = json.treeToValue(n, ProcurementAnswerCompletenessGrader.Evaluation.class);
-        assertThrows(IllegalArgumentException.class, () -> ProcurementAnswerEvaluationV3.pending(modified));
+        assertThrows(IllegalArgumentException.class, () -> ProcurementAnswerAssessment.analyze(modified));
     }
 
     @Test void foundationErrorCannotCiteANonexistentScoredClaim() throws Exception {

@@ -53,22 +53,27 @@ public final class ProcurementCompleteAnswerEvaluator {
         } catch (Exception invalid) {
             String reason = message(invalid);
             return new ProcurementAnswerEvaluationV3(SCHEMA, VERSION, COVERAGE_VERSION, null, null,
-                    List.of(new Prerequisite("foundation", Status.ERROR, reason)), pending(null), Stage.BLOCKED,
+                    List.of(new Prerequisite("foundation", Status.ERROR, reason)), emptyCoverage(), Stage.BLOCKED,
                     CompleteAnswerStatus.ERROR, ExecutionStatus.ERROR,
                     List.of(new Finding(Origin.FOUNDATION, FindingKind.ERROR, reason, List.of("raw-inputs"))), SCOPE);
         }
         ProcurementAnswerCompletenessGrader.Evaluation result = null;
         List<Finding> findings;
+        ProcurementAnswerAssessment.Output assessment = null;
         try {
             result = new ProcurementAnswerCompletenessGrader().grade(c, a, fixtureBytes, policyBytes);
-            findings = findings(result);
+            assessment = ProcurementAnswerAssessment.analyze(result);
+            findings = assessment.findings();
         } catch (Exception invalid) {
             findings = List.of(new Finding(Origin.SCORING, FindingKind.ERROR, message(invalid), List.of("completenessEvaluation")));
         }
         boolean error = findings.stream().anyMatch(f -> f.kind() == FindingKind.ERROR);
-        return new ProcurementAnswerEvaluationV3(SCHEMA, VERSION, COVERAGE_VERSION, binding, result, passedPrerequisites(binding), pending(result),
-                error ? Stage.BLOCKED : Stage.NOT_IMPLEMENTED, error ? CompleteAnswerStatus.ERROR : null,
-                error ? ExecutionStatus.ERROR : ExecutionStatus.NOT_IMPLEMENTED, findings, SCOPE);
+        // A constructor/assessment invariant violation is not a license to manufacture a scored result.
+        if (assessment == null) result = null;
+        return new ProcurementAnswerEvaluationV3(SCHEMA, VERSION, COVERAGE_VERSION, binding, result, passedPrerequisites(binding),
+                assessment == null ? emptyCoverage() : assessment.coverage(), Stage.ASSESSED,
+                assessment == null ? CompleteAnswerStatus.NEEDS_REVIEW : assessment.decision().status(),
+                error ? ExecutionStatus.ERROR : ExecutionStatus.COMPLETE, findings, SCOPE);
     }
 
     static List<Prerequisite> passedPrerequisites(InputBinding binding) {
@@ -91,37 +96,8 @@ public final class ProcurementCompleteAnswerEvaluator {
                 Map.entry("scalarGrader", "procurement-answer-grader-v1.1"), Map.entry("coverage", "procurement-answer-coverage-v1"),
                 Map.entry("coverageEvaluator", "procurement-answer-coverage-evaluator-v1"), Map.entry("relationExtractor", "procurement-relations-v1"),
                 Map.entry("relationGrader", "procurement-relation-grader-v1.1"), Map.entry("matcher", "procurement-completeness-v1.1"),
-                Map.entry("effectiveCoverage", "procurement-effective-coverage-v1"), Map.entry("decision", "procurement-complete-answer-decision-v1"));
+                Map.entry("effectiveCoverage", "procurement-effective-coverage-v1"), Map.entry("decision", "procurement-complete-answer-decision-v2"));
         require(actual.equals(pinned), "UNSUPPORTED_COMPONENT_COMBINATION"); return pinned;
-    }
-    static List<Finding> findings(ProcurementAnswerCompletenessGrader.Evaluation result) {
-        List<Finding> findings = new ArrayList<>();
-        result.errors().forEach(error -> findings.add(new Finding(Origin.SCORING, FindingKind.ERROR, error, List.of("completenessEvaluation/errors"))));
-        var scalar = result.baseEvaluation().legacyEvaluation().claims();
-        for (int i = 0; i < scalar.size(); i++) {
-            add(findings, scalar.get(i).factualCorrectness(), "scalar:claim-" + i + "/factualCorrectness");
-            add(findings, scalar.get(i).faithfulness(), "scalar:claim-" + i + "/faithfulness");
-        }
-        for (int i = 0; i < result.relationEvaluation().results().size(); i++) {
-            var r = result.relationEvaluation().results().get(i);
-            add(findings, r.factualDirection(), "relation:" + i + "/factualDirection");
-            add(findings, r.factualDifference(), "relation:" + i + "/factualDifference");
-            add(findings, r.evidenceDirection(), "relation:" + i + "/evidenceDirection");
-            add(findings, r.evidenceDifference(), "relation:" + i + "/evidenceDifference");
-        }
-        for (var e : result.elements()) {
-            if (e.presence() == ProcurementAnswerCompletenessGrader.Presence.MISSING || e.presence() == ProcurementAnswerCompletenessGrader.Presence.UNRESOLVED)
-                findings.add(new Finding(Origin.SCORING, e.presence() == ProcurementAnswerCompletenessGrader.Presence.MISSING ? FindingKind.FAIL : FindingKind.NEEDS_REVIEW,
-                        e.reason(), List.of("element:" + e.elementId())));
-        }
-        return List.copyOf(findings);
-    }
-    private static void add(List<Finding> findings, ProcurementAnswerEvaluation.Verdict v, String ref) {
-        FindingKind kind = switch (v.status()) { case FAIL -> FindingKind.FAIL; case SKIP -> FindingKind.NEEDS_REVIEW; case ERROR -> FindingKind.ERROR; default -> null; };
-        if (kind != null) {
-            List<String> refs = new ArrayList<>(); refs.add(ref); refs.addAll(v.evidencePaths());
-            findings.add(new Finding(Origin.SCORING, kind, v.reason(), refs));
-        }
     }
     private static String message(Exception e) { return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage(); }
 }
