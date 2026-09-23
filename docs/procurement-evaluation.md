@@ -435,3 +435,51 @@ mvn -o '-Dtest=ProcurementAnswerCompletenessTests' '-Dcompleteness.artifact=targ
 最终复核：明确推荐存在多个不同主体时，所有依赖推荐角色的未匹配元素保持 UNRESOLVED，并关联推荐片段，不把主体歧义误报为确定遗漏；因此匹配规则提升为 v1.1，schema 不变。
 独立 Effective Coverage 构造/反序列化也从原文核对关系引用、完整区间与语气，不只依赖外层结果校验。完整性结果反序列化校验内嵌规则定义与随程序提供的冻结 Policy 一致，并按同一匹配函数核对逐元素结果，拒绝将已有总价/交期引用互换等语义错误。验证只读 classpath 中已绑定哈希的 Benchmark/Policy，不依赖当前工作目录中的 Fixture，也不重新执行 Agent 或业务工具。
 保守策略会降低可判定率：即使未知片段实际上无关，未匹配元素仍可能从 MISSING 变为 UNRESOLVED；没有通过语义消歧缩小候选片段。不提供该比例的实测结论，也不会据此将未知内容计成 PRESENT。此契约仍非外部 JSON 真实性签名，Artifact/执行证据真实性须经原始输入重评核对。
+
+### Phase 7B-2B-3 Step 1：v3 契约与可信门禁
+
+新增测试侧 `ProcurementAnswerEvaluationV3`、`ProcurementCompleteAnswerEvaluator` 和包内决策表 `ProcurementCompleteAnswerDecision`。
+schema 为 `procurement-answer-v3`，阶段评测器为 `procurement-complete-answer-step1-v1`，待承接结构为 `procurement-assessment-coverage-pending-v1`。
+唯一公开评测入口是 `evaluate(case, artifact, fixtureBytes, policyBytes)`；本步没有中间 JSON 组合入口、v3 文件重评入口或报告聚合器。
+
+有效输入返回 `assessmentStage=NOT_IMPLEMENTED`、`assessmentExecutionStatus=NOT_IMPLEMENTED`、显式 `completeAnswerStatus=null`。
+该 null 是必需字段的明确未评测值，不是缺失字段的默认值；JSON 缺失此字段将被拒绝。
+基础门禁或独立评分异常返回 `assessmentStage=BLOCKED`、执行状态 ERROR 和完整回答 ERROR。
+旧事实 FAIL、证据 SKIP、必要元素 MISSING/UNRESOLVED 均保留为 findings；在适用评分尚未实现时不提前聚合为完整 FAIL/NEEDS_REVIEW/PASS。
+因此“Step 1 尚未实现完整评测”不被伪装成回答自身需要人工复核。
+
+门禁核验冻结 Dataset 的实际内容及 Case 定义、Fixture 字节哈希、Policy 原始资源字节及固定内容指纹。
+复用固定 Phase 7A v2 中全部九项 requirement 检查证明身份验证已完成，并要求需求范围全部 PASS，不使用 structuredStatus 代替。
+Phase 7A 把身份和后续 outcome 异常共用 artifactValidity；这里不通过该汇总标签猜测异常阶段。
+另校验业务版本、成功 Search/Finalize 原始载荷 Case/version、重复 JSON 字段和尾随内容；Finalize 必须明确提供 Case。
+无法可靠分类的基础错误保守为 ERROR，并且不调用后续完整性组合器。
+历史 Runtime 会把 null answer 规范化为 ""；本入口据实绑定规范化后的原始 Artifact 回答，不能恢复此前丢失的 null/空字符串区别。
+
+InputBinding 保存 Case/Run/session/业务 Case/version、Dataset 版本及哈希、Fixture/Artifact/回答/Policy 指纹和支持的组件版本组合。
+内嵌原 completeness-coverage-v1 结果不改写；顶层与内嵌共同具有的身份字段必须一致，额外 session/业务身份由原始门禁核验。
+组件版本明确固定，未知组合拒绝；构造和反序列化检查必需字段、枚举、阶段状态、嵌套身份、完整 findings 和待承接片段。
+这些是内部一致性约束，不是真实性签名。读取外部 JSON 不会重新认证其原始业务证据。
+
+待承接片段保留原 Coverage 片段号、文本、UTF-16 区间以及同片段 scalar/relation 候选引用。
+所有评分路径均为 PENDING，阻断项为 APPLICABILITY_NOT_IMPLEMENTED，supersededUnresolvedRefs 必须为空；反序列化重新核对候选引用与原文。
+本步不会忽略任何旧 SKIP，也不会将候选 Claim 当作已完成评分承接。执行状态、条件、引用及未知业务内容仍保留在旧结果与 findings 中。
+
+包内四态决策表版本 `procurement-complete-answer-decision-v1` 只接收未来可信适用检查，用于隔离规则测试，不在 Step 1 原始入口中宣称适用评分已完成：
+
+| 条件（按顺序） | 完整状态 | 执行异常 |
+| --- | --- | --- |
+| 基础身份不可信 | ERROR | 是 |
+| 身份可信，有适用 FAIL | FAIL | 保留其他检查的 ERROR |
+| 无 FAIL，有适用 ERROR | ERROR | 是 |
+| 适用检查未完成、有 SKIP，或没有任何实际 PASS 检查 | NEEDS_REVIEW | 否 |
+| 所有适用检查 PASS，仅可伴随明确 NOT_APPLICABLE | PASS | 否 |
+
+NOT_APPLICABLE 不算 PASS，空检查集和仅有 NOT_APPLICABLE 的集合不能通过。内部调用方必须明确声明无差值关系检查的位置；未声明的 NOT_APPLICABLE、越界声明或对非 NOT_APPLICABLE 检查的声明均视为决策输入 ERROR。该声明还需由 Step 2 依据真实关系 Claim 生成，不能从任意 SKIP 推导。
+已知 FAIL 与独立 ERROR 的决策表测试保留 FAIL 和执行异常；真实入口当前仍保留全部逐项诊断并声明阶段未完成/阻断，不替代 Step 2 的文本端到端适用评分验证。
+当前 v3 构造器禁止完整 PASS。未来启用实际承接及最终判定必须显式升级评测器/覆盖版本和合法阶段，不静默改变 Step 1 文件含义。
+
+本步没有修改冻结 Policy、Benchmark、旧 Grader、旧 Coverage、v1/v2 Sidecar 或生产语义；没有实现完整回答 PASS、LLM Judge、统一 Comparator 或真实业务调用。
+
+Step 1 最终复核补强：成功载荷的 caseVersion 必须可无损转换为 long，防止溢出后碰巧等于当前版本；存在的 caseId 必须为字符串。
+artifactIdentity 前置检查的 reason 保留原始门禁观察到的 session/业务 Case/version 规范化快照，构造及反序列化与顶层对应字段交叉核对，拒绝只改动顶层额外身份字段。该冗余校验仍不是真实性签名，协同伪造两处必须通过原始 Artifact 重评识别。
+即使旧结果因异常缺少 Effective Coverage，新待承接结构也核对原 Coverage 与原文重解析一致、关系 Claim 列表与同一原文提取一致，不能靠异常分支绕过原文约束。
