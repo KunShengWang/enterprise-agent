@@ -545,3 +545,25 @@ mvn -o '-Dtest=ProcurementAnswerV3ReplayTests' '-Danswer.v3.artifact=target/proc
 四个 HANDCRAFTED 合成 Artifact 的 PASS、未知保证撤销 PASS、重复字节、UTF-16 原文与阻断引用均经磁盘往返验证；合成证据不代表真实执行验收。
 保存的 scripted Runtime 回答重评仍为 FAIL，并与 Step 2 内存结果逐字段相等，原始文件不变。
 兼容验收继续显式运行 Phase 7A、标量 v1、Coverage v2、关系及完整性五个旧重评入口；旧 Sidecar 的完整回答 SKIP 不改写，历史文件不迁移。本步不实现 Comparator。
+
+### Phase 7B-2C Step 1：比较身份与可信输入
+
+新增测试侧 `ProcurementExperimentManifest`（`procurement-experiment-manifest-v1`）与 `ProcurementComparisonInputs`（`procurement-comparison-inputs-v1`）。入口为 `validate(manifestPath)`，只读输入，返回比较资格及诊断；不写比较报告、不排名、不计算胜率、综合分数或统计显著性。
+
+Manifest 必需字段：schemaVersion、experimentId、datasetVersion、datasetSha256、fixturePath、policyPath、requiredRecordsPerCase、groups、records。路径按 Manifest 所在目录解析，也允许绝对路径。
+每个 group 声明 groupId、model、promptVersion、agentVersion 和 configuration；这些字段明确属于实验声明，不代表模型/Prompt/Agent 已被真实调用证明。
+每条 record 声明 recordId、groupId、caseId、runId、sessionId、artifactSha256、artifactPath、v3Path。比较结果复用 v3 的完整 InputBinding，不另造评测身份；业务 Case/version、回答、Fixture、Policy、组件版本来自正式 v3，而非 Manifest 补值。
+
+验证先读取冻结 Dataset 与 Fixture/Policy 实际字节，再通过 Step 3 的 `ProcurementAnswerV3Reports.read` 读取每个 v3。有效绑定必须与 Manifest 的 Case/Run/session/Artifact 声明一致；原始 Artifact 经旧读取器及重复 JSON 字段校验后，调用原有完整回答入口重评，要求整个结果相等。不会只读取 completeAnswerStatus，也不会把历史评分结果当作 Ground Truth。
+本版只接受当前已支持的精确规则组合：历史/未知 schema、Policy 或评分器版本由正式读取器拒绝，资源不一致或原始重评不一致均 NOT_COMPARABLE。没有跨版本兼容映射，不静默合并规则口径。
+
+比较资格独立于回答状态：可信的 PASS、FAIL、NEEDS_REVIEW 可以同层比较，并保留执行异常状态；基础门禁 BLOCKED/ERROR 缺少可信身份，标记 FOUNDATION_ERROR_NOT_AN_ANSWER_FAILURE，不能当作普通回答失败纳入。
+requiredRecordsPerCase 预先规定所有实验组共同的 Case 范围及每 Case 记录数。scope 只描述声明范围：声明包含全部冻结 Case 时为 FULL_FROZEN_BENCHMARK，显式子集为 DECLARED_SUBSET；它不是实际完成标志，必须同时检查 eligibility。按 Case 返回各组的记录引用及资格；任何缺失、额外记录或无效输入都保留诊断并阻止整体 COMPARABLE，缺失项不生成假 FAIL，也不删除 Case。部分 Case 合格不代表整个实验完整。
+
+重复判定使用正式绑定中的 Artifact 哈希和 Run ID，而非回答或评分内容相似性。相同 Artifact、重复 recordId、复用 Run ID 的所有相关引用均阻断，跨组改标签不产生新样本；同一 groupId 的重复/冲突定义也拒绝。
+不同 Run ID/Artifact 即使答案完全一致仍保留，但只称“不同捕获运行身份”。结果固定声明 INDEPENDENCE_NOT_ATTESTED，不输出独立样本量，不证明改写 ID 后的输入是真实独立执行；Manifest 标签、内部一致性和原始重评都不是来源真实性签名。
+
+组、记录、Case 和诊断按稳定键排序；输入列表重排不改变资格和诊断。Manifest 缺字段、未知版本/字段、重复 JSON 字段和尾随 JSON 直接拒绝；文件缺失、绑定冲突、资源错误则由记录/范围诊断定位。输入 v3 的状态可保留用于诊断，只有资格合格的记录进入 Case 比较集合。
+测试数据均标 SYNTHETIC_TEST_ONLY，复用已有 HANDCRAFTED Artifact 工厂；不作为真实模型能力或运行独立性的证据。历史 Artifact/v3 文件只读，旧五个磁盘入口继续独立兼容验收。
+
+最终定向审计：完整 record 相等检查覆盖 Claim、证据诊断、承接与阻断项，不只比较最终状态。反例包括同为 FAIL 但原始证据变化、两组总数相等但 Case 分布不同、跨路径复制同一 Artifact/v3，以及合法记录已满额但另有坏记录；均不能获得整体比较资格。身份可信且重新评分一致的独立评分 ERROR 保留在 assessmentExecutionStatus 中，可与 FAIL/NEEDS_REVIEW 同时存在，不被当作基础身份失败。
