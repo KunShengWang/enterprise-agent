@@ -10,7 +10,6 @@ import type { TraceRun } from '../types/agent'
 type Tab = 'ops' | 'traces' | 'eval'
 const activeTab = ref<Tab>('ops')
 const loading = ref(false)
-const actionBusy = ref(false)
 const error = ref('')
 const summary = ref<Record<string, unknown>>({})
 const evidence = ref<Record<string, unknown>>({})
@@ -20,7 +19,6 @@ const selectedTrace = ref<TraceRun | null>(null)
 const replay = ref<Array<Record<string, unknown>>>([])
 const evalReports = ref<Array<Record<string, unknown>>>([])
 const evalEvents = ref<Array<Record<string, unknown>>>([])
-const latestEvalResult = ref<Record<string, unknown> | null>(null)
 
 const summaryMetrics = computed(() => {
   const candidates = [
@@ -63,21 +61,6 @@ async function selectTrace(trace: TraceRun) {
     error.value = reason instanceof Error ? reason.message : 'Trace 详情加载失败'
   } finally {
     loading.value = false
-  }
-}
-
-async function runEval(kind: 'regression' | 'adversarial') {
-  actionBusy.value = true
-  error.value = ''
-  try {
-    latestEvalResult.value = kind === 'regression'
-      ? await agentApi.runRegressionEval()
-      : await agentApi.runAdversarialEval()
-    evalReports.value = await agentApi.evalReports(20)
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '评测执行失败'
-  } finally {
-    actionBusy.value = false
   }
 }
 
@@ -150,11 +133,8 @@ onMounted(load)
 
       <div v-else class="eval-view">
         <div class="eval-actions">
-          <div><p class="eyebrow">CONTROLLED EVALUATION</p><h3>评测会真实调用 Agent Runtime</h3><p>回归集验证功能没有退化；对抗集验证 Prompt Injection、敏感数据与工具权限。</p></div>
-          <button class="secondary-button" type="button" :disabled="actionBusy" @click="runEval('regression')">运行回归评测</button>
-          <button class="danger-button" type="button" :disabled="actionBusy" @click="runEval('adversarial')">运行对抗评测</button>
+          <div><p class="eyebrow">EVALUATION HISTORY</p><h3>评测报告与事件</h3><p>评测通过内部工具执行；此页面仅查看已有报告、事件与历史观测数据。</p></div>
         </div>
-        <JsonViewer v-if="latestEvalResult" :value="latestEvalResult" :collapsed="false" label="本次评测结果" />
         <div class="eval-grid">
           <article v-for="(report, index) in evalReports" :key="String(report.runId ?? index)" class="data-record">
             <div><span>{{ report.runId ?? `report-${index}` }}</span><strong>{{ report.overallScore ?? report.averageScore ?? '—' }}</strong></div>

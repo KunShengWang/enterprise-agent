@@ -23,6 +23,14 @@ Content-Type: application/json
 
 身份、tenant、role、ExecutionTarget、runId 等字段不能由 Body metadata 伪造。
 
+### 会话所有权与历史兼容
+
+工作台保留客户端提供的原 conversationId，但该 ID 必须由服务端可信 tenant/principal 独占。服务端使用同一 PostgreSQL 数据源中的 `agent_public_conversation_owner` 表原子登记全局 Timeline ID 所有权；并发不同身份只能有一个登记成功，其他请求返回 HTTP 403。工作台拒绝 `procurement-api-` 保留前缀。
+
+已有会话只有在工作台/采购 Case 记录能证明唯一的 tenant/user 归属且 Timeline user 一致时才允许继续。存在多个历史所有者、归属冲突或只有 userId 无法证明租户的历史 Timeline，均失败关闭，留待人工核实；不会迁移、重命名或覆写历史消息。合法用户的原 ID、Case 和上下文保持不变。
+
+`GET /api/agent/conversations/{conversationId}/messages` 同样校验归属；其他身份返回 HTTP 403，完全未知的会话返回空数组，不读取 Timeline。历史 Run 查询和既有恢复策略不在本次改造范围内。
+
 ### 查询 Conversation 和 WorkItem
 
 ```http
@@ -116,7 +124,7 @@ POST /api/agent/work-items/{workItemId}/commands/{command}
 
 自然语言“继续、终止、补充信息或开始新任务”也通过统一 `/inputs` 入口，由 WorkCommandClassifier 判断，不需要调用方自己选择 ExecutionTarget。
 
-## 2. 直接 Runtime API（学习与调试）
+## 2. 直接采购 Run API
 
 ```http
 POST /api/agent/runs
@@ -124,14 +132,22 @@ Content-Type: application/json
 
 {
   "conversationId": "session-001",
-  "userId": "user-001",
-  "question": "介绍 Tool Calling",
+  "question": "你能帮我做哪些采购工作？",
   "metadata": {},
-  "scenarioId": "general-agent-v1"
+  "scenarioId": "procurement-sourcing-rfq-v1"
 }
 ```
 
-发送 `Accept: text/event-stream` 使用同一 Runtime 的 SSE 适配器。直接 Runtime API 绕过 WorkItem、统一路由和 Dispatch，因此不是普通产品入口。
+发送 `Accept: text/event-stream` 使用同一 Runtime 的 SSE 适配器。`POST /runs/events`（结构化 SSE）及 `/runs/stream`（文本 SSE）采用相同的新建约束。
+
+- `scenarioId` 缺省、null 或空白：服务端绑定 `procurement-sourcing-rfq-v1`；显式采购 Profile 同样接受。
+- 显式 `general-agent-v1`、`main-agent` 或其他非采购 Profile：HTTP 400 / `BAD_REQUEST`，不创建 Case 或 Run，不回退。
+- 退役场景、退役执行目标或退役业务问题：仍为 HTTP 410 / `TARGET_RETIRED`。
+- `userId` 和全部客户端 metadata 不作为执行参数。身份、tenant、roles 来自服务端 `WorkbenchPrincipalProvider`，Case 由 `ProcurementCaseService.ensureCase` 初始化，Case ID/version 由服务端填充。空 Case 不代表已经形成采购需求。
+- `conversationId` 是当前身份下的会话别名，服务端映射为隔离的采购 API 会话 ID。后续请求可以重复使用原别名或响应中的有效会话 ID；查询消息时使用响应中的有效 ID。缺省时生成新会话。其他身份的有效 ID 或已存在且属于其他身份的别名返回 HTTP 403，不会静默改成新会话。
+- 使用可信 tenant/user 限流；身份、Profile 或 Case 初始化失败则不执行 Runtime。直接 API 仍不创建 WorkItem，不提供工作台级幂等、预算与派发，正式产品请继续使用 `/inputs`。
+
+旧 `POST /api/agent/multi-agent/runs` 以及 `/api/agent/evals/run`、`/regression`、`/adversarial` 统一返回 HTTP 400 / `BAD_REQUEST`，不再公开启动通用 Agent。内部 Multi-Agent 和 EvalRunner 保留，评测 Case 管理、报告与事件查询保留。内部测试/Profile 执行不受此 HTTP 策略影响。
 
 查询与持久化事件：
 
@@ -152,7 +168,7 @@ POST /api/agent/runs/{runId}/resume/events
 Accept: text/event-stream
 ```
 
-Resume 参数必须是 `runId`，不能传 `runId:leaseOwnerUuid`。恢复不会创建新 Run；Context/Model 阶段从完整消息边界重新决策，`EXECUTING_TOOL` 阶段先查询或对账原 ToolExecution。
+Resume 参数必须是 `runId`，不能传 `runId:leaseOwnerUuid`。本阶段保留历史 Generic/空 Profile 的既有恢复策略，不转换为采购 Profile。恢复不会创建新 Run；Context/Model 阶段从完整消息边界重新决策，`EXECUTING_TOOL` 阶段先查询或对账原 ToolExecution。
 
 ## 3. Approval
 

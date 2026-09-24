@@ -27,6 +27,7 @@ import com.agent.platform.workbench.presentation.PublicPresentationStreamService
 import com.agent.platform.workbench.persistence.RoutingStore;
 import com.agent.platform.workbench.persistence.WorkbenchStore;
 import com.agent.platform.workbench.security.AuthenticatedPrincipal;
+import com.agent.platform.workbench.security.ConversationAccessPolicy;
 import com.agent.platform.workbench.security.WorkbenchPrincipalProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
@@ -62,6 +63,7 @@ public class UnifiedWorkController {
             "toolwhitelist", "scenarioid", "principalid");
 
     private final WorkbenchPrincipalProvider principals;
+    private final ConversationAccessPolicy conversations;
     private final UnifiedWorkIntakeService intake;
     private final UnifiedWorkLauncher launcher;
     private final UnifiedWorkQueryService queries;
@@ -89,7 +91,8 @@ public class UnifiedWorkController {
                                  WorkCommandHandler commandHandler,
                                  WorkItemBudgetQueryService budgetQueries,
                                  PublicPresentationService presentations,
-                                 PublicPresentationStreamService presentationStream) {
+                                 PublicPresentationStreamService presentationStream,
+                                 ConversationAccessPolicy conversations) {
         this.principals = principals; this.intake = intake; this.launcher = launcher;
         this.queries = queries; this.confirmations = confirmations; this.focusService = focusService;
         this.workbench = workbench; this.routing = routing; this.eventStream = eventStream;
@@ -98,6 +101,7 @@ public class UnifiedWorkController {
         this.budgetQueries = budgetQueries;
         this.presentations = presentations;
         this.presentationStream = presentationStream;
+        this.conversations = conversations;
     }
 
     @PostMapping("/conversations/{conversationId}/inputs")
@@ -258,9 +262,11 @@ public class UnifiedWorkController {
         // 验证元数据是否包含禁止的身份或执行字段
         validateMetadata(body.metadata());
         // 收下用户输入，判定意图，决定是直接执行命令还是创建任务交给 Agent 跑。
-        UnifiedWorkIntakeResult result = intake.accept(principal, new UnifiedWorkInputRequest(
+        UnifiedWorkInputRequest input = new UnifiedWorkInputRequest(
                 "input-" + UUID.randomUUID(), clientInputId, conversationId, body.content(),
-                ClassifierType.MODEL, null, ""));
+                ClassifierType.MODEL, null, "");
+        conversations.claimWorkbench(principal, input.conversationId());
+        UnifiedWorkIntakeResult result = intake.accept(principal, input);
         // 命令输入，如：继续、暂停、停止，给当前任务补充信息，那么它不是新业务目标，不创建新的 WorkItem，也不进入第二级目标路由
         if (result.commandOnly()) {
             return commandResponse(commandHandler.handle(principal,

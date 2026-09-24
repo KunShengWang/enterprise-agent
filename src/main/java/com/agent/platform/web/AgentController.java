@@ -48,6 +48,7 @@ public class AgentController {
     private final AgentRunStore agentRunStore;
     private final AgentRuntime agentRuntime;
     private final AgentTimelineStore timelineStore;
+    private final PublicProcurementRunPolicy publicRuns;
 
     public AgentController(AgentExecutor agentExecutor,
                            AgentProperties agentProperties,
@@ -55,7 +56,8 @@ public class AgentController {
                            RateLimitService rateLimitService,
                            AgentRunStore agentRunStore,
                            AgentRuntime agentRuntime,
-                           AgentTimelineStore timelineStore) {
+                           AgentTimelineStore timelineStore,
+                           PublicProcurementRunPolicy publicRuns) {
         this.agentExecutor = agentExecutor;
         this.agentProperties = agentProperties;
         this.streamingAgentExecutor = streamingAgentExecutor;
@@ -63,6 +65,7 @@ public class AgentController {
         this.agentRunStore = agentRunStore;
         this.agentRuntime = agentRuntime;
         this.timelineStore = timelineStore;
+        this.publicRuns = publicRuns;
     }
 
     @GetMapping("/health")
@@ -80,15 +83,16 @@ public class AgentController {
      */
     @PostMapping(value = "/runs", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ApiResponse<AgentResponse>> run(@Valid @RequestBody AgentRequest request) {
-        // @Valid 会在进入方法前校验 AgentRequest；这里先按 userId 做入口限流，避免单个用户在一分钟内创建过多 Agent Run 和模型调用。
-        RateLimitResult limit = rateLimitService.acquire(rateLimitKey(request));
+        // Capture server identity before offloading; never rate-limit using client userId.
+        AgentRequest authorized = publicRuns.authorize(request);
+        RateLimitResult limit = rateLimitService.acquire(publicRuns.rateLimitKey(authorized));
         if (!limit.allowed()) {
             return Mono.just(ApiResponse.failure(com.agent.platform.common.ErrorCode.TOO_MANY_REQUESTS,
                     "请求过于频繁，请稍后重试。limit=" + limit.limit() + "/minute"));
         }
 
         // RuntimeAgentExecutor 和 SSE 适配器共享同一个 AgentRuntime；同步接口只是在完成后把已持久化事件投影为 AgentResponse。
-        return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.execute(request)))
+        return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.execute(publicRuns.initializeCase(authorized))))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -141,7 +145,9 @@ public class AgentController {
     public Mono<ApiResponse<List<ConversationMessageView>>> conversationMessages(
             @PathVariable String conversationId,
             @RequestParam(defaultValue = "200") int limit) {
+        var permission = publicRuns.readPermission(normalizeConversationId(conversationId));
         return Mono.fromSupplier(() -> {
+                    if (!permission.getAsBoolean()) return ApiResponse.success(List.<ConversationMessageView>of());
                     int visibleLimit = Math.max(1, Math.min(limit, 500));
                     int timelineLimit = Math.min(10_000, visibleLimit * 10);
                     List<ConversationMessageView> visibleMessages = timelineStore
@@ -224,11 +230,7 @@ public class AgentController {
      */
     @PostMapping(value = "/runs/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> stream(@Valid @RequestBody AgentRequest request) {
-        RateLimitResult limit = rateLimitService.acquire(rateLimitKey(request));
-        if (!limit.allowed()) {
-            return Flux.just("error: 请求过于频繁，请稍后重试。limit=" + limit.limit() + "/minute");
-        }
-        return streamingAgentExecutor.stream(request)
+        return streamEventsInternal(request)
                 .map(event -> event.type() + ": " + event.content());
     }
 
@@ -238,12 +240,13 @@ public class AgentController {
     }
 
     private Flux<AgentStreamEvent> streamEventsInternal(AgentRequest request) {
-        RateLimitResult limit = rateLimitService.acquire(rateLimitKey(request));
+        AgentRequest authorized = publicRuns.authorize(request);
+        RateLimitResult limit = rateLimitService.acquire(publicRuns.rateLimitKey(authorized));
         if (!limit.allowed()) {
             return Flux.just(new AgentStreamEvent(
                     java.util.UUID.randomUUID().toString(),
                     "",
-                    normalizeConversationId(request.conversationId()),
+                    authorized.conversationId(),
                     0,
                     "error",
                     "请求过于频繁，请稍后重试。limit=" + limit.limit() + "/minute",
@@ -251,14 +254,9 @@ public class AgentController {
                     Map.of("rateLimitKey", limit.key(), "resetEpochMillis", limit.resetEpochMillis())
             ));
         }
-        return streamingAgentExecutor.stream(request);
-    }
-
-    private String rateLimitKey(AgentRequest request) {
-        if (request == null || request.userId() == null || request.userId().isBlank()) {
-            return "anonymous";
-        }
-        return request.userId().trim();
+        return Mono.fromSupplier(() -> publicRuns.initializeCase(authorized))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMapMany(streamingAgentExecutor::stream);
     }
 
     private String normalizeConversationId(String conversationId) {

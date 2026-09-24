@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "test": "node scripts/conversation-items-smoke.mjs && node scripts/workbench-p3-smoke.mjs && node scripts/workbench-p4-smoke.mjs && node scripts/workbench-p5-smoke.mjs && node scripts/workbench-p6-smoke.mjs && node scripts/workbench-turn-history-smoke.mjs && node scripts/retired-history-smoke.mjs",
+    "test": "node scripts/conversation-items-smoke.mjs && node scripts/workbench-p3-smoke.mjs && node scripts/workbench-p4-smoke.mjs && node scripts/workbench-p5-smoke.mjs && node scripts/workbench-p6-smoke.mjs && node scripts/workbench-turn-history-smoke.mjs && node scripts/retired-history-smoke.mjs && node scripts/observability-contract-smoke.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

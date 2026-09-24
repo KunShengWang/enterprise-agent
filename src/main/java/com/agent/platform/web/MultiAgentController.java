@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 @RestController
 @RequestMapping("/api/agent/multi-agent")
@@ -24,7 +23,7 @@ public class MultiAgentController {
 
     @PostMapping("/runs")
     public Mono<ApiResponse<MultiAgentRunResponse>> run(@Valid @RequestBody AgentRequest request) {
-        return Mono.fromSupplier(() -> ApiResponse.success(multiAgentOrchestrator.execute(request)))
-                .subscribeOn(Schedulers.boundedElastic());
+        return Mono.error(new IllegalArgumentException(
+                "public Multi-Agent execution is disabled; use /api/agent/runs for procurement"));
     }
 }

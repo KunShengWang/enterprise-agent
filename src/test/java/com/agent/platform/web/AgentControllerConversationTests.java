@@ -45,7 +45,8 @@ class AgentControllerConversationTests {
                 rateLimitService,
                 mock(AgentRunStore.class),
                 mock(AgentRuntime.class),
-                mock(AgentTimelineStore.class)
+                mock(AgentTimelineStore.class),
+                representationOnlyPolicy()
         );
 
         WebTestClient.bindToController(controller).build()
@@ -80,7 +81,8 @@ class AgentControllerConversationTests {
                 rateLimitService,
                 mock(AgentRunStore.class),
                 mock(AgentRuntime.class),
-                mock(AgentTimelineStore.class)
+                mock(AgentTimelineStore.class),
+                representationOnlyPolicy()
         );
 
         WebTestClient.bindToController(controller).build()
@@ -116,7 +118,8 @@ class AgentControllerConversationTests {
                 mock(RateLimitService.class),
                 mock(AgentRunStore.class),
                 mock(AgentRuntime.class),
-                timelineStore
+                timelineStore,
+                representationOnlyPolicy()
         );
 
         ApiResponse<List<ConversationMessageView>> response = controller
@@ -130,6 +133,16 @@ class AgentControllerConversationTests {
         assertEquals(List.of("first question", "first answer"),
                 response.data().stream().map(ConversationMessageView::content).toList());
         verify(timelineStore).loadMessages("conversation-1", 1000);
+    }
+
+    // These tests cover content negotiation/history. Procurement boundary has real-policy HTTP tests.
+    private PublicProcurementRunPolicy representationOnlyPolicy() {
+        var policy = mock(PublicProcurementRunPolicy.class);
+        when(policy.authorize(org.mockito.ArgumentMatchers.any())).thenAnswer(call -> call.getArgument(0));
+        when(policy.initializeCase(org.mockito.ArgumentMatchers.any())).thenAnswer(call -> call.getArgument(0));
+        when(policy.readPermission(org.mockito.ArgumentMatchers.anyString())).thenReturn(() -> true);
+        when(policy.rateLimitKey(org.mockito.ArgumentMatchers.any())).thenReturn("user-1");
+        return policy;
     }
 
     private AgentMessage message(String messageId,

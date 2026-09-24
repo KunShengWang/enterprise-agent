@@ -8,7 +8,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 class EvalControllerTests {
@@ -18,18 +17,14 @@ class EvalControllerTests {
     private final EvalEventRecorder events = mock(EvalEventRecorder.class);
     private final AdversarialEvalSuite adversarial = mock(AdversarialEvalSuite.class);
     private final WebTestClient client = WebTestClient.bindToController(
-            new EvalController(runner, cases, reports, events, adversarial)).build();
+            new EvalController(runner, cases, reports, events, adversarial)).controllerAdvice(new com.agent.platform.common.GlobalExceptionHandler()).build();
 
     @ParameterizedTest
     @ValueSource(strings = {"run", "regression", "adversarial"})
-    void genericEvalEndpointsStillRunAndRecordReports(String endpoint) {
-        var report = new EvalReport("offline-report", Instant.now(), 0, 0, 0, 0, 0, 0, 0, 0, null, List.of());
-        when(runner.run(anyList())).thenReturn(report);
-        when(adversarial.cases()).thenReturn(List.of());
+    void publicEvalEndpointsCannotStartGenericRuns(String endpoint) {
         client.post().uri("/api/agent/evals/" + endpoint).exchange()
-                .expectStatus().isOk().expectBody().jsonPath("$.data.runId").isEqualTo("offline-report");
-        verify(runner).run(List.of());
-        verify(reports).record(report);
+                .expectStatus().isBadRequest().expectBody().jsonPath("$.code").isEqualTo("BAD_REQUEST");
+        verifyNoInteractions(runner, reports, adversarial);
     }
 
     @Test
@@ -50,7 +45,9 @@ class EvalControllerTests {
 
     @Test
     void removedBusinessEvalEndpointCannotRunAnyEvaluation() {
-        client.post().uri("/api/agent/evals/ordercare/m1").exchange().expectStatus().isNotFound();
+        // Keep the original unmapped-route test independent of the global catch-all advice.
+        WebTestClient.bindToController(new EvalController(runner, cases, reports, events, adversarial)).build()
+                .post().uri("/api/agent/evals/ordercare/m1").exchange().expectStatus().isNotFound();
         verifyNoInteractions(runner, cases, reports, events, adversarial);
     }
 }

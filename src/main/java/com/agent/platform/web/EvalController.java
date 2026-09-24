@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 
@@ -69,33 +68,20 @@ public class EvalController {
 
     @PostMapping("/run")
     public Mono<ApiResponse<EvalReport>> run(@RequestBody(required = false) EvalRunRequest request) {
-        return Mono.fromSupplier(() -> {
-                    List<EvalCase> cases = request == null || request.cases() == null ? List.of() : request.cases();
-                    EvalReport report = evalRunner.run(cases);
-                    evalReportRecorder.record(report);
-                    return ApiResponse.success(report);
-                })
-                .subscribeOn(Schedulers.boundedElastic());
+        return Mono.error(new IllegalArgumentException(
+                "public evaluation execution is disabled; use the internal evaluation runner"));
     }
 
     @PostMapping("/regression")
     public Mono<ApiResponse<EvalReport>> regression() {
-        return Mono.fromSupplier(() -> {
-                    EvalReport report = evalRunner.run(List.of());
-                    evalReportRecorder.record(report);
-                    return ApiResponse.success(report);
-                })
-                .subscribeOn(Schedulers.boundedElastic());
+        return Mono.error(new IllegalArgumentException(
+                "public evaluation execution is disabled; use the internal evaluation runner"));
     }
 
     @PostMapping("/adversarial")
     public Mono<ApiResponse<EvalReport>> adversarial() {
-        return Mono.fromSupplier(() -> {
-                    EvalReport report = evalRunner.run(adversarialEvalSuite.cases());
-                    evalReportRecorder.record(report);
-                    return ApiResponse.success(report);
-                })
-                .subscribeOn(Schedulers.boundedElastic());
+        return Mono.error(new IllegalArgumentException(
+                "public evaluation execution is disabled; use the internal evaluation runner"));
     }
 
     @GetMapping("/reports")

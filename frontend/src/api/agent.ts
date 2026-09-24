@@ -97,6 +97,4 @@ export const agentApi = {
   opsEvidence: (limit = 20) => apiRequest<Record<string, unknown>>(`/api/agent/ops/evidence?limit=${limit}`),
   evalReports: (limit = 10) => apiRequest<Array<Record<string, unknown>>>(`/api/agent/evals/reports?limit=${limit}`),
   evalEvents: () => apiRequest<Array<Record<string, unknown>>>('/api/agent/evals/events'),
-  runRegressionEval: () => apiRequest<Record<string, unknown>>('/api/agent/evals/regression', { method: 'POST' }),
-  runAdversarialEval: () => apiRequest<Record<string, unknown>>('/api/agent/evals/adversarial', { method: 'POST' }),
 }

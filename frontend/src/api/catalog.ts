@@ -16,7 +16,7 @@ export interface ApiEndpointDefinition {
 
 export const apiCatalog: ApiEndpointDefinition[] = [
   { id: 'agent-health', module: 'Agent', method: 'GET', path: '/api/agent/health', title: '运行状态', description: '检查服务版本、阶段和 Mock 模式。' },
-  { id: 'agent-run', module: 'Agent', method: 'POST', path: '/api/agent/runs', title: '同步执行 Agent', description: '执行完整 Agent Loop，完成后一次性返回 AgentResponse。', body: { conversationId: 'lab-session', userId: 'lab-user', question: '你能为我做什么？', metadata: { source: 'api-lab' } }, sideEffect: true },
+  { id: 'agent-run', module: 'Agent', method: 'POST', path: '/api/agent/runs', title: '同步执行采购 Agent', description: '以服务端身份启动采购 Agent，完成后返回 AgentResponse。', body: { conversationId: 'lab-session', scenarioId: 'procurement-sourcing-rfq-v1', question: '你能为我做什么？' }, sideEffect: true },
   { id: 'agent-runs', module: 'Agent', method: 'GET', path: '/api/agent/runs', title: '最近 Run', description: '查询持久化 AgentRunRecord。', query: { limit: 20 } },
   { id: 'agent-run-detail', module: 'Agent', method: 'GET', path: '/api/agent/runs/{runId}', examplePath: '/api/agent/runs/替换为真实-runId', title: 'Run 详情', description: '按 ID 查询执行状态、预算和检查点。' },
   { id: 'agent-run-events', module: 'Agent', method: 'GET', path: '/api/agent/runs/{runId}/events', examplePath: '/api/agent/runs/替换为真实-runId/events', title: '持久化事件', description: '根据 sequence 补拉 Run 事件。', query: { afterSequence: -1, limit: 500 } },
@@ -71,9 +71,6 @@ export const apiCatalog: ApiEndpointDefinition[] = [
   { id: 'eval-cases', module: 'Eval', method: 'GET', path: '/api/agent/evals/cases', title: '评测用例', description: '读取持久化 Agent Eval Case。' },
   { id: 'eval-save-case', module: 'Eval', method: 'POST', path: '/api/agent/evals/cases', title: '保存评测用例', description: '新增或覆盖一条评测用例。', body: { caseId: 'lab-case', question: '示例问题', expectedKeywords: ['示例'], expectedTools: [], expectRag: false }, sideEffect: true },
   { id: 'eval-delete-case', module: 'Eval', method: 'DELETE', path: '/api/agent/evals/cases/{caseId}', examplePath: '/api/agent/evals/cases/lab-case', title: '删除评测用例', description: '删除指定 Eval Case。', sideEffect: true },
-  { id: 'eval-run', module: 'Eval', method: 'POST', path: '/api/agent/evals/run', title: '运行自定义评测', description: '执行传入用例，空数组使用仓库用例。', body: { cases: [] }, sideEffect: true },
-  { id: 'eval-regression', module: 'Eval', method: 'POST', path: '/api/agent/evals/regression', title: '回归评测', description: '运行已保存的回归用例集。', sideEffect: true },
-  { id: 'eval-adversarial', module: 'Eval', method: 'POST', path: '/api/agent/evals/adversarial', title: '对抗评测', description: '运行 Prompt Injection 等对抗用例。', sideEffect: true },
   { id: 'eval-reports', module: 'Eval', method: 'GET', path: '/api/agent/evals/reports', title: '评测报告', description: '读取最近 EvalReport。', query: { limit: 10 } },
   { id: 'eval-report', module: 'Eval', method: 'GET', path: '/api/agent/evals/reports/{runId}', examplePath: '/api/agent/evals/reports/替换为-eval-runId', title: '评测报告详情', description: '读取单次评测结果。' },
   { id: 'eval-events', module: 'Eval', method: 'GET', path: '/api/agent/evals/events', title: '在线评测事件', description: '读取 Agent Run 自动评测快照。' },
@@ -81,7 +78,6 @@ export const apiCatalog: ApiEndpointDefinition[] = [
 
   { id: 'ops-summary', module: 'AgentOps', method: 'GET', path: '/api/agent/ops/summary', title: '运行摘要', description: '聚合 Trace、RAG、Tool、Cache 与 Eval 指标。', query: { limit: 100 } },
   { id: 'ops-evidence', module: 'AgentOps', method: 'GET', path: '/api/agent/ops/evidence', title: '工程证据', description: '返回最近 Trace、RAG、Tool 与 Eval 记录。', query: { limit: 20 } },
-  { id: 'multi-run', module: 'Multi-Agent', method: 'POST', path: '/api/agent/multi-agent/runs', title: 'Multi-Agent 执行', description: 'Planner、Specialist 与 Reviewer 使用隔离 Sub-Agent Runtime 协作。', body: { conversationId: 'multi-lab', userId: 'lab-user', question: '分析一次生产发布失败并给出复盘建议', metadata: { source: 'api-lab' } }, sideEffect: true },
 ]
 
 export const apiModules = ['ALL', ...Array.from(new Set(apiCatalog.map((endpoint) => endpoint.module)))]

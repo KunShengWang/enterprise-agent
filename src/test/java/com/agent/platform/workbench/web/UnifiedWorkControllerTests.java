@@ -63,7 +63,8 @@ class UnifiedWorkControllerTests {
     private final PublicPresentationStreamService presentationStream = mock(PublicPresentationStreamService.class);
     private final UnifiedWorkController controller = new UnifiedWorkController(
             principals, intake, launcher, queries, confirmations, focus, workbench, routing,
-            eventStream, executionTrees, commandHandler, budgetQueries, presentations, presentationStream);
+            eventStream, executionTrees, commandHandler, budgetQueries, presentations, presentationStream,
+            mock(com.agent.platform.workbench.security.ConversationAccessPolicy.class));
 
     @Test
     void requestMetadataCannotOverrideTrustedIdentityOrExecutionProfile() {
