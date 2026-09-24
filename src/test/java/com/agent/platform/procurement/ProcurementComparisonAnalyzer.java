@@ -37,15 +37,26 @@ public final class ProcurementComparisonAnalyzer {
             for (var snapshot : snapshots.entrySet()) if (snapshot.getValue() == null || !Arrays.equals(snapshot.getValue(), Files.readAllBytes(snapshot.getKey())))
                 return blocked(identity, gate, "INPUT_CHANGED");
         } catch (IOException | RuntimeException e) { return blocked(identity, gate, "INPUT_UNAVAILABLE_AFTER_VALIDATION"); }
-        var cases = new ArrayList<CaseMetrics>();
+        Map<String, List<String>> elements = new TreeMap<>();
         var definitions = ProcurementEvaluationDataset.load();
         for (var slice : gate.cases()) {
             var c = definitions.stream().filter(x -> x.caseId().equals(slice.caseId())).findFirst().orElseThrow();
             var policy = ProcurementAnswerPolicy.load(snapshots.get(base.resolve(manifest.policyPath())), c, snapshots.get(base.resolve(manifest.fixturePath())));
+            elements.put(c.caseId(), policy.forCase(c.caseId()).elements().stream().map(ProcurementAnswerPolicy.Element::elementId).toList());
+        }
+        return summarize(identity, gate, reports, manifest.requiredRecordsPerCase(), elements);
+    }
+
+    /** Same reducer for live analysis and stored-report consistency checks; no input trust or grading here. */
+    static Result summarize(String identity, ProcurementComparisonInputs.Result gate,
+            Map<String, ProcurementAnswerEvaluationV3> reports, Map<String, Integer> expected,
+            Map<String, List<String>> elements) {
+        var cases = new ArrayList<CaseMetrics>();
+        for (var slice : gate.cases()) {
             for (var group : gate.declaredGroups()) {
                 var ids = slice.groupRecordIds().get(group.groupId()); var builders = builders();
-                for (String id : ids) collect(builders, id, reports.get(id), policy.forCase(c.caseId()).elements());
-                cases.add(new CaseMetrics(group.groupId(), c.caseId(), manifest.requiredRecordsPerCase().get(c.caseId()), ids.size(), ids, finish(builders)));
+                for (String id : ids) collect(builders, id, reports.get(id), elements.get(slice.caseId()));
+                cases.add(new CaseMetrics(group.groupId(), slice.caseId(), expected.get(slice.caseId()), ids.size(), ids, finish(builders)));
             }
         }
         var summaries = new ArrayList<GroupMetric>(); var diffs = new ArrayList<Difference>();
@@ -75,7 +86,7 @@ public final class ProcurementComparisonAnalyzer {
         return new Result(VERSION, identity, gate, State.READY, List.of(), reports, cases, summaries, diffs, LIMITS);
     }
 
-    private static void collect(Map<Key, Builder> out, String id, ProcurementAnswerEvaluationV3 report, List<ProcurementAnswerPolicy.Element> policy) {
+    private static void collect(Map<Key, Builder> out, String id, ProcurementAnswerEvaluationV3 report, List<String> policy) {
         String caseId = report.inputBinding().caseId();
         add(out, Key.COMPLETE_ANSWER, id, caseId, "completeAnswerStatus", report.completeAnswerStatus().name(), "V3_COMPLETE_ANSWER", List.of());
         add(out, Key.SCORING_EXECUTION, id, caseId, "assessmentExecutionStatus", report.assessmentExecutionStatus().name(), "V3_EXECUTION_STATUS", List.of());
@@ -104,8 +115,8 @@ public final class ProcurementComparisonAnalyzer {
             }
         }
         for (var definition : policy) {
-            var element = completeness == null ? null : completeness.elements().stream().filter(e -> e.elementId().equals(definition.elementId())).findFirst().orElse(null);
-            add(out, Key.REQUIRED_ELEMENTS, id, caseId, "element:" + definition.elementId(), element == null ? "UNAVAILABLE" : element.presence().name(),
+            var element = completeness == null ? null : completeness.elements().stream().filter(e -> e.elementId().equals(definition)).findFirst().orElse(null);
+            add(out, Key.REQUIRED_ELEMENTS, id, caseId, "element:" + definition, element == null ? "UNAVAILABLE" : element.presence().name(),
                     element == null ? "SCORING_RESULT_UNAVAILABLE" : element.reason(), element == null ? List.of() : element.matchedClaimRefs());
         }
         if (completeness != null && completeness.effectiveCoverage() != null) for (var segment : completeness.effectiveCoverage().segments()) {

@@ -596,3 +596,27 @@ NON_FACTUAL 片段和 v3 明确标记的非事实 Claim 按已有适用规则排
 端到端测试从 HANDCRAFTED 合成 Artifact 生成正式 v3，再经 Manifest/Step 1 生成指标；金额、方向、差值、额外错误、证据缺失、未知保证和必答元素删除均改变相应维度。合成工具证据只用于验证统计实现，不证明真实模型能力。可选 `answer.v3.artifact` 测试只读保存的 scripted Runtime Artifact，预期仍 FAIL，具体缺失 delivery_advantage/budget_compliance；对照组合成 PASS 明确标记 SYNTHETIC，不能据此作模型排名。没有新增 Runtime 或 Live Eval 执行。
 
 本步不提供比较报告磁盘写入、最终报告读写契约、防覆盖或可视化；这些属于尚未实施的 Step 3。历史评分器、版本和文件契约不变。
+
+### Phase 7B-2C Step 3：统一比较报告与确定性持久化
+
+独立契约 `ProcurementComparisonReport` 使用 schema `procurement-comparison-report-v1`、写入器版本 `procurement-comparison-report-writer-v1`。它不同于 `procurement-answer-v3` 和内存指标 `procurement-comparison-metrics-v1`。正式文件入口为 `ProcurementComparisonReports.replay(manifestPath, outputDirectory)` 和 `read(reportPath)`。
+
+`replay` 调用 Step 2 `analyze`，经 Step 1 对实际 Artifact、冻结资源、Policy 和 v3 完整重评一致性校验后才能生成报告。NOT_COMPARABLE/BLOCKED 抛出带输入诊断的 IOException，不创建正式报告，也不筛选部分记录。正式写入入口不接受外部评分 JSON 或计数。报告 Statistics、inputValidation 和 recordEvidence 直接来自 Step 2 正式结果，没有重新定义评分或统计公式。
+
+报告保存：schema/写入器/指标版本、inputSha256、便携实验声明 Input、Step 1 资格和范围、完整 v3 记录、各组各 Case 统计、micro/macro、逐状态差异以及能力限制。Input 记录 Manifest 版本、实验名、Dataset 身份、预期记录数、组标签与配置、记录的 Case/Run/session/Artifact/v3 内容指纹。Fixture、Policy、回答和评分器身份继续由嵌套 v3 InputBinding 保留。报告没有新增时间戳或随机 ID。
+
+原 Step 2 的 manifestSha256 包含文件定位路径，所以不直接持久化该字段。报告 inputSha256 对去除 fixturePath/policyPath/artifactPath/v3Path 的、按组和 recordId 排序的 Input 计算 SHA-256。其余原始指标、诊断和来源不改写。文件目录只是定位方式；移动同一输入、更改这些定位路径或重排列表不影响报告字节。用户主动写入 configuration/回答的字符串仍按数据保留，不自动清洗其中的路径或标签，不对不同声明作同一性保证。
+
+正式文件名为 `procurement-comparison-report-v1-<完整规范化报告字节的 SHA-256>.json`，输出身份由文件名绑定全部内容，避免内容内的自引用哈希。JSON 字段按现有 canonicalJson 排序，集合沿用稳定排序。读取直接从原始数字 token 绑定 record，避免经通用 JSON tree 转换破坏 BigDecimal scale；读取后要求规范化编码字节完全一致。
+
+`read` 校验文件名/内容指纹、schema/版本、缺失字段、未知字段/枚举、重复 JSON 字段及尾随内容，并校验完整嵌套 v3 契约、声明与记录及 Case/组成员关系。统计一致性校验复用从 Analyzer 提取的同一个包内 `summarize` 方法，以保存的 v3 和版本固定的内置 Policy 定义核对全部统计、来源、排除项、micro/macro 和差异；只验证相等，不修正或覆盖保存值，不调用 Grader，也不读取当前实验目录中的 Artifact。该提取未改变 Step 1、Step 2 版本或原有计算语义。
+
+独立读取仍要求当前实现支持所保存的固定契约和内置冻结定义；不是任意未来版本迁移器。内部一致的内容与 SHA-256 都不证明真实模型调用或来源真实性。报告读出不保证它与当前磁盘输入重评一致；修改原始 Artifact 后旧报告仍可独立读取，只有再次 replay 才会检查当前输入。保留 DECLARED_EXPERIMENT_LABELS、INDEPENDENCE_NOT_ATTESTED，并明确 INTERNAL_CONSISTENCY_ONLY、READ_IS_NOT_CURRENT_INPUT_REPLAY。
+
+发布采用同目录 `.comparison-*.pending` 临时文件，完整字节写入并核对后创建硬链接正式名称；已有目标（包括输入或历史文件的硬链接别名）拒绝覆盖，无覆盖式 move 回退。短写及注入写入异常清理 pending；已被另一写入者占用的目标保留。要求文件系统支持硬链接，不承诺断电持久性、跨文件系统发布或任意并发故障下的安全；进程被强制终止可能留下不可被正式读取器接受的 pending 文件。
+
+验收测试 `ProcurementComparisonReportsTests` 通过合成 Artifact → 正式 v3 → Manifest/资格 → 指标 → 写入/读取路径验证：四 Case 分层、PASS 撤销、输入字节不变、目录迁移及顺序确定性、零分母、既有文件/别名防覆盖、异常/短写/发布占用、篡改后重新计算文件名仍被契约拒绝，以及 v1/v2/v3 不能冒充 Comparator 报告。
+
+两个组合断言：`equalRatiosRetainDifferentNumeratorsDenominatorsAndSources` 使用同 Case 的标量检查 1/2 与 2/4，保留相同比例背后的不同数量；`equalFailStatusRetainsMissingElementAndWrongFactSeparately` 保留两侧 FAIL 和零状态差，同时分别定位缺失 delivery_advantage 与错误金额 Claim。所有合成工具证据只证明实现，不是模型能力证据。
+
+可选测试 `savedRuntimeFailAndDiagnosticsMatchStep2` 由 `answer.v3.artifact` 门控，只读已保存 scripted Runtime；报告与 Step 2 内存统计及完整证据相等，仍为 FAIL，保留 delivery_advantage/budget_compliance 缺失。普通全仓库测试未设置该参数时新增一项预期跳过，带参数的定向回归必须实际执行。五个历史磁盘重评入口、旧 Sidecar SKIP 和既有 v3 评分语义继续回归；本步不增加模型调用、排名、配对推断或可视化。
