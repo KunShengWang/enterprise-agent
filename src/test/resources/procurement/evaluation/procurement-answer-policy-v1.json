@@ -1,0 +1,268 @@
+{
+  "schemaVersion": "procurement-answer-policy-v1",
+  "policyVersion": "procurement-answer-requirements-v1",
+  "datasetSha256": "f0c0763148783ab9e461ccf6a21fe86ba81e4a6681a2f0f423075f9b0c37f6b1",
+  "fixtureSha256": "a0b6760e51e71ddbcc23e9f79c7ab1266cd52b9e197620204067dd4784c3d4b8",
+  "cases": [
+    {
+      "caseId": "delivery_priority_two_eligible",
+      "elements": [
+        {
+          "elementId": "recommendation",
+          "requirement": "明确给出推荐供应商。",
+          "sources": [
+            {
+              "kind": "BENCHMARK",
+              "reference": "/expected/preferredSupplierId",
+              "quote": "supplier-d"
+            }
+          ],
+          "rationale": "采购决策的主要结论必须明确，不要求复述所有输入字段。",
+          "acceptedClaimTypes": [
+            "RECOMMENDATION"
+          ]
+        },
+        {
+          "elementId": "selected_total",
+          "requirement": "说明推荐供应商在本次采购数量下的总价。",
+          "sources": [
+            {
+              "kind": "SCENARIO_POLICY",
+              "reference": "policy:decision-summary-v1",
+              "quote": "采购决策摘要应说明选定供应商的总价和报价交期。"
+            }
+          ],
+          "rationale": "用户需要据此判断推荐方案的支出；不是要求列出所有供应商报价。",
+          "acceptedClaimTypes": [
+            "TOTAL_PRICE"
+          ]
+        },
+        {
+          "elementId": "selected_lead_time",
+          "requirement": "说明推荐供应商的报价交期。",
+          "sources": [
+            {
+              "kind": "SCENARIO_POLICY",
+              "reference": "policy:decision-summary-v1",
+              "quote": "采购决策摘要应说明选定供应商的总价和报价交期。"
+            }
+          ],
+          "rationale": "交付期限是当前采购场景的重要约束。",
+          "acceptedClaimTypes": [
+            "LEAD_TIME"
+          ]
+        },
+        {
+          "elementId": "delivery_advantage",
+          "requirement": "说明推荐供应商相对另一合格候选交付更快。",
+          "sources": [
+            {
+              "kind": "USER_REQUEST",
+              "reference": "/userMessage",
+              "quote": "满足硬约束且不超预算时优先交付"
+            },
+            {
+              "kind": "SCENARIO_POLICY",
+              "reference": "policy:preference-explanation-v1",
+              "quote": "双候选场景需要说明主要偏好的取舍依据。"
+            }
+          ],
+          "rationale": "解释交付优先为何支持当前推荐，不强制报告价格差值。",
+          "acceptedClaimTypes": [
+            "PAIRWISE_LEAD_TIME_COMPARISON"
+          ]
+        },
+        {
+          "elementId": "budget_compliance",
+          "requirement": "说明推荐方案仍满足本次预算。",
+          "sources": [
+            {
+              "kind": "USER_REQUEST",
+              "reference": "/userMessage",
+              "quote": "可以在预算内接受更高价格"
+            }
+          ],
+          "rationale": "价格让步不能被解释为允许超预算。",
+          "acceptedClaimTypes": [
+            "WITHIN_BUDGET"
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "price_priority_two_eligible",
+      "elements": [
+        {
+          "elementId": "recommendation",
+          "requirement": "明确给出推荐供应商。",
+          "sources": [
+            {
+              "kind": "BENCHMARK",
+              "reference": "/expected/preferredSupplierId",
+              "quote": "supplier-b"
+            }
+          ],
+          "rationale": "采购决策的主要结论必须明确，不要求复述所有输入字段。",
+          "acceptedClaimTypes": [
+            "RECOMMENDATION"
+          ]
+        },
+        {
+          "elementId": "selected_total",
+          "requirement": "说明推荐供应商在本次采购数量下的总价。",
+          "sources": [
+            {
+              "kind": "SCENARIO_POLICY",
+              "reference": "policy:decision-summary-v1",
+              "quote": "采购决策摘要应说明选定供应商的总价和报价交期。"
+            }
+          ],
+          "rationale": "用户需要据此判断推荐方案的支出；不是要求列出所有供应商报价。",
+          "acceptedClaimTypes": [
+            "TOTAL_PRICE"
+          ]
+        },
+        {
+          "elementId": "selected_lead_time",
+          "requirement": "说明推荐供应商的报价交期。",
+          "sources": [
+            {
+              "kind": "SCENARIO_POLICY",
+              "reference": "policy:decision-summary-v1",
+              "quote": "采购决策摘要应说明选定供应商的总价和报价交期。"
+            }
+          ],
+          "rationale": "交付期限是当前采购场景的重要约束。",
+          "acceptedClaimTypes": [
+            "LEAD_TIME"
+          ]
+        },
+        {
+          "elementId": "price_advantage",
+          "requirement": "说明推荐供应商相对另一合格候选价格更低。",
+          "sources": [
+            {
+              "kind": "USER_REQUEST",
+              "reference": "/userMessage",
+              "quote": "明确优先选择价格更低的方案"
+            },
+            {
+              "kind": "SCENARIO_POLICY",
+              "reference": "policy:preference-explanation-v1",
+              "quote": "双候选场景需要说明主要偏好的取舍依据。"
+            }
+          ],
+          "rationale": "说明价格偏好的决策理由，不要求所有候选全量排名。",
+          "acceptedClaimTypes": [
+            "PAIRWISE_PRICE_COMPARISON"
+          ]
+        },
+        {
+          "elementId": "delivery_compliance",
+          "requirement": "说明推荐方案仍满足本次交付期限。",
+          "sources": [
+            {
+              "kind": "USER_REQUEST",
+              "reference": "/userMessage",
+              "quote": "在满足交付期限和硬约束的前提下"
+            }
+          ],
+          "rationale": "价格优势不能以违反交付期限为代价。",
+          "acceptedClaimTypes": [
+            "WITHIN_DELIVERY_LIMIT"
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "single_eligible_after_exclusions",
+      "elements": [
+        {
+          "elementId": "recommendation",
+          "requirement": "明确给出推荐供应商。",
+          "sources": [
+            {
+              "kind": "BENCHMARK",
+              "reference": "/expected/preferredSupplierId",
+              "quote": "supplier-d"
+            }
+          ],
+          "rationale": "采购决策的主要结论必须明确，不要求复述所有输入字段。",
+          "acceptedClaimTypes": [
+            "RECOMMENDATION"
+          ]
+        },
+        {
+          "elementId": "selected_total",
+          "requirement": "说明推荐供应商在本次采购数量下的总价。",
+          "sources": [
+            {
+              "kind": "SCENARIO_POLICY",
+              "reference": "policy:decision-summary-v1",
+              "quote": "采购决策摘要应说明选定供应商的总价和报价交期。"
+            }
+          ],
+          "rationale": "用户需要据此判断推荐方案的支出；不是要求列出所有供应商报价。",
+          "acceptedClaimTypes": [
+            "TOTAL_PRICE"
+          ]
+        },
+        {
+          "elementId": "selected_lead_time",
+          "requirement": "说明推荐供应商的报价交期。",
+          "sources": [
+            {
+              "kind": "SCENARIO_POLICY",
+              "reference": "policy:decision-summary-v1",
+              "quote": "采购决策摘要应说明选定供应商的总价和报价交期。"
+            }
+          ],
+          "rationale": "交付期限是当前采购场景的重要约束。",
+          "acceptedClaimTypes": [
+            "LEAD_TIME"
+          ]
+        },
+        {
+          "elementId": "unique_eligible",
+          "requirement": "说明当前约束下仅有一个合格供应商。",
+          "sources": [
+            {
+              "kind": "USER_REQUEST",
+              "reference": "/userMessage",
+              "quote": "不要为了展示权衡而虚构额外候选"
+            }
+          ],
+          "rationale": "不要求备选或成对比较，必须保留单候选场景含义。",
+          "acceptedClaimTypes": [
+            "UNIQUE_ELIGIBLE"
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "no_eligible_under_hard_constraints",
+      "elements": [
+        {
+          "elementId": "no_eligible",
+          "requirement": "明确说明当前原始硬约束下没有合格供应商。",
+          "sources": [
+            {
+              "kind": "USER_REQUEST",
+              "reference": "/userMessage",
+              "quote": "请明确报告无合格结果"
+            },
+            {
+              "kind": "BENCHMARK",
+              "reference": "/expected/status",
+              "quote": "NO_ELIGIBLE"
+            }
+          ],
+          "rationale": "无合格场景不能以虚构推荐替代结果；本规则不强制逐个列出阻断原因。",
+          "acceptedClaimTypes": [
+            "NO_ELIGIBLE"
+          ]
+        }
+      ]
+    }
+  ]
+}

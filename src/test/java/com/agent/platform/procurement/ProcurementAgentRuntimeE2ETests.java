@@ -351,6 +351,37 @@ class ProcurementAgentRuntimeE2ETests {
                         || record.toolName().equals(ProcurementToolCatalog.DELIVERY_ANALYSIS)));
     }
 
+    @Test
+    void exportsFrozenCaseExecutionAndRegradesWithoutRunningAgentAgain() throws Exception {
+        var definition = ProcurementEvaluationDataset.load().get(0);
+        var provider = new AwsSyntheticProcurementProvider(mapper, new ProcurementDataProperties());
+        var execution = runRuntime(provider, null, "evaluation-artifact", "", false, false,
+                definition.userMessage());
+        int modelCalls = execution.model().requests.size();
+        int toolCount = execution.toolExecutionStore().records.size();
+        var current = execution.caseStore().findByTenantUserAndConversationId(
+                "tenant-1", "buyer-1", "evaluation-artifact").orElseThrow();
+        var artifact = ProcurementExecutionArtifacts.capture(definition, definition.userMessage(),
+                execution.result(), current, execution.toolExecutionStore().records.values().stream()
+                        .sorted(java.util.Comparator.comparing(ToolExecutionRecord::toolCallId)).toList(),
+                List.copyOf(execution.timelineStore().events), Map.of(
+                        "executionMode", "SCRIPTED_RUNTIME_E2E", "model", "procurement-scripted",
+                        "codeRevision", System.getProperty("evaluation.codeRevision", "UNKNOWN"),
+                        "fixtureSha256", ProcurementEvaluationReports.sha256(java.nio.file.Files.readAllBytes(
+                                java.nio.file.Path.of("data/procurement/scenarios/complex_workstation_01.json")))));
+        var artifactPath = java.nio.file.Path.of("target/procurement-evaluation/runtime-artifact.json");
+        ProcurementEvaluationReports.write(artifactPath, artifact);
+        var loaded = ProcurementEvaluationReports.readArtifact(artifactPath);
+        var report = ProcurementEvaluationReports.regrade(List.of(definition), List.of(loaded));
+        assertEquals(ProcurementEvaluation.Status.PASS, report.results().get(0).structuredStatus(), report.toString());
+        assertEquals(report, ProcurementEvaluationReports.regrade(List.of(definition), List.of(loaded)));
+        assertEquals(modelCalls, execution.model().requests.size());
+        assertEquals(toolCount, execution.toolExecutionStore().records.size());
+        assertEquals(execution.result().answer(), loaded.runtime().answer());
+        assertTrue(loaded.observedEvents().stream().anyMatch(e -> e.type() == AgentEventType.TOOL_REQUESTED));
+        ProcurementEvaluationReports.write(java.nio.file.Path.of("target/procurement-evaluation/runtime-report.json"), report);
+    }
+
     private RuntimeExecution runRuntime(ProcurementDataProvider provider,
                                         ObjectProvider<McpToolGateway> mcpGateways,
                                         String conversationId,
@@ -364,6 +395,14 @@ class ProcurementAgentRuntimeE2ETests {
                                         String expectedOfferSource,
                                         boolean adaptive,
                                         boolean simple) {
+        return runRuntime(provider, mcpGateways, conversationId, expectedOfferSource, adaptive, simple,
+                "研发部门需要采购 50 台 CUDA 工作站，预算 60 万，三周内到，显存至少 24GB；不要 Supplier A。这次项目比较急，可以稍微贵一点，交付优先。");
+    }
+
+    private RuntimeExecution runRuntime(ProcurementDataProvider provider,
+                                        ObjectProvider<McpToolGateway> mcpGateways,
+                                        String conversationId, String expectedOfferSource,
+                                        boolean adaptive, boolean simple, String userMessage) {
         MemoryCaseStore caseStore = new MemoryCaseStore();
         ProcurementCasePatchMerger patchMerger = new ProcurementCasePatchMerger();
         ProcurementDecisionEngine decisionEngine = new ProcurementDecisionEngine();
@@ -422,7 +461,7 @@ class ProcurementAgentRuntimeE2ETests {
 
         AgentRuntimeResult result = runtime.run(new AgentRequest(
                 conversationId, "buyer-1",
-                "研发部门需要采购 50 台 CUDA 工作站，预算 60 万，三周内到，显存至少 24GB；不要 Supplier A。这次项目比较急，可以稍微贵一点，交付优先。",
+                userMessage,
                 Map.of("tenantId", "tenant-1", "authenticatedRoles", Set.of("USER")),
                 profile.name()), profile, AgentEventListener.NOOP);
         return new RuntimeExecution(result, model, caseStore, timelineStore, toolExecutionStore, runStore, memoryService);
