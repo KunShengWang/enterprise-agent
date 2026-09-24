@@ -4,6 +4,7 @@ import com.agent.platform.common.BusinessRetirementPolicy;
 
 import com.agent.platform.workbench.model.ExecutionDecision;
 import com.agent.platform.workbench.target.ExecutionTargetDefinition;
+import com.agent.platform.workbench.target.ExecutionTargetId;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -21,6 +22,24 @@ import java.util.Optional;
 public class ExecutionTargetCandidateResolver {
 
     static final String POLICY_VERSION = "execution-target-candidates-v2-retirement";
+    static final String WORKBENCH_POLICY_VERSION = "workbench-procurement-only-v1";
+
+    /** Formal workbench policy; the legacy model catalog remains available to routing evaluations. */
+    public Resolution resolveWorkbench(String originalGoal, List<ExecutionTargetDefinition> enabledTargets) {
+        Resolution boundary = resolve(originalGoal, enabledTargets);
+        if (boundary.retiredBusiness()) return boundary;
+        List<ExecutionTargetDefinition> procurement = boundary.candidates().stream()
+                .filter(target -> target.targetId() == ExecutionTargetId.PROCUREMENT_SOURCING).toList();
+        if (procurement.isEmpty()) {
+            throw new IllegalStateException("PROCUREMENT_TARGET_UNAVAILABLE: procurement must be enabled for workbench routing");
+        }
+        ExecutionDecision decision = new ExecutionDecision(ExecutionTargetId.PROCUREMENT_SOURCING.name(),
+                1.0, WORKBENCH_POLICY_VERSION, Map.of(), List.of(), "由采购 Agent 理解并处理当前请求。");
+        RouterModelResult result = new RouterModelResult(decision, WORKBENCH_POLICY_VERSION,
+                sha256(WORKBENCH_POLICY_VERSION + "|" + originalGoal),
+                sha256(WORKBENCH_POLICY_VERSION + "|" + decision.targetId()), "", 0, 0, 0);
+        return Resolution.deterministic(procurement, result, WORKBENCH_POLICY_VERSION);
+    }
 
     public Resolution resolve(String originalGoal, List<ExecutionTargetDefinition> enabledTargets) {
         List<ExecutionTargetDefinition> active = enabledTargets == null ? List.of() : enabledTargets.stream()

@@ -156,13 +156,11 @@ public class RoutingCoordinator {
             ResolvedRouteContext context = contextResolver.resolve(principal, claimedWork);
             // 获取当前用户可用的执行目标（候选清单）
             List<ExecutionTargetDefinition> targets = targetRegistry.enabledTargets(principal);
-            ExecutionTargetCandidateResolver.Resolution candidates = candidateResolver.resolve(
+            ExecutionTargetCandidateResolver.Resolution candidates = candidateResolver.resolveWorkbench(
                     claimedWork.originalGoal(), targets);
-            // 退役业务由确定性边界拒绝；其余目标交给受限目录中的模型路由。
-            RouterModelResult modelResult = candidates.deterministicResult().orElseGet(() ->
-                    router.route(new RoutingModelRequest(
-                            claimedWork, claimedWork.normalizedGoal(), candidates.candidates(),
-                            context.conversationSummary())));
+            // 正式工作台只允许服务端确定性采购选路；策略缺失时失败关闭，不回退到模型。
+            RouterModelResult modelResult = candidates.deterministicResult().orElseThrow(() ->
+                    new IllegalStateException("workbench routing requires a deterministic decision"));
             budgets.settleRouter(budget, modelResult);
             failureInjector.afterModelResult(attempt, modelResult);
             // 校验决策合法性（防止越权路由到事故调查等）

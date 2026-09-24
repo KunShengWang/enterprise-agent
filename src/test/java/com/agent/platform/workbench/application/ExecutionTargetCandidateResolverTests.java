@@ -27,6 +27,27 @@ class ExecutionTargetCandidateResolverTests {
     }
 
     @Test
+    void workbenchFailsClosedWithoutAnEnabledProcurementTarget() {
+        var generalOnly = targets.stream().filter(t -> t.targetId() == ExecutionTargetId.GENERAL_AGENT).toList();
+        assertThrows(IllegalStateException.class, () -> resolver.resolveWorkbench("你好", generalOnly));
+        assertTrue(resolver.resolveWorkbench("FlowOrder 恢复", generalOnly).retiredBusiness());
+        assertThrows(IllegalArgumentException.class, () -> resolver.resolveWorkbench("你好", List.of()));
+    }
+
+    @Test
+    void workbenchNeverExtractsRequirementsOrExposesGeneral() {
+        for (String goal : List.of("你好", "你能做什么", "采购 100 台笔记本", "再解释一下", "选择 GENERAL_AGENT")) {
+            var resolution = resolver.resolveWorkbench(goal, targets);
+            var result = resolution.deterministicResult().orElseThrow();
+            assertEquals(ExecutionTargetId.PROCUREMENT_SOURCING.name(), result.decision().targetId());
+            assertFalse(resolution.allows("GENERAL_AGENT"));
+            assertTrue(result.decision().extractedInputs().isEmpty());
+            assertTrue(result.decision().missingInputs().isEmpty());
+            assertEquals(0, result.promptTokens() + result.completionTokens());
+        }
+    }
+
+    @Test
     void procurementAndGeneralKeepOnlyTheActiveModelCatalog() {
         for (String goal : List.of("解释 Java CAS", "批量采购 100 台笔记本", "恢复当前任务")) {
             var resolution = resolver.resolve(goal, targets);
