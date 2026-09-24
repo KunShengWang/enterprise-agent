@@ -32,12 +32,6 @@ public class ExecutionTargetRegistry {
 
     private Map<ExecutionTargetId, ExecutionTargetDefinition> catalog(AuthenticatedPrincipal principal) {
         EnumMap<ExecutionTargetId, ExecutionTargetDefinition> definitions = new EnumMap<>(ExecutionTargetId.class);
-        definitions.put(ExecutionTargetId.GENERAL_AGENT, new ExecutionTargetDefinition(
-                ExecutionTargetId.GENERAL_AGENT,
-                "通用解释、知识问答和低风险只读协助",
-                Set.of("EXPLAIN", "KNOWLEDGE", "LOW_RISK_ASSISTANCE"),
-                Set.of(), TargetRiskLevel.LOW, TargetCostClass.LOW,
-                "general-safe-v1", true));
         definitions.put(ExecutionTargetId.PROCUREMENT_SOURCING, new ExecutionTargetDefinition(
                 ExecutionTargetId.PROCUREMENT_SOURCING,
                 "复杂采购的供应商寻源、证据推荐，并可在人工审批后创建受控 RFQ",

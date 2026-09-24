@@ -59,12 +59,12 @@ class M1BRealModelRoutingIT {
     }
 
     @Test
-    void realModelRoutesGeneralGoalThroughRestrictedCatalog() {
-        AgentWorkItem work = work("解释 Java CAS 的原理和 ABA 问题");
+    void realModelRoutesConsultationThroughProcurementOnlyCatalog() {
+        AgentWorkItem work = work("你能如何协助采购？");
         RouterModelResult result = router.route(new RoutingModelRequest(
                 work, work.normalizedGoal(), registry.enabledTargets(principal), ""));
 
-        assertEquals("GENERAL_AGENT", result.decision().targetId());
+        assertEquals("PROCUREMENT_SOURCING", result.decision().targetId());
         assertFalse(result.modelName().isBlank());
         assertTrue(result.promptTokens() + result.completionTokens() > 0);
         assertEquals(RouteDisposition.AUTO_DISPATCH,

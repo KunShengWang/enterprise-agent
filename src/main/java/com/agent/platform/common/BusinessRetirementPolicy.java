@@ -7,8 +7,8 @@ import java.util.regex.Pattern;
 /** Permanent execution boundary; historical identifiers remain readable. No feature flag re-enables it. */
 public final class BusinessRetirementPolicy {
     public static final String CODE = "TARGET_RETIRED";
-    public static final String MESSAGE = "FlowOrder 订单诊断、事故调查和恢复业务已退役，不再支持新执行或恢复；历史记录仍可查看。";
-    private static final Set<String> TARGETS = Set.of("ORDERCARE_CASE", "INCIDENT_INVESTIGATION", "INCIDENT_RECOVERY_PLAN");
+    public static final String MESSAGE = "Generic Agent、FlowOrder 订单诊断、事故调查和恢复业务已退役，不再支持新执行或恢复；历史记录仍可查看。";
+    private static final Set<String> TARGETS = Set.of("GENERAL_AGENT", "ORDERCARE_CASE", "INCIDENT_INVESTIGATION", "INCIDENT_RECOVERY_PLAN");
     private static final Set<String> TOOLS = Set.of("delegate_order_analyst", "delegate_inventory_analyst",
             "delegate_mq_analyst", "review_incident_evidence");
     private static final Pattern LEGACY_INPUT = Pattern.compile(

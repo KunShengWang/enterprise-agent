@@ -21,14 +21,15 @@ import static org.mockito.Mockito.when;
 
 class RouteConfirmationScopeBindingTests {
 
-    @Test
-    void retiredPreviewIsReadableButCannotConfirmScopeOrStartDispatch() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"GENERAL_AGENT", "INCIDENT_INVESTIGATION"})
+    void retiredPreviewIsReadableButCannotConfirmScopeOrStartDispatch(String target) {
         DispatchStore dispatch = mock(DispatchStore.class);
         WorkbenchStore workbench = mock(WorkbenchStore.class);
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(
                 "tenant-1", "alice", Set.of("INCIDENT_OPERATOR"));
         RoutePreview preview = new RoutePreview("preview-1", "work-1", "decision-1",
-                "INCIDENT_INVESTIGATION", 1, "input-digest", "scope-digest",
+                target, 1, "input-digest", "scope-digest",
                 Map.of("validatedInput", Map.of(
                         "scopeSnapshotId", "scope-1",
                         "scopeSnapshotVersion", 3,
@@ -49,11 +50,11 @@ class RouteConfirmationScopeBindingTests {
                 "input-digest", "scope-digest");
     }
     @Test
-    void genericPreviewStillRequiresMatchingIdVersionAndBothDigests() {
+    void procurementPreviewStillRequiresMatchingIdVersionAndBothDigests() {
         DispatchStore dispatch = mock(DispatchStore.class);
         WorkbenchStore workbench = mock(WorkbenchStore.class);
         var principal = new AuthenticatedPrincipal("tenant", "user", Set.of("USER"));
-        var preview = new RoutePreview("p", "w", "d", "GENERAL_AGENT", 3, "input", "scope", Map.of(),
+        var preview = new RoutePreview("p", "w", "d", "PROCUREMENT_SOURCING", 3, "input", "scope", Map.of(),
                 RoutePreviewStatus.ACTIVE, Instant.now().plusSeconds(60), "", null, Instant.now());
         when(dispatch.findPreview(principal, "w")).thenReturn(Optional.of(preview));
         var service = new RouteConfirmationService(dispatch, mock(RoutingStore.class), workbench, new WorkbenchDispatchProperties());

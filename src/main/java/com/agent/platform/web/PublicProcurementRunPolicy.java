@@ -18,7 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/** HTTP new-run boundary only. Internal Runtime and checkpoint recovery retain their profiles. */
+/** HTTP business execution boundary. Internal Runtime retains its general profile support. */
 @Component
 public class PublicProcurementRunPolicy {
     private static final String PROFILE = ProcurementSourcingExecutionProfileFactory.PROFILE_NAME;
@@ -82,6 +82,17 @@ public class PublicProcurementRunPolicy {
     public java.util.function.BooleanSupplier readPermission(String conversationId) {
         var principal = principals.current();
         return () -> conversations.canRead(principal, conversationId);
+    }
+
+    public java.util.function.Consumer<com.agent.platform.runtime.AgentRunRecord> resumePermission() {
+        var principal = principals.current();
+        return run -> {
+            com.agent.platform.common.PublicBusinessRunPolicy.requireResumable(run);
+            if (!principal.principalId().equals(run.userId())
+                    || !conversations.canRead(principal, run.conversationId())) {
+                throw new WorkbenchAccessDeniedException("run is not owned by the authenticated identity");
+            }
+        };
     }
 
     public String rateLimitKey(AgentRequest authorized) {

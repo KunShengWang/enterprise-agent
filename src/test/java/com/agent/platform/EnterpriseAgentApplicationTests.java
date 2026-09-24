@@ -18,11 +18,10 @@ class EnterpriseAgentApplicationTests {
     void contextLoads() {
         var adapters = context.getBeansOfType(com.agent.platform.workbench.dispatch.ExecutionAdapter.class).values();
         org.junit.jupiter.api.Assertions.assertEquals(java.util.Set.of(
-                com.agent.platform.workbench.target.ExecutionTargetId.GENERAL_AGENT,
                 com.agent.platform.workbench.target.ExecutionTargetId.PROCUREMENT_SOURCING),
                 adapters.stream().map(com.agent.platform.workbench.dispatch.ExecutionAdapter::targetId)
                         .collect(java.util.stream.Collectors.toSet()));
-        org.junit.jupiter.api.Assertions.assertEquals(2, adapters.size());
+        org.junit.jupiter.api.Assertions.assertEquals(1, adapters.size());
         org.junit.jupiter.api.Assertions.assertNotNull(context.getBean(com.agent.platform.web.EvalController.class));
         org.junit.jupiter.api.Assertions.assertTrue(context.getBeansOfType(com.agent.platform.workbench.application.WorkEventProjectionContributor.class).isEmpty());
         org.junit.jupiter.api.Assertions.assertTrue(context.getBeansOfType(com.agent.platform.workbench.application.WorkExecutionTreeContributor.class).isEmpty());
@@ -31,9 +30,11 @@ class EnterpriseAgentApplicationTests {
     @Test
     void applicationAssemblyContainsOnlyCurrentProfilesAndNoRetiredDomainBeans() {
         var factories = context.getBeansOfType(com.agent.platform.config.AgentScenarioProfileFactory.class).values();
-        org.junit.jupiter.api.Assertions.assertEquals(java.util.Set.of("general-agent-v1", "procurement-sourcing-rfq-v1"),
+        org.junit.jupiter.api.Assertions.assertEquals(java.util.Set.of("procurement-sourcing-rfq-v1"),
                 factories.stream().map(com.agent.platform.config.AgentScenarioProfileFactory::scenarioId)
                         .collect(java.util.stream.Collectors.toSet()));
+        org.junit.jupiter.api.Assertions.assertFalse(context.containsBean("generalAgentExecutionProfileFactory"));
+        org.junit.jupiter.api.Assertions.assertFalse(context.containsBean("generalAgentExecutionAdapter"));
         var resolver = context.getBean(com.agent.platform.config.AgentScenarioProfileResolver.class);
         factories.forEach(factory -> org.junit.jupiter.api.Assertions.assertEquals(factory.createProfile(),
                 resolver.resolve(factory.scenarioId()).orElseThrow()));

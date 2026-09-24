@@ -18,7 +18,7 @@ async function loadModule(relativePath) {
 const now = index => `2026-07-21T00:00:0${index}Z`
 const work = index => ({
   workItemId: `work-${index}`, conversationId: 'conversation-1', sourceInputId: `input-${index}`,
-  originalGoal: `goal-${index}`, activeExecutionTarget: index === 3 ? 'INCIDENT_INVESTIGATION' : 'GENERAL_AGENT',
+  originalGoal: `goal-${index}`, activeExecutionTarget: index === 3 ? 'INCIDENT_INVESTIGATION' : 'PROCUREMENT_SOURCING',
   activeRunId: `run-${index}`, activeIncidentId: index === 3 ? 'incident-3' : '', activeRecoveryPlanId: '',
   controlState: 'CLOSED', executionState: 'COMPLETED', outcome: index === 3 ? 'ASSESSED' : 'RESOLVED',
   routingFailureCode: '', version: 2, createdAt: now(index), updatedAt: now(index + 1), completedAt: now(index + 1),

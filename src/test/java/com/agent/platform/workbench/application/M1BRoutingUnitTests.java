@@ -70,15 +70,15 @@ class M1BRoutingUnitTests {
     }
 
     @Test
-    void registryContainsOnlyTwoActiveTargetsAndGeneralProfileIsRestricted() {
+    void registryContainsOnlyProcurementAndGeneralIsNotExecutable() {
         ExecutionTargetRegistry registry = new ExecutionTargetRegistry();
 
         var targets = registry.enabledTargets(principal());
 
-        assertEquals(2, targets.size());
-        var general = registry.findEnabled(principal(), ExecutionTargetId.GENERAL_AGENT.name()).orElseThrow();
-        assertEquals("general-safe-v1", general.executionProfileId());
-        assertFalse(general.supportedIntents().stream().anyMatch(value -> value.contains("INCIDENT")));
+        assertEquals(1, targets.size());
+        var procurement = registry.findEnabled(principal(), ExecutionTargetId.PROCUREMENT_SOURCING.name()).orElseThrow();
+        assertEquals("procurement-sourcing-rfq-v1", procurement.executionProfileId());
+        assertTrue(registry.findEnabled(principal(), ExecutionTargetId.GENERAL_AGENT.name()).isEmpty());
         assertTrue(registry.findEnabled(principal(), ExecutionTargetId.INCIDENT_INVESTIGATION.name()).isEmpty());
     }
 

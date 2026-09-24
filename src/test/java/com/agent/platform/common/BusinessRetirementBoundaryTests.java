@@ -32,7 +32,7 @@ class BusinessRetirementBoundaryTests {
             assertFalse(target.executable());
             assertTrue(new ExecutionTargetRegistry().findEnabled(principal, id).isEmpty());
         }
-        assertEquals(Set.of(ExecutionTargetId.GENERAL_AGENT, ExecutionTargetId.PROCUREMENT_SOURCING),
+        assertEquals(Set.of(ExecutionTargetId.PROCUREMENT_SOURCING),
                 ExecutionTargetId.executableTargets());
     }
 
@@ -158,12 +158,12 @@ class BusinessRetirementBoundaryTests {
     void activeRoutingStillChecksProtectedFieldsAndIdentifierSources() {
         var validator = new RoutePolicyValidator(new ExecutionTargetRegistry(), new WorkbenchRoutingProperties(), new ObjectMapper());
         var context = new RouteValidationContext(principal, mock(AgentWorkItem.class), "explain queueName=queue-1", Map.of(), Map.of());
-        var accepted = validator.validate(new ExecutionDecision("GENERAL_AGENT", 1, "", Map.of("queueName", "queue-1"), List.of(), ""), context);
+        var accepted = validator.validate(new ExecutionDecision("PROCUREMENT_SOURCING", 1, "", Map.of("queueName", "queue-1"), List.of(), ""), context);
         assertEquals(RouteDisposition.AUTO_DISPATCH, accepted.disposition());
         assertEquals(IdentifierSource.EXPLICIT_USER_INPUT, accepted.validatedInput().identifiers().get("queueName").source());
-        var inferred = validator.validate(new ExecutionDecision("GENERAL_AGENT", 1, "", Map.of("queueName", "invented"), List.of(), ""), context);
+        var inferred = validator.validate(new ExecutionDecision("PROCUREMENT_SOURCING", 1, "", Map.of("queueName", "invented"), List.of(), ""), context);
         assertEquals(RouteDisposition.REQUIRE_CLARIFICATION, inferred.disposition());
-        var collision = validator.validate(new ExecutionDecision("GENERAL_AGENT", 1, "", Map.of("queueName", "queue-1", "batchId", "queue-1"), List.of(), ""), context);
+        var collision = validator.validate(new ExecutionDecision("PROCUREMENT_SOURCING", 1, "", Map.of("queueName", "queue-1", "batchId", "queue-1"), List.of(), ""), context);
         assertEquals(RouteDisposition.REQUIRE_CLARIFICATION, collision.disposition());
         for (String field : List.of("scenarioId", "executionProfile", "toolName", "approvedBy", "roles", "tenantId", "url", "sql")) {
             var forbidden = validator.validate(new ExecutionDecision("PROCUREMENT_SOURCING", 1, "", Map.of(field, "injected"), List.of(), ""), context);
@@ -175,7 +175,7 @@ class BusinessRetirementBoundaryTests {
     @Test
     void versionedRoutingEvalKeepsLegacyCasesAsDeterministicRejections() {
         var cases = new com.agent.platform.workbench.eval.WorkbenchRoutingEvalSuite().cases().stream()
-                .filter(c -> c.expectedTarget() != null && !c.expectedTarget().executable()).toList();
+                .filter(c -> c.expectedTarget() != null && BusinessRetirementPolicy.retiredInput(c.input())).toList();
         assertFalse(cases.isEmpty());
         assertTrue(cases.stream().allMatch(c -> c.expectedDisposition() == RouteDisposition.REJECT));
         var model = mock(UnifiedTaskRouter.class);
@@ -189,6 +189,21 @@ class BusinessRetirementBoundaryTests {
         verifyNoInteractions(model, classifier);
     }
 
+
+    @Test
+    void everyHistoricalGeneralRouteIsRejectedWithoutDispatch() {
+        var validator = new RoutePolicyValidator(new ExecutionTargetRegistry(), new WorkbenchRoutingProperties(), new ObjectMapper());
+        var cases = new com.agent.platform.workbench.eval.WorkbenchRoutingEvalSuite().cases().stream()
+                .filter(c -> c.expectedTarget() == ExecutionTargetId.GENERAL_AGENT).toList();
+        assertFalse(cases.isEmpty());
+        for (var item : cases) {
+            var validation = validator.validate(new ExecutionDecision("GENERAL_AGENT", 1, "legacy", Map.of(), List.of(), ""),
+                    new RouteValidationContext(principal, work("legacy", "GENERAL_AGENT"), item.input(), Map.of(), Map.of()));
+            assertEquals(RouteDisposition.REJECT, validation.disposition(), item.caseId());
+            assertEquals("TARGET_RETIRED", validation.failureCode(), item.caseId());
+            assertNull(validation.validatedInput(), item.caseId());
+        }
+    }
 
     @Test
     void oldWorkCommandIsRejectedBeforeClaimingOrUpdatingHistory() {

@@ -102,7 +102,7 @@ class WorkCommandHandlerPostgresIT {
     @Test
     void repeatedAbandonReturnsTheOriginalResultAndAdvancesVersionOnlyOnce() throws Exception {
         AgentWorkItem work = createWork("abandon");
-        setTarget(work.workItemId(), "GENERAL_AGENT", "", "");
+        setTarget(work.workItemId(), "PROCUREMENT_SOURCING", "", "");
         AgentWorkItem admitted = workbench.findWorkItem(principal, work.workItemId()).orElseThrow();
         UnifiedWorkIntakeResult command = command(admitted.conversationId(), WorkCommandType.ABANDON_ACTIVE_WORK, "abandon-once");
         WorkCommandRequest request = new WorkCommandRequest(
@@ -123,7 +123,7 @@ class WorkCommandHandlerPostgresIT {
     @Test
     void staleWorkVersionFailsBeforeRuntimeAndDoesNotCreateCommandExecution() throws Exception {
         AgentWorkItem work = createWork("stale");
-        setTarget(work.workItemId(), "GENERAL_AGENT", "run-stale", "");
+        setTarget(work.workItemId(), "PROCUREMENT_SOURCING", "run-stale", "");
         AgentWorkItem admitted = workbench.findWorkItem(principal, work.workItemId()).orElseThrow();
         UnifiedWorkIntakeResult command = command(admitted.conversationId(), WorkCommandType.PAUSE_ACTIVE_WORK, "pause-stale");
 
@@ -176,8 +176,8 @@ class WorkCommandHandlerPostgresIT {
         AgentWorkItem first = createWork("first", conversation);
         AgentWorkItem second = createWork("second", conversation);
         assertNotEquals(first.workItemId(), second.workItemId());
-        setTarget(first.workItemId(), "GENERAL_AGENT", "", "");
-        setTarget(second.workItemId(), "GENERAL_AGENT", "", "");
+        setTarget(first.workItemId(), "PROCUREMENT_SOURCING", "", "");
+        setTarget(second.workItemId(), "PROCUREMENT_SOURCING", "", "");
         UnifiedWorkIntakeResult command = command(conversation, WorkCommandType.ABANDON_ACTIVE_WORK, "abandon-focus");
 
         WorkCommandResult result = handler.handle(principal, new WorkCommandRequest(
@@ -199,7 +199,7 @@ class WorkCommandHandlerPostgresIT {
     @Test
     void twoStoreInstancesCannotOwnTheSameCommandAtTheSameTime() throws Exception {
         AgentWorkItem work = createWork("multi-instance");
-        setTarget(work.workItemId(), "GENERAL_AGENT", "", "");
+        setTarget(work.workItemId(), "PROCUREMENT_SOURCING", "", "");
         AgentWorkItem admitted = workbench.findWorkItem(principal, work.workItemId()).orElseThrow();
         UnifiedWorkIntakeResult command = command(admitted.conversationId(),
                 WorkCommandType.PAUSE_ACTIVE_WORK, "multi-instance-pause");
@@ -219,7 +219,7 @@ class WorkCommandHandlerPostgresIT {
     @Test
     void successfulResumeKeepsRunIdAndProjectsAuthoritativeTerminalState() throws Exception {
         AgentWorkItem work = createWork("resume-same-run");
-        setTarget(work.workItemId(), "GENERAL_AGENT", "run-same-1", "");
+        setTarget(work.workItemId(), "PROCUREMENT_SOURCING", "run-same-1", "");
         AgentWorkItem admitted = workbench.findWorkItem(principal, work.workItemId()).orElseThrow();
         UnifiedWorkIntakeResult command = command(admitted.conversationId(),
                 WorkCommandType.RESUME_ACTIVE_WORK, "resume-same-run");

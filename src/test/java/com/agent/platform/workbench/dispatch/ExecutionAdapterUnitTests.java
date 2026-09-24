@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 class ExecutionAdapterUnitTests {
 
     @Test
-    void generalUsesFrozenProfile() {
+    void procurementUsesFrozenProfile() {
         AgentExecutor executor = mock(AgentExecutor.class);
         AgentRunStore runStore = mock(AgentRunStore.class);
         when(runStore.findByDispatchRequestId("dispatch-general")).thenReturn(Optional.empty());
@@ -36,23 +36,23 @@ class ExecutionAdapterUnitTests {
                 new AgentResponse("run-1", "conversation-1", AgentRunStatus.COMPLETED,
                         "done", "", List.of(), null));
 
-        new GeneralAgentExecutionAdapter(executor, runStore).dispatch(request(
-                "dispatch-general", ExecutionTargetId.GENERAL_AGENT, Map.of()));
+        new ProcurementSourcingExecutionAdapter(executor, runStore, mock(com.agent.platform.procurement.persistence.ProcurementCaseStore.class)).dispatch(request(
+                "dispatch-general", ExecutionTargetId.PROCUREMENT_SOURCING, Map.of()));
         ArgumentCaptor<AgentRequest> requests = ArgumentCaptor.forClass(AgentRequest.class);
         verify(executor, org.mockito.Mockito.times(1)).execute(requests.capture());
         AgentRequest general = requests.getAllValues().get(0);
-        assertEquals(AgentScenarioProfileResolver.GENERAL_AGENT_V1, general.scenarioId());
+        assertEquals("procurement-sourcing-rfq-v1", general.scenarioId());
         assertEquals("dispatch-general",
                 general.metadata().get(AgentRunStore.DISPATCH_REQUEST_METADATA_KEY));
-        assertEquals(ExecutionTargetId.GENERAL_AGENT.name(), general.metadata().get("executionTarget"));
+        assertEquals(ExecutionTargetId.PROCUREMENT_SOURCING.name(), general.metadata().get("executionTarget"));
     }
 
     @Test
     void registryRejectsAnyCatalogOtherThanTheRegisteredAdapters() {
         List<ExecutionAdapter> all = new ArrayList<>();
         for (ExecutionTargetId id : ExecutionTargetId.values()) all.add(fake(id));
-        assertEquals(2, new ExecutionAdapterRegistry(all).size());
-        assertEquals(2, new ExecutionAdapterRegistry(List.of(fake(ExecutionTargetId.GENERAL_AGENT),
+        assertEquals(1, new ExecutionAdapterRegistry(all).size());
+        assertEquals(1, new ExecutionAdapterRegistry(List.of(fake(ExecutionTargetId.GENERAL_AGENT),
                 fake(ExecutionTargetId.PROCUREMENT_SOURCING))).size());
         assertThrows(com.agent.platform.common.RetiredBusinessException.class,
                 () -> new ExecutionAdapterRegistry(all).require("ORDERCARE_CASE"));
@@ -67,7 +67,7 @@ class ExecutionAdapterUnitTests {
     }
 
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.ValueSource(strings = {"ORDERCARE_CASE", "INCIDENT_INVESTIGATION", "INCIDENT_RECOVERY_PLAN"})
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"GENERAL_AGENT", "ORDERCARE_CASE", "INCIDENT_INVESTIGATION", "INCIDENT_RECOVERY_PLAN"})
     void historicalTargetsCannotReachAdaptersEvenWithCompleteOrIncompleteInput(String historicalId) {
         ExecutionTargetId target = ExecutionTargetId.valueOf(historicalId);
         var registry = new ExecutionAdapterRegistry(List.of(fake(ExecutionTargetId.GENERAL_AGENT),

@@ -40,7 +40,6 @@ public class RoutingCoordinator {
 
     private final RoutingStore routingStore;
     private final WorkbenchStore workbenchStore;
-    private final UnifiedTaskRouter router;
     private final RoutePolicyValidator validator;
     private final RouteContextResolver contextResolver;
     private final ExecutionTargetRegistry targetRegistry;
@@ -53,7 +52,6 @@ public class RoutingCoordinator {
     @Autowired
     public RoutingCoordinator(RoutingStore routingStore,
                               WorkbenchStore workbenchStore,
-                              UnifiedTaskRouter router,
                               RoutePolicyValidator validator,
                               RouteContextResolver contextResolver,
                               ExecutionTargetRegistry targetRegistry,
@@ -64,7 +62,6 @@ public class RoutingCoordinator {
                               ExecutionTargetCandidateResolver candidateResolver) {
         this.routingStore = routingStore;
         this.workbenchStore = workbenchStore;
-        this.router = router;
         this.validator = validator;
         this.contextResolver = contextResolver;
         this.targetRegistry = targetRegistry;
@@ -77,34 +74,31 @@ public class RoutingCoordinator {
 
     public RoutingCoordinator(RoutingStore routingStore,
                               WorkbenchStore workbenchStore,
-                              UnifiedTaskRouter router,
                               RoutePolicyValidator validator,
                               RouteContextResolver contextResolver,
                               ExecutionTargetRegistry targetRegistry,
                               WorkbenchRoutingProperties properties,
                               RoutingFailureInjector failureInjector) {
-        this(routingStore, workbenchStore, router, validator, contextResolver, targetRegistry,
+        this(routingStore, workbenchStore, validator, contextResolver, targetRegistry,
                 properties, failureInjector, (principal, workItem, decision) -> { }, WorkItemBudgetGate.NOOP,
                 new ExecutionTargetCandidateResolver());
     }
 
     public RoutingCoordinator(RoutingStore routingStore,
                               WorkbenchStore workbenchStore,
-                              UnifiedTaskRouter router,
                               RoutePolicyValidator validator,
                               RouteContextResolver contextResolver,
                               ExecutionTargetRegistry targetRegistry,
                               WorkbenchRoutingProperties properties,
                               RoutingFailureInjector failureInjector,
                               RouteDecisionPostProcessor postProcessor) {
-        this(routingStore, workbenchStore, router, validator, contextResolver, targetRegistry,
+        this(routingStore, workbenchStore, validator, contextResolver, targetRegistry,
                 properties, failureInjector, postProcessor, WorkItemBudgetGate.NOOP,
                 new ExecutionTargetCandidateResolver());
     }
 
     public RoutingCoordinator(RoutingStore routingStore,
                               WorkbenchStore workbenchStore,
-                              UnifiedTaskRouter router,
                               RoutePolicyValidator validator,
                               RouteContextResolver contextResolver,
                               ExecutionTargetRegistry targetRegistry,
@@ -112,7 +106,7 @@ public class RoutingCoordinator {
                               RoutingFailureInjector failureInjector,
                               RouteDecisionPostProcessor postProcessor,
                               WorkItemBudgetGate budgets) {
-        this(routingStore, workbenchStore, router, validator, contextResolver, targetRegistry,
+        this(routingStore, workbenchStore, validator, contextResolver, targetRegistry,
                 properties, failureInjector, postProcessor, budgets,
                 new ExecutionTargetCandidateResolver());
     }

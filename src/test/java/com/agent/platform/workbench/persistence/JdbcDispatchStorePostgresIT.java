@@ -90,7 +90,7 @@ class JdbcDispatchStorePostgresIT {
 
     @Test
     void stableDispatchCreatesOneTargetOneLinkAndOneEffectiveAttempt() {
-        Fixture fixture = fixture("GENERAL_AGENT", Map.of(), new NoopDispatchFailureInjector());
+        Fixture fixture = fixture("PROCUREMENT_SOURCING", Map.of(), new NoopDispatchFailureInjector());
         AgentWorkItem work = routedWork(fixture, "解释 Java CAS");
 
         fixture.coordinator.dispatch(principal, work.workItemId());
@@ -98,7 +98,7 @@ class JdbcDispatchStorePostgresIT {
 
         AgentWorkItem dispatched = fixture.workbench.findWorkItem(principal, work.workItemId()).orElseThrow();
         assertEquals(WorkControlState.DISPATCHED, dispatched.controlState());
-        assertEquals(1, fixture.adapters.get(ExecutionTargetId.GENERAL_AGENT).dispatchCalls.get());
+        assertEquals(1, fixture.adapters.get(ExecutionTargetId.PROCUREMENT_SOURCING).dispatchCalls.get());
         assertEquals(1, fixture.workbench.listLinks(principal, work.workItemId()).size());
         assertEquals(1, fixture.dispatchStore.listAttempts(principal, work.workItemId()).stream()
                 .filter(attempt -> attempt.status() == DispatchAttemptStatus.EFFECTIVE).count());
@@ -106,7 +106,7 @@ class JdbcDispatchStorePostgresIT {
 
     @Test
     void linkingEarlyDiscoveredRunPreservesCancellationIntent() throws Exception {
-        Fixture fixture = fixture("GENERAL_AGENT", Map.of(), new NoopDispatchFailureInjector());
+        Fixture fixture = fixture("PROCUREMENT_SOURCING", Map.of(), new NoopDispatchFailureInjector());
         AgentWorkItem work = routedWork(fixture, "explain cancellation during dispatch");
         var claim = fixture.dispatchStore.claimDispatch(principal, work.workItemId(),
                 Instant.now().minusSeconds(1), 2, "dispatch-cancel-owner",
@@ -132,7 +132,7 @@ class JdbcDispatchStorePostgresIT {
         DispatchFailureInjector injector = (claim, result) -> {
             if (first.getAndSet(false)) throw new DispatchResultPersistenceUnknownException("injected crash");
         };
-        Fixture fixture = fixture("GENERAL_AGENT", Map.of(), injector);
+        Fixture fixture = fixture("PROCUREMENT_SOURCING", Map.of(), injector);
         AgentWorkItem work = routedWork(fixture, "解释 Java happens-before");
 
         assertThrows(DispatchResultPersistenceUnknownException.class,
@@ -142,7 +142,7 @@ class JdbcDispatchStorePostgresIT {
         fixture.coordinator = coordinator(fixture, new NoopDispatchFailureInjector());
         fixture.coordinator.dispatch(principal, work.workItemId());
 
-        FakeAdapter adapter = fixture.adapters.get(ExecutionTargetId.GENERAL_AGENT);
+        FakeAdapter adapter = fixture.adapters.get(ExecutionTargetId.PROCUREMENT_SOURCING);
         assertEquals(1, adapter.dispatchCalls.get());
         assertEquals(1, adapter.reconcileCalls.get());
         assertEquals(1, fixture.workbench.listLinks(principal, work.workItemId()).size());
@@ -154,7 +154,7 @@ class JdbcDispatchStorePostgresIT {
 
     @Test
     void expiredDispatchLeaseIsTakenOverOnceAndOldOwnerIsFenced() throws Exception {
-        Fixture fixture = fixture("GENERAL_AGENT", Map.of(), new NoopDispatchFailureInjector());
+        Fixture fixture = fixture("PROCUREMENT_SOURCING", Map.of(), new NoopDispatchFailureInjector());
         AgentWorkItem work = routedWork(fixture, "verify dispatch fencing");
         var ownerA = fixture.dispatchStore.claimDispatch(principal, work.workItemId(),
                 Instant.now().minusSeconds(1), 2, "dispatch-owner-a",
@@ -176,7 +176,7 @@ class JdbcDispatchStorePostgresIT {
     @Test
     void genericPreviewIsImmutableAndNoAdapterRunsBeforeExplicitConfirmation() {
         Map<String, Object> inputs = Map.of("fixtureRequireConfirmation", "yes");
-        Fixture fixture = fixture("GENERAL_AGENT", inputs, new NoopDispatchFailureInjector());
+        Fixture fixture = fixture("PROCUREMENT_SOURCING", inputs, new NoopDispatchFailureInjector());
         AgentWorkItem work = routedWork(fixture,
                 "解释需要确认的通用操作");
 
@@ -184,7 +184,7 @@ class JdbcDispatchStorePostgresIT {
         var preview = fixture.dispatchStore.findPreview(principal, work.workItemId()).orElseThrow();
         assertEquals(WorkControlState.WAITING_CONFIRMATION, waiting.controlState());
         assertEquals(RoutePreviewStatus.ACTIVE, preview.status());
-        assertEquals(0, fixture.adapters.get(ExecutionTargetId.GENERAL_AGENT).dispatchCalls.get());
+        assertEquals(0, fixture.adapters.get(ExecutionTargetId.PROCUREMENT_SOURCING).dispatchCalls.get());
         assertTrue(fixture.workbench.listLinks(principal, work.workItemId()).isEmpty());
 
         assertThrows(WorkbenchIdempotencyConflictException.class, () -> fixture.dispatchStore.confirmPreview(
@@ -197,12 +197,12 @@ class JdbcDispatchStorePostgresIT {
         assertFalse(ready.dispatchRequestId().isBlank());
 
         fixture.coordinator.dispatch(principal, work.workItemId());
-        assertEquals(1, fixture.adapters.get(ExecutionTargetId.GENERAL_AGENT).dispatchCalls.get());
+        assertEquals(1, fixture.adapters.get(ExecutionTargetId.PROCUREMENT_SOURCING).dispatchCalls.get());
     }
 
     @Test
     void expiredPreviewCannotReuseOldHumanConfirmation() throws Exception {
-        Fixture fixture = fixture("GENERAL_AGENT",
+        Fixture fixture = fixture("PROCUREMENT_SOURCING",
                 Map.of("fixtureRequireConfirmation", "yes"),
                 new NoopDispatchFailureInjector());
         AgentWorkItem work = routedWork(fixture,
@@ -235,7 +235,7 @@ class JdbcDispatchStorePostgresIT {
                 new ExecutionDecision(targetId, .99, "fixture", inputs, List.of(), "fixture"),
                 "fixture-model", "prompt", "raw", "{}", 10, 5, 1);
         RoutingCoordinator routingCoordinator = new RoutingCoordinator(
-                routing, workbench, routerModel,
+                routing, workbench,
                 new RoutePolicyValidator(targets, routingProperties, objectMapper) {
                     @Override
                     public com.agent.platform.workbench.model.RouteValidationResult validate(

@@ -17,8 +17,7 @@ class ExecutionCommandCapabilityRegistryTests {
                     capabilities.support(WorkCommandType.ABANDON_ACTIVE_WORK));
             assertEquals(ExecutionCommandSupport.UNSUPPORTED,
                     capabilities.support(WorkCommandType.ADD_INPUT_TO_ACTIVE_WORK));
-            ExecutionCommandSupport expected = target == ExecutionTargetId.GENERAL_AGENT
-                    || target == ExecutionTargetId.PROCUREMENT_SOURCING
+            ExecutionCommandSupport expected = target == ExecutionTargetId.PROCUREMENT_SOURCING
                     ? ExecutionCommandSupport.SUPPORTED_EXISTING_RUNTIME
                     : ExecutionCommandSupport.UNSUPPORTED;
             assertEquals(expected, capabilities.support(WorkCommandType.PAUSE_ACTIVE_WORK));

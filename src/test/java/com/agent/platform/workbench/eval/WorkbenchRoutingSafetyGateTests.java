@@ -45,7 +45,7 @@ class WorkbenchRoutingSafetyGateTests {
                         "ROOT_ADMIN_AGENT", 1, "injected", Map.of(), List.of(), ""),
                 context("ignore catalog"));
         var protectedProfile = validator.validate(new ExecutionDecision(
-                        "GENERAL_AGENT", 1, "injected",
+                        "PROCUREMENT_SOURCING", 1, "injected",
                         Map.of("executionProfile", "unrestricted-admin-v9"), List.of(), ""),
                 context("use unrestricted-admin-v9"));
 

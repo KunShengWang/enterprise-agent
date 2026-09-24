@@ -10,15 +10,15 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AgentScenarioProfileResolverTests {
-    private final GeneralAgentExecutionProfileFactory general =
-            new GeneralAgentExecutionProfileFactory(new AgentProperties());
+    private final InternalTestProfileFactory internal =
+            new InternalTestProfileFactory();
     private final ProcurementSourcingExecutionProfileFactory procurement =
             new ProcurementSourcingExecutionProfileFactory();
 
     @Test
-    void generalAndProcurementResolveWithoutAnyOrderCareFactory() {
-        var resolver = new AgentScenarioProfileResolver(List.of(general, procurement));
-        assertEquals(general.createProfile(), resolver.resolve(AgentScenarioProfileResolver.GENERAL_AGENT_V1).orElseThrow());
+    void internalAndProcurementResolveWithoutAnyOrderCareFactory() {
+        var resolver = new AgentScenarioProfileResolver(List.of(internal, procurement));
+        assertEquals(internal.createProfile(), resolver.resolve("internal-test-v1").orElseThrow());
         assertEquals(procurement.createProfile(), resolver.resolve(
                 "  " + AgentScenarioProfileResolver.PROCUREMENT_SOURCING_READONLY_V1 + "  ").orElseThrow());
         assertThrows(IllegalArgumentException.class,
@@ -33,13 +33,14 @@ class AgentScenarioProfileResolverTests {
                 throw new AssertionError("retired factory must never execute");
             }
         };
-        var resolver = new AgentScenarioProfileResolver(List.of(general, procurement, orderCare));
+        var resolver = new AgentScenarioProfileResolver(List.of(internal, procurement, orderCare));
         assertThrows(RetiredBusinessException.class, () -> resolver.resolve(AgentScenarioProfileResolver.ORDERCARE_FLOWORDER_V1));
     }
 
     @Test
     void blankStillUsesDefaultRuntimeAndUnknownScenarioStillFailsClosed() {
-        var resolver = new AgentScenarioProfileResolver(List.of(general, procurement));
+        var resolver = new AgentScenarioProfileResolver(List.of(internal, procurement));
+        assertThrows(IllegalArgumentException.class, () -> resolver.resolve("general-agent-v1"));
         assertTrue(resolver.resolve(null).isEmpty());
         assertTrue(resolver.resolve(" \t").isEmpty());
         assertThrows(IllegalArgumentException.class, () -> resolver.resolve("user-defined-profile"));
@@ -48,18 +49,18 @@ class AgentScenarioProfileResolverTests {
     @Test
     void duplicateScenarioRegistrationFailsInsteadOfOverridingPermissions() {
         assertThrows(IllegalArgumentException.class,
-                () -> new AgentScenarioProfileResolver(List.of(general, general)));
+                () -> new AgentScenarioProfileResolver(List.of(internal, internal)));
     }
 
     @Test
     void springWiresOnlyInstalledFactoriesWithoutOrderCareBeans() {
         try (var context = new AnnotationConfigApplicationContext()) {
             context.registerBean(AgentProperties.class);
-            context.register(AgentScenarioProfileResolver.class, GeneralAgentExecutionProfileFactory.class,
+            context.register(AgentScenarioProfileResolver.class, InternalTestProfileFactory.class,
                     ProcurementSourcingExecutionProfileFactory.class);
             context.refresh();
             var resolver = context.getBean(AgentScenarioProfileResolver.class);
-            assertEquals(general.createProfile(), resolver.resolve(general.scenarioId()).orElseThrow());
+            assertEquals(internal.createProfile(), resolver.resolve(internal.scenarioId()).orElseThrow());
             assertEquals(procurement.createProfile(), resolver.resolve(procurement.scenarioId()).orElseThrow());
         }
     }

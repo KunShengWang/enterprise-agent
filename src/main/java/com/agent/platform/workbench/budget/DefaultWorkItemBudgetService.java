@@ -40,7 +40,6 @@ public class DefaultWorkItemBudgetService implements WorkItemBudgetGate {
                                                  AgentWorkItem workItem,
                                                  String operationKey) {
         if (!properties.isEnabled()) {
-            if (properties.isAllowLowRiskDegradedMode()) return BudgetReservationHandle.degraded(operationKey);
             throw new BudgetExceededException("BUDGET_CONFIGURATION_UNAVAILABLE", "workbench budget is disabled");
         }
         validatePolicy();
@@ -80,9 +79,6 @@ public class DefaultWorkItemBudgetService implements WorkItemBudgetGate {
                                                   ExecutionTargetId targetId,
                                                   String operationKey) {
         if (!properties.isEnabled()) {
-            if (targetId == ExecutionTargetId.GENERAL_AGENT && properties.isAllowLowRiskDegradedMode()) {
-                return BudgetReservationHandle.degraded(operationKey);
-            }
             throw new BudgetExceededException("BUDGET_CONFIGURATION_UNAVAILABLE",
                     "budget is required for target " + targetId);
         }

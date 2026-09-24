@@ -2,7 +2,7 @@ import type { WorkItem, WorkExecutionTree, RoutePreview } from '../types/workben
 
 export const retiredMessage = '业务已退役、不能继续执行；仅保留已保存的历史记录。'
 export function isRetiredTarget(target?: string) {
-  return ['ORDERCARE_CASE', 'INCIDENT_INVESTIGATION', 'INCIDENT_RECOVERY_PLAN'].includes(target ?? '')
+  return ['GENERAL_AGENT', 'ORDERCARE_CASE', 'INCIDENT_INVESTIGATION', 'INCIDENT_RECOVERY_PLAN'].includes(target ?? '')
 }
 export function isRetiredTool(tool?: string) {
   return /^(floworder_|mcp\.floworder\.)/.test(tool ?? '')
@@ -16,10 +16,10 @@ export function isRetiredWork(work?: Pick<WorkItem, 'activeExecutionTarget'>, tr
   return isRetiredTarget(work?.activeExecutionTarget) || tree?.treeType === 'RETIRED'
 }
 export function isRetiredRun(request?: { scenarioId?: string; metadata?: Record<string, unknown> }, tool?: string) {
-  return /^(ordercare-|incident-)/.test(request?.scenarioId ?? '')
+  return Boolean(request && request.scenarioId !== 'procurement-sourcing-rfq-v1')
     || isRetiredTarget(String(request?.metadata?.executionTarget ?? '')) || isRetiredTool(tool)
 }
 export function executionTargetLabel(target: string) {
   if (isRetiredTarget(target)) return '已退役业务（只读历史）'
-  return ({ PROCUREMENT_SOURCING: '采购 Agent', GENERAL_AGENT: 'General（受限通用）' } as Record<string, string>)[target] || target || 'Routing'
+  return ({ PROCUREMENT_SOURCING: '采购 Agent' } as Record<string, string>)[target] || target || 'Routing'
 }

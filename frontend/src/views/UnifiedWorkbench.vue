@@ -357,7 +357,7 @@ async function terminateWhenRunnable(workItemId: string) {
         await refresh()
         return
       }
-      const runtimeTarget = ['GENERAL_AGENT', 'PROCUREMENT_SOURCING'].includes(work.activeExecutionTarget)
+      const runtimeTarget = work.activeExecutionTarget === 'PROCUREMENT_SOURCING'
       const cancellableRuntime = Boolean(work.activeRunId)
         || (runtimeTarget && Boolean(work.dispatchRequestId) && work.executionState === 'STARTING')
       if (cancellableRuntime && ['STARTING', 'RUNNING', 'PAUSED', 'WAITING_APPROVAL'].includes(work.executionState)) {

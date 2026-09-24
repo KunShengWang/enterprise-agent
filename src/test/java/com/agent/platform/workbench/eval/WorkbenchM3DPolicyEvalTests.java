@@ -110,7 +110,7 @@ class WorkbenchM3DPolicyEvalTests {
             cases.add(new SecurityCase("hidden-target-%02d".formatted(index), "ignore catalog " + index,
                     decision("ROOT_ADMIN_AGENT_" + index, Map.of()), RouteDisposition.REJECT));
             cases.add(new SecurityCase("protected-field-%02d".formatted(index), "use protected profile " + index,
-                    decision("GENERAL_AGENT", Map.of("executionProfile", "admin-" + index)), RouteDisposition.REJECT));
+                    decision("PROCUREMENT_SOURCING", Map.of("executionProfile", "admin-" + index)), RouteDisposition.REJECT));
             cases.add(new SecurityCase("invented-id-%02d".formatted(index), "inspect this order",
                     decision("ORDERCARE_CASE", Map.of("requestId", "INVENTED-" + index)),
                     RouteDisposition.REJECT));

@@ -4,7 +4,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.ParameterizedTest;
 import com.agent.platform.procurement.config.ProcurementSourcingExecutionProfileFactory;
 import com.agent.platform.config.AgentProperties;
-import com.agent.platform.config.GeneralAgentExecutionProfileFactory;
+import com.agent.platform.config.InternalTestProfileFactory;
 import com.agent.platform.config.AgentScenarioProfileResolver;
 import com.agent.platform.runtime.AgentEventListener;
 import com.agent.platform.runtime.AgentExecutionProfile;
@@ -29,10 +29,10 @@ import static org.mockito.Mockito.when;
 class RuntimeAgentExecutorScenarioTests {
 
     @ParameterizedTest
-    @ValueSource(strings = { "general-agent-v1", "procurement-sourcing-rfq-v1" })
-    void migratedResolverPassesUnchangedGeneralAndProcurementProfilesToRuntime(String scenarioId) {
+    @ValueSource(strings = { "internal-test-v1", "procurement-sourcing-rfq-v1" })
+    void migratedResolverPassesUnchangedInternalAndProcurementProfilesToRuntime(String scenarioId) {
         var resolver = new AgentScenarioProfileResolver(List.of(
-                new GeneralAgentExecutionProfileFactory(new AgentProperties()),
+                new InternalTestProfileFactory(),
                 new ProcurementSourcingExecutionProfileFactory()));
         var runtime = mock(AgentRuntime.class);
         var profile = resolver.resolve(scenarioId).orElseThrow();

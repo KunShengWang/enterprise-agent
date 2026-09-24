@@ -29,8 +29,8 @@ class ExecutionTargetCandidateResolverTests {
     @Test
     void workbenchFailsClosedWithoutAnEnabledProcurementTarget() {
         var generalOnly = targets.stream().filter(t -> t.targetId() == ExecutionTargetId.GENERAL_AGENT).toList();
-        assertThrows(IllegalStateException.class, () -> resolver.resolveWorkbench("你好", generalOnly));
-        assertTrue(resolver.resolveWorkbench("FlowOrder 恢复", generalOnly).retiredBusiness());
+        assertThrows(IllegalArgumentException.class, () -> resolver.resolveWorkbench("你好", generalOnly));
+        assertThrows(IllegalArgumentException.class, () -> resolver.resolveWorkbench("FlowOrder 恢复", generalOnly));
         assertThrows(IllegalArgumentException.class, () -> resolver.resolveWorkbench("你好", List.of()));
     }
 
@@ -48,11 +48,11 @@ class ExecutionTargetCandidateResolverTests {
     }
 
     @Test
-    void procurementAndGeneralKeepOnlyTheActiveModelCatalog() {
+    void procurementIsTheOnlyActiveModelCatalog() {
         for (String goal : List.of("解释 Java CAS", "批量采购 100 台笔记本", "恢复当前任务")) {
             var resolution = resolver.resolve(goal, targets);
             assertTrue(resolution.deterministicResult().isEmpty(), goal);
-            assertEquals(Set.of(ExecutionTargetId.PROCUREMENT_SOURCING, ExecutionTargetId.GENERAL_AGENT),
+            assertEquals(Set.of(ExecutionTargetId.PROCUREMENT_SOURCING),
                     new HashSet<>(resolution.candidates().stream().map(ExecutionTargetDefinition::targetId).toList()));
         }
     }

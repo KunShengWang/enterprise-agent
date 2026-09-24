@@ -15,8 +15,6 @@ public class ExecutionCommandCapabilityRegistry {
     public ExecutionCommandCapabilityRegistry() {
         EnumMap<ExecutionTargetId, ExecutionCommandCapabilities> values =
                 new EnumMap<>(ExecutionTargetId.class);
-        values.put(ExecutionTargetId.GENERAL_AGENT, runtimeCapabilities(
-                Set.of("NO_GENERAL_ADD_INPUT_CHECKPOINT")));
         for (ExecutionTargetId id : ExecutionTargetId.values()) {
             if (!id.executable()) values.put(id, new ExecutionCommandCapabilities(defaults(), Set.of("TARGET_RETIRED", "HISTORY_READ_ONLY")));
         }

@@ -3,7 +3,7 @@ package com.agent.platform.stream;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.ParameterizedTest;
 import com.agent.platform.procurement.config.ProcurementSourcingExecutionProfileFactory;
-import com.agent.platform.config.GeneralAgentExecutionProfileFactory;
+import com.agent.platform.config.InternalTestProfileFactory;
 import com.agent.platform.config.AgentScenarioProfileResolver;
 import com.agent.platform.agent.AgentRequest;
 import com.agent.platform.config.AgentProperties;
@@ -35,11 +35,11 @@ import static org.mockito.Mockito.when;
 class DefaultStreamingAgentExecutorTests {
 
     @ParameterizedTest
-    @ValueSource(strings = { "general-agent-v1", "procurement-sourcing-rfq-v1" })
+    @ValueSource(strings = { "internal-test-v1", "procurement-sourcing-rfq-v1" })
     void migratedResolverPreservesProfileAndPersistedEventsInStreamingExecution(String scenarioId) {
         var properties = new AgentProperties();
         var resolver = new AgentScenarioProfileResolver(List.of(
-                new GeneralAgentExecutionProfileFactory(properties),
+                new InternalTestProfileFactory(),
                 new ProcurementSourcingExecutionProfileFactory()));
         var runtime = mock(AgentRuntime.class);
         var profile = resolver.resolve(scenarioId).orElseThrow();

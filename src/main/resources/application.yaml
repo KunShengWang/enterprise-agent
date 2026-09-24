@@ -203,7 +203,6 @@ enterprise-agent:
       heartbeat-every-polls: ${WORKBENCH_STREAM_HEARTBEAT_EVERY_POLLS:20}
     budget:
       enabled: ${WORKBENCH_BUDGET_ENABLED:true}
-      allow-low-risk-degraded-mode: ${WORKBENCH_BUDGET_ALLOW_LOW_RISK_DEGRADED:true}
       work-item:
         max-model-calls: ${WORKBENCH_BUDGET_WORK_MAX_MODEL_CALLS:48}
         max-tokens: ${WORKBENCH_BUDGET_WORK_MAX_TOKENS:220000}
@@ -216,12 +215,6 @@ enterprise-agent:
         max-tool-calls: 0
         max-duration-millis: ${WORKBENCH_BUDGET_ROUTER_MAX_DURATION_MILLIS:45000}
         max-estimated-cost: ${WORKBENCH_BUDGET_ROUTER_MAX_COST:2}
-      general:
-        max-model-calls: 12
-        max-tokens: 48000
-        max-tool-calls: 10
-        max-duration-millis: 240000
-        max-estimated-cost: 12
       procurement-sourcing:
         max-model-calls: 10
         max-tokens: 48000

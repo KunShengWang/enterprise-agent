@@ -99,6 +99,9 @@ public class AgentRunWorkCommandAdapter {
     }
 
     private AgentRunCommandResult resume(AgentRunRecord before) {
+        if (!com.agent.platform.common.PublicBusinessRunPolicy.resumable(before)) {
+            return rejected(BusinessRetirementPolicy.CODE, BusinessRetirementPolicy.MESSAGE, before);
+        }
         if (before.state() != AgentRunState.PAUSED
                 && before.state() != AgentRunState.PAUSE_REQUESTED
                 && before.state() != AgentRunState.WAITING_APPROVAL) {

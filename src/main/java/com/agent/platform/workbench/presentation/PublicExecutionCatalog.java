@@ -9,8 +9,7 @@ import java.util.Map;
 public class PublicExecutionCatalog {
 
     private static final Map<String, Definition> DEFINITIONS = Map.of(
-            "GENERAL_AGENT", new Definition("General Agent", List.of(
-                    "理解目标并加载相关上下文", "按需调用只读工具或知识库", "整理证据并生成回答")),
+            "GENERAL_AGENT", new Definition("Generic（只读历史）", List.of("仅查看历史记录，不支持继续执行")),
             "ORDERCARE_CASE", new Definition("OrderCare Agent", List.of(
                     "读取订单、扣减、库存与死信事实", "检索适用 SOP 并形成诊断",
                     "在需要副作用时申请人工确认", "验证最终业务状态")),

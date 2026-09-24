@@ -63,7 +63,7 @@ class BudgetAdmissionCoordinatorTests {
         WorkbenchRoutingProperties properties = new WorkbenchRoutingProperties();
         properties.setEnabled(true);
         RoutingCoordinator coordinator = new RoutingCoordinator(
-                routing, workbench, router, mock(RoutePolicyValidator.class),
+                routing, workbench, mock(RoutePolicyValidator.class),
                 mock(RouteContextResolver.class), mock(ExecutionTargetRegistry.class), properties,
                 new NoopRoutingFailureInjector(), mock(RouteDecisionPostProcessor.class), budgets);
 

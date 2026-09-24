@@ -43,7 +43,7 @@ async function render(item) {
   return renderToString(createSSRApp({ render: () => h(Renderer,
     { item, busy: false, reviewer: 'reviewer', decisionReason: 'reviewed' }) }))
 }
-for (const target of ['ORDERCARE_CASE', 'INCIDENT_INVESTIGATION', 'INCIDENT_RECOVERY_PLAN']) {
+for (const target of ['GENERAL_AGENT', 'ORDERCARE_CASE', 'INCIDENT_INVESTIGATION', 'INCIDENT_RECOVERY_PLAN']) {
   for (const state of ['RUNNING', 'WAITING_APPROVAL', 'PAUSED', 'COMPLETED']) {
     const source = fixture(target, state)
     const before = JSON.stringify(source)
@@ -63,9 +63,8 @@ assert.ok(projectTurnConversationItems(retiredTree).every(item => item.readOnly)
 const scope = fixture('PROCUREMENT_SOURCING', 'RUNNING')
 scope.detail.preview.payload = { validatedInput: { scopeSnapshotId: 'old-scope' } }
 assert.ok(projectTurnConversationItems(scope).every(item => item.readOnly))
-for (const target of ['GENERAL_AGENT', 'PROCUREMENT_SOURCING']) {
+for (const target of ['PROCUREMENT_SOURCING']) {
   const source = fixture(target, 'WAITING_APPROVAL')
-  if (target === 'GENERAL_AGENT') source.approval = null
   const items = projectTurnConversationItems(source)
   assert.ok(items.every(item => !item.readOnly))
   assert.ok((await render(items.find(item => item.type === 'ROUTE_PREVIEW'))).includes('确认执行范围'))
@@ -78,7 +77,7 @@ for (const type of ['ERROR', 'AGENT_STATUS']) {
 }
 assert.equal(policy.isRetiredRun({ scenarioId: 'ordercare-floworder-v1' }), true)
 assert.equal(policy.isRetiredRun({ metadata: { executionTarget: 'INCIDENT_INVESTIGATION' } }), true)
-assert.equal(policy.isRetiredRun({ scenarioId: 'general-agent-v1' }), false)
+assert.equal(policy.isRetiredRun({ scenarioId: 'general-agent-v1' }), true)
 assert.equal(policy.isRetiredTool('mcp.procurement.rfq.create'), false)
 
 const route = await readFile(new URL('../src/router.ts', import.meta.url), 'utf8')
@@ -93,11 +92,16 @@ assert.ok(retiredPage.includes('to="/runs"'))
 const trace = await readFile(new URL('../src/types/trace.ts', import.meta.url), 'utf8')
 assert.ok(!trace.includes('incident'))
 const runtime = await readFile(new URL('../src/views/RuntimeWorkbench.vue', import.meta.url), 'utf8')
-assert.ok(runtime.includes("ref('general-agent-v1')"))
+assert.ok(runtime.includes("ref('procurement-sourcing-rfq-v1')"))
 assert.ok(!runtime.includes('floworder_recovery'))
 assert.ok(runtime.includes('v-if="!retiredHistory" class="composer-area"'))
 const approvalCenter = await readFile(new URL('../src/views/ApprovalCenterView.vue', import.meta.url), 'utf8')
 assert.ok(approvalCenter.includes('v-if="isRetiredTool(selected.toolCallRequest?.toolName)"'))
 assert.ok(approvalCenter.includes('v-else-if="selected.status === \'REQUESTED\'"'))
 assert.ok(approvalCenter.includes('!isRetiredTool(item.toolCallRequest?.toolName)'))
-console.log('retired history smoke passed: 12 historical states, RETIRED tree, scope, RFQ/General and rendered action boundaries')
+console.log('retired history smoke passed: 16 historical states, RETIRED tree, scope, RFQ/Generic retirement and rendered action boundaries')
+
+assert.equal(policy.isRetiredRun({ scenarioId: 'main-agent' }), true)
+assert.equal(policy.isRetiredRun({}), true)
+assert.equal(policy.isRetiredRun({ scenarioId: 'procurement-sourcing-rfq-v1' }), false)
+assert.ok(!runtime.includes('general-agent-v1'))

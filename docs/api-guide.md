@@ -168,7 +168,7 @@ POST /api/agent/runs/{runId}/resume/events
 Accept: text/event-stream
 ```
 
-Resume 参数必须是 `runId`，不能传 `runId:leaseOwnerUuid`。本阶段保留历史 Generic/空 Profile 的既有恢复策略，不转换为采购 Profile。恢复不会创建新 Run；Context/Model 阶段从完整消息边界重新决策，`EXECUTING_TOOL` 阶段先查询或对账原 ToolExecution。
+Resume 参数必须是 `runId`，不能传 `runId:leaseOwnerUuid`。公开入口拒绝历史 Generic、main-agent 和空 Profile 的恢复，不转换为采购 Profile。恢复不会创建新 Run；Context/Model 阶段从完整消息边界重新决策，`EXECUTING_TOOL` 阶段先查询或对账原 ToolExecution。
 
 ## 3. Approval
 
@@ -246,3 +246,7 @@ Trace/Eval/Presentation 是权威 Runtime/Work 事实的投影，不应维护另
 - 不允许客户端通过 metadata 提交可信身份、角色、ExecutionTarget 或内部 ID 来源；
 - 不允许把 Controller 当作模型 Capability；
 - 不允许把 HTTP 超时解释为副作用未执行。
+
+### 历史执行边界
+
+公开 JSON/SSE resume 和工作台继续执行仅允许已保存的采购 Profile。旧 Generic、main-agent、空 Profile checkpoint 返回 TARGET_RETIRED，不能转换为采购 Run。Run、Timeline、Trace 历史查询保留。直接恢复还需通过可信身份和会话所有权校验。内部 Runtime 的默认 Profile 和显式 Profile 执行能力不变。

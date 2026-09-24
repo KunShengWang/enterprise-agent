@@ -74,7 +74,7 @@ class RoutingCoordinatorCandidatePolicyTests {
         });
 
         RoutingCoordinator coordinator = new RoutingCoordinator(
-                routingStore, workbenchStore, modelRouter,
+                routingStore, workbenchStore,
                 new RoutePolicyValidator(registry, properties, new ObjectMapper()),
                 contextResolver, registry, properties, (ignoredAttempt, ignoredResult) -> { });
 

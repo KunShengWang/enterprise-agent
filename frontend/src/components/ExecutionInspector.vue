@@ -106,7 +106,7 @@ function compactId(value?: string) {
   return value.length > 24 ? `${value.slice(0, 10)}…${value.slice(-8)}` : value
 }
 function roleLabel(role: string) {
-  const labels: Record<string, string> = { GENERAL_AGENT: 'General Agent', PROCUREMENT_SOURCING: 'Procurement Sourcing Agent' }
+  const labels: Record<string, string> = { GENERAL_AGENT: 'Generic（只读历史）', PROCUREMENT_SOURCING: 'Procurement Sourcing Agent' }
   return labels[role] ?? role.match(/^SPECIALIST:([^:]+)/)?.[1] ?? role
 }
 function number(value?: number) { return new Intl.NumberFormat('zh-CN').format(value ?? 0) }

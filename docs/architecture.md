@@ -1,6 +1,6 @@
 # 当前架构：采购 Agent
 
-当前执行目标仅为 PROCUREMENT_SOURCING 和受限 GENERAL_AGENT；场景 Profile 分别为 procurement-sourcing-rfq-v1、general-agent-v1。
+当前产品为企业级智能采购 Agent 系统。唯一可执行业务目标为 PROCUREMENT_SOURCING，Profile 为 procurement-sourcing-rfq-v1。GENERAL_AGENT 仅保留历史标识；其独立 Profile、Adapter 与预算降级已移除。公共 Runtime、RAG、MCP、Memory、HITL、采购专家和内部评测保留。工作台不再依赖 LLM 目标 Router；Router 仅供内部路由评测使用。
 
 ## 执行链
 
@@ -22,7 +22,7 @@ RFQ Preparer 从本 Run 的成功 Finalize 和当前 Case 重建 exact request�
 - Memory：跨任务软偏好/稳定指令；报价、预算、数量和选择属于 Case/Provider，不作为长期权威事实。
 - RAG：本地语料加载、切分、Embedding、pgvector、检索与引用；知识内容是不可信数据，不能授予工具权限。
 - Trace/Eval/AgentOps：记录执行证据；冻结 Benchmark 与 Live Eval 的开关和结果分开管理。
-- WorkItem/Router/General/Procurement 预算：沿用公共账本和限额保护。
+- WorkItem/Router/Procurement 预算：沿用公共账本和限额保护。
 
 ## 投影与历史
 

@@ -86,7 +86,7 @@ assert.ok(workbench.includes('serializeSubmission'))
 assert.ok(workbench.includes('launchPending.value = true'))
 assert.ok(workbench.includes('terminateWhenRunnable'))
 assert.ok(workbench.includes("workbenchApi.command(workItemId, 'abandon', work.version)"))
-assert.ok(workbench.includes("['GENERAL_AGENT', 'PROCUREMENT_SOURCING'].includes(work.activeExecutionTarget)"))
+assert.ok(workbench.includes("work.activeExecutionTarget === 'PROCUREMENT_SOURCING'"))
 assert.ok(workbench.includes("Boolean(work.dispatchRequestId) && work.executionState === 'STARTING'"))
 
 console.log('workbench P6 visual-token and accessibility smoke passed')

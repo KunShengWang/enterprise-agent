@@ -70,7 +70,7 @@ class ProcurementOnlyWorkbenchRoutingTests {
         var factory = new ProcurementSourcingExecutionProfileFactory();
         var executor = new RuntimeAgentExecutor(runtime, new AgentScenarioProfileResolver(List.of(factory)));
         var procurement = new ProcurementSourcingExecutionAdapter(executor, mock(AgentRunStore.class), mock(ProcurementCaseStore.class));
-        var general = mock(GeneralAgentExecutionAdapter.class);
+        var general = mock(ExecutionAdapter.class);
         when(general.targetId()).thenReturn(ExecutionTargetId.GENERAL_AGENT);
         var adapters = new ExecutionAdapterRegistry(List.of(procurement, general));
         adapters.require((String) decision.decision().get("targetId")).dispatch(new DispatchRequest(
@@ -144,9 +144,7 @@ class ProcurementOnlyWorkbenchRoutingTests {
     @Test
     void disabledProcurementNeverFallsBackToGeneralOrCreatesCase() {
         AgentWorkItem work = setup("你好");
-        doReturn(List.of(registry.enabledTargets(principal).stream()
-                .filter(t -> t.targetId() == ExecutionTargetId.GENERAL_AGENT).findFirst().orElseThrow()))
-                .when(registry).enabledTargets(principal);
+        doReturn(List.of()).when(registry).enabledTargets(principal);
         assertTrue(coordinator().route(principal, work.workItemId(), work.routingRequestId()).isEmpty());
         verify(routing, never()).completeRouting(any(), any(), any(), any());
         verifyNoInteractions(router, cases, postProcessor);
@@ -163,7 +161,7 @@ class ProcurementOnlyWorkbenchRoutingTests {
     }
 
     private RoutingCoordinator coordinator() {
-        return new RoutingCoordinator(routing, workbench, router,
+        return new RoutingCoordinator(routing, workbench,
                 new RoutePolicyValidator(registry, properties, new ObjectMapper(), cases),
                 context, registry, properties, (attempt, result) -> {}, postProcessor, budgets,
                 new ExecutionTargetCandidateResolver());

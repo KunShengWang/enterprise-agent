@@ -8,19 +8,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class WorkbenchBudgetProperties {
 
     private boolean enabled = true;
-    private boolean allowLowRiskDegradedMode = true;
     private final Limit workItem = new Limit(48, 220_000, 24, 900_000, 48);
     private final Limit routerAttempt = new Limit(1, 12_000, 0, 45_000, 2);
-    private final Limit general = new Limit(12, 48_000, 10, 240_000, 12);
     private final Limit procurementSourcing = new Limit(10, 48_000, 8, 240_000, 12);
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
-    public boolean isAllowLowRiskDegradedMode() { return allowLowRiskDegradedMode; }
-    public void setAllowLowRiskDegradedMode(boolean value) { allowLowRiskDegradedMode = value; }
     public Limit getWorkItem() { return workItem; }
     public Limit getRouterAttempt() { return routerAttempt; }
-    public Limit getGeneral() { return general; }
     public Limit getProcurementSourcing() { return procurementSourcing; }
 
     public BudgetLimit workItemLimit() { return workItem.toLimit(); }
@@ -28,8 +23,7 @@ public class WorkbenchBudgetProperties {
 
     public BudgetLimit targetLimit(ExecutionTargetId targetId) {
         return switch (targetId) {
-            case GENERAL_AGENT -> general.toLimit();
-            case ORDERCARE_CASE, INCIDENT_INVESTIGATION, INCIDENT_RECOVERY_PLAN -> throw new com.agent.platform.common.RetiredBusinessException();
+            case GENERAL_AGENT, ORDERCARE_CASE, INCIDENT_INVESTIGATION, INCIDENT_RECOVERY_PLAN -> throw new com.agent.platform.common.RetiredBusinessException();
             case PROCUREMENT_SOURCING -> procurementSourcing.toLimit();
         };
     }
@@ -37,7 +31,7 @@ public class WorkbenchBudgetProperties {
     public void validateHierarchy() {
         BudgetLimit root = workItemLimit();
         requireFits(routerAttemptLimit(), root, "routerAttempt");
-        for (ExecutionTargetId target : new ExecutionTargetId[]{ExecutionTargetId.GENERAL_AGENT, ExecutionTargetId.PROCUREMENT_SOURCING}) {
+        for (ExecutionTargetId target : new ExecutionTargetId[]{ExecutionTargetId.PROCUREMENT_SOURCING}) {
             requireFits(targetLimit(target), root, target.name());
         }
     }

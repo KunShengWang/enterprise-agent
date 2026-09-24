@@ -28,7 +28,7 @@ function newConversationId() {
 
 const conversationId = ref(newConversationId())
 const userId = ref('student-001')
-const scenarioId = ref('general-agent-v1')
+const scenarioId = ref('procurement-sourcing-rfq-v1')
 const question = ref('说明工具调用与人工审批的区别。')
 const metadataText = ref('{}')
 const showAdvanced = ref(false)
@@ -46,9 +46,12 @@ const followConversation = ref(true)
 const ambiguousPausedInput = ref('')
 let clock: number | undefined
 
-const examples = [{ label: '受限通用问答', value: '说明工具调用与人工审批的区别。' }]
-const retiredHistory = computed(() => isRetiredRun(stream.runRecord.value?.request,
-  stream.runRecord.value?.pendingToolCall?.toolName))
+const examples = [{ label: '采购能力咨询', value: '你可以如何协助采购寻源和 RFQ？' }]
+const retiredHistory = computed(() => {
+  const run = stream.runRecord.value
+  return Boolean(run && (run.executionProfile?.name !== 'procurement-sourcing-rfq-v1'
+    || isRetiredRun(run.request, run.pendingToolCall?.toolName)))
+})
 
 const currentState = computed(() => {
   if (stream.running.value) return 'RUNNING'
@@ -312,7 +315,7 @@ async function openPersistedRun(targetRunId: string) {
     userId.value = run.userId
     question.value = run.state === 'PAUSED' ? '' : run.request?.question ?? ''
     metadataText.value = JSON.stringify(run.request?.metadata ?? {}, null, 2)
-    scenarioId.value = run.request?.scenarioId || 'general-agent-v1'
+    scenarioId.value = 'procurement-sourcing-rfq-v1'
     startedAt.value = 0
     await refreshConversationMessages()
     await scrollConversationToBottom(true)
@@ -385,7 +388,7 @@ onBeforeUnmount(() => {
         <div class="conversation-title">
           <span class="assistant-avatar">✦</span>
           <div>
-            <strong>General Agent · 受限调试</strong>
+            <strong>采购 Agent · 运行调试</strong>
             <small>采购任务请使用统一工作台；此处保留通用 Runtime 调试和历史查看。</small>
           </div>
         </div>
@@ -476,7 +479,6 @@ onBeforeUnmount(() => {
           <label>
             <span>scenarioId（服务端白名单）</span>
             <select v-model="scenarioId" :disabled="stream.running.value">
-              <option value="general-agent-v1">General（受限通用）</option>
             </select>
           </label>
           <label class="metadata-field">

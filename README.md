@@ -1,6 +1,6 @@
 # Enterprise Agent · 采购 Agent
 
-当前唯一核心业务场景是企业采购寻源、供应商比较和受控 RFQ。GENERAL_AGENT 保留为受限通用问答与调试能力。当前源码与测试优先于历史设计报告。
+当前唯一核心业务场景是企业采购寻源、供应商比较和受控 RFQ。Procurement Agent 是唯一对外业务 Agent；Generic 历史记录仅供查看。公共 Runtime 保留内部 Profile 扩展能力。当前源码与测试优先于历史设计报告。
 
 ## 已有能力与边界
 

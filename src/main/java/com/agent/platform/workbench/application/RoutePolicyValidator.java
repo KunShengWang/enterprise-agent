@@ -116,10 +116,6 @@ public class RoutePolicyValidator {
         List<String> reasons = new ArrayList<>();
         RouteDisposition disposition;
         switch (targetId) {
-            case GENERAL_AGENT -> {
-                disposition = RouteDisposition.AUTO_DISPATCH;
-                reasons.add("registered low-risk general target");
-            }
             case PROCUREMENT_SOURCING -> {
                 disposition = RouteDisposition.AUTO_DISPATCH;
                 reasons.add("采购寻源和推荐为只读分析；RFQ 创建必须经人工审批，不支持创建采购订单");

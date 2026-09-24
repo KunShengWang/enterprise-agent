@@ -241,7 +241,7 @@ class JdbcRoutingStorePostgresIT {
             return router.route(request);
         };
         RoutingCoordinator coordinator = new RoutingCoordinator(
-                routing, workbench, counted,
+                routing, workbench,
                 new RoutePolicyValidator(registry, properties, objectMapper),
                 new RouteContextResolver(workbench), registry, properties, injector);
         LlmService unused = new LlmService() {

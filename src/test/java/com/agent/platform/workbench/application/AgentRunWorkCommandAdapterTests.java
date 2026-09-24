@@ -33,7 +33,7 @@ class AgentRunWorkCommandAdapterTests {
         when(runtime.resume("run-1")).thenReturn(runtimeResult);
 
         AgentRunCommandResult result = new AgentRunWorkCommandAdapter(runtime, runs).execute(
-                principal(), work("GENERAL_AGENT", "run-1"), WorkCommandType.RESUME_ACTIVE_WORK);
+                principal(), work("PROCUREMENT_SOURCING", "run-1"), WorkCommandType.RESUME_ACTIVE_WORK);
 
         assertTrue(result.accepted());
         assertTrue(result.underlyingExecutionChanged());
@@ -64,7 +64,7 @@ class AgentRunWorkCommandAdapterTests {
         when(runs.findByDispatchRequestId("dispatch-1")).thenReturn(Optional.of(running));
         when(runs.find("run-early")).thenReturn(Optional.of(running));
         when(runtime.cancel("run-early")).thenReturn(true);
-        AgentWorkItem work = work("GENERAL_AGENT", "");
+        AgentWorkItem work = work("PROCUREMENT_SOURCING", "");
         when(work.dispatchRequestId()).thenReturn("dispatch-1");
 
         AgentRunCommandResult result = new AgentRunWorkCommandAdapter(runtime, runs).execute(
@@ -75,8 +75,25 @@ class AgentRunWorkCommandAdapterTests {
         verify(runtime).cancel("run-early");
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"general-agent-v1", "main-agent", ""})
+    void historicalCheckpointCannotResumeEvenUnderProcurementWorkItem(String profileName) {
+        var runtime = mock(AgentRuntime.class);
+        var runs = mock(AgentRunStore.class);
+        var record = run("legacy", AgentRunState.PAUSED, 1, 0);
+        var limits = new com.agent.platform.procurement.config.ProcurementSourcingExecutionProfileFactory().createProfile().limits();
+        when(record.executionProfile()).thenReturn(profileName.isEmpty() ? null
+                : new com.agent.platform.runtime.AgentExecutionProfile(profileName, "legacy", Set.of(), limits, false));
+        when(runs.find("legacy")).thenReturn(Optional.of(record));
+        var result = new AgentRunWorkCommandAdapter(runtime, runs).execute(principal(),
+                work("PROCUREMENT_SOURCING", "legacy"), WorkCommandType.RESUME_ACTIVE_WORK);
+        assertEquals("TARGET_RETIRED", result.code());
+        org.mockito.Mockito.verifyNoInteractions(runtime);
+    }
+
     private AgentRunRecord run(String runId, AgentRunState state, long version, int resumeCount) {
         AgentRunRecord run = mock(AgentRunRecord.class);
+        when(run.executionProfile()).thenReturn(new com.agent.platform.procurement.config.ProcurementSourcingExecutionProfileFactory().createProfile());
         when(run.runId()).thenReturn(runId);
         when(run.conversationId()).thenReturn("conversation-1");
         when(run.userId()).thenReturn("alice");

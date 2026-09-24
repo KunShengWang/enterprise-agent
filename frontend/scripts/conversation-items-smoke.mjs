@@ -14,14 +14,14 @@ const { projectConversationItems } = await import(`data:text/javascript;base64,$
 
 const work = {
   workItemId: 'work-1', conversationId: 'conversation-1', sourceInputId: 'input-1',
-  originalGoal: '解释 Spring 三级缓存', activeExecutionTarget: 'GENERAL_AGENT', activeRunId: 'run-1',
+  originalGoal: '解释 Spring 三级缓存', activeExecutionTarget: 'PROCUREMENT_SOURCING', activeRunId: 'run-1',
   activeIncidentId: '', activeRecoveryPlanId: '', controlState: 'DISPATCHED', executionState: 'COMPLETED',
   outcome: 'CLOSED', routingFailureCode: '', version: 1,
   createdAt: '2026-07-20T00:00:00Z', updatedAt: '2026-07-20T00:00:06Z',
 }
 const presentations = [
-  { presentationId: 'p-route', workItemId: 'work-1', sequence: 10, schemaVersion: 1, kind: 'ROUTE_SUMMARY', status: 'COMPLETED', title: '已理解任务', summary: '这是一个知识解释任务。', steps: [], detail: { targetLabel: 'General Agent', referenceType: '', referenceId: '', attributes: {} }, sourceType: 'WORK_ITEM', sourceId: 'work-1', sourceEventId: 'route', occurredAt: '2026-07-20T00:00:01Z', visibility: 'PUBLIC' },
-  { presentationId: 'p-process', workItemId: 'work-1', sequence: 11, schemaVersion: 1, kind: 'STANDARD_PROCESS', status: 'COMPLETED', title: '标准流程', summary: '这是产品标准流程。', steps: ['检索资料', '整理回答'], detail: { targetLabel: 'General Agent', referenceType: '', referenceId: '', attributes: {} }, sourceType: 'WORK_ITEM', sourceId: 'work-1', sourceEventId: 'route', occurredAt: '2026-07-20T00:00:01Z', visibility: 'PUBLIC' },
+  { presentationId: 'p-route', workItemId: 'work-1', sequence: 10, schemaVersion: 1, kind: 'ROUTE_SUMMARY', status: 'COMPLETED', title: '已理解任务', summary: '这是一个知识解释任务。', steps: [], detail: { targetLabel: '采购 Agent', referenceType: '', referenceId: '', attributes: {} }, sourceType: 'WORK_ITEM', sourceId: 'work-1', sourceEventId: 'route', occurredAt: '2026-07-20T00:00:01Z', visibility: 'PUBLIC' },
+  { presentationId: 'p-process', workItemId: 'work-1', sequence: 11, schemaVersion: 1, kind: 'STANDARD_PROCESS', status: 'COMPLETED', title: '标准流程', summary: '这是产品标准流程。', steps: ['检索资料', '整理回答'], detail: { targetLabel: '采购 Agent', referenceType: '', referenceId: '', attributes: {} }, sourceType: 'WORK_ITEM', sourceId: 'work-1', sourceEventId: 'route', occurredAt: '2026-07-20T00:00:01Z', visibility: 'PUBLIC' },
   { presentationId: 'p-tool', workItemId: 'work-1', sequence: 20, schemaVersion: 1, kind: 'TOOL_ACTIVITY', status: 'COMPLETED', title: '知识检索', summary: '工具调用已完成，返回 4 条结果。', steps: [], detail: { targetLabel: '', referenceType: 'TOOL_CALL', referenceId: 'call-1', attributes: {}, tool: { toolName: 'knowledge_search', displayName: '知识检索', actionSummary: '正在检索相关知识', publicArguments: { query: 'Spring 三级缓存' }, resultSummary: '工具调用已完成，返回 4 条结果。', resultCount: 4, durationMs: 386, attemptLabel: 'Attempt 1' } }, sourceType: 'AGENT_RUN', sourceId: 'run-1', sourceEventId: 'tool', occurredAt: '2026-07-20T00:00:05Z', visibility: 'PUBLIC' },
 ]
 const items = projectConversationItems({

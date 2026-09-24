@@ -85,7 +85,7 @@ assert.deepEqual(presentationStream.publicPresentations.value.map(item => item.w
 const { useWorkbenchConversation } = await loadModule('../src/composables/useWorkbenchConversation.ts')
 const work = {
   workItemId: 'work-1', conversationId: 'conversation-1', sourceInputId: 'input-1', originalGoal: 'goal',
-  activeExecutionTarget: 'GENERAL_AGENT', activeRunId: 'run-1', activeIncidentId: '', activeRecoveryPlanId: '',
+  activeExecutionTarget: 'PROCUREMENT_SOURCING', activeRunId: 'run-1', activeIncidentId: '', activeRecoveryPlanId: '',
   controlState: 'DISPATCHED', executionState: 'RUNNING', outcome: 'UNDETERMINED', routingFailureCode: '',
   version: 1, createdAt: now, updatedAt: now,
 }

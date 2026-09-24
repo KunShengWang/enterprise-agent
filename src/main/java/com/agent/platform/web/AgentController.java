@@ -175,7 +175,11 @@ public class AgentController {
      */
     @PostMapping("/runs/{runId}/resume")
     public Mono<ApiResponse<AgentResponse>> resumeRun(@PathVariable String runId) {
-        return Mono.fromSupplier(() -> ApiResponse.success(agentExecutor.resume(runId)))
+        var permission = publicRuns.resumePermission();
+        return Mono.fromSupplier(() -> {
+                    permission.accept(agentRunStore.find(runId).orElseThrow(() -> new IllegalArgumentException("agent run not found")));
+                    return ApiResponse.success(agentExecutor.resume(runId));
+                })
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -184,7 +188,11 @@ public class AgentController {
      */
     @PostMapping(value = "/runs/{runId}/resume/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<AgentStreamEvent> resumeRunEvents(@PathVariable String runId) {
-        return streamingAgentExecutor.resume(runId);
+        var permission = publicRuns.resumePermission();
+        return Mono.fromRunnable(() -> permission.accept(agentRunStore.find(runId)
+                        .orElseThrow(() -> new IllegalArgumentException("agent run not found"))))
+                .subscribeOn(Schedulers.boundedElastic())
+                .thenMany(Flux.defer(() -> streamingAgentExecutor.resume(runId)));
     }
 
     @PostMapping("/runs/{runId}/cancel")
