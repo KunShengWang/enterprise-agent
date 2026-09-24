@@ -567,3 +567,32 @@ requiredRecordsPerCase 预先规定所有实验组共同的 Case 范围及每 Ca
 测试数据均标 SYNTHETIC_TEST_ONLY，复用已有 HANDCRAFTED Artifact 工厂；不作为真实模型能力或运行独立性的证据。历史 Artifact/v3 文件只读，旧五个磁盘入口继续独立兼容验收。
 
 最终定向审计：完整 record 相等检查覆盖 Claim、证据诊断、承接与阻断项，不只比较最终状态。反例包括同为 FAIL 但原始证据变化、两组总数相等但 Case 分布不同、跨路径复制同一 Artifact/v3，以及合法记录已满额但另有坏记录；均不能获得整体比较资格。身份可信且重新评分一致的独立评分 ERROR 保留在 assessmentExecutionStatus 中，可与 FAIL/NEEDS_REVIEW 同时存在，不被当作基础身份失败。
+
+### Phase 7B-2C Step 2：分层指标与描述性差异
+
+`ProcurementComparisonAnalyzer.analyze(manifestPath)` 返回内存契约 `ProcurementComparisonMetrics.Result`，版本为 `procurement-comparison-metrics-v1`。不接受外部拼装的评分对象；先调用 Step 1 `validate`，整体 NOT_COMPARABLE 时返回 BLOCKED、全部输入诊断和空指标集合，不能挑选剩余合法记录继续比较。Malformed Manifest 沿用正式入口的读取异常。COMPARABLE 后通过正式 v3 读取器取得完整记录，并核对读取前后的输入快照及绑定；变化时阻断。该快照检查不是任意并发攻击或来源真实性证明。
+
+结果保留规范化 Manifest 指纹（组和记录列表排序后计算）、Step 1 声明身份/范围/资格、每组每 Case 的预期及有效记录数、全量 v3 `recordEvidence`、指标和差异。Manifest 指纹标识规范化声明，不是原文件字节哈希或真实性签名。每个桶带具体 recordId、Case、Claim/检查/元素/片段引用、原因及证据路径或相关引用；用 recordEvidence 可继续定位 Run、原文 UTF-16 区间、证据诊断、合法承接和阻断项，不复制事实判定逻辑。
+
+| 指标 | 分母与状态 |
+| --- | --- |
+| COMPLETE_ANSWER | 当前组/Case 全部可信记录；PASS、FAIL、NEEDS_REVIEW、ERROR 分别计数，PASS 比例只以 PASS 为分子 |
+| SCORING_EXECUTION | 同一批可信记录；COMPLETE/ERROR，与回答状态分开 |
+| SCALAR_FACT / RELATION_DIRECTION / RELATION_DIFFERENCE | 对应实际评分检查，PASS/FAIL/SKIP/ERROR 全部进入分母；N/A 和 v3 证明已承接的重复未决显式列入 exclusions |
+| SCALAR_EVIDENCE / RELATION_DIRECTION_EVIDENCE / RELATION_DIFFERENCE_EVIDENCE | 对应证据检查，PASS=支持、FAIL=检查不支持、SKIP=不足或未决、ERROR=执行异常；详细原因及路径原样保留 |
+| SCALAR_VERIFIED / RELATION_VERIFIED | 实际 Claim 的事实与证据联合满足情况，FAIL > ERROR > SKIP > PASS；这是联合诊断，不是新增事实判定，证据 FAIL 不代表事实 FAIL；组件仍独立展示 |
+| REQUIRED_ELEMENTS | 当前 Case 冻结 Policy 的全部适用元素；PRESENT/MISSING/UNRESOLVED，评分结果缺失则 UNAVAILABLE，不虚构 MISSING；四 Case 共 15 项 |
+| EFFECTIVE_COVERAGE | 原始 Coverage 对应的实质片段；PARSED_SCALAR/PARSED_RELATION/UNKNOWN_CONTENT/UNRESOLVED_BUSINESS；解析比例不是事实或证据通过率 |
+| ASSESSMENT_COVERAGE | 实质片段是否仍有阻断；RESOLVED/BLOCKED，保留原始阻断引用 |
+
+NON_FACTUAL 片段和 v3 明确标记的非事实 Claim 按已有适用规则排除，记录原因；不会依据 SKIP 原因文本自行豁免。无检查时保留 NO_CHECKS_AVAILABLE；不推断未提取 Claim 的数量或把它视为正确。旧评分器为空回答输出的未决诊断仍按原状态统计。当前冻结 Policy 无 N/A 元素，本版没有跨 Policy 兼容映射。零分母的比例为 NOT_COMPUTABLE/value=null，不能用 0 或 1 替代。
+
+每个指标分别输出 micro 和 macro：micro 合并同单位的底层贡献；macro 先算各 Case 成功比例，再等权平均，任何声明 Case 不可计算时整个 macro 为 NOT_COMPUTABLE，并列出该 Case，不删除它后继续平均。比例保留 12 位小数，HALF_EVEN；macro 使用上述 Case 比例。两者均无跨维度综合分数。例：第一 Case 缺少 1/5 元素，其余 Case 完整，元素 micro=14/15，macro=(4/5+1+1+1)/4=0.95。
+
+差异按相同 Case、相同指标、相同状态分别给出右组减左组的数量及比例变化，并附两侧贡献来源。数量差为零仍保留元素/Claim 来源，可能存在不同元素缺失；这不是逐运行配对或因果归因，不按数组位置或 Run 排序配对。跨 Case 仅有明确标注的 micro/macro，不强行输出一个能力分数。保留 INDEPENDENCE_NOT_ATTESTED，不输出胜率、显著性、置信区间或独立样本量。
+
+当前 v3 的完整回答 ERROR 只由基础门禁失败产生，Step 1 会阻断该 Manifest，因此正式分布保留 ERROR 桶但当前有效集合中为零。可信的独立评分异常以 assessmentExecutionStatus=ERROR 参与描述统计，回答仍可能是 FAIL 或 NEEDS_REVIEW；不能为了构造四态混合测试而放宽资格或篡改 Sidecar。
+
+端到端测试从 HANDCRAFTED 合成 Artifact 生成正式 v3，再经 Manifest/Step 1 生成指标；金额、方向、差值、额外错误、证据缺失、未知保证和必答元素删除均改变相应维度。合成工具证据只用于验证统计实现，不证明真实模型能力。可选 `answer.v3.artifact` 测试只读保存的 scripted Runtime Artifact，预期仍 FAIL，具体缺失 delivery_advantage/budget_compliance；对照组合成 PASS 明确标记 SYNTHETIC，不能据此作模型排名。没有新增 Runtime 或 Live Eval 执行。
+
+本步不提供比较报告磁盘写入、最终报告读写契约、防覆盖或可视化；这些属于尚未实施的 Step 3。历史评分器、版本和文件契约不变。
