@@ -1,0 +1,14 @@
+[
+  {
+    "id": "V2-ALG",
+    "name": "Algorithms"
+  },
+  {
+    "id": "V2-SIM",
+    "name": "Simulation"
+  },
+  {
+    "id": "V2-ENG",
+    "name": "Engineering"
+  }
+]

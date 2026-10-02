@@ -1,0 +1,26 @@
+[
+  {
+    "id": "V2-BUD-001",
+    "department": "V2-ALG",
+    "allocated": 600000,
+    "committed": 180000,
+    "currency": "CNY",
+    "fiscal_year": "2026"
+  },
+  {
+    "id": "V2-BUD-002",
+    "department": "V2-SIM",
+    "allocated": 450000,
+    "committed": 210000,
+    "currency": "CNY",
+    "fiscal_year": "2026"
+  },
+  {
+    "id": "V2-BUD-003",
+    "department": "V2-ENG",
+    "allocated": 320000,
+    "committed": 80000,
+    "currency": "CNY",
+    "fiscal_year": "2026"
+  }
+]

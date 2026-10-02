@@ -1,0 +1,22 @@
+# Explicit V2 demo backend. No availability-based synthetic fallback.
+enterprise-agent:
+  # ERP Search includes source versions and performance; retain complete Evidence references.
+  max-tool-result-chars-for-model: 24000
+  procurement:
+    backend: erpnext
+    provider: mcp
+    mcp-tool-prefix: mcp.erpnext.
+    erpnext:
+      enabled: true
+    scenario-dir: __legacy_scenario_unavailable_in_v2__
+    scenario-file: ""
+  mcp:
+    enabled: true
+    servers:
+      - enabled: true
+        server-name: erpnext
+        tool-name-prefix: mcp.erpnext.
+        protocol-version: "2025-11-25"
+        command: ${ERPNEXT_MCP_COMMAND:pwsh}
+        args: ["-NoProfile", "-File", "tools/erpnext/mcp-server.ps1"]
+        working-directory: ${ERPNEXT_WORKSPACE:}

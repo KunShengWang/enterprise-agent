@@ -1,0 +1,50 @@
+[
+  {
+    "id": "V2-SUP-001",
+    "supplier": "V2-SUP-001",
+    "transaction_count": 6,
+    "on_time_rate": 0.98,
+    "quality_score": 96,
+    "observation_date": "2026-09-01"
+  },
+  {
+    "id": "V2-SUP-002",
+    "supplier": "V2-SUP-002",
+    "transaction_count": 5,
+    "on_time_rate": 0.65,
+    "quality_score": 97,
+    "observation_date": "2026-09-01"
+  },
+  {
+    "id": "V2-SUP-003",
+    "supplier": "V2-SUP-003",
+    "transaction_count": 4,
+    "on_time_rate": 0.96,
+    "quality_score": 95,
+    "observation_date": "2026-09-01"
+  },
+  {
+    "id": "V2-SUP-004",
+    "supplier": "V2-SUP-004",
+    "transaction_count": 3,
+    "on_time_rate": 0.72,
+    "quality_score": 82,
+    "observation_date": "2026-09-01"
+  },
+  {
+    "id": "V2-SUP-005",
+    "supplier": "V2-SUP-005",
+    "transaction_count": 4,
+    "on_time_rate": 0.88,
+    "quality_score": 90,
+    "observation_date": "2026-09-01"
+  },
+  {
+    "id": "V2-SUP-006",
+    "supplier": "V2-SUP-006",
+    "transaction_count": 2,
+    "on_time_rate": 0.55,
+    "quality_score": 76,
+    "observation_date": "2026-09-01"
+  }
+]

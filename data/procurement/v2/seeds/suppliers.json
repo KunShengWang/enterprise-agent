@@ -1,0 +1,38 @@
+[
+  {
+    "id": "V2-SUP-001",
+    "name": "Nebula Forge Fictional",
+    "approved": true,
+    "capacity": "HIGH"
+  },
+  {
+    "id": "V2-SUP-002",
+    "name": "Cobalt Finch Fictional",
+    "approved": true,
+    "capacity": "MEDIUM"
+  },
+  {
+    "id": "V2-SUP-003",
+    "name": "Amber Circuit Fictional",
+    "approved": true,
+    "capacity": "HIGH"
+  },
+  {
+    "id": "V2-SUP-004",
+    "name": "Silver Moss Fictional",
+    "approved": true,
+    "capacity": "LOW"
+  },
+  {
+    "id": "V2-SUP-005",
+    "name": "Violet Harbor Fictional",
+    "approved": true,
+    "capacity": "MEDIUM"
+  },
+  {
+    "id": "V2-SUP-006",
+    "name": "Copper Kite Fictional",
+    "approved": false,
+    "capacity": "LOW"
+  }
+]

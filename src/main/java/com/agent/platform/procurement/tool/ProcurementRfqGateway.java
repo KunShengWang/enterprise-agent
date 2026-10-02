@@ -9,6 +9,11 @@ import java.util.Optional;
  */
 public interface ProcurementRfqGateway {
 
+    /** Definitive pre-write refusal. Must not be reconciled into success from an older receipt. */
+    final class RejectedRequestException extends RuntimeException {
+        public RejectedRequestException() { super("RFQ authorization rejected"); }
+    }
+
     Receipt create(CreateRequest request);
 
     Optional<Receipt> findByIdempotencyKey(String idempotencyKey);

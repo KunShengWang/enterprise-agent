@@ -1,0 +1,44 @@
+[
+  {
+    "id": "V2-REQ-001",
+    "department": "V2-ALG",
+    "item": "V2-WS-001",
+    "quantity": 20,
+    "required_by": "2026-12-15"
+  },
+  {
+    "id": "V2-REQ-002",
+    "department": "V2-SIM",
+    "item": "V2-WS-002",
+    "quantity": 6,
+    "required_by": "2026-12-15"
+  },
+  {
+    "id": "V2-REQ-003",
+    "department": "V2-ENG",
+    "item": "V2-WS-003",
+    "quantity": 7,
+    "required_by": "2026-12-15"
+  },
+  {
+    "id": "V2-REQ-004",
+    "department": "V2-ALG",
+    "item": "V2-WS-001",
+    "quantity": 8,
+    "required_by": "2026-12-15"
+  },
+  {
+    "id": "V2-REQ-005",
+    "department": "V2-SIM",
+    "item": "V2-WS-002",
+    "quantity": 9,
+    "required_by": "2026-12-15"
+  },
+  {
+    "id": "V2-REQ-006",
+    "department": "V2-ENG",
+    "item": "V2-WS-003",
+    "quantity": 10,
+    "required_by": "2026-12-15"
+  }
+]

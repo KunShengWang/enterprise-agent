@@ -36,3 +36,7 @@ build/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+
+# Local ERPNext development credentials; never commit generated credentials.
+infra/erpnext/.env
+tools/erpnext/__pycache__/

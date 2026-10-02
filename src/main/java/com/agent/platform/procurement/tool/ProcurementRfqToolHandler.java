@@ -67,6 +67,9 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
             }
             return success(prepared, receipt);
         }
+        catch (ProcurementRfqGateway.RejectedRequestException exception) {
+            return failure(request, message(exception), "RFQ_REQUEST_REJECTED");
+        }
         catch (RuntimeException exception) {
             return reconcileAfterCreateFailure(prepared, exception);
         }

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "V2-WS-001",
+    "name": "AI Workstation 01",
+    "gpu_memory_gb": 24,
+    "warranty": "36 months",
+    "uom": "Nos"
+  },
+  {
+    "id": "V2-WS-002",
+    "name": "AI Workstation 02",
+    "gpu_memory_gb": 32,
+    "warranty": "36 months",
+    "uom": "Nos"
+  },
+  {
+    "id": "V2-WS-003",
+    "name": "AI Workstation 03",
+    "gpu_memory_gb": 48,
+    "warranty": "36 months",
+    "uom": "Nos"
+  },
+  {
+    "id": "V2-WS-004",
+    "name": "AI Workstation 04",
+    "gpu_memory_gb": 16,
+    "warranty": "36 months",
+    "uom": "Nos"
+  },
+  {
+    "id": "V2-WS-005",
+    "name": "AI Workstation 05",
+    "gpu_memory_gb": 24,
+    "warranty": "36 months",
+    "uom": "Nos"
+  },
+  {
+    "id": "V2-WS-006",
+    "name": "AI Workstation 06",
+    "gpu_memory_gb": 32,
+    "warranty": "36 months",
+    "uom": "Nos"
+  },
+  {
+    "id": "V2-WS-007",
+    "name": "AI Workstation 07",
+    "gpu_memory_gb": 48,
+    "warranty": "36 months",
+    "uom": "Nos"
+  },
+  {
+    "id": "V2-WS-008",
+    "name": "AI Workstation 08",
+    "gpu_memory_gb": 64,
+    "warranty": "36 months",
+    "uom": "Nos"
+  },
+  {
+    "id": "V2-WS-009",
+    "name": "AI Workstation 09",
+    "gpu_memory_gb": 24,
+    "warranty": "36 months",
+    "uom": "Nos"
+  },
+  {
+    "id": "V2-WS-010",
+    "name": "AI Workstation 10",
+    "gpu_memory_gb": 32,
+    "warranty": "36 months",
+    "uom": "Nos"
+  }
+]

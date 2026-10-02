@@ -54,6 +54,7 @@ public class StdioMcpToolGateway implements McpToolGateway {
 
     private final AtomicBoolean shuttingDown = new AtomicBoolean();
 
+    @org.springframework.beans.factory.annotation.Autowired
     public StdioMcpToolGateway(McpProperties mcpProperties, ObjectMapper objectMapper) {
         this(mcpProperties, objectMapper, Duration.ofMillis(DEFAULT_REQUEST_TIMEOUT_MILLIS));
     }

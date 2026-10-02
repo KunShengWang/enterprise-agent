@@ -13,6 +13,8 @@ import java.util.concurrent.ConcurrentMap;
  * 它不是 SAP、ERPNext、真实供应商 API 或真实邮件服务，也不能证明跨进程 exactly-once。
  */
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+        prefix = "enterprise-agent.procurement.erpnext", name = "enabled", havingValue = "false", matchIfMissing = true)
 public class SimulatedProcurementRfqGateway implements ProcurementRfqGateway {
 
     private final ConcurrentMap<String, Receipt> receipts = new ConcurrentHashMap<>();

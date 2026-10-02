@@ -1,0 +1,164 @@
+[
+  {
+    "id": "V2-REL-01-01",
+    "supplier": "V2-SUP-001",
+    "item": "V2-WS-001",
+    "reference_price": 12800,
+    "currency": "CNY",
+    "lead_time_days": 12,
+    "capacity_units": 80
+  },
+  {
+    "id": "V2-REL-01-03",
+    "supplier": "V2-SUP-001",
+    "item": "V2-WS-003",
+    "reference_price": 13800,
+    "currency": "CNY",
+    "lead_time_days": 12,
+    "capacity_units": 80
+  },
+  {
+    "id": "V2-REL-01-06",
+    "supplier": "V2-SUP-001",
+    "item": "V2-WS-006",
+    "reference_price": 15300,
+    "currency": "CNY",
+    "lead_time_days": 12,
+    "capacity_units": 80
+  },
+  {
+    "id": "V2-REL-02-01",
+    "supplier": "V2-SUP-002",
+    "item": "V2-WS-001",
+    "reference_price": 10900,
+    "currency": "CNY",
+    "lead_time_days": 20,
+    "capacity_units": 35
+  },
+  {
+    "id": "V2-REL-02-04",
+    "supplier": "V2-SUP-002",
+    "item": "V2-WS-004",
+    "reference_price": 12400,
+    "currency": "CNY",
+    "lead_time_days": 20,
+    "capacity_units": 35
+  },
+  {
+    "id": "V2-REL-02-07",
+    "supplier": "V2-SUP-002",
+    "item": "V2-WS-007",
+    "reference_price": 13900,
+    "currency": "CNY",
+    "lead_time_days": 20,
+    "capacity_units": 35
+  },
+  {
+    "id": "V2-REL-03-01",
+    "supplier": "V2-SUP-003",
+    "item": "V2-WS-001",
+    "reference_price": 13700,
+    "currency": "CNY",
+    "lead_time_days": 10,
+    "capacity_units": 100
+  },
+  {
+    "id": "V2-REL-03-05",
+    "supplier": "V2-SUP-003",
+    "item": "V2-WS-005",
+    "reference_price": 15700,
+    "currency": "CNY",
+    "lead_time_days": 10,
+    "capacity_units": 100
+  },
+  {
+    "id": "V2-REL-03-08",
+    "supplier": "V2-SUP-003",
+    "item": "V2-WS-008",
+    "reference_price": 17200,
+    "currency": "CNY",
+    "lead_time_days": 10,
+    "capacity_units": 100
+  },
+  {
+    "id": "V2-REL-04-01",
+    "supplier": "V2-SUP-004",
+    "item": "V2-WS-001",
+    "reference_price": 11900,
+    "currency": "CNY",
+    "lead_time_days": 25,
+    "capacity_units": 12
+  },
+  {
+    "id": "V2-REL-04-06",
+    "supplier": "V2-SUP-004",
+    "item": "V2-WS-006",
+    "reference_price": 14400,
+    "currency": "CNY",
+    "lead_time_days": 25,
+    "capacity_units": 12
+  },
+  {
+    "id": "V2-REL-04-09",
+    "supplier": "V2-SUP-004",
+    "item": "V2-WS-009",
+    "reference_price": 15900,
+    "currency": "CNY",
+    "lead_time_days": 25,
+    "capacity_units": 12
+  },
+  {
+    "id": "V2-REL-05-01",
+    "supplier": "V2-SUP-005",
+    "item": "V2-WS-001",
+    "reference_price": 12500,
+    "currency": "CNY",
+    "lead_time_days": 16,
+    "capacity_units": 45
+  },
+  {
+    "id": "V2-REL-05-07",
+    "supplier": "V2-SUP-005",
+    "item": "V2-WS-007",
+    "reference_price": 15500,
+    "currency": "CNY",
+    "lead_time_days": 16,
+    "capacity_units": 45
+  },
+  {
+    "id": "V2-REL-05-10",
+    "supplier": "V2-SUP-005",
+    "item": "V2-WS-010",
+    "reference_price": 17000,
+    "currency": "CNY",
+    "lead_time_days": 16,
+    "capacity_units": 45
+  },
+  {
+    "id": "V2-REL-06-01",
+    "supplier": "V2-SUP-006",
+    "item": "V2-WS-001",
+    "reference_price": 9800,
+    "currency": "CNY",
+    "lead_time_days": 8,
+    "capacity_units": 10
+  },
+  {
+    "id": "V2-REL-06-08",
+    "supplier": "V2-SUP-006",
+    "item": "V2-WS-008",
+    "reference_price": 13300,
+    "currency": "CNY",
+    "lead_time_days": 8,
+    "capacity_units": 10
+  },
+  {
+    "id": "V2-REL-06-02",
+    "supplier": "V2-SUP-006",
+    "item": "V2-WS-002",
+    "reference_price": 10300,
+    "currency": "CNY",
+    "lead_time_days": 8,
+    "capacity_units": 10
+  }
+]
