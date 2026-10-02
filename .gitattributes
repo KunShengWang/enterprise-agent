@@ -1,0 +1,3 @@
+# Frozen procurement resources are hashed as bytes by the existing Eval policy.
+/data/procurement/** text eol=lf
+/src/test/resources/procurement/** text eol=lf

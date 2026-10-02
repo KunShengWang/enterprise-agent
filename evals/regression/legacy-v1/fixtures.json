@@ -1,0 +1,28 @@
+{
+  "baseline": "procurement-v0",
+  "suite": "legacy-v1",
+  "sourceCommit": "2e9676afef5b7af1cb887760c608337c92e7c9c7",
+  "encoding": "UTF-8; LF; exact bytes",
+  "files": [
+    {
+      "path": "data/procurement/aws-synthetic/01_suppliers.json",
+      "sha256": "d05878d688ba20c7240acad09e89e547930275f873cb3cfb4d404700680c65a3"
+    },
+    {
+      "path": "data/procurement/aws-synthetic/README.md",
+      "sha256": "9c826333dead0d5edba162634c6b8d054ea7f56ac1dced31aa9e7a18697c400a"
+    },
+    {
+      "path": "data/procurement/scenarios/complex_workstation_01.json",
+      "sha256": "a0b6760e51e71ddbcc23e9f79c7ab1266cd52b9e197620204067dd4784c3d4b8"
+    },
+    {
+      "path": "src/test/resources/procurement/benchmark/procurement-benchmark-v1.json",
+      "sha256": "f0c0763148783ab9e461ccf6a21fe86ba81e4a6681a2f0f423075f9b0c37f6b1"
+    },
+    {
+      "path": "src/test/resources/procurement/evaluation/procurement-answer-policy-v1.json",
+      "sha256": "2588b6a4c336df497390dadf3fa91e312a2f81e6be3f43c473f9d5c365bfe8c4"
+    }
+  ]
+}
