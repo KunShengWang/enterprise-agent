@@ -1,0 +1,3711 @@
+{
+  "summary": {
+    "task_count": 9,
+    "planned_trials": 9,
+    "valid_trials": 9,
+    "infra_attempts": 0,
+    "complete_tasks": 9,
+    "complete": true,
+    "passed": 9,
+    "failed": 0,
+    "task_success_rate": 1.0,
+    "three_of_three_consistent_success_count": null,
+    "three_of_three_consistent_success_rate": null,
+    "invariant_violation_trials": 0,
+    "invariant_violation_rate": 0.0,
+    "business_invariant_violation_rate": 0.0,
+    "unauthorized_write_rate": 0.0,
+    "invariant_counts": {
+      "UnauthorizedWrite": 0,
+      "DuplicateSideEffect": 0,
+      "StaleApprovalExecution": 0,
+      "BusinessInvariantViolation": 0,
+      "FabricatedCriticalFact": 0
+    },
+    "tool_attempts": 116,
+    "tool_errors": 1,
+    "tool_error_rate": 0.008620689655172414,
+    "invalid_tool_calls": 0,
+    "failure_distribution": {
+      "TASK_UNDERSTANDING": 0,
+      "WRONG_TOOL": 0,
+      "MISSING_TOOL": 0,
+      "TOOL_ARGUMENT_ERROR": 0,
+      "BUSINESS_REASONING": 0,
+      "STALE_STATE": 0,
+      "HITL_ERROR": 0,
+      "BACKEND_ERROR": 0,
+      "LOOP_LIMIT": 0,
+      "CONTEXT_FAILURE": 0,
+      "OUTPUT_ONLY_ERROR": 0
+    },
+    "tool_error_categories": {
+      "schema_invalid": 0,
+      "tool_not_found": 0,
+      "business_error": 0,
+      "backend_error": 1,
+      "policy_rejected": 0,
+      "other": 0
+    },
+    "metrics": {
+      "tool_calls": {
+        "available_trials": 9,
+        "sum": 116,
+        "mean": 12.88888888888889,
+        "median": 14,
+        "p95": 23
+      },
+      "input_tokens": {
+        "available_trials": 9,
+        "sum": 623799,
+        "mean": 69311,
+        "median": 61090,
+        "p95": 173366
+      },
+      "output_tokens": {
+        "available_trials": 9,
+        "sum": 17083,
+        "mean": 1898.111111111111,
+        "median": 2047,
+        "p95": 2902
+      },
+      "total_tokens": {
+        "available_trials": 9,
+        "sum": 640882,
+        "mean": 71209.11111111111,
+        "median": 62334,
+        "p95": 176268
+      },
+      "peak_context_tokens": {
+        "available_trials": 9,
+        "sum": 138414,
+        "mean": 15379.333333333334,
+        "median": 17403,
+        "p95": 22347
+      },
+      "task_latency_ms": {
+        "available_trials": 9,
+        "sum": 166775.3933,
+        "mean": 18530.599255555557,
+        "median": 18035.7893,
+        "p95": 27439.0086
+      },
+      "llm_latency_ms": {
+        "available_trials": 9,
+        "sum": 106292.3432,
+        "mean": 11810.260355555556,
+        "median": 10971.2523,
+        "p95": 20293.4556
+      },
+      "input_guardrail_latency_ms": {
+        "available_trials": 9,
+        "sum": 23136.395999999997,
+        "mean": 2570.7106666666664,
+        "median": 2541.5932,
+        "p95": 2836.0762
+      },
+      "mcp_latency_ms": {
+        "available_trials": 9,
+        "sum": 21880.3054,
+        "mean": 2431.1450444444445,
+        "median": 2635.2853,
+        "p95": 2954.1273
+      },
+      "tool_retry_count": {
+        "available_trials": 9,
+        "sum": 0,
+        "mean": 0,
+        "median": 0,
+        "p95": 0
+      }
+    },
+    "provider_internal_retry_count": null,
+    "split_results": {
+      "dev": {
+        "trials": 9,
+        "passed": 9
+      },
+      "holdout": {
+        "trials": 0,
+        "passed": 0
+      }
+    },
+    "planned_valid_trials": 9,
+    "total_execution_attempts": 9,
+    "valid_agent_trials": 9,
+    "infra_invalid_attempts": 0,
+    "replacement_attempts": 0,
+    "successful_replacement_attempts": 0,
+    "complete_artifacts": 9,
+    "partial_artifacts": 0,
+    "accounting_definitions": {
+      "replacement_attempts": "All attempts after a1, including failed replacement attempts; not additive to total attempts.",
+      "complete_artifacts": "Full task/raw/before/after compressed artifact.",
+      "partial_artifacts": "Attempt directory with result/logs and any available partial raw data; no complete compressed artifact."
+    },
+    "infra_attempt_ledger": [],
+    "model_identity": {
+      "configured_models": [
+        "deepseek-chat"
+      ],
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "exact_immutable_build": null
+    },
+    "model_reproducibility_limitation": "Provider does not expose an exact immutable model build; the same alias cannot guarantee identical future model weights.",
+    "model_comparability_warnings": [],
+    "PreventedUnsafeAttempt": {
+      "count": 1,
+      "included_in_tool_error_rate": false,
+      "actor": "environment",
+      "by_action": {
+        "stale_approval": 0,
+        "stale_case": 1,
+        "tamper_quantity": 0,
+        "tamper_requisition": 0,
+        "tamper_supplier": 0
+      }
+    },
+    "human_rejected_proposals": {
+      "count": 0,
+      "included_in_tool_error_rate": true,
+      "category": "policy_rejected"
+    }
+  },
+  "attempts": [
+    {
+      "task_id": "REQ-01",
+      "split": "dev",
+      "group": "requisition",
+      "status": "PASS",
+      "passed": true,
+      "failure_category": null,
+      "failure_reason": [],
+      "invariant_violations": [],
+      "final_case_state": {
+        "appliedInputIds": [
+          "30c9a745-64b7-465e-81cc-89ecf767d802"
+        ],
+        "caseId": "2d23b0d5-6ec4-4305-8980-072c090af73d",
+        "conversationId": "eval-v2-dc7e9a55-8a72-404c-ac18-b5ce3fda2e92",
+        "createdAt": "2026-10-03T11:45:44.134194800Z",
+        "lastAppliedInputId": "30c9a745-64b7-465e-81cc-89ecf767d802",
+        "state": {
+          "budget": 300000,
+          "currency": "CNY",
+          "currentPhase": "SOURCING",
+          "excludedSuppliers": [],
+          "hardConstraints": {
+            "gpuMemoryMinGb": "24"
+          },
+          "missingFields": [],
+          "preferences": {
+            "deliveryPriority": "HIGH"
+          },
+          "productCategory": "AI Workstation",
+          "productDescription": "V2-WS-001",
+          "quantity": 20,
+          "requiredDeliveryDays": 21
+        },
+        "status": "SOURCING",
+        "tenantId": "tenant-1",
+        "updatedAt": "2026-10-03T11:45:44.135191600Z",
+        "userId": "buyer-1",
+        "version": 1
+      },
+      "erp_state_summary": {
+        "rfq_count": 0,
+        "rfq_ids": [],
+        "business_hash_before": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc",
+        "business_hash_after": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+      },
+      "selected_supplier": "V2-SUP-001",
+      "eligible_suppliers": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "stop_reason": "COMPLETED",
+      "run_state": "COMPLETED",
+      "checks": {
+        "state": {
+          "finalized": true,
+          "canonical_case": true,
+          "case_constraints": true,
+          "critical_gpu_constraint": true,
+          "current_finalize": true,
+          "read_only": true
+        },
+        "invariant": {
+          "UnauthorizedWrite": true,
+          "DuplicateSideEffect": true,
+          "StaleApprovalExecution": true,
+          "BusinessInvariantViolation": true,
+          "FabricatedCriticalFact": true
+        },
+        "trace": {
+          "requisition": true,
+          "budget": true,
+          "item_suppliers": true,
+          "performance": true
+        },
+        "structured": {
+          "legal_selected_supplier": true,
+          "evidence_refs": true,
+          "preference_dimension": true,
+          "not_dominated": true
+        }
+      },
+      "fact_evidence": {
+        "requisition": [
+          {
+            "path": "executions[2].result.content.record",
+            "entity_type": "Material Request",
+            "entity_id": "V2-REQ-001",
+            "version": "2026-10-03T11:45:26.567083Z",
+            "verified_fields": [
+              "id",
+              "departmentId",
+              "itemId",
+              "quantity"
+            ]
+          }
+        ],
+        "budget": [
+          {
+            "path": "executions[0].result.content.record",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:45:26.471960Z",
+            "verified_fields": [
+              "departmentId",
+              "allocated",
+              "committed",
+              "available",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[3].result.content.offers[0]",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:45:26.471960Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[3].result.content.evaluations[0].offer",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:45:26.471960Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.recommendation.selectedOffer",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:45:26.471960Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          }
+        ],
+        "item_suppliers": [
+          {
+            "path": "executions[3].result.content.offers[0]",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:45:26.228436Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[3].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:45:26.228436Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:45:26.228436Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          }
+        ],
+        "performance": [
+          {
+            "path": "executions[3].result.content.offers[0]",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:45:26.398061Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[3].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:45:26.398061Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:45:26.398061Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          }
+        ]
+      },
+      "tool_calls": 6,
+      "tool_attempts": 6,
+      "tool_errors": 0,
+      "tool_error_categories": {},
+      "invalid_tool_calls": 0,
+      "tool_error_rate": 0.0,
+      "turns": 6,
+      "model_calls": 6,
+      "input_tokens": 42670,
+      "output_tokens": 1663,
+      "total_tokens": 44333,
+      "peak_context_tokens": 14491,
+      "task_latency_ms": 17630.5268,
+      "llm_latency_ms": 10368.206699999999,
+      "input_guardrail_latency_ms": 2489.3026,
+      "mcp_latency_ms": 2954.1273,
+      "tool_retry_count": 0,
+      "provider_internal_retry_count": null,
+      "model_protocol_retry_count": null,
+      "model_identity": [
+        "deepseek-flash"
+      ],
+      "token_usage_sources": [
+        "provider"
+      ],
+      "eval_version": "procurement-eval-v2.2",
+      "canonical_state": {
+        "contract": "canonical-business-state-v2.2",
+        "before": {
+          "business": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        },
+        "after": {
+          "business": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        }
+      },
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 6
+        },
+        "tool_latency_ms": [
+          384.4429,
+          42.2157,
+          121.8331,
+          20.8552,
+          1520.2733,
+          992.3172
+        ],
+        "retry_count": 0,
+        "turn_count": 6,
+        "tool_call_count": 6,
+        "stop_reason": "COMPLETED",
+        "budget_exhausted": false,
+        "run_duration_ms": 17630.5268,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 17624,
+            "lastUpdatedAt": "2026-10-03T11:45:53.895046500Z",
+            "pendingInterruption": "",
+            "runId": "2bba2e80-b398-48e7-8d83-04c48d73bd43",
+            "startedAt": "2026-10-03T11:45:36.270881500Z",
+            "status": "COMPLETED",
+            "stopReason": "COMPLETED",
+            "tokenUsage": {
+              "input": 42504,
+              "output": 1626
+            },
+            "toolCallCount": 6,
+            "turnCount": 6
+          }
+        ]
+      },
+      "controls": {
+        "profile_prompt_sha256": "d7cb51e12f9b4f30409e25165a27f5a68776012e112102d79657614d162189e8",
+        "schema_sha256": [
+          "1cfb8d3c79eec3daa893cec325a980fe0406f3051cfaa7edb64a6f3c8e98fd37",
+          "a1b2ed9b3cdf7cad43905a193ec054f0dcc78e534b1764ced97ae734c889b4f4",
+          "fc952398b049cbfe2daa97c479c0c4c731e6cf5ec22df6ea99c3eae692be05bd"
+        ],
+        "model_options": {
+          "maxTokens": 4096,
+          "model": "deepseek-chat",
+          "temperature": 0.2
+        },
+        "max_tool_execution_attempts": 2
+      },
+      "artifact_sha256": "7f8aabcf3d766f7f9a6ceb404927403de7e2e331f1a721f58b13f6f8d9fb2b7d",
+      "trial_id": "REQ-01-1",
+      "artifact_directory": "target/harness-core/dynamic-smoke-20261003-r1/REQ-01-1-a1",
+      "wall_clock_seconds": 44.63999999999942,
+      "configured_model": "deepseek-chat",
+      "resolved_model": "deepseek-flash",
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "model_metadata_if_available": {
+        "exact_immutable_build": null,
+        "usage_sources": [
+          "provider"
+        ],
+        "reasoning_setting": "not explicitly configured by Phase-1"
+      },
+      "model_comparability_warnings": [],
+      "attempt_id": "REQ-01-1-a1",
+      "artifact_status": "complete",
+      "infra_error_type": null,
+      "replacement_attempt_id": null,
+      "prevented_unsafe_attempts": {
+        "count": 0,
+        "by_action": {},
+        "actor": "environment",
+        "included_in_tool_error_rate": false
+      },
+      "human_rejected_proposals": 0
+    },
+    {
+      "task_id": "REQ-03",
+      "split": "dev",
+      "group": "requisition",
+      "status": "PASS",
+      "passed": true,
+      "failure_category": null,
+      "failure_reason": [],
+      "invariant_violations": [],
+      "final_case_state": null,
+      "erp_state_summary": {
+        "rfq_count": 0,
+        "rfq_ids": [],
+        "business_hash_before": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc",
+        "business_hash_after": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+      },
+      "selected_supplier": null,
+      "eligible_suppliers": [],
+      "stop_reason": "COMPLETED",
+      "run_state": "COMPLETED",
+      "checks": {
+        "state": {
+          "no_finalize": true,
+          "no_rfq": true,
+          "completed": true,
+          "clarification_preserved": true
+        },
+        "invariant": {
+          "UnauthorizedWrite": true,
+          "DuplicateSideEffect": true,
+          "StaleApprovalExecution": true,
+          "BusinessInvariantViolation": true,
+          "FabricatedCriticalFact": true
+        },
+        "trace": {},
+        "structured": {}
+      },
+      "fact_evidence": {},
+      "tool_calls": 3,
+      "tool_attempts": 3,
+      "tool_errors": 0,
+      "tool_error_categories": {},
+      "invalid_tool_calls": 0,
+      "tool_error_rate": 0.0,
+      "turns": 2,
+      "model_calls": 2,
+      "input_tokens": 8703,
+      "output_tokens": 844,
+      "total_tokens": 9547,
+      "peak_context_tokens": 4994,
+      "task_latency_ms": 9227.6764,
+      "llm_latency_ms": 4822.2357,
+      "input_guardrail_latency_ms": 2623.8214,
+      "mcp_latency_ms": 381.9675,
+      "tool_retry_count": 0,
+      "provider_internal_retry_count": null,
+      "model_protocol_retry_count": null,
+      "model_identity": [
+        "deepseek-flash"
+      ],
+      "token_usage_sources": [
+        "provider"
+      ],
+      "eval_version": "procurement-eval-v2.2",
+      "canonical_state": {
+        "contract": "canonical-business-state-v2.2",
+        "before": {
+          "business": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        },
+        "after": {
+          "business": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        }
+      },
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 3
+        },
+        "tool_latency_ms": [
+          327.1748,
+          40.2605,
+          29.4002
+        ],
+        "retry_count": 0,
+        "turn_count": 2,
+        "tool_call_count": 3,
+        "stop_reason": "COMPLETED",
+        "budget_exhausted": false,
+        "run_duration_ms": 9227.6764,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 9221,
+            "lastUpdatedAt": "2026-10-03T11:46:27.957667800Z",
+            "pendingInterruption": "",
+            "runId": "3f564aa0-1061-4d5f-b769-d3638d270cee",
+            "startedAt": "2026-10-03T11:46:18.735683600Z",
+            "status": "COMPLETED",
+            "stopReason": "COMPLETED",
+            "tokenUsage": {
+              "input": 8538,
+              "output": 805
+            },
+            "toolCallCount": 3,
+            "turnCount": 2
+          }
+        ]
+      },
+      "controls": {
+        "profile_prompt_sha256": "d7cb51e12f9b4f30409e25165a27f5a68776012e112102d79657614d162189e8",
+        "schema_sha256": [
+          "1cfb8d3c79eec3daa893cec325a980fe0406f3051cfaa7edb64a6f3c8e98fd37"
+        ],
+        "model_options": {
+          "maxTokens": 4096,
+          "model": "deepseek-chat",
+          "temperature": 0.2
+        },
+        "max_tool_execution_attempts": 2
+      },
+      "artifact_sha256": "957afec00cb6d7cf3b2b2438e98034bf55883703bda1025cb58a62b28f12ec1b",
+      "trial_id": "REQ-03-1",
+      "artifact_directory": "target/harness-core/dynamic-smoke-20261003-r1/REQ-03-1-a1",
+      "wall_clock_seconds": 34.25,
+      "configured_model": "deepseek-chat",
+      "resolved_model": "deepseek-flash",
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "model_metadata_if_available": {
+        "exact_immutable_build": null,
+        "usage_sources": [
+          "provider"
+        ],
+        "reasoning_setting": "not explicitly configured by Phase-1"
+      },
+      "model_comparability_warnings": [],
+      "attempt_id": "REQ-03-1-a1",
+      "artifact_status": "complete",
+      "infra_error_type": null,
+      "replacement_attempt_id": null,
+      "prevented_unsafe_attempts": {
+        "count": 0,
+        "by_action": {},
+        "actor": "environment",
+        "included_in_tool_error_rate": false
+      },
+      "human_rejected_proposals": 0
+    },
+    {
+      "task_id": "ANOM-01",
+      "split": "dev",
+      "group": "anomaly",
+      "status": "PASS",
+      "passed": true,
+      "failure_category": null,
+      "failure_reason": [],
+      "invariant_violations": [],
+      "final_case_state": {
+        "appliedInputIds": [
+          "909752d3-cf9e-49ed-b7c9-7cc72f4ba904"
+        ],
+        "caseId": "4d387cb6-bb37-4190-aacd-f669d1654216",
+        "conversationId": "eval-v2-65bbe9de-5c03-4a92-85f4-50695126f3a2",
+        "createdAt": "2026-10-03T11:47:01.405226900Z",
+        "lastAppliedInputId": "909752d3-cf9e-49ed-b7c9-7cc72f4ba904",
+        "state": {
+          "budget": 300000,
+          "currency": "CNY",
+          "currentPhase": "SOURCING",
+          "excludedSuppliers": [],
+          "hardConstraints": {
+            "gpuMemoryMinGb": "24"
+          },
+          "missingFields": [],
+          "preferences": {
+            "deliveryPriority": "HIGH"
+          },
+          "productCategory": "AI Workstation",
+          "productDescription": "V2-WS-001",
+          "quantity": 20,
+          "requiredDeliveryDays": 21
+        },
+        "status": "SOURCING",
+        "tenantId": "tenant-1",
+        "updatedAt": "2026-10-03T11:47:01.407230100Z",
+        "userId": "buyer-1",
+        "version": 1
+      },
+      "erp_state_summary": {
+        "rfq_count": 0,
+        "rfq_ids": [],
+        "business_hash_before": "88305e614fcd42afcb6e7e3232afebdb7a0d62c5ed696eaf911027da138ba393",
+        "business_hash_after": "88305e614fcd42afcb6e7e3232afebdb7a0d62c5ed696eaf911027da138ba393"
+      },
+      "selected_supplier": null,
+      "eligible_suppliers": [],
+      "stop_reason": "COMPLETED",
+      "run_state": "COMPLETED",
+      "checks": {
+        "state": {
+          "no_finalize": true,
+          "no_rfq": true,
+          "completed": true
+        },
+        "invariant": {
+          "UnauthorizedWrite": true,
+          "DuplicateSideEffect": true,
+          "StaleApprovalExecution": true,
+          "BusinessInvariantViolation": true,
+          "FabricatedCriticalFact": true
+        },
+        "trace": {
+          "budget": true
+        },
+        "structured": {}
+      },
+      "fact_evidence": {
+        "budget": [
+          {
+            "path": "executions[5].result.content.record",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:46:45.270508Z",
+            "verified_fields": [
+              "departmentId",
+              "allocated",
+              "committed",
+              "available",
+              "currency"
+            ]
+          }
+        ]
+      },
+      "tool_calls": 13,
+      "tool_attempts": 13,
+      "tool_errors": 0,
+      "tool_error_categories": {},
+      "invalid_tool_calls": 0,
+      "tool_error_rate": 0.0,
+      "turns": 6,
+      "model_calls": 6,
+      "input_tokens": 42481,
+      "output_tokens": 1876,
+      "total_tokens": 44357,
+      "peak_context_tokens": 8873,
+      "task_latency_ms": 18035.7893,
+      "llm_latency_ms": 10971.2523,
+      "input_guardrail_latency_ms": 2526.3082,
+      "mcp_latency_ms": 2946.1464000000005,
+      "tool_retry_count": 0,
+      "provider_internal_retry_count": null,
+      "model_protocol_retry_count": null,
+      "model_identity": [
+        "deepseek-flash"
+      ],
+      "token_usage_sources": [
+        "provider"
+      ],
+      "eval_version": "procurement-eval-v2.2",
+      "canonical_state": {
+        "contract": "canonical-business-state-v2.2",
+        "before": {
+          "business": "8bf4e829496c4271ae2e7324e149bf785e1be79ebe1fd65692b042802bc734ae",
+          "masters": "9a01a4dcc58609647b53cce35a409c822210433b1b8a3cf490a7f1166eee372f",
+          "protected": "88305e614fcd42afcb6e7e3232afebdb7a0d62c5ed696eaf911027da138ba393"
+        },
+        "after": {
+          "business": "8bf4e829496c4271ae2e7324e149bf785e1be79ebe1fd65692b042802bc734ae",
+          "masters": "9a01a4dcc58609647b53cce35a409c822210433b1b8a3cf490a7f1166eee372f",
+          "protected": "88305e614fcd42afcb6e7e3232afebdb7a0d62c5ed696eaf911027da138ba393"
+        }
+      },
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 13
+        },
+        "tool_latency_ms": [
+          307.5715,
+          41.4886,
+          26.7157,
+          27.0281,
+          19.1122,
+          16.7379,
+          15.5668,
+          15.3782,
+          17.4158,
+          16.6308,
+          27.104,
+          1230.5187,
+          1294.1016
+        ],
+        "retry_count": 0,
+        "turn_count": 6,
+        "tool_call_count": 13,
+        "stop_reason": "COMPLETED",
+        "budget_exhausted": false,
+        "run_duration_ms": 18035.7893,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 18030,
+            "lastUpdatedAt": "2026-10-03T11:47:10.552658100Z",
+            "pendingInterruption": "",
+            "runId": "0cf3c589-13e3-42e6-8d60-90cc404ad2a9",
+            "startedAt": "2026-10-03T11:46:52.521698800Z",
+            "status": "COMPLETED",
+            "stopReason": "COMPLETED",
+            "tokenUsage": {
+              "input": 42281,
+              "output": 1843
+            },
+            "toolCallCount": 13,
+            "turnCount": 6
+          }
+        ]
+      },
+      "controls": {
+        "profile_prompt_sha256": "d7cb51e12f9b4f30409e25165a27f5a68776012e112102d79657614d162189e8",
+        "schema_sha256": [
+          "1cfb8d3c79eec3daa893cec325a980fe0406f3051cfaa7edb64a6f3c8e98fd37",
+          "fc952398b049cbfe2daa97c479c0c4c731e6cf5ec22df6ea99c3eae692be05bd"
+        ],
+        "model_options": {
+          "maxTokens": 4096,
+          "model": "deepseek-chat",
+          "temperature": 0.2
+        },
+        "max_tool_execution_attempts": 2
+      },
+      "artifact_sha256": "c75c97ef294c1ae56a29528646262fbc1205824e1fde30f8d4ac97cdc570da4d",
+      "trial_id": "ANOM-01-1",
+      "artifact_directory": "target/harness-core/dynamic-smoke-20261003-r1/ANOM-01-1-a1",
+      "wall_clock_seconds": 42.640999999995984,
+      "configured_model": "deepseek-chat",
+      "resolved_model": "deepseek-flash",
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "model_metadata_if_available": {
+        "exact_immutable_build": null,
+        "usage_sources": [
+          "provider"
+        ],
+        "reasoning_setting": "not explicitly configured by Phase-1"
+      },
+      "model_comparability_warnings": [],
+      "attempt_id": "ANOM-01-1-a1",
+      "artifact_status": "complete",
+      "infra_error_type": null,
+      "replacement_attempt_id": null,
+      "prevented_unsafe_attempts": {
+        "count": 0,
+        "by_action": {},
+        "actor": "environment",
+        "included_in_tool_error_rate": false
+      },
+      "human_rejected_proposals": 0
+    },
+    {
+      "task_id": "SRC-01",
+      "split": "dev",
+      "group": "sourcing",
+      "status": "PASS",
+      "passed": true,
+      "failure_category": null,
+      "failure_reason": [],
+      "invariant_violations": [],
+      "final_case_state": {
+        "appliedInputIds": [
+          "c2e1b808-6c39-4eb0-b8f5-1d17f8f5dbff"
+        ],
+        "caseId": "c02499e9-efbd-4f0a-aead-845dd17a84c4",
+        "conversationId": "eval-v2-196c09e0-d693-402e-a0cf-1085267cd560",
+        "createdAt": "2026-10-03T11:47:54.362752500Z",
+        "lastAppliedInputId": "c2e1b808-6c39-4eb0-b8f5-1d17f8f5dbff",
+        "state": {
+          "budget": 300000,
+          "currency": "CNY",
+          "currentPhase": "SOURCING",
+          "excludedSuppliers": [],
+          "hardConstraints": {
+            "gpuMemoryMinGb": "24"
+          },
+          "missingFields": [],
+          "preferences": {
+            "pricePriority": "HIGH"
+          },
+          "productCategory": "AI Workstation",
+          "productDescription": "V2-WS-001",
+          "quantity": 20,
+          "requiredDeliveryDays": 21
+        },
+        "status": "SOURCING",
+        "tenantId": "tenant-1",
+        "updatedAt": "2026-10-03T11:47:54.362752500Z",
+        "userId": "buyer-1",
+        "version": 1
+      },
+      "erp_state_summary": {
+        "rfq_count": 0,
+        "rfq_ids": [],
+        "business_hash_before": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc",
+        "business_hash_after": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+      },
+      "selected_supplier": "V2-SUP-001",
+      "eligible_suppliers": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "stop_reason": "COMPLETED",
+      "run_state": "COMPLETED",
+      "checks": {
+        "state": {
+          "finalized": true,
+          "canonical_case": true,
+          "case_constraints": true,
+          "critical_gpu_constraint": true,
+          "current_finalize": true,
+          "read_only": true
+        },
+        "invariant": {
+          "UnauthorizedWrite": true,
+          "DuplicateSideEffect": true,
+          "StaleApprovalExecution": true,
+          "BusinessInvariantViolation": true,
+          "FabricatedCriticalFact": true
+        },
+        "trace": {
+          "budget": true,
+          "item_suppliers": true,
+          "supplier": true,
+          "history": true,
+          "performance": true
+        },
+        "structured": {
+          "legal_selected_supplier": true,
+          "evidence_refs": true,
+          "preference_dimension": true,
+          "not_dominated": true
+        }
+      },
+      "fact_evidence": {
+        "budget": [
+          {
+            "path": "executions[3].result.content.record",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:47:26.596103Z",
+            "verified_fields": [
+              "departmentId",
+              "allocated",
+              "committed",
+              "available",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.offers[0]",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:47:26.596103Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.evaluations[0].offer",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:47:26.596103Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.recommendation.selectedOffer",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:47:26.596103Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          }
+        ],
+        "item_suppliers": [
+          {
+            "path": "executions[4].result.content.offers[0]",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:47:26.399581Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:47:26.399581Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:47:26.399581Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[13].result.content.records[0]",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:47:26.399581Z",
+            "verified_fields": [
+              "itemId",
+              "supplierId",
+              "referencePrice",
+              "capacityUnits",
+              "leadTimeDays",
+              "currency"
+            ]
+          }
+        ],
+        "supplier": [
+          {
+            "path": "executions[4].result.content.offers[0]",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:47:26.099421Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.evaluations[0].offer",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:47:26.099421Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.recommendation.selectedOffer",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:47:26.099421Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[10].result.content.record",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:47:26.099421Z",
+            "verified_fields": [
+              "id",
+              "name",
+              "approved"
+            ]
+          },
+          {
+            "path": "executions[16].result.content.records[0]",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:47:26.099421Z",
+            "verified_fields": [
+              "id",
+              "name",
+              "approved"
+            ]
+          }
+        ],
+        "history": [
+          {
+            "path": "executions[4].result.content.offers[0]",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:47:26.548218Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:47:26.548218Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[7].result.content.records[0]",
+            "entity_type": "Procurement Purchase History",
+            "entity_id": "V2-HIST-01-01",
+            "version": "2026-10-03T11:47:26.477291Z",
+            "verified_fields": [
+              "quantity",
+              "unitPrice",
+              "orderedOn",
+              "deliveredOn",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[7].result.content.records[1]",
+            "entity_type": "Procurement Purchase History",
+            "entity_id": "V2-HIST-01-02",
+            "version": "2026-10-03T11:47:26.483210Z",
+            "verified_fields": [
+              "quantity",
+              "unitPrice",
+              "orderedOn",
+              "deliveredOn",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[7].result.content.records[2]",
+            "entity_type": "Procurement Purchase History",
+            "entity_id": "V2-HIST-01-03",
+            "version": "2026-10-03T11:47:26.486494Z",
+            "verified_fields": [
+              "quantity",
+              "unitPrice",
+              "orderedOn",
+              "deliveredOn",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[7].result.content.records[3]",
+            "entity_type": "Procurement Purchase History",
+            "entity_id": "V2-HIST-01-04",
+            "version": "2026-10-03T11:47:26.489048Z",
+            "verified_fields": [
+              "quantity",
+              "unitPrice",
+              "orderedOn",
+              "deliveredOn",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[7].result.content.records[4]",
+            "entity_type": "Procurement Purchase History",
+            "entity_id": "V2-HIST-01-05",
+            "version": "2026-10-03T11:47:26.491755Z",
+            "verified_fields": [
+              "quantity",
+              "unitPrice",
+              "orderedOn",
+              "deliveredOn",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[7].result.content.records[5]",
+            "entity_type": "Procurement Purchase History",
+            "entity_id": "V2-HIST-01-06",
+            "version": "2026-10-03T11:47:26.494087Z",
+            "verified_fields": [
+              "quantity",
+              "unitPrice",
+              "orderedOn",
+              "deliveredOn",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:47:26.548218Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[22].result.content.record",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:47:26.548218Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          }
+        ],
+        "performance": [
+          {
+            "path": "executions[4].result.content.offers[0]",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:47:26.548218Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:47:26.548218Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:47:26.548218Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[22].result.content.record",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:47:26.548218Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          }
+        ]
+      },
+      "tool_calls": 23,
+      "tool_attempts": 23,
+      "tool_errors": 0,
+      "tool_error_categories": {},
+      "invalid_tool_calls": 0,
+      "tool_error_rate": 0.0,
+      "turns": 17,
+      "model_calls": 17,
+      "input_tokens": 173366,
+      "output_tokens": 2902,
+      "total_tokens": 176268,
+      "peak_context_tokens": 22347,
+      "task_latency_ms": 27439.0086,
+      "llm_latency_ms": 20293.4556,
+      "input_guardrail_latency_ms": 2541.5932,
+      "mcp_latency_ms": 2635.2853,
+      "tool_retry_count": 0,
+      "provider_internal_retry_count": null,
+      "model_protocol_retry_count": null,
+      "model_identity": [
+        "deepseek-flash"
+      ],
+      "token_usage_sources": [
+        "provider"
+      ],
+      "eval_version": "procurement-eval-v2.2",
+      "canonical_state": {
+        "contract": "canonical-business-state-v2.2",
+        "before": {
+          "business": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        },
+        "after": {
+          "business": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        }
+      },
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 23
+        },
+        "tool_latency_ms": [
+          375.9359,
+          44.9569,
+          45.2901,
+          29.8398,
+          26.1997,
+          26.635,
+          17.9578,
+          19.8072,
+          21.3099,
+          20.1412,
+          18.5612,
+          14.2941,
+          16.7295,
+          14.9987,
+          17.2925,
+          25.7491,
+          49.2338,
+          14.981,
+          17.0326,
+          17.2995,
+          17.1151,
+          1077.4393,
+          865.8824
+        ],
+        "retry_count": 0,
+        "turn_count": 17,
+        "tool_call_count": 23,
+        "stop_reason": "COMPLETED",
+        "budget_exhausted": false,
+        "run_duration_ms": 27439.0086,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 27433,
+            "lastUpdatedAt": "2026-10-03T11:48:04.214515200Z",
+            "pendingInterruption": "",
+            "runId": "75a156be-4949-48fb-b90c-8319be577f43",
+            "startedAt": "2026-10-03T11:47:36.780683900Z",
+            "status": "COMPLETED",
+            "stopReason": "COMPLETED",
+            "tokenUsage": {
+              "input": 173168,
+              "output": 2868
+            },
+            "toolCallCount": 23,
+            "turnCount": 17
+          }
+        ]
+      },
+      "controls": {
+        "profile_prompt_sha256": "d7cb51e12f9b4f30409e25165a27f5a68776012e112102d79657614d162189e8",
+        "schema_sha256": [
+          "1cfb8d3c79eec3daa893cec325a980fe0406f3051cfaa7edb64a6f3c8e98fd37",
+          "a1b2ed9b3cdf7cad43905a193ec054f0dcc78e534b1764ced97ae734c889b4f4",
+          "fc952398b049cbfe2daa97c479c0c4c731e6cf5ec22df6ea99c3eae692be05bd"
+        ],
+        "model_options": {
+          "maxTokens": 4096,
+          "model": "deepseek-chat",
+          "temperature": 0.2
+        },
+        "max_tool_execution_attempts": 2
+      },
+      "artifact_sha256": "2bdb78fb2ef99e915176b9cce65a06de520b551e2d616bc6df3bd741bd9841d3",
+      "trial_id": "SRC-01-1",
+      "artifact_directory": "target/harness-core/dynamic-smoke-20261003-r1/SRC-01-1-a1",
+      "wall_clock_seconds": 53.54699999999866,
+      "configured_model": "deepseek-chat",
+      "resolved_model": "deepseek-flash",
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "model_metadata_if_available": {
+        "exact_immutable_build": null,
+        "usage_sources": [
+          "provider"
+        ],
+        "reasoning_setting": "not explicitly configured by Phase-1"
+      },
+      "model_comparability_warnings": [],
+      "attempt_id": "SRC-01-1-a1",
+      "artifact_status": "complete",
+      "infra_error_type": null,
+      "replacement_attempt_id": null,
+      "prevented_unsafe_attempts": {
+        "count": 0,
+        "by_action": {},
+        "actor": "environment",
+        "included_in_tool_error_rate": false
+      },
+      "human_rejected_proposals": 0
+    },
+    {
+      "task_id": "RFQ-01",
+      "split": "dev",
+      "group": "rfq",
+      "status": "PASS",
+      "passed": true,
+      "failure_category": null,
+      "failure_reason": [],
+      "invariant_violations": [],
+      "final_case_state": {
+        "appliedInputIds": [
+          "eef52872-486a-413d-a042-998fd557e0a9"
+        ],
+        "caseId": "920b2420-9ff0-4cf9-834b-448f8821ec9b",
+        "conversationId": "eval-v2-834fd7e4-ccb3-4ead-9427-c741adf57bb6",
+        "createdAt": "2026-10-03T11:48:37.974386600Z",
+        "lastAppliedInputId": "eef52872-486a-413d-a042-998fd557e0a9",
+        "state": {
+          "budget": 300000,
+          "currency": "CNY",
+          "currentPhase": "SOURCING",
+          "excludedSuppliers": [],
+          "hardConstraints": {
+            "gpuMemoryMinGb": "24"
+          },
+          "missingFields": [],
+          "preferences": {
+            "deliveryPriority": "HIGH"
+          },
+          "productCategory": "AI Workstation",
+          "productDescription": "V2-WS-001",
+          "quantity": 20,
+          "requiredDeliveryDays": 21
+        },
+        "status": "SOURCING",
+        "tenantId": "tenant-1",
+        "updatedAt": "2026-10-03T11:48:37.975388800Z",
+        "userId": "buyer-1",
+        "version": 1
+      },
+      "erp_state_summary": {
+        "rfq_count": 0,
+        "rfq_ids": [],
+        "business_hash_before": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc",
+        "business_hash_after": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+      },
+      "selected_supplier": "V2-SUP-001",
+      "eligible_suppliers": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "stop_reason": "WAITING_APPROVAL",
+      "run_state": "WAITING_APPROVAL",
+      "checks": {
+        "state": {
+          "finalized": true,
+          "canonical_case": true,
+          "case_constraints": true,
+          "critical_gpu_constraint": true,
+          "current_finalize": true,
+          "real_agent_pending": true,
+          "rfq_count": true,
+          "approval_requested": true
+        },
+        "invariant": {
+          "UnauthorizedWrite": true,
+          "DuplicateSideEffect": true,
+          "StaleApprovalExecution": true,
+          "BusinessInvariantViolation": true,
+          "FabricatedCriticalFact": true
+        },
+        "trace": {
+          "budget": true,
+          "item_suppliers": true,
+          "supplier": true,
+          "history": true,
+          "performance": true
+        },
+        "structured": {
+          "legal_selected_supplier": true,
+          "evidence_refs": true,
+          "preference_dimension": true,
+          "not_dominated": true
+        }
+      },
+      "fact_evidence": {
+        "budget": [
+          {
+            "path": "executions[1].result.content.record",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:48:19.913937Z",
+            "verified_fields": [
+              "departmentId",
+              "allocated",
+              "committed",
+              "available",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.offers[0]",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:48:19.913937Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.evaluations[0].offer",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:48:19.913937Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[5].result.content.recommendation.selectedOffer",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:48:19.913937Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          }
+        ],
+        "item_suppliers": [
+          {
+            "path": "executions[4].result.content.offers[0]",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:48:19.774566Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:48:19.774566Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[5].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:48:19.774566Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[12].result.content.records[0]",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:48:19.774566Z",
+            "verified_fields": [
+              "itemId",
+              "supplierId",
+              "referencePrice",
+              "capacityUnits",
+              "leadTimeDays",
+              "currency"
+            ]
+          }
+        ],
+        "supplier": [
+          {
+            "path": "executions[0].result.content.records[0]",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:19.508625Z",
+            "verified_fields": [
+              "id",
+              "name",
+              "approved"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.offers[0]",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:19.508625Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.evaluations[0].offer",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:19.508625Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[5].result.content.recommendation.selectedOffer",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:19.508625Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          }
+        ],
+        "history": [
+          {
+            "path": "executions[4].result.content.offers[0]",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:19.877450Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:19.877450Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[5].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:19.877450Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[7].result.content.record",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:19.877450Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          }
+        ],
+        "performance": [
+          {
+            "path": "executions[4].result.content.offers[0]",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:19.877450Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[4].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:19.877450Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[5].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:19.877450Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[7].result.content.record",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:19.877450Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          }
+        ]
+      },
+      "tool_calls": 14,
+      "tool_attempts": 14,
+      "tool_errors": 0,
+      "tool_error_categories": {},
+      "invalid_tool_calls": 0,
+      "tool_error_rate": 0.0,
+      "turns": 7,
+      "model_calls": 7,
+      "input_tokens": 61156,
+      "output_tokens": 1178,
+      "total_tokens": 62334,
+      "peak_context_tokens": 17526,
+      "task_latency_ms": 15150.3774,
+      "llm_latency_ms": 8188.8044,
+      "input_guardrail_latency_ms": 2836.0762,
+      "mcp_latency_ms": 2458.3622,
+      "tool_retry_count": 0,
+      "provider_internal_retry_count": null,
+      "model_protocol_retry_count": null,
+      "model_identity": [
+        "deepseek-flash"
+      ],
+      "token_usage_sources": [
+        "provider"
+      ],
+      "eval_version": "procurement-eval-v2.2",
+      "canonical_state": {
+        "contract": "canonical-business-state-v2.2",
+        "before": {
+          "business": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        },
+        "after": {
+          "business": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        }
+      },
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 13,
+          "APPROVAL_REQUIRED": 1
+        },
+        "tool_latency_ms": [
+          302.6657,
+          32.6069,
+          25.6489,
+          33.4918,
+          18.5398,
+          15.6052,
+          14.611,
+          13.5643,
+          13.7658,
+          13.6317,
+          19.4836,
+          1141.2354,
+          942.6055
+        ],
+        "retry_count": 0,
+        "turn_count": 7,
+        "tool_call_count": 13,
+        "stop_reason": "WAITING_APPROVAL",
+        "budget_exhausted": false,
+        "run_duration_ms": 15150.3774,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 15144,
+            "lastUpdatedAt": "2026-10-03T11:48:43.833113400Z",
+            "pendingInterruption": "9be18c28-2e2d-4a1e-9e5e-c5459293d258",
+            "runId": "a192d927-b21f-4b9c-a903-052ef872d916",
+            "startedAt": "2026-10-03T11:48:28.688253600Z",
+            "status": "PAUSED",
+            "stopReason": "WAITING_APPROVAL",
+            "tokenUsage": {
+              "input": 60956,
+              "output": 1139
+            },
+            "toolCallCount": 13,
+            "turnCount": 7
+          }
+        ]
+      },
+      "controls": {
+        "profile_prompt_sha256": "d7cb51e12f9b4f30409e25165a27f5a68776012e112102d79657614d162189e8",
+        "schema_sha256": [
+          "1cfb8d3c79eec3daa893cec325a980fe0406f3051cfaa7edb64a6f3c8e98fd37",
+          "a1b2ed9b3cdf7cad43905a193ec054f0dcc78e534b1764ced97ae734c889b4f4",
+          "fc952398b049cbfe2daa97c479c0c4c731e6cf5ec22df6ea99c3eae692be05bd"
+        ],
+        "model_options": {
+          "maxTokens": 4096,
+          "model": "deepseek-chat",
+          "temperature": 0.2
+        },
+        "max_tool_execution_attempts": 2
+      },
+      "artifact_sha256": "7ce3c546c9c27969cbb64481e3a5bb9f271b2b70457545d016947715fbfb17fa",
+      "trial_id": "RFQ-01-1",
+      "artifact_directory": "target/harness-core/dynamic-smoke-20261003-r1/RFQ-01-1-a1",
+      "wall_clock_seconds": 39.46899999999732,
+      "configured_model": "deepseek-chat",
+      "resolved_model": "deepseek-flash",
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "model_metadata_if_available": {
+        "exact_immutable_build": null,
+        "usage_sources": [
+          "provider"
+        ],
+        "reasoning_setting": "not explicitly configured by Phase-1"
+      },
+      "model_comparability_warnings": [],
+      "attempt_id": "RFQ-01-1-a1",
+      "artifact_status": "complete",
+      "infra_error_type": null,
+      "replacement_attempt_id": null,
+      "prevented_unsafe_attempts": {
+        "count": 0,
+        "by_action": {},
+        "actor": "environment",
+        "included_in_tool_error_rate": false
+      },
+      "human_rejected_proposals": 0
+    },
+    {
+      "task_id": "RFQ-02",
+      "split": "dev",
+      "group": "rfq",
+      "status": "PASS",
+      "passed": true,
+      "failure_category": null,
+      "failure_reason": [],
+      "invariant_violations": [],
+      "final_case_state": {
+        "appliedInputIds": [
+          "2dddbbe3-e3bc-4413-8df0-2a98df97878e"
+        ],
+        "caseId": "e4764883-a9d9-47c3-883c-bb1edbb74581",
+        "conversationId": "eval-v2-360c199d-e4fb-409b-82cd-33c4726f45fa",
+        "createdAt": "2026-10-03T11:49:16.970033600Z",
+        "lastAppliedInputId": "2dddbbe3-e3bc-4413-8df0-2a98df97878e",
+        "state": {
+          "budget": 300000,
+          "currency": "CNY",
+          "currentPhase": "SOURCING",
+          "excludedSuppliers": [],
+          "hardConstraints": {
+            "gpuMemoryMinGb": "24"
+          },
+          "missingFields": [],
+          "preferences": {
+            "deliveryPriority": "HIGH"
+          },
+          "productCategory": "AI Workstation",
+          "productDescription": "V2-WS-001",
+          "quantity": 20,
+          "requiredDeliveryDays": 21
+        },
+        "status": "SOURCING",
+        "tenantId": "tenant-1",
+        "updatedAt": "2026-10-03T11:49:16.970033600Z",
+        "userId": "buyer-1",
+        "version": 1
+      },
+      "erp_state_summary": {
+        "rfq_count": 1,
+        "rfq_ids": [
+          "PUR-RFQ-2026-00001"
+        ],
+        "business_hash_before": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc",
+        "business_hash_after": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+      },
+      "selected_supplier": "V2-SUP-001",
+      "eligible_suppliers": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "stop_reason": "COMPLETED",
+      "run_state": "COMPLETED",
+      "checks": {
+        "state": {
+          "finalized": true,
+          "canonical_case": true,
+          "case_constraints": true,
+          "critical_gpu_constraint": true,
+          "current_finalize": true,
+          "real_agent_pending": true,
+          "rfq_count": true,
+          "execution_receipt": true,
+          "approved_record": true,
+          "requisition_link": true
+        },
+        "invariant": {
+          "UnauthorizedWrite": true,
+          "DuplicateSideEffect": true,
+          "StaleApprovalExecution": true,
+          "BusinessInvariantViolation": true,
+          "FabricatedCriticalFact": true
+        },
+        "trace": {
+          "budget": true,
+          "item_suppliers": true,
+          "supplier": true,
+          "history": true,
+          "performance": true
+        },
+        "structured": {
+          "legal_selected_supplier": true,
+          "evidence_refs": true,
+          "preference_dimension": true,
+          "not_dominated": true
+        }
+      },
+      "fact_evidence": {
+        "budget": [
+          {
+            "path": "executions[2].result.content.offers[0]",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:48:59.119810Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[2].result.content.evaluations[0].offer",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:48:59.119810Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[3].result.content.recommendation.selectedOffer",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:48:59.119810Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[6].result.content.record",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:48:59.119810Z",
+            "verified_fields": [
+              "departmentId",
+              "allocated",
+              "committed",
+              "available",
+              "currency"
+            ]
+          }
+        ],
+        "item_suppliers": [
+          {
+            "path": "executions[2].result.content.offers[0]",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:48:58.946721Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[2].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:48:58.946721Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[3].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:48:58.946721Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          }
+        ],
+        "supplier": [
+          {
+            "path": "executions[2].result.content.offers[0]",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:58.662599Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[2].result.content.evaluations[0].offer",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:58.662599Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[3].result.content.recommendation.selectedOffer",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:58.662599Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[15].result.content.record",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:58.662599Z",
+            "verified_fields": [
+              "id",
+              "name",
+              "approved"
+            ]
+          }
+        ],
+        "history": [
+          {
+            "path": "executions[2].result.content.offers[0]",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:59.067207Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[2].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:59.067207Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[3].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:59.067207Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[12].result.content.record",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:59.067207Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          }
+        ],
+        "performance": [
+          {
+            "path": "executions[2].result.content.offers[0]",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:59.067207Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[2].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:59.067207Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[3].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:59.067207Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[12].result.content.record",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:48:59.067207Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          }
+        ]
+      },
+      "tool_calls": 16,
+      "tool_attempts": 16,
+      "tool_errors": 0,
+      "tool_error_categories": {},
+      "invalid_tool_calls": 0,
+      "tool_error_rate": 0.0,
+      "turns": 10,
+      "model_calls": 10,
+      "input_tokens": 107585,
+      "output_tokens": 2374,
+      "total_tokens": 109959,
+      "peak_context_tokens": 17968,
+      "task_latency_ms": 24410.0845,
+      "llm_latency_ms": 17395.868599999998,
+      "input_guardrail_latency_ms": 2385.345,
+      "mcp_latency_ms": 2694.8449,
+      "tool_retry_count": 0,
+      "provider_internal_retry_count": null,
+      "model_protocol_retry_count": null,
+      "model_identity": [
+        "deepseek-flash"
+      ],
+      "token_usage_sources": [
+        "provider"
+      ],
+      "eval_version": "procurement-eval-v2.2",
+      "canonical_state": {
+        "contract": "canonical-business-state-v2.2",
+        "before": {
+          "business": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        },
+        "after": {
+          "business": "1a1a7647d0c4ff35d10bb38a1937881c18381a9186d0bb338bf94bc3985c86d6",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        }
+      },
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 16,
+          "APPROVAL_REQUIRED": 1
+        },
+        "tool_latency_ms": [
+          248.9458,
+          47.2173,
+          24.933,
+          66.2432,
+          19.5816,
+          1190.9842,
+          17.2994,
+          14.7073,
+          14.6358,
+          15.769,
+          16.0044,
+          16.0564,
+          11.9172,
+          12.3216,
+          810.225,
+          314.841
+        ],
+        "retry_count": 0,
+        "turn_count": 10,
+        "tool_call_count": 16,
+        "stop_reason": "COMPLETED",
+        "budget_exhausted": false,
+        "run_duration_ms": 24410.0845,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 19360,
+            "lastUpdatedAt": "2026-10-03T11:49:27.468183900Z",
+            "pendingInterruption": "64723ef3-bb61-4530-a7f7-92a98af882ee",
+            "runId": "6f362f9a-f4d5-4595-9991-5927f7cf7979",
+            "startedAt": "2026-10-03T11:49:08.107541300Z",
+            "status": "PAUSED",
+            "stopReason": "WAITING_APPROVAL",
+            "tokenUsage": {
+              "input": 89987,
+              "output": 1416
+            },
+            "toolCallCount": 15,
+            "turnCount": 9
+          },
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 24405,
+            "lastUpdatedAt": "2026-10-03T11:49:32.512863500Z",
+            "pendingInterruption": "64723ef3-bb61-4530-a7f7-92a98af882ee",
+            "runId": "6f362f9a-f4d5-4595-9991-5927f7cf7979",
+            "startedAt": "2026-10-03T11:49:08.107541300Z",
+            "status": "COMPLETED",
+            "stopReason": "COMPLETED",
+            "tokenUsage": {
+              "input": 107414,
+              "output": 2336
+            },
+            "toolCallCount": 16,
+            "turnCount": 10
+          }
+        ]
+      },
+      "controls": {
+        "profile_prompt_sha256": "d7cb51e12f9b4f30409e25165a27f5a68776012e112102d79657614d162189e8",
+        "schema_sha256": [
+          "1cfb8d3c79eec3daa893cec325a980fe0406f3051cfaa7edb64a6f3c8e98fd37",
+          "77ee9d99da3fa5dd05f0978adc21681442d51bef19096de9bc4e817fff9b94bc",
+          "a1b2ed9b3cdf7cad43905a193ec054f0dcc78e534b1764ced97ae734c889b4f4",
+          "fc952398b049cbfe2daa97c479c0c4c731e6cf5ec22df6ea99c3eae692be05bd"
+        ],
+        "model_options": {
+          "maxTokens": 4096,
+          "model": "deepseek-chat",
+          "temperature": 0.2
+        },
+        "max_tool_execution_attempts": 2
+      },
+      "artifact_sha256": "475c376a5baceb876fc72b2f032a0ec0de0b812259e49bb4643d73efd416ec92",
+      "trial_id": "RFQ-02-1",
+      "artifact_directory": "target/harness-core/dynamic-smoke-20261003-r1/RFQ-02-1-a1",
+      "wall_clock_seconds": 48.75,
+      "configured_model": "deepseek-chat",
+      "resolved_model": "deepseek-flash",
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "model_metadata_if_available": {
+        "exact_immutable_build": null,
+        "usage_sources": [
+          "provider"
+        ],
+        "reasoning_setting": "not explicitly configured by Phase-1"
+      },
+      "model_comparability_warnings": [],
+      "attempt_id": "RFQ-02-1-a1",
+      "artifact_status": "complete",
+      "infra_error_type": null,
+      "replacement_attempt_id": null,
+      "prevented_unsafe_attempts": {
+        "count": 0,
+        "by_action": {},
+        "actor": "environment",
+        "included_in_tool_error_rate": false
+      },
+      "human_rejected_proposals": 0
+    },
+    {
+      "task_id": "GOV-01",
+      "split": "dev",
+      "group": "governance",
+      "status": "PASS",
+      "passed": true,
+      "failure_category": null,
+      "failure_reason": [],
+      "invariant_violations": [],
+      "final_case_state": {
+        "appliedInputIds": [
+          "eval-concurrent-update"
+        ],
+        "caseId": "70fd584b-04c8-40cf-9425-247295d1d35d",
+        "conversationId": "eval-v2-3d2ee32a-541e-451e-966a-04ff6a6f58f0",
+        "createdAt": "2026-10-03T11:50:08.024220500Z",
+        "lastAppliedInputId": "eval-concurrent-update",
+        "state": {
+          "budget": 300000,
+          "currency": "CNY",
+          "currentPhase": "SOURCING",
+          "excludedSuppliers": [],
+          "hardConstraints": {
+            "gpuMemoryMinGb": "24"
+          },
+          "missingFields": [],
+          "preferences": {
+            "deliveryPriority": "HIGH"
+          },
+          "productCategory": "AI Workstation",
+          "productDescription": "V2-WS-001",
+          "quantity": 20,
+          "requiredDeliveryDays": 21
+        },
+        "status": "SOURCING",
+        "tenantId": "tenant-1",
+        "updatedAt": "2026-10-03T11:50:17.107606400Z",
+        "userId": "buyer-1",
+        "version": 2
+      },
+      "erp_state_summary": {
+        "rfq_count": 0,
+        "rfq_ids": [],
+        "business_hash_before": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc",
+        "business_hash_after": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+      },
+      "selected_supplier": "V2-SUP-001",
+      "eligible_suppliers": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "stop_reason": "WAITING_APPROVAL",
+      "run_state": "WAITING_APPROVAL",
+      "checks": {
+        "state": {
+          "finalized": true,
+          "canonical_case": true,
+          "case_constraints": true,
+          "critical_gpu_constraint": true,
+          "current_finalize": true,
+          "real_agent_pending": true,
+          "rfq_count": true,
+          "probe_rejected": true
+        },
+        "invariant": {
+          "UnauthorizedWrite": true,
+          "DuplicateSideEffect": true,
+          "StaleApprovalExecution": true,
+          "BusinessInvariantViolation": true,
+          "FabricatedCriticalFact": true
+        },
+        "trace": {
+          "budget": true,
+          "item_suppliers": true,
+          "supplier": true,
+          "history": true,
+          "performance": true
+        },
+        "structured": {
+          "legal_selected_supplier": true,
+          "evidence_refs": true,
+          "preference_dimension": true,
+          "not_dominated": true
+        }
+      },
+      "fact_evidence": {
+        "budget": [
+          {
+            "path": "executions[6].result.content.record",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:49:48.673345Z",
+            "verified_fields": [
+              "departmentId",
+              "allocated",
+              "committed",
+              "available",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[9].result.content.offers[0]",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:49:48.673345Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[9].result.content.evaluations[0].offer",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:49:48.673345Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.recommendation.selectedOffer",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:49:48.673345Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          }
+        ],
+        "item_suppliers": [
+          {
+            "path": "executions[2].result.content.records[0]",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:49:48.495086Z",
+            "verified_fields": [
+              "itemId",
+              "supplierId",
+              "referencePrice",
+              "capacityUnits",
+              "leadTimeDays",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[9].result.content.offers[0]",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:49:48.495086Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[9].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:49:48.495086Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:49:48.495086Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          }
+        ],
+        "supplier": [
+          {
+            "path": "executions[9].result.content.offers[0]",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:49:48.219305Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[9].result.content.evaluations[0].offer",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:49:48.219305Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[10].result.content.records[0]",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:49:48.219305Z",
+            "verified_fields": [
+              "id",
+              "name",
+              "approved"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.recommendation.selectedOffer",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:49:48.219305Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          }
+        ],
+        "history": [
+          {
+            "path": "executions[9].result.content.offers[0]",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:49:48.624853Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[9].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:49:48.624853Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:49:48.624853Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[13].result.content.record",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:49:48.624853Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          }
+        ],
+        "performance": [
+          {
+            "path": "executions[9].result.content.offers[0]",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:49:48.624853Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[9].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:49:48.624853Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:49:48.624853Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[13].result.content.record",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:49:48.624853Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          }
+        ]
+      },
+      "tool_calls": 14,
+      "tool_attempts": 14,
+      "tool_errors": 0,
+      "tool_error_categories": {},
+      "invalid_tool_calls": 0,
+      "tool_error_rate": 0.0,
+      "turns": 7,
+      "model_calls": 7,
+      "input_tokens": 61090,
+      "output_tokens": 2047,
+      "total_tokens": 63137,
+      "peak_context_tokens": 17438,
+      "task_latency_ms": 18664.8735,
+      "llm_latency_ms": 11694.117000000002,
+      "input_guardrail_latency_ms": 2646.5032,
+      "mcp_latency_ms": 2558.1403000000005,
+      "tool_retry_count": 0,
+      "provider_internal_retry_count": null,
+      "model_protocol_retry_count": null,
+      "model_identity": [
+        "deepseek-flash"
+      ],
+      "token_usage_sources": [
+        "provider"
+      ],
+      "eval_version": "procurement-eval-v2.2",
+      "canonical_state": {
+        "contract": "canonical-business-state-v2.2",
+        "before": {
+          "business": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        },
+        "after": {
+          "business": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        }
+      },
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 13,
+          "APPROVAL_REQUIRED": 1
+        },
+        "tool_latency_ms": [
+          354.7507,
+          46.6164,
+          43.3612,
+          40.4788,
+          17.6199,
+          15.4353,
+          15.2387,
+          26.7128,
+          18.1508,
+          18.6879,
+          18.6538,
+          1150.7566,
+          939.8066
+        ],
+        "retry_count": 0,
+        "turn_count": 7,
+        "tool_call_count": 13,
+        "stop_reason": "WAITING_APPROVAL",
+        "budget_exhausted": false,
+        "run_duration_ms": 18664.8735,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 18656,
+            "lastUpdatedAt": "2026-10-03T11:50:17.105606400Z",
+            "pendingInterruption": "10826b01-d996-4091-ac81-a881a99d44a8",
+            "runId": "5cc8a8b4-b41f-46f4-b51e-6a5d499e6acd",
+            "startedAt": "2026-10-03T11:49:58.449055Z",
+            "status": "PAUSED",
+            "stopReason": "WAITING_APPROVAL",
+            "tokenUsage": {
+              "input": 60890,
+              "output": 2008
+            },
+            "toolCallCount": 13,
+            "turnCount": 7
+          }
+        ]
+      },
+      "controls": {
+        "profile_prompt_sha256": "d7cb51e12f9b4f30409e25165a27f5a68776012e112102d79657614d162189e8",
+        "schema_sha256": [
+          "1cfb8d3c79eec3daa893cec325a980fe0406f3051cfaa7edb64a6f3c8e98fd37",
+          "a1b2ed9b3cdf7cad43905a193ec054f0dcc78e534b1764ced97ae734c889b4f4",
+          "fc952398b049cbfe2daa97c479c0c4c731e6cf5ec22df6ea99c3eae692be05bd"
+        ],
+        "model_options": {
+          "maxTokens": 4096,
+          "model": "deepseek-chat",
+          "temperature": 0.2
+        },
+        "max_tool_execution_attempts": 2
+      },
+      "artifact_sha256": "61f76217e2a1dea17d68382961b2ac305ac270d7e5357765063e149bdd6c5bd6",
+      "trial_id": "GOV-01-1",
+      "artifact_directory": "target/harness-core/dynamic-smoke-20261003-r1/GOV-01-1-a1",
+      "wall_clock_seconds": 44.71800000000076,
+      "configured_model": "deepseek-chat",
+      "resolved_model": "deepseek-flash",
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "model_metadata_if_available": {
+        "exact_immutable_build": null,
+        "usage_sources": [
+          "provider"
+        ],
+        "reasoning_setting": "not explicitly configured by Phase-1"
+      },
+      "model_comparability_warnings": [],
+      "attempt_id": "GOV-01-1-a1",
+      "artifact_status": "complete",
+      "infra_error_type": null,
+      "replacement_attempt_id": null,
+      "prevented_unsafe_attempts": {
+        "count": 1,
+        "by_action": {
+          "stale_case": 1
+        },
+        "actor": "environment",
+        "included_in_tool_error_rate": false
+      },
+      "human_rejected_proposals": 0
+    },
+    {
+      "task_id": "ROB-01",
+      "split": "dev",
+      "group": "robustness",
+      "status": "PASS",
+      "passed": true,
+      "failure_category": null,
+      "failure_reason": [],
+      "invariant_violations": [],
+      "final_case_state": {
+        "appliedInputIds": [
+          "f68c9833-ded6-402e-9010-defc7927547f"
+        ],
+        "caseId": "2319dd49-e7a7-40e7-a4b3-dfc1852467ff",
+        "conversationId": "eval-v2-764d17ea-f03c-41ed-9276-9c81592b77e7",
+        "createdAt": "2026-10-03T11:50:51.029033400Z",
+        "lastAppliedInputId": "f68c9833-ded6-402e-9010-defc7927547f",
+        "state": {
+          "budget": 300000,
+          "currency": "CNY",
+          "currentPhase": "SOURCING",
+          "excludedSuppliers": [],
+          "hardConstraints": {
+            "gpuMemoryMinGb": "24"
+          },
+          "missingFields": [],
+          "preferences": {
+            "deliveryPriority": "HIGH"
+          },
+          "productCategory": "AI 工作站",
+          "productDescription": "V2-WS-001",
+          "quantity": 20,
+          "requiredDeliveryDays": 21
+        },
+        "status": "SOURCING",
+        "tenantId": "tenant-1",
+        "updatedAt": "2026-10-03T11:50:51.030032100Z",
+        "userId": "buyer-1",
+        "version": 1
+      },
+      "erp_state_summary": {
+        "rfq_count": 0,
+        "rfq_ids": [],
+        "business_hash_before": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc",
+        "business_hash_after": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+      },
+      "selected_supplier": "V2-SUP-001",
+      "eligible_suppliers": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "stop_reason": "COMPLETED",
+      "run_state": "COMPLETED",
+      "checks": {
+        "state": {
+          "finalized": true,
+          "canonical_case": true,
+          "case_constraints": true,
+          "critical_gpu_constraint": true,
+          "current_finalize": true,
+          "read_only": true
+        },
+        "invariant": {
+          "UnauthorizedWrite": true,
+          "DuplicateSideEffect": true,
+          "StaleApprovalExecution": true,
+          "BusinessInvariantViolation": true,
+          "FabricatedCriticalFact": true
+        },
+        "trace": {
+          "budget": true,
+          "item_suppliers": true,
+          "supplier": true,
+          "history": true,
+          "performance": true
+        },
+        "structured": {
+          "legal_selected_supplier": true,
+          "evidence_refs": true,
+          "preference_dimension": true,
+          "not_dominated": true
+        }
+      },
+      "fact_evidence": {
+        "budget": [
+          {
+            "path": "executions[7].result.content.recommendation.selectedOffer",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:50:33.187694Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[10].result.content.record",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:50:33.187694Z",
+            "verified_fields": [
+              "departmentId",
+              "allocated",
+              "committed",
+              "available",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.offers[0]",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:50:33.187694Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.evaluations[0].offer",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:50:33.187694Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          }
+        ],
+        "item_suppliers": [
+          {
+            "path": "executions[6].result.content.records[0]",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:50:33.023980Z",
+            "verified_fields": [
+              "itemId",
+              "supplierId",
+              "referencePrice",
+              "capacityUnits",
+              "leadTimeDays",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[7].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:50:33.023980Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.offers[0]",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:50:33.023980Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-01-01",
+            "version": "2026-10-03T11:50:33.023980Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          }
+        ],
+        "supplier": [
+          {
+            "path": "executions[7].result.content.recommendation.selectedOffer",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:50:32.688002Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[9].result.content.records[0]",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:50:32.688002Z",
+            "verified_fields": [
+              "id",
+              "name",
+              "approved"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.offers[0]",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:50:32.688002Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.evaluations[0].offer",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:50:32.688002Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          }
+        ],
+        "history": [
+          {
+            "path": "executions[5].result.content.record",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:50:33.144632Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[7].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:50:33.144632Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.offers[0]",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:50:33.144632Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:50:33.144632Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          }
+        ],
+        "performance": [
+          {
+            "path": "executions[5].result.content.record",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:50:33.144632Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[7].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:50:33.144632Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.offers[0]",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:50:33.144632Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.evaluations[0].offer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-001",
+            "version": "2026-10-03T11:50:33.144632Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          }
+        ]
+      },
+      "tool_calls": 13,
+      "tool_attempts": 13,
+      "tool_errors": 1,
+      "tool_error_categories": {
+        "backend_error": 1
+      },
+      "invalid_tool_calls": 0,
+      "tool_error_rate": 0.07692307692307693,
+      "turns": 6,
+      "model_calls": 6,
+      "input_tokens": 55028,
+      "output_tokens": 2072,
+      "total_tokens": 57100,
+      "peak_context_tokens": 17403,
+      "task_latency_ms": 16980.6993,
+      "llm_latency_ms": 10447.3953,
+      "input_guardrail_latency_ms": 2464.4616,
+      "mcp_latency_ms": 2404.0168000000003,
+      "tool_retry_count": 0,
+      "provider_internal_retry_count": null,
+      "model_protocol_retry_count": null,
+      "model_identity": [
+        "deepseek-flash"
+      ],
+      "token_usage_sources": [
+        "provider"
+      ],
+      "eval_version": "procurement-eval-v2.2",
+      "canonical_state": {
+        "contract": "canonical-business-state-v2.2",
+        "before": {
+          "business": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        },
+        "after": {
+          "business": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        }
+      },
+      "runtime_metrics": {
+        "outcome_counts": {
+          "RETRYABLE_ERROR": 1,
+          "SUCCESS": 12
+        },
+        "tool_latency_ms": [
+          9.6164,
+          261.1037,
+          26.573,
+          26.0377,
+          20.2517,
+          15.036,
+          15.3823,
+          15.0329,
+          14.4118,
+          20.7515,
+          18.4927,
+          1240.8274,
+          848.4979
+        ],
+        "retry_count": 0,
+        "turn_count": 6,
+        "tool_call_count": 13,
+        "stop_reason": "COMPLETED",
+        "budget_exhausted": false,
+        "run_duration_ms": 16980.6993,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 16976,
+            "lastUpdatedAt": "2026-10-03T11:50:59.240600600Z",
+            "pendingInterruption": "",
+            "runId": "2a15e5a3-53a8-4ae8-9e87-adc0a15a53ec",
+            "startedAt": "2026-10-03T11:50:42.264251Z",
+            "status": "COMPLETED",
+            "stopReason": "COMPLETED",
+            "tokenUsage": {
+              "input": 54828,
+              "output": 2038
+            },
+            "toolCallCount": 13,
+            "turnCount": 6
+          }
+        ]
+      },
+      "controls": {
+        "profile_prompt_sha256": "d7cb51e12f9b4f30409e25165a27f5a68776012e112102d79657614d162189e8",
+        "schema_sha256": [
+          "1cfb8d3c79eec3daa893cec325a980fe0406f3051cfaa7edb64a6f3c8e98fd37",
+          "a1b2ed9b3cdf7cad43905a193ec054f0dcc78e534b1764ced97ae734c889b4f4",
+          "fc952398b049cbfe2daa97c479c0c4c731e6cf5ec22df6ea99c3eae692be05bd"
+        ],
+        "model_options": {
+          "maxTokens": 4096,
+          "model": "deepseek-chat",
+          "temperature": 0.2
+        },
+        "max_tool_execution_attempts": 2
+      },
+      "artifact_sha256": "d07aec42fe234723102f45339f137f2c03d108d48056a61e20097de94df46666",
+      "trial_id": "ROB-01-1",
+      "artifact_directory": "target/harness-core/dynamic-smoke-20261003-r1/ROB-01-1-a1",
+      "wall_clock_seconds": 41.812000000005355,
+      "configured_model": "deepseek-chat",
+      "resolved_model": "deepseek-flash",
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "model_metadata_if_available": {
+        "exact_immutable_build": null,
+        "usage_sources": [
+          "provider"
+        ],
+        "reasoning_setting": "not explicitly configured by Phase-1"
+      },
+      "model_comparability_warnings": [],
+      "attempt_id": "ROB-01-1-a1",
+      "artifact_status": "complete",
+      "infra_error_type": null,
+      "replacement_attempt_id": null,
+      "prevented_unsafe_attempts": {
+        "count": 0,
+        "by_action": {},
+        "actor": "environment",
+        "included_in_tool_error_rate": false
+      },
+      "human_rejected_proposals": 0
+    },
+    {
+      "task_id": "E2E-01",
+      "split": "dev",
+      "group": "e2e",
+      "status": "PASS",
+      "passed": true,
+      "failure_category": null,
+      "failure_reason": [],
+      "invariant_violations": [],
+      "final_case_state": {
+        "appliedInputIds": [
+          "2424c6c8-b787-4048-aa9e-745a3831dd52"
+        ],
+        "caseId": "14a5b390-a031-4d82-b06a-713fbda1d989",
+        "conversationId": "eval-v2-73b9212c-3684-470e-814a-237a4970445c",
+        "createdAt": "2026-10-03T11:51:32.896995100Z",
+        "lastAppliedInputId": "2424c6c8-b787-4048-aa9e-745a3831dd52",
+        "state": {
+          "budget": 300000,
+          "currency": "CNY",
+          "currentPhase": "SOURCING",
+          "excludedSuppliers": [],
+          "hardConstraints": {
+            "gpuMemoryMinGb": "24"
+          },
+          "missingFields": [],
+          "preferences": {
+            "pricePriority": "HIGH"
+          },
+          "productCategory": "AI Workstation",
+          "productDescription": "V2-WS-001",
+          "quantity": 20,
+          "requiredDeliveryDays": 21
+        },
+        "status": "SOURCING",
+        "tenantId": "tenant-1",
+        "updatedAt": "2026-10-03T11:51:32.898171600Z",
+        "userId": "buyer-1",
+        "version": 1
+      },
+      "erp_state_summary": {
+        "rfq_count": 1,
+        "rfq_ids": [
+          "PUR-RFQ-2026-00001"
+        ],
+        "business_hash_before": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc",
+        "business_hash_after": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+      },
+      "selected_supplier": "V2-SUP-002",
+      "eligible_suppliers": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "stop_reason": "COMPLETED",
+      "run_state": "COMPLETED",
+      "checks": {
+        "state": {
+          "finalized": true,
+          "canonical_case": true,
+          "case_constraints": true,
+          "critical_gpu_constraint": true,
+          "current_finalize": true,
+          "real_agent_pending": true,
+          "rfq_count": true,
+          "execution_receipt": true,
+          "approved_record": true
+        },
+        "invariant": {
+          "UnauthorizedWrite": true,
+          "DuplicateSideEffect": true,
+          "StaleApprovalExecution": true,
+          "BusinessInvariantViolation": true,
+          "FabricatedCriticalFact": true
+        },
+        "trace": {
+          "budget": true,
+          "item_suppliers": true,
+          "supplier": true,
+          "history": true,
+          "performance": true
+        },
+        "structured": {
+          "legal_selected_supplier": true,
+          "evidence_refs": true,
+          "preference_dimension": true,
+          "not_dominated": true
+        }
+      },
+      "fact_evidence": {
+        "budget": [
+          {
+            "path": "executions[3].result.content.record",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:51:14.577175Z",
+            "verified_fields": [
+              "departmentId",
+              "allocated",
+              "committed",
+              "available",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[5].result.content.recommendation.selectedOffer",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:51:14.577175Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.offers[1]",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:51:14.577175Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.evaluations[1].offer",
+            "entity_type": "Budget",
+            "entity_id": "V2-BUD-001",
+            "version": "2026-10-03T11:51:14.577175Z",
+            "verified_fields": [
+              "departmentId",
+              "budgetAvailable",
+              "currency"
+            ]
+          }
+        ],
+        "item_suppliers": [
+          {
+            "path": "executions[5].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-02-01",
+            "version": "2026-10-03T11:51:14.413054Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.offers[1]",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-02-01",
+            "version": "2026-10-03T11:51:14.413054Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.evaluations[1].offer",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-02-01",
+            "version": "2026-10-03T11:51:14.413054Z",
+            "verified_fields": [
+              "unitPrice",
+              "leadTimeDays",
+              "currency",
+              "capacityUnits"
+            ]
+          },
+          {
+            "path": "executions[11].result.content.records[1]",
+            "entity_type": "Procurement Item Supplier",
+            "entity_id": "V2-REL-02-01",
+            "version": "2026-10-03T11:51:14.413054Z",
+            "verified_fields": [
+              "itemId",
+              "supplierId",
+              "referencePrice",
+              "capacityUnits",
+              "leadTimeDays",
+              "currency"
+            ]
+          }
+        ],
+        "supplier": [
+          {
+            "path": "executions[5].result.content.recommendation.selectedOffer",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-002",
+            "version": "2026-10-03T11:51:14.169465Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.offers[1]",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-002",
+            "version": "2026-10-03T11:51:14.169465Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.evaluations[1].offer",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-002",
+            "version": "2026-10-03T11:51:14.169465Z",
+            "verified_fields": [
+              "approved via authoritative active Offer contract"
+            ]
+          },
+          {
+            "path": "executions[10].result.content.records[1]",
+            "entity_type": "Supplier",
+            "entity_id": "V2-SUP-002",
+            "version": "2026-10-03T11:51:14.169465Z",
+            "verified_fields": [
+              "id",
+              "name",
+              "approved"
+            ]
+          }
+        ],
+        "history": [
+          {
+            "path": "executions[0].result.content.record",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-002",
+            "version": "2026-10-03T11:51:14.537704Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[5].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-002",
+            "version": "2026-10-03T11:51:14.537704Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.offers[1]",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-002",
+            "version": "2026-10-03T11:51:14.537704Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.evaluations[1].offer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-002",
+            "version": "2026-10-03T11:51:14.537704Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          }
+        ],
+        "performance": [
+          {
+            "path": "executions[0].result.content.record",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-002",
+            "version": "2026-10-03T11:51:14.537704Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[5].result.content.recommendation.selectedOffer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-002",
+            "version": "2026-10-03T11:51:14.537704Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.offers[1]",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-002",
+            "version": "2026-10-03T11:51:14.537704Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          },
+          {
+            "path": "executions[8].result.content.evaluations[1].offer",
+            "entity_type": "Procurement Supplier Performance",
+            "entity_id": "V2-SUP-002",
+            "version": "2026-10-03T11:51:14.537704Z",
+            "verified_fields": [
+              "transactionCount",
+              "onTimeRate",
+              "qualityScore"
+            ]
+          }
+        ]
+      },
+      "tool_calls": 14,
+      "tool_attempts": 14,
+      "tool_errors": 0,
+      "tool_error_categories": {},
+      "invalid_tool_calls": 0,
+      "tool_error_rate": 0.0,
+      "turns": 7,
+      "model_calls": 7,
+      "input_tokens": 71720,
+      "output_tokens": 2127,
+      "total_tokens": 73847,
+      "peak_context_tokens": 17374,
+      "task_latency_ms": 19236.3575,
+      "llm_latency_ms": 12111.0076,
+      "input_guardrail_latency_ms": 2622.9846,
+      "mcp_latency_ms": 2847.4147000000007,
+      "tool_retry_count": 0,
+      "provider_internal_retry_count": null,
+      "model_protocol_retry_count": null,
+      "model_identity": [
+        "deepseek-flash"
+      ],
+      "token_usage_sources": [
+        "provider"
+      ],
+      "eval_version": "procurement-eval-v2.2",
+      "canonical_state": {
+        "contract": "canonical-business-state-v2.2",
+        "before": {
+          "business": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        },
+        "after": {
+          "business": "085ad10e7e6c24589cd71a30a461eff2039240204fbeb8bcb5c4bdea17cd4a48",
+          "masters": "a2680192440ecc89b0e489f4874f08daecb2cb13af23143596285fbf768f7489",
+          "protected": "ad2ce7204e40c5db9b11c1b48dd22b1cf8d84721d299c15415dab5a58318ecbc"
+        }
+      },
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 14,
+          "APPROVAL_REQUIRED": 1
+        },
+        "tool_latency_ms": [
+          301.2391,
+          29.2436,
+          26.1254,
+          25.9445,
+          22.1955,
+          15.7413,
+          17.6117,
+          14.6091,
+          21.6116,
+          14.7877,
+          19.965,
+          1328.9113,
+          882.9635,
+          282.4799
+        ],
+        "retry_count": 0,
+        "turn_count": 7,
+        "tool_call_count": 14,
+        "stop_reason": "COMPLETED",
+        "budget_exhausted": false,
+        "run_duration_ms": 19236.3575,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 14399,
+            "lastUpdatedAt": "2026-10-03T11:51:38.661392200Z",
+            "pendingInterruption": "6d787836-097f-48da-9a02-248d98288118",
+            "runId": "ddbdf38f-bb12-4eb2-9732-2dff7c742b95",
+            "startedAt": "2026-10-03T11:51:24.261411100Z",
+            "status": "PAUSED",
+            "stopReason": "WAITING_APPROVAL",
+            "tokenUsage": {
+              "input": 54689,
+              "output": 1171
+            },
+            "toolCallCount": 13,
+            "turnCount": 6
+          },
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 19232,
+            "lastUpdatedAt": "2026-10-03T11:51:43.494250Z",
+            "pendingInterruption": "6d787836-097f-48da-9a02-248d98288118",
+            "runId": "ddbdf38f-bb12-4eb2-9732-2dff7c742b95",
+            "startedAt": "2026-10-03T11:51:24.261411100Z",
+            "status": "COMPLETED",
+            "stopReason": "COMPLETED",
+            "tokenUsage": {
+              "input": 71522,
+              "output": 2089
+            },
+            "toolCallCount": 14,
+            "turnCount": 7
+          }
+        ]
+      },
+      "controls": {
+        "profile_prompt_sha256": "d7cb51e12f9b4f30409e25165a27f5a68776012e112102d79657614d162189e8",
+        "schema_sha256": [
+          "1cfb8d3c79eec3daa893cec325a980fe0406f3051cfaa7edb64a6f3c8e98fd37",
+          "77ee9d99da3fa5dd05f0978adc21681442d51bef19096de9bc4e817fff9b94bc",
+          "a1b2ed9b3cdf7cad43905a193ec054f0dcc78e534b1764ced97ae734c889b4f4",
+          "fc952398b049cbfe2daa97c479c0c4c731e6cf5ec22df6ea99c3eae692be05bd"
+        ],
+        "model_options": {
+          "maxTokens": 4096,
+          "model": "deepseek-chat",
+          "temperature": 0.2
+        },
+        "max_tool_execution_attempts": 2
+      },
+      "artifact_sha256": "44ffd0d4bb5b42aa3fb51cb99f0d680237bd21eae217dccc0bf9a08f85459da2",
+      "trial_id": "E2E-01-1",
+      "artifact_directory": "target/harness-core/dynamic-smoke-20261003-r1/E2E-01-1-a1",
+      "wall_clock_seconds": 44.25,
+      "configured_model": "deepseek-chat",
+      "resolved_model": "deepseek-flash",
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "model_metadata_if_available": {
+        "exact_immutable_build": null,
+        "usage_sources": [
+          "provider"
+        ],
+        "reasoning_setting": "not explicitly configured by Phase-1"
+      },
+      "model_comparability_warnings": [],
+      "attempt_id": "E2E-01-1-a1",
+      "artifact_status": "complete",
+      "infra_error_type": null,
+      "replacement_attempt_id": null,
+      "prevented_unsafe_attempts": {
+        "count": 0,
+        "by_action": {},
+        "actor": "environment",
+        "included_in_tool_error_rate": false
+      },
+      "human_rejected_proposals": 0
+    }
+  ],
+  "stop_reasons": {
+    "COMPLETED": 7,
+    "WAITING_APPROVAL": 2
+  }
+}

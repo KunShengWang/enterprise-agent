@@ -1,0 +1,3067 @@
+{
+  "delta_statistics": {
+    "turns": {
+      "improved": 12,
+      "unchanged": 8,
+      "regressed": 8,
+      "sum": 12,
+      "median": 0.0,
+      "p25": -1.0,
+      "p75": 1.0,
+      "p95": 5.599999999999994
+    },
+    "tool_calls": {
+      "improved": 8,
+      "unchanged": 13,
+      "regressed": 7,
+      "sum": 18,
+      "median": 0.0,
+      "p25": -1.0,
+      "p75": 0.5,
+      "p95": 9.899999999999991
+    },
+    "tool_errors": {
+      "improved": 0,
+      "unchanged": 28,
+      "regressed": 0,
+      "sum": 0,
+      "median": 0.0,
+      "p25": 0.0,
+      "p75": 0.0,
+      "p95": 0.0
+    },
+    "input_tokens": {
+      "improved": 20,
+      "unchanged": 0,
+      "regressed": 8,
+      "sum": 85033,
+      "median": -5099.5,
+      "p25": -10806.25,
+      "p75": 1565.75,
+      "p95": 76852.14999999994
+    },
+    "output_tokens": {
+      "improved": 12,
+      "unchanged": 0,
+      "regressed": 16,
+      "sum": 1826,
+      "median": 36.5,
+      "p25": -50.75,
+      "p75": 226.0,
+      "p95": 743.6499999999996
+    },
+    "total_tokens": {
+      "improved": 20,
+      "unchanged": 0,
+      "regressed": 8,
+      "sum": 86859,
+      "median": -5308.0,
+      "p25": -10654.75,
+      "p75": 1627.5,
+      "p95": 77537.69999999994
+    },
+    "peak_context_tokens": {
+      "improved": 21,
+      "unchanged": 0,
+      "regressed": 7,
+      "sum": -10264,
+      "median": -904.0,
+      "p25": -1196.5,
+      "p75": -179.0,
+      "p95": 4181.399999999998
+    },
+    "task_latency_ms": {
+      "improved": 16,
+      "unchanged": 0,
+      "regressed": 12,
+      "sum": -190.68399999999747,
+      "median": -730.0830999999989,
+      "p25": -1594.7234250000006,
+      "p75": 555.7776000000001,
+      "p95": 6582.972784999994
+    }
+  },
+  "delta_quantiles": "linear interpolation (n-1)*q; frozen phase-level P95 uses nearest rank ceil(n*q)",
+  "top_input_increases": [
+    {
+      "task_id": "SRC-02",
+      "turns": 12,
+      "tool_calls": 12,
+      "tool_errors": 0,
+      "input_tokens": 134959,
+      "output_tokens": 855,
+      "total_tokens": 135814,
+      "peak_context_tokens": 4725,
+      "task_latency_ms": 11577.911
+    },
+    {
+      "task_id": "SRC-05",
+      "turns": 7,
+      "tool_calls": 12,
+      "tool_errors": 0,
+      "input_tokens": 92186,
+      "output_tokens": 849,
+      "total_tokens": 93035,
+      "peak_context_tokens": 4705,
+      "task_latency_ms": 7756.105199999998
+    },
+    {
+      "task_id": "ROB-01",
+      "turns": 3,
+      "tool_calls": 6,
+      "tool_errors": 0,
+      "input_tokens": 48375,
+      "output_tokens": 382,
+      "total_tokens": 48757,
+      "peak_context_tokens": 3209,
+      "task_latency_ms": 1984.259299999998
+    },
+    {
+      "task_id": "SRC-07",
+      "turns": 2,
+      "tool_calls": 3,
+      "tool_errors": 0,
+      "input_tokens": 16660,
+      "output_tokens": 548,
+      "total_tokens": 17208,
+      "peak_context_tokens": 2347,
+      "task_latency_ms": 4404.298299999999
+    },
+    {
+      "task_id": "REQ-04",
+      "turns": 1,
+      "tool_calls": 2,
+      "tool_errors": 0,
+      "input_tokens": 4293,
+      "output_tokens": 197,
+      "total_tokens": 4490,
+      "peak_context_tokens": 752,
+      "task_latency_ms": 723.5796
+    },
+    {
+      "task_id": "REQ-03",
+      "turns": 1,
+      "tool_calls": 2,
+      "tool_errors": 0,
+      "input_tokens": 3679,
+      "output_tokens": 214,
+      "total_tokens": 3893,
+      "peak_context_tokens": 127,
+      "task_latency_ms": 499.84360000000015
+    },
+    {
+      "task_id": "SRC-04",
+      "turns": 1,
+      "tool_calls": 0,
+      "tool_errors": 0,
+      "input_tokens": 2120,
+      "output_tokens": 385,
+      "total_tokens": 2505,
+      "peak_context_tokens": -894,
+      "task_latency_ms": 48.910500000001775
+    },
+    {
+      "task_id": "RFQ-05",
+      "turns": 1,
+      "tool_calls": 0,
+      "tool_errors": 0,
+      "input_tokens": 1381,
+      "output_tokens": -46,
+      "total_tokens": 1335,
+      "peak_context_tokens": -1129,
+      "task_latency_ms": -1289.7636000000002
+    },
+    {
+      "task_id": "REQ-06",
+      "turns": 0,
+      "tool_calls": 0,
+      "tool_errors": 0,
+      "input_tokens": -1054,
+      "output_tokens": -41,
+      "total_tokens": -1095,
+      "peak_context_tokens": -529,
+      "task_latency_ms": -1266.6749
+    },
+    {
+      "task_id": "ROB-02",
+      "turns": 0,
+      "tool_calls": 0,
+      "tool_errors": 0,
+      "input_tokens": -1072,
+      "output_tokens": -39,
+      "total_tokens": -1111,
+      "peak_context_tokens": -536,
+      "task_latency_ms": -771.0429000000004
+    },
+    {
+      "task_id": "ANOM-03",
+      "turns": 0,
+      "tool_calls": 0,
+      "tool_errors": 0,
+      "input_tokens": -1073,
+      "output_tokens": -71,
+      "total_tokens": -1144,
+      "peak_context_tokens": -536,
+      "task_latency_ms": 75.41939999999977
+    },
+    {
+      "task_id": "ANOM-04",
+      "turns": 0,
+      "tool_calls": 0,
+      "tool_errors": 0,
+      "input_tokens": -1095,
+      "output_tokens": 17,
+      "total_tokens": -1078,
+      "peak_context_tokens": -547,
+      "task_latency_ms": 20.09560000000056
+    },
+    {
+      "task_id": "ROB-03",
+      "turns": -1,
+      "tool_calls": 5,
+      "tool_errors": 0,
+      "input_tokens": -4765,
+      "output_tokens": 262,
+      "total_tokens": -4503,
+      "peak_context_tokens": 170,
+      "task_latency_ms": -716.8895999999986
+    },
+    {
+      "task_id": "E2E-06",
+      "turns": 0,
+      "tool_calls": 0,
+      "tool_errors": 0,
+      "input_tokens": -5073,
+      "output_tokens": -21,
+      "total_tokens": -5094,
+      "peak_context_tokens": -1166,
+      "task_latency_ms": -1401.4680000000008
+    },
+    {
+      "task_id": "RFQ-04",
+      "turns": 0,
+      "tool_calls": -4,
+      "tool_errors": 0,
+      "input_tokens": -5126,
+      "output_tokens": -396,
+      "total_tokens": -5522,
+      "peak_context_tokens": -1806,
+      "task_latency_ms": -2327.5571
+    },
+    {
+      "task_id": "E2E-03",
+      "turns": 0,
+      "tool_calls": 0,
+      "tool_errors": 0,
+      "input_tokens": -5834,
+      "output_tokens": 35,
+      "total_tokens": -5799,
+      "peak_context_tokens": -1111,
+      "task_latency_ms": 958.4043999999994
+    },
+    {
+      "task_id": "E2E-04",
+      "turns": -1,
+      "tool_calls": 0,
+      "tool_errors": 0,
+      "input_tokens": -8376,
+      "output_tokens": -16,
+      "total_tokens": -8392,
+      "peak_context_tokens": -281,
+      "task_latency_ms": -1341.4391000000014
+    },
+    {
+      "task_id": "GOV-01",
+      "turns": -1,
+      "tool_calls": 0,
+      "tool_errors": 0,
+      "input_tokens": -9504,
+      "output_tokens": 68,
+      "total_tokens": -9436,
+      "peak_context_tokens": -940,
+      "task_latency_ms": -1716.271200000001
+    },
+    {
+      "task_id": "RFQ-01",
+      "turns": -1,
+      "tool_calls": 0,
+      "tool_errors": 0,
+      "input_tokens": -9764,
+      "output_tokens": 94,
+      "total_tokens": -9670,
+      "peak_context_tokens": -946,
+      "task_latency_ms": -1872.9501999999975
+    },
+    {
+      "task_id": "RFQ-02",
+      "turns": 0,
+      "tool_calls": -1,
+      "tool_errors": 0,
+      "input_tokens": -10676,
+      "output_tokens": 38,
+      "total_tokens": -10638,
+      "peak_context_tokens": -2121,
+      "task_latency_ms": 2509.535100000001
+    },
+    {
+      "task_id": "E2E-01",
+      "turns": -1,
+      "tool_calls": 0,
+      "tool_errors": 0,
+      "input_tokens": -10781,
+      "output_tokens": 264,
+      "total_tokens": -10517,
+      "peak_context_tokens": -946,
+      "task_latency_ms": 286.9310000000005
+    },
+    {
+      "task_id": "GOV-03",
+      "turns": -1,
+      "tool_calls": 0,
+      "tool_errors": 0,
+      "input_tokens": -10882,
+      "output_tokens": 177,
+      "total_tokens": -10705,
+      "peak_context_tokens": -914,
+      "task_latency_ms": -166.8891999999978
+    },
+    {
+      "task_id": "REQ-01",
+      "turns": -1,
+      "tool_calls": -2,
+      "tool_errors": 0,
+      "input_tokens": -11506,
+      "output_tokens": -359,
+      "total_tokens": -11865,
+      "peak_context_tokens": -1468,
+      "task_latency_ms": -2846.139900000002
+    },
+    {
+      "task_id": "ANOM-01",
+      "turns": -1,
+      "tool_calls": -1,
+      "tool_errors": 0,
+      "input_tokens": -11885,
+      "output_tokens": -375,
+      "total_tokens": -12260,
+      "peak_context_tokens": -344,
+      "task_latency_ms": -5069.2588
+    },
+    {
+      "task_id": "ANOM-06",
+      "turns": -1,
+      "tool_calls": -1,
+      "tool_errors": 0,
+      "input_tokens": -12517,
+      "output_tokens": -65,
+      "total_tokens": -12582,
+      "peak_context_tokens": -1288,
+      "task_latency_ms": -743.2765999999992
+    },
+    {
+      "task_id": "SRC-01",
+      "turns": -1,
+      "tool_calls": -4,
+      "tool_errors": 0,
+      "input_tokens": -15118,
+      "output_tokens": -143,
+      "total_tokens": -15261,
+      "peak_context_tokens": -1867,
+      "task_latency_ms": -1554.2075000000004
+    },
+    {
+      "task_id": "SRC-03",
+      "turns": -2,
+      "tool_calls": -8,
+      "tool_errors": 0,
+      "input_tokens": -39082,
+      "output_tokens": -1049,
+      "total_tokens": -40131,
+      "peak_context_tokens": -4198,
+      "task_latency_ms": -5540.212100000001
+    },
+    {
+      "task_id": "GOV-02",
+      "turns": -4,
+      "tool_calls": -3,
+      "tool_errors": 0,
+      "input_tokens": -43437,
+      "output_tokens": 62,
+      "total_tokens": -43375,
+      "peak_context_tokens": -2732,
+      "task_latency_ms": -2411.9362999999976
+    }
+  ],
+  "groups": {
+    "anomaly": {
+      "tasks": [
+        "ANOM-01",
+        "ANOM-03",
+        "ANOM-04",
+        "ANOM-06"
+      ],
+      "phase4": {
+        "turns": 18,
+        "tool_calls": 29,
+        "input_tokens": 121103,
+        "total_tokens": 126241,
+        "schema_tokens": 35334,
+        "visible_tools_mean": 15,
+        "schema_mean": 1963,
+        "peak_context_mean": 7170.75
+      },
+      "phase5": {
+        "turns": 16,
+        "tool_calls": 27,
+        "input_tokens": 94533,
+        "total_tokens": 99177,
+        "schema_tokens": 24260,
+        "visible_tools_mean": 12.3125,
+        "schema_mean": 1516.25,
+        "peak_context_mean": 6492
+      },
+      "input_tasks": {
+        "improved": 4,
+        "unchanged": 0,
+        "regressed": 0,
+        "sum": -26570,
+        "median": -6490.0,
+        "p25": -12043.0,
+        "p75": -1089.5,
+        "p95": -1076.3
+      }
+    },
+    "e2e": {
+      "tasks": [
+        "E2E-01",
+        "E2E-03",
+        "E2E-04",
+        "E2E-06"
+      ],
+      "phase4": {
+        "turns": 30,
+        "tool_calls": 49,
+        "input_tokens": 251715,
+        "total_tokens": 258782,
+        "schema_tokens": 58248,
+        "visible_tools_mean": 14.9,
+        "schema_mean": 1941.6,
+        "peak_context_mean": 13361.5
+      },
+      "phase5": {
+        "turns": 28,
+        "tool_calls": 49,
+        "input_tokens": 221651,
+        "total_tokens": 228980,
+        "schema_tokens": 38291,
+        "visible_tools_mean": 11.107142857142858,
+        "schema_mean": 1367.5357142857142,
+        "peak_context_mean": 12485.5
+      },
+      "input_tasks": {
+        "improved": 4,
+        "unchanged": 0,
+        "regressed": 0,
+        "sum": -30064,
+        "median": -7105.0,
+        "p25": -8977.25,
+        "p75": -5643.75,
+        "p95": -5187.150000000001
+      }
+    },
+    "governance": {
+      "tasks": [
+        "GOV-01",
+        "GOV-02",
+        "GOV-03"
+      ],
+      "phase4": {
+        "turns": 25,
+        "tool_calls": 45,
+        "input_tokens": 247546,
+        "total_tokens": 252182,
+        "schema_tokens": 48861,
+        "visible_tools_mean": 14.96,
+        "schema_mean": 1954.44,
+        "peak_context_mean": 19161
+      },
+      "phase5": {
+        "turns": 19,
+        "tool_calls": 42,
+        "input_tokens": 183723,
+        "total_tokens": 188666,
+        "schema_tokens": 27016,
+        "visible_tools_mean": 11.31578947368421,
+        "schema_mean": 1421.8947368421052,
+        "peak_context_mean": 17632.333333333332
+      },
+      "input_tasks": {
+        "improved": 3,
+        "unchanged": 0,
+        "regressed": 0,
+        "sum": -63823,
+        "median": -10882,
+        "p25": -27159.5,
+        "p75": -10193.0,
+        "p95": -9641.8
+      }
+    },
+    "requisition": {
+      "tasks": [
+        "REQ-01",
+        "REQ-03",
+        "REQ-04",
+        "REQ-06"
+      ],
+      "phase4": {
+        "turns": 14,
+        "tool_calls": 15,
+        "input_tokens": 100966,
+        "total_tokens": 104109,
+        "schema_tokens": 27482,
+        "visible_tools_mean": 15,
+        "schema_mean": 1963,
+        "peak_context_mean": 7781
+      },
+      "phase5": {
+        "turns": 15,
+        "tool_calls": 17,
+        "input_tokens": 96378,
+        "total_tokens": 99532,
+        "schema_tokens": 22121,
+        "visible_tools_mean": 11.933333333333334,
+        "schema_mean": 1474.7333333333333,
+        "peak_context_mean": 7501.5
+      },
+      "input_tasks": {
+        "improved": 2,
+        "unchanged": 0,
+        "regressed": 2,
+        "sum": -4588,
+        "median": 1312.5,
+        "p25": -3667.0,
+        "p75": 3832.5,
+        "p95": 4200.9
+      }
+    },
+    "rfq": {
+      "tasks": [
+        "RFQ-01",
+        "RFQ-02",
+        "RFQ-04",
+        "RFQ-05"
+      ],
+      "phase4": {
+        "turns": 26,
+        "tool_calls": 54,
+        "input_tokens": 251717,
+        "total_tokens": 257551,
+        "schema_tokens": 50824,
+        "visible_tools_mean": 14.961538461538462,
+        "schema_mean": 1954.7692307692307,
+        "peak_context_mean": 18214.5
+      },
+      "phase5": {
+        "turns": 26,
+        "tool_calls": 49,
+        "input_tokens": 227532,
+        "total_tokens": 233056,
+        "schema_tokens": 37349,
+        "visible_tools_mean": 11.423076923076923,
+        "schema_mean": 1436.5,
+        "peak_context_mean": 16714
+      },
+      "input_tasks": {
+        "improved": 3,
+        "unchanged": 0,
+        "regressed": 1,
+        "sum": -24185,
+        "median": -7445.0,
+        "p25": -9992.0,
+        "p75": -3499.25,
+        "p95": 404.949999999998
+      }
+    },
+    "robustness": {
+      "tasks": [
+        "ROB-01",
+        "ROB-02",
+        "ROB-03"
+      ],
+      "phase4": {
+        "turns": 16,
+        "tool_calls": 34,
+        "input_tokens": 143851,
+        "total_tokens": 149363,
+        "schema_tokens": 31408,
+        "visible_tools_mean": 15,
+        "schema_mean": 1963,
+        "peak_context_mean": 14233
+      },
+      "phase5": {
+        "turns": 18,
+        "tool_calls": 45,
+        "input_tokens": 186389,
+        "total_tokens": 192506,
+        "schema_tokens": 26446,
+        "visible_tools_mean": 11.777777777777779,
+        "schema_mean": 1469.2222222222222,
+        "peak_context_mean": 15180.666666666666
+      },
+      "input_tasks": {
+        "improved": 2,
+        "unchanged": 0,
+        "regressed": 1,
+        "sum": 42538,
+        "median": -1072,
+        "p25": -2918.5,
+        "p75": 23651.5,
+        "p95": 43430.299999999996
+      }
+    },
+    "sourcing": {
+      "tasks": [
+        "SRC-01",
+        "SRC-02",
+        "SRC-03",
+        "SRC-04",
+        "SRC-05",
+        "SRC-07"
+      ],
+      "phase4": {
+        "turns": 39,
+        "tool_calls": 84,
+        "input_tokens": 371014,
+        "total_tokens": 383679,
+        "schema_tokens": 76557,
+        "visible_tools_mean": 15,
+        "schema_mean": 1963,
+        "peak_context_mean": 16805.333333333332
+      },
+      "phase5": {
+        "turns": 58,
+        "tool_calls": 99,
+        "input_tokens": 562739,
+        "total_tokens": 576849,
+        "schema_tokens": 85584,
+        "visible_tools_mean": 11.879310344827585,
+        "schema_mean": 1475.5862068965516,
+        "peak_context_mean": 17608.333333333332
+      },
+      "input_tasks": {
+        "improved": 2,
+        "unchanged": 0,
+        "regressed": 4,
+        "sum": 191725,
+        "median": 9390.0,
+        "p25": -10808.5,
+        "p75": 73304.5,
+        "p95": 124265.75
+      }
+    }
+  },
+  "composition": {
+    "phase4": {
+      "instructions": 284424,
+      "tool_schema": 328714,
+      "business_state": 9899,
+      "run_state": 16469,
+      "conversation": 22690,
+      "tool_result": 413353,
+      "other": 26802,
+      "total_estimated": 1102351
+    },
+    "phase5": {
+      "instructions": 304740,
+      "tool_schema": 261067,
+      "business_state": 9646,
+      "run_state": 17635,
+      "conversation": 26015,
+      "tool_result": 482733,
+      "other": 31721,
+      "total_estimated": 1133557
+    }
+  },
+  "turn_normalized": {
+    "phase4": {
+      "turns": 168,
+      "provider_model_input_total": 1482533,
+      "provider_input_including_guardrail": 1487912,
+      "model_input_per_turn": 8824.60119047619,
+      "input_including_guardrail_per_model_turn": 8856.619047619048,
+      "schema_per_turn": 1956.6309523809523,
+      "tool_results_per_turn": 2460.434523809524,
+      "tool_calls_per_turn": 1.8452380952380953,
+      "output_per_turn": 256.0059523809524,
+      "assistant_text_estimate": 20080,
+      "reasoning_text_estimate": 0,
+      "reasoning_present_turns": 0
+    },
+    "phase5": {
+      "turns": 180,
+      "provider_model_input_total": 1567566,
+      "provider_input_including_guardrail": 1572945,
+      "model_input_per_turn": 8708.7,
+      "input_including_guardrail_per_model_turn": 8738.583333333334,
+      "schema_per_turn": 1450.3722222222223,
+      "tool_results_per_turn": 2681.85,
+      "tool_calls_per_turn": 1.8222222222222222,
+      "output_per_turn": 249.02777777777777,
+      "assistant_text_estimate": 20797,
+      "reasoning_text_estimate": 0,
+      "reasoning_present_turns": 0
+    }
+  },
+  "exposure_stages": {
+    "POST_RFQ": {
+      "turns": 5,
+      "visible_tools_mean": 5,
+      "candidate_schema_mean": 1749,
+      "selected_schema_mean": 352,
+      "direct_schema_saved": 6985,
+      "saved_per_turn": 1397
+    },
+    "REQUEST_ANALYSIS": {
+      "turns": 110,
+      "visible_tools_mean": 12,
+      "candidate_schema_mean": 1963,
+      "selected_schema_mean": 1445,
+      "direct_schema_saved": 56980,
+      "saved_per_turn": 518
+    },
+    "RFQ_PREPARATION": {
+      "turns": 18,
+      "visible_tools_mean": 8,
+      "candidate_schema_mean": 1963,
+      "selected_schema_mean": 1207,
+      "direct_schema_saved": 13608,
+      "saved_per_turn": 756
+    },
+    "SOURCING": {
+      "turns": 47,
+      "visible_tools_mean": 13,
+      "candidate_schema_mean": 1963,
+      "selected_schema_mean": 1673,
+      "direct_schema_saved": 13630,
+      "saved_per_turn": 290
+    }
+  },
+  "schema_direct": {
+    "total": 91203,
+    "per_task_mean": 3257.25,
+    "per_model_turn": 506.68333333333334
+  },
+  "growth_tasks": [
+    "REQ-03",
+    "REQ-04",
+    "ROB-01",
+    "ROB-03",
+    "SRC-02",
+    "SRC-05",
+    "SRC-07"
+  ],
+  "growth_task_surplus_categories": {
+    "E_ADDITIONAL_FACT_ACQUISITION": 28,
+    "B_SAME_BATCH_FACT_OVERLAP": 7,
+    "B_EQUIVALENT_FACT_OVERLAP": 7,
+    "UNKNOWN": 1,
+    "C_STAGE_TRANSITION_FACT_OVERLAP": 1
+  },
+  "growth_task_accounting": {
+    "phase5_surplus": 44,
+    "phase4_surplus": 2,
+    "net": 42
+  },
+  "growth_surplus_stage_counts": {
+    "REQUEST_ANALYSIS": 43,
+    "SOURCING": 1
+  },
+  "peak_tail": {
+    "phase4": [
+      {
+        "task_id": "SRC-04",
+        "peak": 20625
+      },
+      {
+        "task_id": "GOV-02",
+        "peak": 20479
+      },
+      {
+        "task_id": "ROB-01",
+        "peak": 19523
+      },
+      {
+        "task_id": "SRC-01",
+        "peak": 19344
+      },
+      {
+        "task_id": "RFQ-04",
+        "peak": 19318
+      }
+    ],
+    "phase5": [
+      {
+        "task_id": "SRC-02",
+        "peak": 23042
+      },
+      {
+        "task_id": "ROB-01",
+        "peak": 22732
+      },
+      {
+        "task_id": "SRC-05",
+        "peak": 22545
+      },
+      {
+        "task_id": "SRC-04",
+        "peak": 19731
+      },
+      {
+        "task_id": "ROB-03",
+        "peak": 18553
+      }
+    ]
+  },
+  "all_call_categories": {
+    "phase4": {
+      "E_ADDITIONAL_FACT_ACQUISITION": 226,
+      "UNKNOWN": 56,
+      "B_EQUIVALENT_FACT_OVERLAP": 23,
+      "D_RECOVERY_OR_INJECTED_FAULT": 5
+    },
+    "phase5": {
+      "E_ADDITIONAL_FACT_ACQUISITION": 221,
+      "UNKNOWN": 56,
+      "B_EQUIVALENT_FACT_OVERLAP": 13,
+      "C_STAGE_TRANSITION_FACT_OVERLAP": 20,
+      "D_RECOVERY_OR_INJECTED_FAULT": 4,
+      "B_SAME_BATCH_FACT_OVERLAP": 14
+    }
+  },
+  "fact_family_reacquisition": {
+    "Budget": {
+      "phase4": {
+        "read_calls": 42,
+        "same_version_overlap_calls": 19,
+        "new_value_calls": 23
+      },
+      "phase5": {
+        "read_calls": 45,
+        "same_version_overlap_calls": 20,
+        "new_value_calls": 25
+      }
+    },
+    "Procurement Purchase History": {
+      "phase4": {
+        "read_calls": 11,
+        "same_version_overlap_calls": 0,
+        "new_value_calls": 11
+      },
+      "phase5": {
+        "read_calls": 22,
+        "same_version_overlap_calls": 0,
+        "new_value_calls": 22
+      }
+    },
+    "Supplier": {
+      "phase4": {
+        "read_calls": 43,
+        "same_version_overlap_calls": 1,
+        "new_value_calls": 43
+      },
+      "phase5": {
+        "read_calls": 47,
+        "same_version_overlap_calls": 8,
+        "new_value_calls": 41
+      }
+    },
+    "Procurement Supplier Performance": {
+      "phase4": {
+        "read_calls": 123,
+        "same_version_overlap_calls": 18,
+        "new_value_calls": 105
+      },
+      "phase5": {
+        "read_calls": 125,
+        "same_version_overlap_calls": 22,
+        "new_value_calls": 103
+      }
+    },
+    "Material Request": {
+      "phase4": {
+        "read_calls": 3,
+        "same_version_overlap_calls": 0,
+        "new_value_calls": 3
+      },
+      "phase5": {
+        "read_calls": 3,
+        "same_version_overlap_calls": 0,
+        "new_value_calls": 3
+      }
+    },
+    "Item": {
+      "phase4": {
+        "read_calls": 45,
+        "same_version_overlap_calls": 21,
+        "new_value_calls": 26
+      },
+      "phase5": {
+        "read_calls": 45,
+        "same_version_overlap_calls": 19,
+        "new_value_calls": 27
+      }
+    }
+  },
+  "transition_groups": {
+    "0": {
+      "tasks": [
+        "ANOM-03",
+        "ANOM-04",
+        "REQ-03",
+        "REQ-04",
+        "REQ-06",
+        "ROB-02"
+      ],
+      "call_delta_sum": 4,
+      "call_delta_median": 0.0,
+      "turn_delta_sum": 2
+    },
+    "1": {
+      "tasks": [
+        "ANOM-01",
+        "ANOM-06",
+        "E2E-04",
+        "SRC-07"
+      ],
+      "call_delta_sum": 1,
+      "call_delta_median": -0.5,
+      "turn_delta_sum": -1
+    },
+    "2": {
+      "tasks": [
+        "GOV-01",
+        "GOV-02",
+        "REQ-01",
+        "RFQ-01",
+        "RFQ-04",
+        "RFQ-05",
+        "ROB-01",
+        "ROB-03",
+        "SRC-01",
+        "SRC-02",
+        "SRC-03",
+        "SRC-04",
+        "SRC-05"
+      ],
+      "call_delta_sum": 14,
+      "call_delta_median": 0,
+      "turn_delta_sum": 13
+    },
+    "3": {
+      "tasks": [
+        "E2E-01",
+        "E2E-03",
+        "E2E-06",
+        "GOV-03",
+        "RFQ-02"
+      ],
+      "call_delta_sum": -1,
+      "call_delta_median": 0,
+      "turn_delta_sum": -2
+    }
+  },
+  "indirect_selection_cost": {
+    "proven_cases": [],
+    "candidate_calls": [
+      {
+        "task_id": "E2E-01",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-01",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-01",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 16
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-01",
+        "call_index": 5,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-01",
+        "call_index": 6,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-01",
+        "call_index": 7,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-01",
+        "call_index": 9,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-03",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 11,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-03",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 11,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-03",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 11,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-03",
+        "call_index": 6,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 11,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-04",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-04",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-04",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 16
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-04",
+        "call_index": 5,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-04",
+        "call_index": 6,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-04",
+        "call_index": 7,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-04",
+        "call_index": 9,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-06",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 8,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-06",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 8,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-06",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 8,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "E2E-06",
+        "call_index": 5,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 8,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-01",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-01",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-01",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 16
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-01",
+        "call_index": 5,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-01",
+        "call_index": 6,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-01",
+        "call_index": 7,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-01",
+        "call_index": 9,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-02",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-02",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-02",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 16
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-02",
+        "call_index": 5,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-02",
+        "call_index": 6,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-02",
+        "call_index": 7,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-02",
+        "call_index": 9,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-03",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-03",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-03",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 16
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-03",
+        "call_index": 5,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-03",
+        "call_index": 6,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-03",
+        "call_index": 7,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "GOV-03",
+        "call_index": 9,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "REQ-01",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 7,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "REQ-01",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 7,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "REQ-01",
+        "call_index": 4,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 7,
+            "shared_atoms": 16
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-01",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-01",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-01",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 16
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-01",
+        "call_index": 5,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-01",
+        "call_index": 6,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-01",
+        "call_index": 7,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-01",
+        "call_index": 9,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-02",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 5,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-02",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 5,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-04",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-04",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-04",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 16
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-04",
+        "call_index": 5,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-04",
+        "call_index": 6,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-04",
+        "call_index": 7,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-04",
+        "call_index": 9,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-05",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-05",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-05",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 16
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-05",
+        "call_index": 5,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-05",
+        "call_index": 6,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-05",
+        "call_index": 7,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "RFQ-05",
+        "call_index": 9,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "ROB-01",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 23,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "ROB-01",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 23,
+            "shared_atoms": 16
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "ROB-01",
+        "call_index": 11,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 23,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "ROB-01",
+        "call_index": 12,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 23,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "ROB-01",
+        "call_index": 13,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 23,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "ROB-01",
+        "call_index": 15,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 23,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "ROB-03",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 17,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "ROB-03",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 17,
+            "shared_atoms": 16
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "ROB-03",
+        "call_index": 10,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 17,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "ROB-03",
+        "call_index": 11,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 17,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "ROB-03",
+        "call_index": 12,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 17,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "ROB-03",
+        "call_index": 14,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 17,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-01",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-01",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-01",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 16
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-02",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 24,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-02",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 24,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-02",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 24,
+            "shared_atoms": 16
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-02",
+        "call_index": 11,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 24,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-02",
+        "call_index": 12,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 24,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-02",
+        "call_index": 13,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 24,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-02",
+        "call_index": 15,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 24,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-03",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-03",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-03",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 8
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-03",
+        "call_index": 5,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-03",
+        "call_index": 7,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-04",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-04",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-04",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 20
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-04",
+        "call_index": 5,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-04",
+        "call_index": 6,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-04",
+        "call_index": 7,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-04",
+        "call_index": 8,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-04",
+        "call_index": 9,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 12,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-05",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 24,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-05",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 24,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-05",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 24,
+            "shared_atoms": 16
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-05",
+        "call_index": 11,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 24,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-05",
+        "call_index": 12,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 24,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-05",
+        "call_index": 13,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 24,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-05",
+        "call_index": 15,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 24,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-07",
+        "call_index": 1,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_item",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 10,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-07",
+        "call_index": 2,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_budget_status",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 10,
+            "shared_atoms": 2
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-07",
+        "call_index": 3,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_item_suppliers",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 10,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-07",
+        "call_index": 5,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_get_supplier_performance",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 10,
+            "shared_atoms": 3
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      },
+      {
+        "task_id": "SRC-07",
+        "call_index": 7,
+        "stage": "REQUEST_ANALYSIS",
+        "tool": "mcp.erpnext.procurement_list_items",
+        "alternatives": [
+          {
+            "tool": "procurement_supplier_search",
+            "example_call": 10,
+            "shared_atoms": 4
+          }
+        ],
+        "business_state": {
+          "status": "UNCREATED",
+          "caseVersion": null
+        },
+        "assessment": "NOT_EXECUTABLE_ALTERNATIVE_WITHOUT_CASE"
+      }
+    ],
+    "rule": "Candidate overlap with a hidden read tool is not proof: inspect actual current Case preconditions and whether a multi-tool substitute is necessary. No mental-state inference."
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "command": "mvn -B '-Dtest=ProcurementToolSelectorTests,ContextEngineeringTests,DefaultAgentRuntimeStateTests,HarnessCoreTests,ProcurementRfqHitlTests,ErpNextRfqGatewayTests,ProcurementCaseContextRendererTests,DefaultAgentContextManagerTests,NativeToolCallingAgentModelGatewayTests' '-Dsurefire.reportNameSuffix=dynamic-l0-r3' test",
+  "tests": 109,
+  "passed": 109,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "history": "r1 99 pass; r2 test compilation failed; fixed test accessor; r3 109 pass"
+}

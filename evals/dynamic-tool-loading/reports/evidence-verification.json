@@ -1,0 +1,11 @@
+{
+  "scanned_entries": 580,
+  "archive_hashes_valid": true,
+  "entry_hashes_valid": true,
+  "gzip_contents_scanned": true,
+  "configured_secret_matches": 0,
+  "valid_trials": 37,
+  "execution_attempts": 38,
+  "passed": 37,
+  "invariant_violations": 0
+}

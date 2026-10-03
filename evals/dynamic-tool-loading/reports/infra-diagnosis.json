@@ -1,0 +1,10 @@
+{
+  "attempt": "REQ-03-1-a1",
+  "run_id": "dynamic-dev-20261003-r1",
+  "stage": "reset before model invocation",
+  "root_error": "MariaDB 1020 Record has changed since last read in tabSupplier; Frappe QueryDeadlockError wrapped as QueryTimeoutError",
+  "diagnosis": "Read-only SHOW PROCESSLIST showed only the probe connection, no remaining site transaction; all 6 suppliers present. Containers running. Failed reset process exited and destroyed connection.",
+  "action": "Same-source --resume replaces only infrastructure-invalid attempt; no server restart, deletion, source change or timeout loosening.",
+  "model_invoked": false,
+  "retained_evidence": "reset.log, result.json, target/dynamic-db-probe.log"
+}

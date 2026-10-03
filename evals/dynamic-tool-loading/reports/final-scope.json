@@ -1,0 +1,238 @@
+{
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "branch": "feat/dynamic-tool-loading",
+  "git_status_short": " M src/main/java/com/agent/platform/procurement/application/ProcurementCaseContextRenderer.java\n M src/main/java/com/agent/platform/procurement/config/ProcurementSourcingExecutionProfileFactory.java\n M src/main/java/com/agent/platform/procurement/tool/ProcurementToolHandler.java\n M src/main/java/com/agent/platform/runtime/AgentCanonicalContextProvider.java\n M src/main/java/com/agent/platform/runtime/AgentContextManager.java\n M src/main/java/com/agent/platform/runtime/AgentExecutionProfile.java\n M src/main/java/com/agent/platform/runtime/DefaultAgentContextManager.java\n M src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java\n M src/test/java/com/agent/platform/runtime/DefaultAgentRuntimeStateTests.java\n?? docs/harness/dynamic-tool-loading.md\n?? docs/harness/phase5-report.md\n?? evals/dynamic-tool-loading/\n?? src/main/java/com/agent/platform/procurement/application/ProcurementToolSelector.java\n?? src/main/java/com/agent/platform/runtime/ToolSelectionState.java\n?? src/main/java/com/agent/platform/runtime/ToolSelector.java\n?? src/test/java/com/agent/platform/procurement/ProcurementToolSelectorTests.java",
+  "git_diff_stat": " .../ProcurementCaseContextRenderer.java            | 16 +++++++++\n ...ProcurementSourcingExecutionProfileFactory.java |  2 +-\n .../procurement/tool/ProcurementToolHandler.java   | 12 +++++++\n .../runtime/AgentCanonicalContextProvider.java     |  5 +++\n .../platform/runtime/AgentContextManager.java      |  5 +++\n .../platform/runtime/AgentExecutionProfile.java    |  8 ++++-\n .../runtime/DefaultAgentContextManager.java        |  9 +++++\n .../platform/runtime/DefaultAgentRuntime.java      | 39 +++++++++++++++++-----\n .../runtime/DefaultAgentRuntimeStateTests.java     | 24 +++++++++++++\n 9 files changed, 110 insertions(+), 10 deletions(-)",
+  "staged_files": [],
+  "handler_sha256": "8F3EEA10DF78F9E8F5010A4D2CE72EE049962FDC4E3B4D98CFCD7518CE2E7F6D",
+  "handler_unchanged": true,
+  "fixture_fingerprints_unchanged": true,
+  "frozen_prior_eval_files_unchanged": true,
+  "same_source_smoke_dev": true,
+  "model_exposure_checks": [
+    {
+      "mode": "smoke",
+      "trial_id": "REQ-01-1",
+      "model_requests": 6,
+      "exposure_matches": true
+    },
+    {
+      "mode": "smoke",
+      "trial_id": "REQ-03-1",
+      "model_requests": 2,
+      "exposure_matches": true
+    },
+    {
+      "mode": "smoke",
+      "trial_id": "ANOM-01-1",
+      "model_requests": 6,
+      "exposure_matches": true
+    },
+    {
+      "mode": "smoke",
+      "trial_id": "SRC-01-1",
+      "model_requests": 17,
+      "exposure_matches": true
+    },
+    {
+      "mode": "smoke",
+      "trial_id": "RFQ-01-1",
+      "model_requests": 7,
+      "exposure_matches": true
+    },
+    {
+      "mode": "smoke",
+      "trial_id": "RFQ-02-1",
+      "model_requests": 10,
+      "exposure_matches": true
+    },
+    {
+      "mode": "smoke",
+      "trial_id": "GOV-01-1",
+      "model_requests": 7,
+      "exposure_matches": true
+    },
+    {
+      "mode": "smoke",
+      "trial_id": "ROB-01-1",
+      "model_requests": 6,
+      "exposure_matches": true
+    },
+    {
+      "mode": "smoke",
+      "trial_id": "E2E-01-1",
+      "model_requests": 7,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "ANOM-01-1",
+      "model_requests": 6,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "ANOM-03-1",
+      "model_requests": 2,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "ANOM-04-1",
+      "model_requests": 2,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "ANOM-06-1",
+      "model_requests": 6,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "E2E-01-1",
+      "model_requests": 7,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "E2E-03-1",
+      "model_requests": 9,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "E2E-04-1",
+      "model_requests": 5,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "E2E-06-1",
+      "model_requests": 7,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "GOV-01-1",
+      "model_requests": 6,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "GOV-02-1",
+      "model_requests": 6,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "GOV-03-1",
+      "model_requests": 7,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "REQ-01-1",
+      "model_requests": 9,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "REQ-03-1",
+      "model_requests": 2,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "REQ-04-1",
+      "model_requests": 2,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "REQ-06-1",
+      "model_requests": 2,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "RFQ-01-1",
+      "model_requests": 6,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "RFQ-02-1",
+      "model_requests": 7,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "RFQ-04-1",
+      "model_requests": 6,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "RFQ-05-1",
+      "model_requests": 7,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "ROB-01-1",
+      "model_requests": 10,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "ROB-02-1",
+      "model_requests": 2,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "ROB-03-1",
+      "model_requests": 6,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "SRC-01-1",
+      "model_requests": 6,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "SRC-02-1",
+      "model_requests": 19,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "SRC-03-1",
+      "model_requests": 7,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "SRC-04-1",
+      "model_requests": 7,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "SRC-05-1",
+      "model_requests": 13,
+      "exposure_matches": true
+    },
+    {
+      "mode": "dev",
+      "trial_id": "SRC-07-1",
+      "model_requests": 6,
+      "exposure_matches": true
+    }
+  ],
+  "existing_tags": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776 refs/tags/procurement-context-v1\n13759383e988cafee936f5ac297299080eba9cc3 refs/tags/procurement-eval-v2.1\nad563544fce6ae2bc238d555c6bf70abc1f38a4a refs/tags/procurement-eval-v2.2\nad563544fce6ae2bc238d555c6bf70abc1f38a4a refs/tags/procurement-harness-b0\ncfb29cdf31ca240802cc86c2b9f9642f7fbfde42 refs/tags/procurement-harness-core-v1\nb4e1189b6697733a63830d60cb8f422ebcd9ed2c refs/tags/procurement-v0-baseline\nb0e82e2b603ae56370ce3ee4bc136669f0f78b34 refs/tags/procurement-v2-erp-baseline",
+  "scope": "No commit/push/tag; no Multi-Agent, Memory redesign, Tool Search, extra context optimization."
+}

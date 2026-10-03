@@ -24,6 +24,22 @@ public class ProcurementCaseContextRenderer implements AgentCanonicalContextProv
 
     public static final String SOURCE = "authoritative-procurement-case-state";
 
+    @Override
+    public Optional<com.agent.platform.runtime.ToolSelectionState> toolSelectionState(
+            String tenantId, String userId, String conversationId, AgentExecutionProfile profile) {
+        if (profile == null || !ProcurementSourcingExecutionProfileFactory.PROFILE_NAME.equals(profile.name()))
+            return Optional.empty();
+        if (blank(tenantId) || blank(userId) || blank(conversationId))
+            return Optional.of(com.agent.platform.runtime.ToolSelectionState.unknown());
+        return Optional.of(caseStore.findByTenantUserAndConversationId(tenantId.trim(), userId.trim(), conversationId.trim())
+                .map(c -> new com.agent.platform.runtime.ToolSelectionState(true, true, c.caseId(), c.version(),
+                        c.status().name(), c.state().missingFields().isEmpty(),
+                        !c.state().productCategory().isBlank() && !c.state().productDescription().isBlank()
+                                && c.state().quantity() != null && c.state().requiredDeliveryDays() != null
+                                && !c.state().currency().isBlank()))
+                .orElseGet(com.agent.platform.runtime.ToolSelectionState::absent));
+    }
+
     private final ProcurementCaseStore caseStore;
     private final ObjectMapper objectMapper;
 

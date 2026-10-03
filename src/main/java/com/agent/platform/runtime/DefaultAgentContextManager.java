@@ -74,6 +74,15 @@ public class DefaultAgentContextManager implements AgentContextManager {
     }
 
     @Override
+    public ToolSelectionState toolSelectionState(String sessionId, String userId, String tenantId,
+                                                 AgentExecutionProfile profile) {
+        List<ToolSelectionState> states = canonicalContextProviders.stream()
+                .flatMap(provider -> provider.toolSelectionState(tenantId, userId, sessionId, profile).stream())
+                .toList();
+        return states.size() == 1 ? states.get(0) : ToolSelectionState.unknown();
+    }
+
+    @Override
     public AgentContextView project(String sessionId,
                                     String userId,
                                     String tenantId,

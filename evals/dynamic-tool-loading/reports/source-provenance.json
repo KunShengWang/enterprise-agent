@@ -1,0 +1,24 @@
+{
+  "files": {
+    "docs/harness/dynamic-tool-loading.md": "28d1ac260ee6ec4313c0cd90a861ce5afd4cd83457c56a678c2c32cde679ebef",
+    "docs/harness/phase5-report.md": "bdf8b24bf89329155d89f6fbd77c17a76de1901bbbb9d0dd7abd2f969f621dd2",
+    "evals/dynamic-tool-loading/compare.py": "7a21161c09a80af48d954b8931d21d84f8aaced2240d182fe409fec177a59fc7",
+    "evals/dynamic-tool-loading/run.py": "1fb1df4aa61fd8407c6e8f85f1066670d305cbf2b29443d56be2a6e140b6a060",
+    "src/main/java/com/agent/platform/procurement/application/ProcurementCaseContextRenderer.java": "d9a3863fa9566306f75e20b36a072c7a3e57c27b86ecaf853da8c87a4fdb3efc",
+    "src/main/java/com/agent/platform/procurement/application/ProcurementToolSelector.java": "95226f80a0bb771b320b5f6c8a8ad7a390bc7146930af636150c2663ab7d3171",
+    "src/main/java/com/agent/platform/procurement/config/ProcurementSourcingExecutionProfileFactory.java": "bb3124eb57a652d1b9d4073163bfa8b984873286fa74d064cc788448c875a25d",
+    "src/main/java/com/agent/platform/runtime/AgentCanonicalContextProvider.java": "776bc059d73e50be50e5ff96d1d16c3e360d118b8cea9fe58a6108664324fd62",
+    "src/main/java/com/agent/platform/runtime/AgentContextManager.java": "41382b86988f86e465b85089e946d6b8135f134981a5e1eb4f837ac05a9e9f4c",
+    "src/main/java/com/agent/platform/runtime/AgentExecutionProfile.java": "2c0527926ed0fc064cd7c4e7ecfd117beea9964d99aefe7161f716648528039a",
+    "src/main/java/com/agent/platform/runtime/DefaultAgentContextManager.java": "fe04c913c8868df96b0e4c9dfc0fba26f68194152e68abe9ce21e4a008cee3ca",
+    "src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java": "5e091aa1dfb9ed82309808b1fb42f671ff26e608c03fbcc5c57aa26accc071d6",
+    "src/main/java/com/agent/platform/runtime/ToolSelectionState.java": "736e38353795aeb4d13d5ac9bdd4f9c43d96e3cac53ed40c558a4b3a4aa5007e",
+    "src/main/java/com/agent/platform/runtime/ToolSelector.java": "d8b06a9d8952f83199edcec737aac56e9ddca29beab2e36bdfd6e916383596b7",
+    "src/test/java/com/agent/platform/procurement/ProcurementToolSelectorTests.java": "ba64fcc9b75fadc468487e49875bb38af92c9b3db96d0bff6fbfaba887139267",
+    "src/test/java/com/agent/platform/runtime/DefaultAgentRuntimeStateTests.java": "42d4dec1e68480f99c8fac38377b87dacd0c876d434b14e679368dcb8eae7eea"
+  },
+  "sha256": "55a1b5ef785f82767bc3c74c6031df884b3184388e76f6666f7b0267d38f7656",
+  "configured_secret_matches": 0,
+  "scanned_files": 16,
+  "gzip_content_scanned": true
+}

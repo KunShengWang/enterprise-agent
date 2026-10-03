@@ -1,0 +1,391 @@
+{
+  "baseline": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "phase": "pre-change audit; no Phase 5 code written yet",
+  "tools": [
+    {
+      "name": "procurement_case_patch",
+      "domain": "Procurement internal Case",
+      "effect": "INTERNAL_WRITE",
+      "approval": false,
+      "singleUse": false,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "trusted scope + validated Patch + CAS",
+      "raw_definition": {
+        "description": "提交本轮用户采购意图的结构化 Case Patch。Java 会校验、CAS 合并并重新计算 authoritative CaseState；不能携带身份、版本或派生字段。",
+        "inputSchema": "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\n  \"productCategory\":{\"type\":\"string\",\"maxLength\":100,\"description\":\"采购对象的上位业务或商品类别，不是完整自然语言需求；不要包含数量、预算、交期、约束和偏好。\"},\n  \"productDescription\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":500,\"description\":\"具体采购对象的简洁产品描述；不要重复已有独立字段表达的数量、预算、币种、交期、hard constraint 和 preference。\"},\n  \"quantity\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":100000},\n  \"budget\":{\"type\":\"number\",\"minimum\":0},\n  \"currency\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z]{3}$\"},\n  \"requiredDeliveryDays\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":3650},\n  \"hardConstraintsUpsert\":{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\n    \"gpuMemoryMinGb\":{\"type\":\"string\",\"pattern\":\"^[1-9][0-9]*$\",\"description\":\"GPU 显存最低 GB，使用正整数字符串；这是必须满足的 hard constraint。\"}\n  }},\n  \"hardConstraintsRemove\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"gpuMemoryMinGb\"]}},\n  \"preferencesUpsert\":{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\n    \"deliveryPriority\":{\"type\":\"string\",\"enum\":[\"HIGH\"],\"description\":\"用户明确把交付速度作为优先权衡维度的软偏好。\"},\n    \"pricePriority\":{\"type\":\"string\",\"enum\":[\"HIGH\"],\"description\":\"用户明确把价格作为优先权衡维度的软偏好。\"}\n  }},\n  \"preferencesRemove\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"deliveryPriority\",\"pricePriority\"]}},\n  \"excludedSuppliersAdd\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"excludedSuppliersRemove\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\n  \"fieldsToClear\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"productCategory\",\"productDescription\",\"quantity\",\"budget\",\"requiredDeliveryDays\"]}}\n}}",
+        "metadata": {
+          "contractVersion": "procurement-sourcing-v4",
+          "domain": "procurement",
+          "parallelSafe": false,
+          "provider": "procurement",
+          "publicActionSummary": "正在合并采购需求状态",
+          "publicArgumentKeys": [
+            "productDescription",
+            "quantity",
+            "budget"
+          ],
+          "publicDisplayName": "采购需求 Patch",
+          "readOnly": false,
+          "sideEffect": true
+        },
+        "name": "procurement_case_patch",
+        "riskLevel": "LOW"
+      }
+    },
+    {
+      "name": "procurement_supplier_search",
+      "domain": "Procurement ERP facts / RFQ",
+      "effect": "READ_ONLY",
+      "approval": false,
+      "singleUse": false,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "current complete Case",
+      "raw_definition": {
+        "description": "只读读取当前 authoritative ProcurementCaseState，查询采购供应商报价并由 Java 计算 Eligibility。不会接受模型传入的权威数量、预算或约束。",
+        "inputSchema": "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{}}",
+        "metadata": {
+          "contractVersion": "procurement-sourcing-v4",
+          "domain": "procurement",
+          "parallelSafe": false,
+          "provider": "procurement",
+          "publicActionSummary": "正在查询采购供应商和报价",
+          "publicArgumentKeys": [],
+          "publicDisplayName": "供应商寻源",
+          "readOnly": true,
+          "sideEffect": false
+        },
+        "name": "procurement_supplier_search",
+        "riskLevel": "LOW"
+      }
+    },
+    {
+      "name": "procurement_recommendation_finalize",
+      "domain": "Procurement ERP facts / RFQ",
+      "effect": "READ_ONLY",
+      "approval": false,
+      "singleUse": false,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "current Case version + eligible supplier + canonical Evidence",
+      "raw_definition": {
+        "description": "提交 Agent 基于 Eligibility/Evidence 的供应商推荐草案；Java 重新读取当前 Case 和 Provider 快照，验证版本、资格与证据后返回 canonical Recommendation。不会修改采购 Case 或执行采购业务副作用。",
+        "inputSchema": "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\n  \"evaluatedCaseVersion\":{\"type\":\"integer\",\"minimum\":0},\n  \"selectedSupplierId\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":128},\n  \"evidenceRefs\":{\"type\":\"array\",\"minItems\":1,\"items\":{\"type\":\"string\",\"minLength\":1}},\n  \"tradeoffDimensions\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"PRICE\",\"DELIVERY\",\"WARRANTY\",\"SPECIFICATION\"]}},\n  \"confidence\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1}\n},\"required\":[\"evaluatedCaseVersion\",\"selectedSupplierId\",\"evidenceRefs\",\"tradeoffDimensions\",\"confidence\"]}",
+        "metadata": {
+          "contractVersion": "procurement-sourcing-v4",
+          "domain": "procurement",
+          "parallelSafe": false,
+          "provider": "procurement",
+          "publicActionSummary": "正在验证供应商推荐与证据",
+          "publicArgumentKeys": [
+            "selectedSupplierId",
+            "evidenceRefs"
+          ],
+          "publicDisplayName": "确认供应商推荐",
+          "readOnly": true,
+          "sideEffect": false
+        },
+        "name": "procurement_recommendation_finalize",
+        "riskLevel": "LOW"
+      }
+    },
+    {
+      "name": "procurement_create_rfq",
+      "domain": "Procurement ERP facts / RFQ",
+      "effect": "EXTERNAL_WRITE_INTENT",
+      "approval": true,
+      "singleUse": true,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "current Run verified Finalize, current Case binding, approval, authorization, CAS and idempotency",
+      "raw_definition": {
+        "description": "提出创建一个受控 RFQ 的意图。模型必须使用空 arguments；服务端会在人工审批前根据当前 Case 和本 Run 已验证的 Recommendation 重建具体 RFQ。只有用户明确要求发起 RFQ 且 Finalize 成功后才可调用；批准前不会创建外部资源。",
+        "inputSchema": "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\n  \"caseId\":{\"type\":\"string\"},\"caseVersion\":{\"type\":\"integer\"},\"supplierId\":{\"type\":\"string\"},\n  \"productCategory\":{\"type\":\"string\"},\"productDescription\":{\"type\":\"string\"},\"quantity\":{\"type\":\"integer\"},\n  \"currency\":{\"type\":\"string\"},\"requiredDeliveryDays\":{\"type\":\"integer\"},\"hardConstraints\":{\"type\":\"object\"},\n  \"sourceRecommendationToolCallId\":{\"type\":\"string\"},\"idempotencyKey\":{\"type\":\"string\"}\n}}",
+        "metadata": {
+          "contractVersion": "procurement-rfq-v1",
+          "domain": "procurement",
+          "parallelSafe": false,
+          "provider": "procurement",
+          "publicActionSummary": "正在创建审批绑定的采购 RFQ",
+          "publicArgumentKeys": [],
+          "publicDisplayName": "创建审批绑定的采购 RFQ",
+          "readOnly": false,
+          "sideEffect": true,
+          "singleUse": true
+        },
+        "name": "procurement_create_rfq",
+        "riskLevel": "HIGH"
+      }
+    },
+    {
+      "name": "mcp.erpnext.procurement_get_requisition",
+      "domain": "Procurement ERP facts / RFQ",
+      "effect": "READ_ONLY",
+      "approval": false,
+      "singleUse": false,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "ERP adapter validation; no Case-state gate; read-only adapter method",
+      "raw_definition": {
+        "description": "Read a saved requisition before interpreting its item, department and deadline.",
+        "inputSchema": "{\"required\":[\"id\"],\"properties\":{\"id\":{\"maxLength\":500,\"minLength\":1,\"type\":\"string\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+        "metadata": {
+          "mcpBindingId": "erpnext/1/procurement_get_requisition",
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_requisition",
+          "provider": "mcp"
+        },
+        "name": "mcp.erpnext.procurement_get_requisition",
+        "riskLevel": "MEDIUM"
+      }
+    },
+    {
+      "name": "mcp.erpnext.procurement_list_requisitions",
+      "domain": "Procurement ERP facts / RFQ",
+      "effect": "READ_ONLY",
+      "approval": false,
+      "singleUse": false,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "ERP adapter validation; no Case-state gate; read-only adapter method",
+      "raw_definition": {
+        "description": "Find saved enterprise requisitions; use nextOffset to read subsequent pages.",
+        "inputSchema": "{\"required\":[],\"properties\":{\"offset\":{\"maximum\":10000,\"minimum\":0,\"type\":\"integer\"},\"limit\":{\"maximum\":200,\"minimum\":1,\"type\":\"integer\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+        "metadata": {
+          "mcpBindingId": "erpnext/1/procurement_list_requisitions",
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_list_requisitions",
+          "provider": "mcp"
+        },
+        "name": "mcp.erpnext.procurement_list_requisitions",
+        "riskLevel": "MEDIUM"
+      }
+    },
+    {
+      "name": "mcp.erpnext.procurement_get_item",
+      "domain": "Procurement ERP facts / RFQ",
+      "effect": "READ_ONLY",
+      "approval": false,
+      "singleUse": false,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "ERP adapter validation; no Case-state gate; read-only adapter method",
+      "raw_definition": {
+        "description": "Read an exact SKU and GPU specification before sourcing. Use its id as Case productDescription.",
+        "inputSchema": "{\"required\":[\"id\"],\"properties\":{\"id\":{\"maxLength\":500,\"minLength\":1,\"type\":\"string\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+        "metadata": {
+          "mcpBindingId": "erpnext/1/procurement_get_item",
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_item",
+          "provider": "mcp"
+        },
+        "name": "mcp.erpnext.procurement_get_item",
+        "riskLevel": "MEDIUM"
+      }
+    },
+    {
+      "name": "mcp.erpnext.procurement_list_items",
+      "domain": "Procurement ERP facts / RFQ",
+      "effect": "READ_ONLY",
+      "approval": false,
+      "singleUse": false,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "ERP adapter validation; no Case-state gate; read-only adapter method",
+      "raw_definition": {
+        "description": "Discover AI workstation SKUs before selecting a concrete item. Never invent an item code.",
+        "inputSchema": "{\"required\":[],\"properties\":{\"offset\":{\"maximum\":10000,\"minimum\":0,\"type\":\"integer\"},\"limit\":{\"maximum\":200,\"minimum\":1,\"type\":\"integer\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+        "metadata": {
+          "mcpBindingId": "erpnext/1/procurement_list_items",
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_list_items",
+          "provider": "mcp"
+        },
+        "name": "mcp.erpnext.procurement_list_items",
+        "riskLevel": "MEDIUM"
+      }
+    },
+    {
+      "name": "mcp.erpnext.procurement_get_budget_status",
+      "domain": "Procurement ERP facts / RFQ",
+      "effect": "READ_ONLY",
+      "approval": false,
+      "singleUse": false,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "ERP adapter validation; no Case-state gate; read-only adapter method",
+      "raw_definition": {
+        "description": "Read ERP departmental budget available for procurement; this is not an Agent estimate or a reservation.",
+        "inputSchema": "{\"required\":[\"departmentId\"],\"properties\":{\"departmentId\":{\"maxLength\":500,\"minLength\":1,\"type\":\"string\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+        "metadata": {
+          "mcpBindingId": "erpnext/1/procurement_get_budget_status",
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_budget_status",
+          "provider": "mcp"
+        },
+        "name": "mcp.erpnext.procurement_get_budget_status",
+        "riskLevel": "MEDIUM"
+      }
+    },
+    {
+      "name": "mcp.erpnext.procurement_list_suppliers",
+      "domain": "Procurement ERP facts / RFQ",
+      "effect": "READ_ONLY",
+      "approval": false,
+      "singleUse": false,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "ERP adapter validation; no Case-state gate; read-only adapter method",
+      "raw_definition": {
+        "description": "Discover approved/inactive suppliers. Inactive suppliers must not be recommended.",
+        "inputSchema": "{\"required\":[],\"properties\":{\"offset\":{\"maximum\":10000,\"minimum\":0,\"type\":\"integer\"},\"limit\":{\"maximum\":200,\"minimum\":1,\"type\":\"integer\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+        "metadata": {
+          "mcpBindingId": "erpnext/1/procurement_list_suppliers",
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_list_suppliers",
+          "provider": "mcp"
+        },
+        "name": "mcp.erpnext.procurement_list_suppliers",
+        "riskLevel": "MEDIUM"
+      }
+    },
+    {
+      "name": "mcp.erpnext.procurement_get_supplier",
+      "domain": "Procurement ERP facts / RFQ",
+      "effect": "READ_ONLY",
+      "approval": false,
+      "singleUse": false,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "ERP adapter validation; no Case-state gate; read-only adapter method",
+      "raw_definition": {
+        "description": "Read supplier approval and capacity before interpreting an item-supplier relationship.",
+        "inputSchema": "{\"required\":[\"id\"],\"properties\":{\"id\":{\"maxLength\":500,\"minLength\":1,\"type\":\"string\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+        "metadata": {
+          "mcpBindingId": "erpnext/1/procurement_get_supplier",
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_supplier",
+          "provider": "mcp"
+        },
+        "name": "mcp.erpnext.procurement_get_supplier",
+        "riskLevel": "MEDIUM"
+      }
+    },
+    {
+      "name": "mcp.erpnext.procurement_list_item_suppliers",
+      "domain": "Procurement ERP facts / RFQ",
+      "effect": "READ_ONLY",
+      "approval": false,
+      "singleUse": false,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "ERP adapter validation; no Case-state gate; read-only adapter method",
+      "raw_definition": {
+        "description": "Read supported suppliers, reference prices, delivery days and unit capacity for a known SKU. Reference prices are synthetic ERP facts, not binding quotations.",
+        "inputSchema": "{\"required\":[\"itemId\"],\"properties\":{\"offset\":{\"maximum\":10000,\"minimum\":0,\"type\":\"integer\"},\"limit\":{\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"itemId\":{\"maxLength\":500,\"minLength\":1,\"type\":\"string\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+        "metadata": {
+          "mcpBindingId": "erpnext/1/procurement_list_item_suppliers",
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_list_item_suppliers",
+          "provider": "mcp"
+        },
+        "name": "mcp.erpnext.procurement_list_item_suppliers",
+        "riskLevel": "MEDIUM"
+      }
+    },
+    {
+      "name": "mcp.erpnext.procurement_get_purchase_history",
+      "domain": "Procurement ERP facts / RFQ",
+      "effect": "READ_ONLY",
+      "approval": false,
+      "singleUse": false,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "ERP adapter validation; no Case-state gate; read-only adapter method",
+      "raw_definition": {
+        "description": "Read historical transactions for a supplier when comparing sourcing experience. This does not create purchase orders.",
+        "inputSchema": "{\"required\":[\"supplierId\"],\"properties\":{\"offset\":{\"maximum\":10000,\"minimum\":0,\"type\":\"integer\"},\"limit\":{\"maximum\":200,\"minimum\":1,\"type\":\"integer\"},\"supplierId\":{\"maxLength\":500,\"minLength\":1,\"type\":\"string\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+        "metadata": {
+          "mcpBindingId": "erpnext/1/procurement_get_purchase_history",
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_purchase_history",
+          "provider": "mcp"
+        },
+        "name": "mcp.erpnext.procurement_get_purchase_history",
+        "riskLevel": "MEDIUM"
+      }
+    },
+    {
+      "name": "mcp.erpnext.procurement_get_supplier_performance",
+      "domain": "Procurement ERP facts / RFQ",
+      "effect": "READ_ONLY",
+      "approval": false,
+      "singleUse": false,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "ERP adapter validation; no Case-state gate; read-only adapter method",
+      "raw_definition": {
+        "description": "Read historical delivery and quality observations when evaluating sourcing reliability. Never modify supplier records.",
+        "inputSchema": "{\"required\":[\"supplierId\"],\"properties\":{\"supplierId\":{\"maxLength\":500,\"minLength\":1,\"type\":\"string\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+        "metadata": {
+          "mcpBindingId": "erpnext/1/procurement_get_supplier_performance",
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_supplier_performance",
+          "provider": "mcp"
+        },
+        "name": "mcp.erpnext.procurement_get_supplier_performance",
+        "riskLevel": "MEDIUM"
+      }
+    },
+    {
+      "name": "mcp.erpnext.procurement_get_rfq",
+      "domain": "Procurement ERP facts / RFQ",
+      "effect": "READ_ONLY",
+      "approval": false,
+      "singleUse": false,
+      "current_exposure": "All Case states under profile; RFQ disappears after singleUse. Exposure is not authorization.",
+      "execution_prerequisite": "ERP adapter validation; no Case-state gate; read-only adapter method",
+      "raw_definition": {
+        "description": "Read an RFQ by id or reconcile a stored idempotency key; provide exactly one selector. Does not create an RFQ.",
+        "inputSchema": "{\"required\":[],\"properties\":{\"id\":{\"maxLength\":500,\"minLength\":1,\"type\":\"string\"},\"idempotencyKey\":{\"maxLength\":500,\"minLength\":1,\"type\":\"string\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+        "metadata": {
+          "mcpBindingId": "erpnext/1/procurement_get_rfq",
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_rfq",
+          "provider": "mcp"
+        },
+        "name": "mcp.erpnext.procurement_get_rfq",
+        "riskLevel": "MEDIUM"
+      }
+    }
+  ],
+  "observed_counts": [
+    14,
+    15
+  ],
+  "source_inspected": [
+    "ProcurementSourcingExecutionProfileFactory.java",
+    "ProcurementToolCatalog.java",
+    "ProcurementMcpService.java",
+    "ProcurementCaseService.java",
+    "ProcurementRfqApprovalPreparer.java",
+    "ProcurementRfqToolHandler.java",
+    "AgentCapabilityVisibilityPolicy.java",
+    "DefaultToolPermissionPolicy.java"
+  ],
+  "findings": [
+    "Case status currently transitions only CLARIFICATION_REQUIRED/SOURCING on Patch. RECOMMENDATION_READY and NO_ELIGIBLE_SUPPLIER are enum values, not persisted by Search/Finalize.",
+    "RFQ readiness must use same-run successful Finalize bound to current Case version; never treat the enum alone as approval.",
+    "ERP prompt requires supplier/history/performance reads before Patch: preserve these during initial analysis.",
+    "MCP read annotations exist at server but are not copied to readOnly metadata in registry; do not change Phase 4 projection/dedup indirectly by adding readOnly flags."
+  ]
+}

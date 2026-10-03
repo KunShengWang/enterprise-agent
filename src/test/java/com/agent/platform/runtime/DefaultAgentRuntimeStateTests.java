@@ -631,6 +631,30 @@ class DefaultAgentRuntimeStateTests {
         return fixture;
     }
 
+    @Test
+    void stageSelectionReachesModelAndHiddenToolIsDistinctFromUnknownCapability() {
+        Fixture fixture=harnessFixture();
+        var catalog=new com.agent.platform.procurement.tool.ProcurementToolCatalog();
+        var definitions=catalog.definitions().stream().filter(t->Set.of("procurement_case_patch","procurement_create_rfq").contains(t.name())).toList();
+        when(fixture.capabilityRegistry.listCapabilities()).thenReturn(definitions);
+        definitions.forEach(t->when(fixture.capabilityRegistry.findCapability(t.name())).thenReturn(Optional.of(t)));
+        when(fixture.contextManager.toolSelectionState(anyString(),anyString(),anyString(),any())).thenReturn(ToolSelectionState.absent());
+        var profile=new AgentExecutionProfile("procurement-sourcing-rfq-v1","unchanged prompt",
+                Set.of("procurement_case_patch","procurement_create_rfq","missing"),AgentRunLimits.from(fixture.properties),
+                false,new ContextPolicy(true,32000,2000,0.75,2),true);
+        when(fixture.modelGateway.nextTurn(any())).thenReturn(toolTurn("procurement_create_rfq"),toolTurn("missing"),finalTurn("done"));
+        List<AgentEventDraft> events=new ArrayList<>();recordEvents(fixture,events);
+        var result=fixture.runtime().run(new AgentRequest("s","u","buy",Map.of("stage","RFQ_PREPARATION")),profile,AgentEventListener.NOOP);
+        assertEquals(AgentStopReason.COMPLETED,result.stopReason());
+        ArgumentCaptor<AgentModelRequest> requests=ArgumentCaptor.forClass(AgentModelRequest.class);
+        verify(fixture.modelGateway,org.mockito.Mockito.times(3)).nextTurn(requests.capture());
+        assertTrue(requests.getAllValues().stream().allMatch(r->r.tools().stream().map(ToolDefinition::name).toList().equals(List.of("procurement_case_patch"))));
+        assertEquals("SELECTOR_HIDDEN_TOOL",fixture.persisted.get().toolResults().get(0).metadata().get("errorType"));
+        assertEquals("UNKNOWN_CAPABILITY",fixture.persisted.get().toolResults().get(1).metadata().get("errorType"));
+        assertTrue(events.stream().anyMatch(e->Integer.valueOf(1).equals(e.payload().get("visible_tool_count"))));
+        verify(fixture.toolRuntime,never()).execute(any(),any(),any(),any(),any(),any());
+    }
+
     private AgentModelTurn toolTurn(String name) {
         return new AgentModelTurn("",List.of(new AgentToolCall("call",name,Map.of(),"")),"",
                 new LlmUsage(10,5,15,0,0,"test","test"),"tool_calls");

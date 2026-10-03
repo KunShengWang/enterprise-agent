@@ -1,0 +1,35 @@
+{
+  "branch": "feat/dynamic-tool-loading",
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "existing_files_verified": 998,
+  "existing_changed_files": [],
+  "new_files": [
+    "docs/harness/phase5-attribution-audit.md",
+    "evals/dynamic-tool-loading/audits/analyze.py",
+    "evals/dynamic-tool-loading/audits/phase4-vs-phase5-by-task.json",
+    "evals/dynamic-tool-loading/audits/render_report.py",
+    "evals/dynamic-tool-loading/audits/summary.json",
+    "evals/dynamic-tool-loading/audits/test_analyze.py",
+    "evals/dynamic-tool-loading/audits/tool-sequences.json",
+    "evals/dynamic-tool-loading/audits/turn-composition.json"
+  ],
+  "staged_files": [],
+  "handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "model_calls_during_audit": 0,
+  "production_changes_during_audit": 0,
+  "offline_analysis_tests": {
+    "passed": 4,
+    "failed": 0
+  },
+  "git_status_short": " M src/main/java/com/agent/platform/procurement/application/ProcurementCaseContextRenderer.java\n M src/main/java/com/agent/platform/procurement/config/ProcurementSourcingExecutionProfileFactory.java\n M src/main/java/com/agent/platform/procurement/tool/ProcurementToolHandler.java\n M src/main/java/com/agent/platform/runtime/AgentCanonicalContextProvider.java\n M src/main/java/com/agent/platform/runtime/AgentContextManager.java\n M src/main/java/com/agent/platform/runtime/AgentExecutionProfile.java\n M src/main/java/com/agent/platform/runtime/DefaultAgentContextManager.java\n M src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java\n M src/test/java/com/agent/platform/runtime/DefaultAgentRuntimeStateTests.java\n?? docs/harness/dynamic-tool-loading.md\n?? docs/harness/phase5-attribution-audit.md\n?? docs/harness/phase5-report.md\n?? evals/dynamic-tool-loading/\n?? src/main/java/com/agent/platform/procurement/application/ProcurementToolSelector.java\n?? src/main/java/com/agent/platform/runtime/ToolSelectionState.java\n?? src/main/java/com/agent/platform/runtime/ToolSelector.java\n?? src/test/java/com/agent/platform/procurement/ProcurementToolSelectorTests.java\n",
+  "output_hashes": {
+    "docs/harness/phase5-attribution-audit.md": "f097388eb41d5f1e8d79f41e4d00b249c36c03293c9b0e7460126f1e4393ec69",
+    "evals/dynamic-tool-loading/audits/analyze.py": "79d411bd08ed68166c19b947afe2d5a6dbff7318ab62c64dcba7f68238a65fc3",
+    "evals/dynamic-tool-loading/audits/phase4-vs-phase5-by-task.json": "6686ad09aec51b68d543bb7640a599ea43404a0e17163645bf8f2ec6fce47b1b",
+    "evals/dynamic-tool-loading/audits/render_report.py": "d5344d8c7fed9c3256dd60e11d403aab0f17716b7547ec9c3afffb8cedba61ed",
+    "evals/dynamic-tool-loading/audits/summary.json": "3724d96c9647a898b9664b31c3d7d42d66bd875d1375e7f63f1bbc0fdeb3509b",
+    "evals/dynamic-tool-loading/audits/test_analyze.py": "9d46a1e055005c86c5354697085d5b179a839173edcc7e6a7b547a9ad6edb524",
+    "evals/dynamic-tool-loading/audits/tool-sequences.json": "21050461d9ef691918d64b4f43177a915c40981840097cfd08fd0f3661b6c47b",
+    "evals/dynamic-tool-loading/audits/turn-composition.json": "21d6e4bad69a3c7001460e2127fcc92339dbda5c7fdbb921fb3f6fdaa87cea52"
+  }
+}

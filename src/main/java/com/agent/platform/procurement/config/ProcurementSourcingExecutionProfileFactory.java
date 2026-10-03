@@ -60,6 +60,6 @@ public class ProcurementSourcingExecutionProfileFactory implements AgentScenario
                 """, java.util.Set.copyOf(allowed),new AgentRunLimits(24,20,40,384_000,16_000,12,240_000),false,
                 new com.agent.platform.runtime.ContextPolicy(true, contextProperties.getModelContextWindowTokens(),
                         contextProperties.getContextOutputReserveTokens(), contextProperties.getContextCompactionThreshold(),
-                        contextProperties.getContextRecentUserTurns()));
+                        contextProperties.getContextRecentUserTurns()), true);
     }
 }

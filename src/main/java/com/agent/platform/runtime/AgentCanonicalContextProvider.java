@@ -11,6 +11,11 @@ import java.util.Optional;
  */
 public interface AgentCanonicalContextProvider {
 
+    default Optional<ToolSelectionState> toolSelectionState(String tenantId, String userId,
+                                                           String conversationId, AgentExecutionProfile profile) {
+        return Optional.empty();
+    }
+
     Optional<CanonicalContext> provide(String tenantId,
                                        String userId,
                                        String conversationId,

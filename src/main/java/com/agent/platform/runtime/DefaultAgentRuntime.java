@@ -76,6 +76,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
     private final LlmCostCalculator costCalculator;
     private final ToolResultProjector toolResultProjector;
     private final ContextAssembler contextAssembler;
+    private final ToolSelector toolSelector;
 
     /** 仅保存本实例中正在执行的取消句柄，持久取消事实仍写入 AgentRunControlStore。 */
     private final ConcurrentMap<String, AgentRunBudget> activeBudgets = new ConcurrentHashMap<>();
@@ -128,6 +129,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         this.costCalculator = costCalculator;
         this.toolResultProjector = toolResultProjector;
         this.contextAssembler = new ContextAssembler(tokenEstimator, toolExecutionStore, toolResultProjector);
+        this.toolSelector = new com.agent.platform.procurement.application.ProcurementToolSelector(tokenEstimator);
     }
 
     @Override
@@ -728,9 +730,18 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     toolResults, usedTools, usedRag, budget);
 
             // 计算上下文消息预算
-            long contextTokenBudget = contextMessageBudget(profile);
             String tenantId = ToolPolicyContext.from(
                     runId, sessionId, userId, request.metadata()).tenantId();
+            List<ToolDefinition> candidates = capabilitiesFor(profile, request.metadata(), usedTools);
+            ToolSelector.Selection selection = toolSelector.select(profile,
+                    profile.stageToolSelectionEnabled() ? contextManager.toolSelectionState(sessionId,userId,tenantId,profile)
+                            : ToolSelectionState.unknown(), runStore.find(runId).orElse(null),
+                    profile.stageToolSelectionEnabled() ? toolExecutionStore.findByRun(runId) : List.of(), candidates);
+            List<ToolDefinition> selectedTools = selection.tools();
+            long contextTokenBudget = profile.stageToolSelectionEnabled()
+                    ? contextMessageBudget(profile, selectedTools) : contextMessageBudget(profile);
+            Map<String,Object> selectionMetrics = new LinkedHashMap<>(selection.metrics());
+            selectionMetrics.put("tokenBudget", contextTokenBudget);
             // 从数据库中加载消息 AgentMessage 并做处理
             AgentContextView projectedContext = contextManager.project(
                     sessionId,
@@ -741,7 +752,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     profile
             );
             AgentContextView context = contextAssembler.assemble(projectedContext, profile,
-                    runStore.find(runId).orElse(null), capabilitiesFor(profile, request.metadata(), usedTools), contextTokenBudget);
+                    runStore.find(runId).orElse(null), selectedTools, contextTokenBudget);
             boolean contextBudgetCompactionRequested = profile.contextPolicy().enabled()
                     ? Boolean.TRUE.equals(context.metadata().get("compactionPerformed")) : projectedContext.omittedMessages() > 0;
             if (contextBudgetCompactionRequested && !profile.contextPolicy().enabled()) {
@@ -757,7 +768,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     contextEventPayload(projectedContext, context,
                             contextBudgetCompactionRequested ? "context_budget" : "projection",
                             contextBudgetCompactionRequested,
-                            Map.of("tokenBudget", contextTokenBudget)),
+                            selectionMetrics),
                     listener);
             if (context.estimatedTokens() > contextTokenBudget || context.omittedMessages() > 0) {
                 return finish(
@@ -806,7 +817,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                             profile.systemPrompt(),
                             context.messages(),
                             // 发给 LLM 前过滤，保存 agent 白名单工具和当前阶段可见工具
-                            capabilitiesFor(profile, request.metadata(), usedTools),
+                            selectedTools,
                             request.metadata()
                     ), modelDeltaPublisher::accept);
                     break;
@@ -869,7 +880,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                         AgentContextView beforeOverflowCompaction = context;
                         context = profile.contextPolicy().enabled() ? contextAssembler.assemble(
                                 contextManager.project(sessionId, userId, tenantId, request.question(), retryBudget, profile),
-                                profile, runStore.find(runId).orElse(null), capabilitiesFor(profile, request.metadata(), usedTools), retryBudget)
+                                profile, runStore.find(runId).orElse(null), selectedTools, retryBudget)
                                 : contextManager.compact(
                                 sessionId, userId, tenantId, runId, request.question(), retryBudget,
                                 "provider_context_overflow", profile
@@ -1034,7 +1045,11 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 boolean phaseVisible = registeredDefinition
                         .map(item -> AgentCapabilityVisibilityPolicy.visible(item, request.metadata()))
                         .orElse(false);
-                Optional<ToolDefinition> definition = phaseVisible
+                // Preserve the independent existing singleUse rejection below, including its error category.
+                boolean alreadyUsedSingle = registeredDefinition.map(t -> Boolean.TRUE.equals(t.metadata().get("singleUse"))
+                        && usedTools.contains(call.toolName())).orElse(false);
+                boolean selectorVisible = !profile.stageToolSelectionEnabled() || selection.contains(call.toolName()) || alreadyUsedSingle;
+                Optional<ToolDefinition> definition = phaseVisible && selectorVisible
                         ? registeredDefinition
                         : Optional.empty();
 
@@ -1044,6 +1059,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                             ? "CAPABILITY_NOT_ALLOWED"// 白名单外（越权）
                             : registeredDefinition.isEmpty()
                             ? "UNKNOWN_CAPABILITY" // 不存在（幻觉）
+                            : !selectorVisible ? "SELECTOR_HIDDEN_TOOL"
                             : "CAPABILITY_NOT_AVAILABLE_IN_PHASE"; // 阶段不可见
                     String errorMessage = !capabilityAllowed
                             ? "capability is not allowed by execution profile: " + call.toolName()
@@ -1052,7 +1068,10 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                             : "capability is not available in the current Agent phase: " + call.toolName();
                     ToolCallResult unknown = new ToolCallResult(
                             call.toolName(), false, "", errorMessage,
-                            Map.of("errorType", errorType, "profile", profile.name())
+                            profile.stageToolSelectionEnabled()
+                                    ? Map.of("errorType", errorType, "profile", profile.name(),
+                                            "selectionStage", selection.metrics().getOrDefault("selection_stage", "DISABLED"))
+                                    : Map.of("errorType", errorType, "profile", profile.name())
                     );
                     // 把失败结果追加回时间线
                     ToolCallResult projectedUnknown = appendToolResult(
@@ -2075,9 +2094,13 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
      * 上下文消息预算
      */
     private long contextMessageBudget(AgentExecutionProfile profile) {
+        return contextMessageBudget(profile, capabilitiesFor(profile));
+    }
+
+    private long contextMessageBudget(AgentExecutionProfile profile, List<ToolDefinition> tools) {
         // token 估算
         long staticTokens = tokenEstimator.estimate(profile.systemPrompt()) + 700;
-        for (ToolDefinition definition : capabilitiesFor(profile)) {// 保留允许调用的工具
+        for (ToolDefinition definition : tools) {// 保留本轮允许调用的工具
             staticTokens += tokenEstimator.estimate(definition.name())
                     + tokenEstimator.estimate(definition.description())
                     + tokenEstimator.estimate(definition.inputSchema());

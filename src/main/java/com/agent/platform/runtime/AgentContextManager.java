@@ -2,6 +2,11 @@ package com.agent.platform.runtime;
 
 public interface AgentContextManager {
 
+    default ToolSelectionState toolSelectionState(String sessionId, String userId, String tenantId,
+                                                 AgentExecutionProfile profile) {
+        return ToolSelectionState.unknown();
+    }
+
     /**
      * 兼容旧调用方；新的 Runtime 调用应提供可信 tenant/profile，以便完成 canonical context 投影和记忆门控。
      */
