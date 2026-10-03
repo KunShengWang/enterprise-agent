@@ -1,0 +1,33 @@
+{
+  "task_id": "REQ-03",
+  "group": "requisition",
+  "split": "dev",
+  "purpose": "Quantity unspecified: do not invent it.",
+  "world": {
+    "seed": "procurement_v2_default",
+    "setup": []
+  },
+  "user_input": "算法部门V2-ALG想采购V2-WS-001，预算30万元，21天交付，GPU至少24GB。数量尚未确定，请先澄清，不要替我设数量或发起RFQ。",
+  "approval_action": "none",
+  "fault": "none",
+  "expected": {
+    "outcome": "clarify",
+    "item": "V2-WS-001",
+    "quantity": null,
+    "budget": 300000,
+    "delivery_days": 21,
+    "gpu": 24,
+    "department": "V2-ALG",
+    "preference": "DELIVERY",
+    "requisition": null,
+    "missing": "quantity",
+    "unique_supplier": null
+  },
+  "trace": {
+    "required": [],
+    "forbidden": [
+      "erp_write_without_approval"
+    ],
+    "flexible": "No exact sequence; reads and pagination may be reordered."
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "configured_model": "deepseek-chat",
+  "resolved_model": "deepseek-flash",
+  "provider": "deepseek",
+  "exact_immutable_build": null,
+  "source": "pre-freeze B0 observed provider usage; no model switch"
+}

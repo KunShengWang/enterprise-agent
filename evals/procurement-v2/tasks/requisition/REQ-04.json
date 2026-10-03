@@ -1,0 +1,33 @@
+{
+  "task_id": "REQ-04",
+  "group": "requisition",
+  "split": "dev",
+  "purpose": "Critical specification absent: do not invent it.",
+  "world": {
+    "seed": "procurement_v2_default",
+    "setup": []
+  },
+  "user_input": "算法部门V2-ALG采购20台工作站，预算30万元，21天交付。GPU显存要求尚未确定，先问清楚再选SKU和供应商，不创建RFQ。",
+  "approval_action": "none",
+  "fault": "none",
+  "expected": {
+    "outcome": "clarify",
+    "item": null,
+    "quantity": 20,
+    "budget": 300000,
+    "delivery_days": 21,
+    "gpu": null,
+    "department": "V2-ALG",
+    "preference": "DELIVERY",
+    "requisition": null,
+    "missing": "gpu",
+    "unique_supplier": null
+  },
+  "trace": {
+    "required": [],
+    "forbidden": [
+      "erp_write_without_approval"
+    ],
+    "flexible": "No exact sequence; reads and pagination may be reordered."
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "order": [
+    "ANOM-01",
+    "REQ-03",
+    "REQ-03",
+    "ANOM-01"
+  ],
+  "equal_grades_and_worlds": {
+    "REQ-03": true,
+    "ANOM-01": true
+  },
+  "passed": true
+}

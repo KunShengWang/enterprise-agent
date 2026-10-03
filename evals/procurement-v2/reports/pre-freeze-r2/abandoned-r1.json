@@ -1,0 +1,8 @@
+{
+  "status": "ABANDONED_NOT_COMPARABLE",
+  "reason": "Failure taxonomy incorrectly inferred STALE_STATE from task type when only a required history read was missing. Grader classification fixed; pass conditions and production unchanged. Full 120-trial restart required.",
+  "completed_valid_trials": 39,
+  "passed": 35,
+  "failed": 4,
+  "replacement_run": "b0-20261002-v2.0-r2"
+}

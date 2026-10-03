@@ -1,0 +1,6 @@
+{
+  "seed": "procurement_v2_default",
+  "source_commit": "b0e82e2b603ae56370ce3ee4bc136669f0f78b34",
+  "base_business_sha256": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e",
+  "counts": {"suppliers": 6, "items": 10, "item_suppliers": 18, "departments": 3, "budgets": 3, "purchase_history": 24, "supplier_performance": 6, "sample_requisitions": 6}
+}

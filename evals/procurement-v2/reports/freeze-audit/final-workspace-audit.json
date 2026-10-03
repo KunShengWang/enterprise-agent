@@ -1,0 +1,13 @@
+{
+  "run_id": "b0-20261003-v2.1-r1",
+  "passed": true,
+  "source_freeze_unchanged": true,
+  "pre_freeze_archive_unchanged": true,
+  "protected_handler_sha256": "8F3EEA10DF78F9E8F5010A4D2CE72EE049962FDC4E3B4D98CFCD7518CE2E7F6D",
+  "index_empty": true,
+  "only_tracked_change_is_original_handler_comments": true,
+  "diff_check_passed": true,
+  "documentation_links_resolve": true,
+  "git_status_short": " M src/main/java/com/agent/platform/procurement/tool/ProcurementToolHandler.java\n?? docs/baselines/procurement-v2-b0-baseline.md\n?? docs/baselines/procurement-v2-freeze-audit.md\n?? evals/procurement-v2/\n?? src/test/java/com/agent/platform/procurement/ProcurementV2EvalStoresTest.java\n?? src/test/java/com/agent/platform/procurement/ProcurementV2TrialDriver.java\n",
+  "head": "b0e82e2b603ae56370ce3ee4bc136669f0f78b34"
+}

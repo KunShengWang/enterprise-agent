@@ -1,0 +1,13 @@
+{
+  "run_id": "b0-20261002-v2.0-r2",
+  "valid_trials": 75,
+  "passed": 68,
+  "failed": 7,
+  "infra_attempts": 4,
+  "complete": false,
+  "archive": "b0-checkpoint-75-evidence.zip",
+  "archive_sha256": "e6a2efb71e662ed9063eea23fe7583b8dde28f370ab6ab887ce72450d598cb62",
+  "cause": "C drive free space 0; Mockito Java agent creation failed, then Docker reset timed out",
+  "next_trial": "RFQ-04-1",
+  "planned_recovery": "After disk space and Docker recover, resume unchanged freeze; put JVM TEMP/TMP on D drive"
+}

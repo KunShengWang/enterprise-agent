@@ -1,0 +1,29 @@
+{
+  "status": "pre-freeze result",
+  "run_id": "b0-20261002-v2.0-r2",
+  "reason": "Freeze audit found exact-tool dependency despite authoritative canonical Offer/Evidence facts; RFQ link failures remain real",
+  "original_result": {
+    "valid": 120,
+    "passed": 105,
+    "failed": 15,
+    "infra": 6
+  },
+  "files": {
+    "abandoned-r1.json": "09f8f914056e6aeceba9870cf2a47598197f15878163ca78e70b0fde9e8b3d27",
+    "b0-checkpoint-75-audit.json": "21025589afdf8b58c746605a26c404cfb0a6c80b7185da0b6735baf3f830fe2a",
+    "b0-checkpoint-75-evidence.zip": "e6a2efb71e662ed9063eea23fe7583b8dde28f370ab6ab887ce72450d598cb62",
+    "b0-checkpoint-75.json": "089efcbab5490f001f661e782a7b7489942569ce08323be6b1e5dfb161baf00a",
+    "b0-evidence-index.json": "b825a0194cf2d7609a70cedbbe94718cbf2c301ba8c99c5b3b2cedc19f4c4043",
+    "b0-evidence.zip": "75313fe112b7650b40966f0382ca6eabcea94edfeef3905e9df6b06c9e60647a",
+    "b0-infra-evidence-index.json": "f5348c77852c358b2088419a4a65a366937f30b0e31cc8a0ca78ac8524e0d0c1",
+    "b0-infra-evidence.zip": "a49159d97d10efb3b4ee97b3973d8a59a32987a1fd9971ef62f58b2462b0c1c1",
+    "b0-integrity-audit.json": "c0d84cb9537014410bdc1338b72a164794e4e377ef27857dd69036a8f06a4169",
+    "b0-partial-evidence.zip": "c836be394acaca8ec66b9571b9a914e457c956f39d8b8bff1482c0fd798e7f77",
+    "b0-summary.json": "24658a0924e1faa0efa16a3583f33fd2b16289499833e70818bf2d2a4b1c60e3",
+    "b0-trials.jsonl": "c72dac35772507a668c602e6d489082ab3676bc772d62a804fb647421b9a9f27",
+    "eval-implementation.zip": "d458bc1bbafe4160f6c16b1a5bf528c4d3c71ce4cd9bfba86aa8714a1b284423",
+    "legacy-regression.json": "28180acca2055e892fdff97ab79e5844e793074082a4f7e05a4c253bc07f4e39",
+    "order-independence.json": "57cd43fb7b0d16381e43863364f386fc1fb0517ea129c0f628f4a787f16dd4ba",
+    "world-preflight.json": "e21c4c57d360035ccb3312eb6be40a303dc9ffe4a3287d397f718ff083272aed"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "order": [
+    "ANOM-01",
+    "REQ-03",
+    "REQ-03",
+    "ANOM-01"
+  ],
+  "original_live_smoke": true,
+  "offline_regraded_with": "V2.1",
+  "checks_and_worlds_equal": true,
+  "before_rfq_counts": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "archive_sha256": "33f8cb29b3ef50ab6247c3c8c2ebd1d2a804ab2d8567840fdd21e1944b3f3ffd"
+}

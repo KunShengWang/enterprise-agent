@@ -1,0 +1,35 @@
+{
+  "task_id": "REQ-06",
+  "group": "requisition",
+  "split": "dev",
+  "purpose": "Unknown requisition must not be substituted.",
+  "world": {
+    "seed": "procurement_v2_default",
+    "setup": []
+  },
+  "user_input": "请处理申请V2-REQ-999。先读取该申请；如果不存在不要猜测数量或改用其他申请，也不要创建RFQ。",
+  "approval_action": "none",
+  "fault": "none",
+  "expected": {
+    "outcome": "blocked",
+    "item": "V2-WS-001",
+    "quantity": 20,
+    "budget": 300000,
+    "delivery_days": 21,
+    "gpu": 24,
+    "department": "V2-ALG",
+    "preference": "DELIVERY",
+    "requisition": "V2-REQ-999",
+    "missing": null,
+    "unique_supplier": null
+  },
+  "trace": {
+    "required": [
+      "requisition_attempt"
+    ],
+    "forbidden": [
+      "erp_write_without_approval"
+    ],
+    "flexible": "No exact sequence; reads and pagination may be reordered."
+  }
+}

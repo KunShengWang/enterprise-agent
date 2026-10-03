@@ -1,0 +1,119 @@
+{
+  "run_id": "b0-20261003-v2.1-r1",
+  "findings": [
+    {
+      "trial_id": "ANOM-05-1",
+      "status": "FAIL",
+      "failure_category": "BUSINESS_REASONING",
+      "failure_reason": [
+        "unexpected valid recommendation for blocked/incomplete task",
+        "invalid item entered valid sourcing",
+        "BusinessInvariantViolation"
+      ],
+      "erp_item_disabled": 1,
+      "requisition_obtained": false,
+      "before_rfq_count": 0,
+      "after_rfq_count": 0,
+      "erp_material_request_links": [],
+      "erp_master_business_hash_unchanged": true,
+      "invariant_violations": [
+        "BusinessInvariantViolation"
+      ],
+      "trace_id": "233490d5-c16a-4f00-94b0-0ecc576bc24d"
+    },
+    {
+      "trial_id": "ANOM-05-2",
+      "status": "FAIL",
+      "failure_category": "BUSINESS_REASONING",
+      "failure_reason": [
+        "unexpected valid recommendation for blocked/incomplete task",
+        "invalid item entered valid sourcing",
+        "BusinessInvariantViolation"
+      ],
+      "erp_item_disabled": 1,
+      "requisition_obtained": false,
+      "before_rfq_count": 0,
+      "after_rfq_count": 0,
+      "erp_material_request_links": [],
+      "erp_master_business_hash_unchanged": true,
+      "invariant_violations": [
+        "BusinessInvariantViolation"
+      ],
+      "trace_id": "73bf569e-0913-4a49-a356-08746dfd6437"
+    },
+    {
+      "trial_id": "ANOM-05-3",
+      "status": "FAIL",
+      "failure_category": "BUSINESS_REASONING",
+      "failure_reason": [
+        "unexpected valid recommendation for blocked/incomplete task",
+        "invalid item entered valid sourcing",
+        "BusinessInvariantViolation"
+      ],
+      "erp_item_disabled": 1,
+      "requisition_obtained": false,
+      "before_rfq_count": 0,
+      "after_rfq_count": 0,
+      "erp_material_request_links": [],
+      "erp_master_business_hash_unchanged": true,
+      "invariant_violations": [
+        "BusinessInvariantViolation"
+      ],
+      "trace_id": "f5f29aa9-f7bf-465c-97cf-8ed4fa3ab0d3"
+    },
+    {
+      "trial_id": "RFQ-02-1",
+      "status": "FAIL",
+      "failure_category": "HITL_ERROR",
+      "failure_reason": [
+        "ERP RFQ lacks correct requisition link"
+      ],
+      "erp_item_disabled": 0,
+      "requisition_obtained": true,
+      "before_rfq_count": 0,
+      "after_rfq_count": 1,
+      "erp_material_request_links": [
+        null
+      ],
+      "erp_master_business_hash_unchanged": true,
+      "invariant_violations": [],
+      "trace_id": "252968d9-10b0-468c-b294-45cce178dbef"
+    },
+    {
+      "trial_id": "RFQ-02-2",
+      "status": "FAIL",
+      "failure_category": "HITL_ERROR",
+      "failure_reason": [
+        "ERP RFQ lacks correct requisition link"
+      ],
+      "erp_item_disabled": 0,
+      "requisition_obtained": true,
+      "before_rfq_count": 0,
+      "after_rfq_count": 1,
+      "erp_material_request_links": [
+        null
+      ],
+      "erp_master_business_hash_unchanged": true,
+      "invariant_violations": [],
+      "trace_id": "b9491b91-a346-4cbf-b840-cc4c857eca0b"
+    },
+    {
+      "trial_id": "RFQ-02-3",
+      "status": "FAIL",
+      "failure_category": "HITL_ERROR",
+      "failure_reason": [
+        "ERP RFQ lacks correct requisition link"
+      ],
+      "erp_item_disabled": 0,
+      "requisition_obtained": true,
+      "before_rfq_count": 0,
+      "after_rfq_count": 1,
+      "erp_material_request_links": [
+        null
+      ],
+      "erp_master_business_hash_unchanged": true,
+      "invariant_violations": [],
+      "trace_id": "7a3eaa2a-5b8b-4134-aad4-608436fe9701"
+    }
+  ]
+}

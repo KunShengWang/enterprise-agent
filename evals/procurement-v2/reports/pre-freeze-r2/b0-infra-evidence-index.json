@@ -1,0 +1,197 @@
+{
+  "run_id": "b0-20261002-v2.0-r2",
+  "infra_attempts": 6,
+  "excluded_from_valid_denominator": true,
+  "archive": "b0-infra-evidence.zip",
+  "archive_sha256": "a49159d97d10efb3b4ee97b3973d8a59a32987a1fd9971ef62f58b2462b0c1c1",
+  "files": [
+    {
+      "path": "ANOM-01-3-a1/result.json",
+      "sha256": "6bdae29e117e91e6dcf047ad7f4ff46ce6ff381cd5311dc91d5405507af65fbb",
+      "bytes": 3440
+    },
+    {
+      "path": "ANOM-01-3-a1/artifact.json.gz",
+      "sha256": "b768cf6a25fce6e033c4245ad3881028a48920cbe7ca1bbad2a2d49cfc111f22",
+      "bytes": 142884
+    },
+    {
+      "path": "ANOM-01-3-a1/raw.json",
+      "sha256": "4ef23b87cdcd9c76f660b0360b14ae8288098af62e5b95c7e7ac508ad016b033",
+      "bytes": 999064
+    },
+    {
+      "path": "ANOM-01-3-a1/raw.json.trace.jsonl",
+      "sha256": "9e76049bd6591d3b5029ccb66dab3d0a0c4a61565d771272706f7f1eb364b279",
+      "bytes": 677463
+    },
+    {
+      "path": "ANOM-01-3-a1/agent.log",
+      "sha256": "5cb5818f06b0ab4010ed5d261bc1594efba9d8e30ee5d8a81d1a87a8ae64a0df",
+      "bytes": 607396
+    },
+    {
+      "path": "ANOM-01-3-a1/reset.log",
+      "sha256": "960f75ebf339c6beb77490674a05afbca7d56283c2c9a1f0a893be2ef0ad2784",
+      "bytes": 453
+    },
+    {
+      "path": "ANOM-01-3-a1/snapshot.log",
+      "sha256": "3711c6336d55336b10e3db484c4353875f337beb43a87ce34a3bc095b0495969",
+      "bytes": 295
+    },
+    {
+      "path": "ANOM-01-3-a1/reset.json",
+      "sha256": "6d578d77caec01b0a52422e9ac901903cf6e82145496707a02d4880e16f508b1",
+      "bytes": 97861
+    },
+    {
+      "path": "ANOM-01-3-a1/snapshot.json",
+      "sha256": "69067198838a20f566ff0bd7a900e7e3c6f4bbb0ea556604c79c2d0a87976acb",
+      "bytes": 97771
+    },
+    {
+      "path": "ANOM-01-3-a2/result.json",
+      "sha256": "18c4b07783df9859bce3d32a9d53f3ee08800e654e967418574175508a8bab86",
+      "bytes": 2492
+    },
+    {
+      "path": "ANOM-01-3-a2/artifact.json.gz",
+      "sha256": "afc528e80cec8c8068606efc6a49d296504aad9a4fe8a165822ca49c32c7eaf5",
+      "bytes": 18267
+    },
+    {
+      "path": "ANOM-01-3-a2/raw.json",
+      "sha256": "a0ca01e9cadd86fffb191f55906193d23c2b681df1244416691c9f78e28b1fb2",
+      "bytes": 45250
+    },
+    {
+      "path": "ANOM-01-3-a2/raw.json.trace.jsonl",
+      "sha256": "3c1739a8faf879bff59038ebfdcc841135e10977f223ab545887deff62588219",
+      "bytes": 23033
+    },
+    {
+      "path": "ANOM-01-3-a2/agent.log",
+      "sha256": "09e094bc94ac9f7efeddfcefb399fd5246e6007f7a2682e457530ede6bf1f443",
+      "bytes": 100505
+    },
+    {
+      "path": "ANOM-01-3-a2/reset.log",
+      "sha256": "960f75ebf339c6beb77490674a05afbca7d56283c2c9a1f0a893be2ef0ad2784",
+      "bytes": 453
+    },
+    {
+      "path": "ANOM-01-3-a2/snapshot.log",
+      "sha256": "3711c6336d55336b10e3db484c4353875f337beb43a87ce34a3bc095b0495969",
+      "bytes": 295
+    },
+    {
+      "path": "ANOM-01-3-a2/reset.json",
+      "sha256": "0022eb96c94068ba734a16a1cc946bf5e66bb0721367bf9126fd4f178530fe2b",
+      "bytes": 97861
+    },
+    {
+      "path": "ANOM-01-3-a2/snapshot.json",
+      "sha256": "845fc396a20f7109318950a7e697f4a154ff6985c41880b3a20921ede1e4c8bf",
+      "bytes": 97771
+    },
+    {
+      "path": "RFQ-04-1-a1/result.json",
+      "sha256": "0dba756febb21684ef41533d4f0b070b524c49d50aa58aca813de04fd4f13f67",
+      "bytes": 520
+    },
+    {
+      "path": "RFQ-04-1-a1/agent.log",
+      "sha256": "2e71b8fd7a4f999c08debad38335f89df7c7b77f5dc3bb6e41be73286c0475b9",
+      "bytes": 6287
+    },
+    {
+      "path": "RFQ-04-1-a1/reset.log",
+      "sha256": "fc799a0ee00fe2a2f85e93e8911f34eb508531e38f7427a5964c49a2179312fa",
+      "bytes": 453
+    },
+    {
+      "path": "RFQ-04-1-a1/reset.json",
+      "sha256": "f17833e798ab8fef3658b8d470468d7400ab41ccc9a7bfa102a5754b0b6d2555",
+      "bytes": 97861
+    },
+    {
+      "path": "RFQ-04-1-a2/result.json",
+      "sha256": "60a63d98e8f8c9297c4b78bc458a95c33d0709620995b8081ea9096ed1a3bc32",
+      "bytes": 690
+    },
+    {
+      "path": "RFQ-04-1-a2/reset.log",
+      "sha256": "e9133cf10b02b0b91c8b119848513db0ac541e7c3c19681266939e4b9952f7cc",
+      "bytes": 224
+    },
+    {
+      "path": "ROB-04-1-a1/result.json",
+      "sha256": "d6e16f5932985530dca793bf9daed00d51491b021224f0b4ffb4284e8c43553d",
+      "bytes": 527
+    },
+    {
+      "path": "ROB-04-1-a1/raw.json",
+      "sha256": "4e0037ae0d106d368aca647a353729777c9330d1c2038a79106e68595480d87e",
+      "bytes": 1140592
+    },
+    {
+      "path": "ROB-04-1-a1/raw.json.trace.jsonl",
+      "sha256": "edd0b7a9fd0e7f7e4949cc1612cdcb636721f87ada7877a91958b9d2a373ce40",
+      "bytes": 788145
+    },
+    {
+      "path": "ROB-04-1-a1/agent.log",
+      "sha256": "b9a9204c79645f3596bbff2c1dde855f9af00d64911ddc92ca4ae6c1e2240e78",
+      "bytes": 399946
+    },
+    {
+      "path": "ROB-04-1-a1/reset.log",
+      "sha256": "fc799a0ee00fe2a2f85e93e8911f34eb508531e38f7427a5964c49a2179312fa",
+      "bytes": 453
+    },
+    {
+      "path": "ROB-04-1-a1/snapshot.log",
+      "sha256": "bf3bfad45645e3728f7a387c73852ccd7a0b74f10e6b02b2e2ac33f2bac1f77f",
+      "bytes": 33
+    },
+    {
+      "path": "ROB-04-1-a1/reset.json",
+      "sha256": "3a7ff9fae549d68e9ad459ec0c57fbc6b9dd22e1bd6ebc49e5db0752ac1f2b80",
+      "bytes": 97861
+    },
+    {
+      "path": "ROB-04-1-a2/result.json",
+      "sha256": "fa009e436fc3c31c843dde214b1431a53a0d8c0b33a2ada488aa21afb4127b19",
+      "bytes": 525
+    },
+    {
+      "path": "ROB-04-1-a2/reset.log",
+      "sha256": "bf3bfad45645e3728f7a387c73852ccd7a0b74f10e6b02b2e2ac33f2bac1f77f",
+      "bytes": 33
+    }
+  ],
+  "causes": [
+    {
+      "attempts": [
+        "ANOM-01-3-a1",
+        "ANOM-01-3-a2"
+      ],
+      "cause": "DeepSeek HTTP 402 insufficient balance; user recharged"
+    },
+    {
+      "attempts": [
+        "RFQ-04-1-a1",
+        "RFQ-04-1-a2"
+      ],
+      "cause": "C drive full: Java temporary agent creation failed; Docker reset timed out; user freed disk, Docker restarted; TEMP/TMP redirected to D for subsequent eval processes"
+    },
+    {
+      "attempts": [
+        "ROB-04-1-a1",
+        "ROB-04-1-a2"
+      ],
+      "cause": "ERP backend container not running during snapshot and subsequent reset; existing ERP services restarted and frozen world verified before resume"
+    }
+  ]
+}

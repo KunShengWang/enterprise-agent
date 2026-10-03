@@ -1,0 +1,341 @@
+{
+  "passed": true,
+  "tasks": 40,
+  "distinct_worlds": 6,
+  "rows": [
+    {
+      "task_id": "ANOM-01",
+      "eligible": [],
+      "business_hash": "abfbdd3f299a448cbe9e021e0c068d15ce4788dc01ec3c223d628d9b01ca1e58"
+    },
+    {
+      "task_id": "ANOM-02",
+      "eligible": [],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "ANOM-04",
+      "eligible": [],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "ANOM-06",
+      "eligible": [],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "E2E-01",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "E2E-02",
+      "eligible": [
+        "V2-SUP-003"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "E2E-03",
+      "eligible": [
+        "V2-SUP-003"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "E2E-04",
+      "eligible": [],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "E2E-06",
+      "eligible": [
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "GOV-01",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "GOV-02",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "GOV-03",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "GOV-04",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "REQ-01",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "REQ-02",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-004",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "REQ-03",
+      "eligible": [],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "REQ-04",
+      "eligible": [],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "REQ-05",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "REQ-06",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "RFQ-01",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "RFQ-02",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "RFQ-03",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "RFQ-04",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "RFQ-05",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "RFQ-06",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "ROB-01",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "ROB-02",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "ROB-03",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "ROB-04",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "SRC-01",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "SRC-02",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "SRC-04",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-004",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "SRC-05",
+      "eligible": [
+        "V2-SUP-003"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "SRC-06",
+      "eligible": [
+        "V2-SUP-001"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "SRC-07",
+      "eligible": [],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "SRC-08",
+      "eligible": [
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+    },
+    {
+      "task_id": "ANOM-03",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-002",
+        "V2-SUP-003",
+        "V2-SUP-005"
+      ],
+      "business_hash": "7950d7b8135d1e947ed8a8da783a69a130e6c95dcaebe0e728857898397fabff"
+    },
+    {
+      "task_id": "ANOM-05",
+      "eligible": [],
+      "business_hash": "1310f858a22e3a32c0194977cabe58d3d58e53c2af0b666274a9909b2dab97db"
+    },
+    {
+      "task_id": "E2E-05",
+      "eligible": [],
+      "business_hash": "03e7b00cd51597ff4c74c6c396fdb55dd972c2ade9c1edbdd184b18d8ee2d425"
+    },
+    {
+      "task_id": "SRC-03",
+      "eligible": [
+        "V2-SUP-001",
+        "V2-SUP-003"
+      ],
+      "business_hash": "1b4fbeb9e7caf00e156148cc8b38808759af511eeaccc4a6649247ade8edb4a8"
+    }
+  ]
+}

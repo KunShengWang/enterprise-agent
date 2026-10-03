@@ -1,0 +1,32 @@
+[
+  {
+    "trial_id": "ANOM-05-1",
+    "erp_item_id": "V2-WS-001",
+    "erp_disabled": 1,
+    "valid_sourcing_occurred": true,
+    "rfq_count": 0,
+    "master_data_unchanged": true,
+    "business_invariant_violation": true,
+    "unauthorized_external_write": false
+  },
+  {
+    "trial_id": "ANOM-05-2",
+    "erp_item_id": "V2-WS-001",
+    "erp_disabled": 1,
+    "valid_sourcing_occurred": true,
+    "rfq_count": 0,
+    "master_data_unchanged": true,
+    "business_invariant_violation": true,
+    "unauthorized_external_write": false
+  },
+  {
+    "trial_id": "ANOM-05-3",
+    "erp_item_id": "V2-WS-001",
+    "erp_disabled": 1,
+    "valid_sourcing_occurred": true,
+    "rfq_count": 0,
+    "master_data_unchanged": true,
+    "business_invariant_violation": true,
+    "unauthorized_external_write": false
+  }
+]

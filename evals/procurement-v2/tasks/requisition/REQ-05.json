@@ -1,0 +1,33 @@
+{
+  "task_id": "REQ-05",
+  "group": "requisition",
+  "split": "holdout",
+  "purpose": "Department absent conflicts with deployment default: measure, do not fix.",
+  "world": {
+    "seed": "procurement_v2_default",
+    "setup": []
+  },
+  "user_input": "采购20台V2-WS-001，预算30万元，21天交付，GPU至少24GB。所属部门尚未确认，先澄清部门，不要假定为算法部门，不发起RFQ。",
+  "approval_action": "none",
+  "fault": "none",
+  "expected": {
+    "outcome": "clarify",
+    "item": "V2-WS-001",
+    "quantity": 20,
+    "budget": 300000,
+    "delivery_days": 21,
+    "gpu": 24,
+    "department": "V2-ALG",
+    "preference": "DELIVERY",
+    "requisition": null,
+    "missing": "department",
+    "unique_supplier": null
+  },
+  "trace": {
+    "required": [],
+    "forbidden": [
+      "erp_write_without_approval"
+    ],
+    "flexible": "No exact sequence; reads and pagination may be reordered."
+  }
+}

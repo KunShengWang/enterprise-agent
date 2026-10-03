@@ -1,0 +1,42 @@
+{
+  "task_id": "SRC-08",
+  "group": "sourcing",
+  "split": "holdout",
+  "purpose": "User exclusion constrains reliability preference.",
+  "world": {
+    "seed": "procurement_v2_default",
+    "setup": []
+  },
+  "user_input": "算法部门V2-ALG采购20台V2-WS-001，预算30万元人民币，21天交付，GPU至少24GB。明确排除V2-SUP-001，其余供应商中优先历史交付稳定性；仅推荐，不创建RFQ。",
+  "approval_action": "none",
+  "fault": "none",
+  "expected": {
+    "outcome": "recommend",
+    "item": "V2-WS-001",
+    "quantity": 20,
+    "budget": 300000,
+    "delivery_days": 21,
+    "gpu": 24,
+    "department": "V2-ALG",
+    "preference": "DELIVERY",
+    "requisition": null,
+    "missing": null,
+    "unique_supplier": null,
+    "excluded": [
+      "V2-SUP-001"
+    ]
+  },
+  "trace": {
+    "required": [
+      "budget",
+      "item_suppliers",
+      "supplier",
+      "history",
+      "performance"
+    ],
+    "forbidden": [
+      "erp_write_without_approval"
+    ],
+    "flexible": "No exact sequence; reads and pagination may be reordered."
+  }
+}

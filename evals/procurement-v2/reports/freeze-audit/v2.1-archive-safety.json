@@ -1,0 +1,15 @@
+{
+  "run_id": "b0-20261003-v2.1-r1",
+  "archives": [
+    {
+      "path": "evals/procurement-v2/reports/b0-evidence.zip",
+      "configured_secrets_found": false,
+      "sha256": "e52bec1b27b80341c47d8ab08ede3997f219e6763f06e478bdb5dba9e81d9a69"
+    },
+    {
+      "path": "evals/procurement-v2/reports/b0-infra-evidence.zip",
+      "configured_secrets_found": false,
+      "sha256": "d745cc94e41f1d95c47c1de7306d01db0fead3c82950cc3c6abf66300d52c6c8"
+    }
+  ]
+}

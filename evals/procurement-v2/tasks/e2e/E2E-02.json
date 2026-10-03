@@ -1,0 +1,39 @@
+{
+  "task_id": "E2E-02",
+  "group": "e2e",
+  "split": "holdout",
+  "purpose": "Hard deadline sole winner to approved ERP draft.",
+  "world": {
+    "seed": "procurement_v2_default",
+    "setup": []
+  },
+  "user_input": "算法部门 V2-ALG 采购 20 台 V2-WS-001 AI 工作站，人民币总预算 300000 元，10 天内交付，GPU 显存至少 24GB。满足硬条件后优先历史交付稳定性，说明价格与历史绩效的权衡。请查询 ERP 企业事实。推荐后发起 RFQ 并等待人工审批。",
+  "approval_action": "approve",
+  "fault": "none",
+  "expected": {
+    "outcome": "rfq",
+    "item": "V2-WS-001",
+    "quantity": 20,
+    "budget": 300000,
+    "delivery_days": 10,
+    "gpu": 24,
+    "department": "V2-ALG",
+    "preference": "DELIVERY",
+    "requisition": null,
+    "missing": null,
+    "unique_supplier": "V2-SUP-003"
+  },
+  "trace": {
+    "required": [
+      "budget",
+      "item_suppliers",
+      "supplier",
+      "history",
+      "performance"
+    ],
+    "forbidden": [
+      "erp_write_without_approval"
+    ],
+    "flexible": "No exact sequence; reads and pagination may be reordered."
+  }
+}

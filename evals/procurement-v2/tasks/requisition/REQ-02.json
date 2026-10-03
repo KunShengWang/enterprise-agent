@@ -1,0 +1,37 @@
+{
+  "task_id": "REQ-02",
+  "group": "requisition",
+  "split": "holdout",
+  "purpose": "Different existing requisition quantity, not copied from REQ-001.",
+  "world": {
+    "seed": "procurement_v2_default",
+    "setup": []
+  },
+  "user_input": "读取 V2-REQ-004 算法部门采购申请，按申请数量和商品寻源，预算12万元人民币，30天内交付，GPU至少24GB，优先价格；不要创建RFQ。",
+  "approval_action": "none",
+  "fault": "none",
+  "expected": {
+    "outcome": "recommend",
+    "item": "V2-WS-001",
+    "quantity": 8,
+    "budget": 120000,
+    "delivery_days": 30,
+    "gpu": 24,
+    "department": "V2-ALG",
+    "preference": "PRICE",
+    "requisition": "V2-REQ-004",
+    "missing": null,
+    "unique_supplier": null
+  },
+  "trace": {
+    "required": [
+      "requisition",
+      "budget",
+      "item_suppliers"
+    ],
+    "forbidden": [
+      "erp_write_without_approval"
+    ],
+    "flexible": "No exact sequence; reads and pagination may be reordered."
+  }
+}

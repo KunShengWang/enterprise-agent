@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "run_id": "b0-20261003-v2.1-r1",
+  "regraded_artifacts": 122,
+  "valid_trials": 120,
+  "before_rfq_empty_trials": 120,
+  "distinct_run_ids": 120,
+  "distinct_case_ids": 98,
+  "distinct_approval_ids": 42,
+  "no_cross_trial_case_approval_receipt_leak": true,
+  "legacy_fingerprints_unchanged": 5,
+  "protected_handler_unchanged": true,
+  "archive_sha256": "e52bec1b27b80341c47d8ab08ede3997f219e6763f06e478bdb5dba9e81d9a69",
+  "model_comparability_warnings": [
+    "MODEL_IDENTITY_UNAVAILABLE"
+  ]
+}

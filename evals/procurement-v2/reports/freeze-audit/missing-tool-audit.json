@@ -1,0 +1,867 @@
+[
+  {
+    "task_id": "GOV-04",
+    "trial_id": "GOV-04-1",
+    "trace_id": "2e190c44-ec4d-4954-a149-47fb18f35458",
+    "required_fact": [
+      "history"
+    ],
+    "why_fact_is_required": {
+      "history": "Historical experience and delivery/quality risk are needed for the requested trade-off; transaction rows are not mandated."
+    },
+    "available_sources_for_fact": {
+      "history": [
+        "Procurement Supplier Performance"
+      ]
+    },
+    "agent_obtained_fact": true,
+    "required_specific_tool": true,
+    "corrected_required_specific_tool": false,
+    "grader_verdict": "OVER_CONSTRAINED",
+    "witnesses": {
+      "history": [
+        {
+          "path": "executions[3].result.content.offers[0]",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T07:59:37.658794Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[3].result.content.evaluations[0].offer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T07:59:37.658794Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[4].result.content.record",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T07:59:37.658794Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[10].result.content.recommendation.selectedOffer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T07:59:37.658794Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        }
+      ]
+    },
+    "retained_failure": null
+  },
+  {
+    "task_id": "RFQ-02",
+    "trial_id": "RFQ-02-1",
+    "trace_id": "375ba2f6-5173-44f8-8167-0ca0294947b5",
+    "required_fact": [
+      "item_suppliers",
+      "supplier",
+      "history",
+      "performance"
+    ],
+    "why_fact_is_required": {
+      "item_suppliers": "Actual SKU support, price, capacity and delivery constraints must be known.",
+      "supplier": "Supplier identity and approved/active status must be known.",
+      "history": "Historical experience and delivery/quality risk are needed for the requested trade-off; transaction rows are not mandated.",
+      "performance": "Authoritative historical delivery/quality observations support the requested preference."
+    },
+    "available_sources_for_fact": {
+      "item_suppliers": [
+        "Procurement Item Supplier"
+      ],
+      "supplier": [
+        "Supplier"
+      ],
+      "history": [
+        "Procurement Supplier Performance"
+      ],
+      "performance": [
+        "Procurement Supplier Performance"
+      ]
+    },
+    "agent_obtained_fact": true,
+    "required_specific_tool": true,
+    "corrected_required_specific_tool": false,
+    "grader_verdict": "OVER_CONSTRAINED",
+    "witnesses": {
+      "item_suppliers": [
+        {
+          "path": "executions[0].result.content.offers[0]",
+          "entity_type": "Procurement Item Supplier",
+          "entity_id": "V2-REL-01-01",
+          "version": "2026-10-02T08:14:40.065937Z",
+          "verified_fields": [
+            "unitPrice",
+            "leadTimeDays",
+            "currency",
+            "capacityUnits"
+          ]
+        },
+        {
+          "path": "executions[0].result.content.evaluations[0].offer",
+          "entity_type": "Procurement Item Supplier",
+          "entity_id": "V2-REL-01-01",
+          "version": "2026-10-02T08:14:40.065937Z",
+          "verified_fields": [
+            "unitPrice",
+            "leadTimeDays",
+            "currency",
+            "capacityUnits"
+          ]
+        },
+        {
+          "path": "executions[3].result.content.recommendation.selectedOffer",
+          "entity_type": "Procurement Item Supplier",
+          "entity_id": "V2-REL-01-01",
+          "version": "2026-10-02T08:14:40.065937Z",
+          "verified_fields": [
+            "unitPrice",
+            "leadTimeDays",
+            "currency",
+            "capacityUnits"
+          ]
+        }
+      ],
+      "supplier": [
+        {
+          "path": "executions[0].result.content.offers[0]",
+          "entity_type": "Supplier",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:14:39.810540Z",
+          "verified_fields": [
+            "approved via authoritative active Offer contract"
+          ]
+        },
+        {
+          "path": "executions[0].result.content.evaluations[0].offer",
+          "entity_type": "Supplier",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:14:39.810540Z",
+          "verified_fields": [
+            "approved via authoritative active Offer contract"
+          ]
+        },
+        {
+          "path": "executions[3].result.content.recommendation.selectedOffer",
+          "entity_type": "Supplier",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:14:39.810540Z",
+          "verified_fields": [
+            "approved via authoritative active Offer contract"
+          ]
+        }
+      ],
+      "history": [
+        {
+          "path": "executions[0].result.content.offers[0]",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:14:40.172270Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[0].result.content.evaluations[0].offer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:14:40.172270Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[3].result.content.recommendation.selectedOffer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:14:40.172270Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        }
+      ],
+      "performance": [
+        {
+          "path": "executions[0].result.content.offers[0]",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:14:40.172270Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[0].result.content.evaluations[0].offer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:14:40.172270Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[3].result.content.recommendation.selectedOffer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:14:40.172270Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        }
+      ]
+    },
+    "retained_failure": "ERP RFQ lacks correct requisition link"
+  },
+  {
+    "task_id": "RFQ-02",
+    "trial_id": "RFQ-02-2",
+    "trace_id": "135aff69-ae0d-473d-b10f-afb6980966d4",
+    "required_fact": [
+      "history"
+    ],
+    "why_fact_is_required": {
+      "history": "Historical experience and delivery/quality risk are needed for the requested trade-off; transaction rows are not mandated."
+    },
+    "available_sources_for_fact": {
+      "history": [
+        "Procurement Supplier Performance"
+      ]
+    },
+    "agent_obtained_fact": true,
+    "required_specific_tool": true,
+    "corrected_required_specific_tool": false,
+    "grader_verdict": "OVER_CONSTRAINED",
+    "witnesses": {
+      "history": [
+        {
+          "path": "executions[3].result.content.offers[0]",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:15:19.372566Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[3].result.content.evaluations[0].offer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:15:19.372566Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[7].result.content.record",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:15:19.372566Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[12].result.content.recommendation.selectedOffer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:15:19.372566Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        }
+      ]
+    },
+    "retained_failure": "ERP RFQ lacks correct requisition link"
+  },
+  {
+    "task_id": "RFQ-02",
+    "trial_id": "RFQ-02-3",
+    "trace_id": "841ecc52-2a9d-48b1-bfba-2aa3607ddeef",
+    "required_fact": [
+      "history"
+    ],
+    "why_fact_is_required": {
+      "history": "Historical experience and delivery/quality risk are needed for the requested trade-off; transaction rows are not mandated."
+    },
+    "available_sources_for_fact": {
+      "history": [
+        "Procurement Supplier Performance"
+      ]
+    },
+    "agent_obtained_fact": true,
+    "required_specific_tool": true,
+    "corrected_required_specific_tool": false,
+    "grader_verdict": "OVER_CONSTRAINED",
+    "witnesses": {
+      "history": [
+        {
+          "path": "executions[1].result.content.recommendation.selectedOffer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:16:03.462795Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[3].result.content.offers[0]",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:16:03.462795Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[3].result.content.evaluations[0].offer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:16:03.462795Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[13].result.content.record",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:16:03.462795Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        }
+      ]
+    },
+    "retained_failure": "ERP RFQ lacks correct requisition link"
+  },
+  {
+    "task_id": "RFQ-04",
+    "trial_id": "RFQ-04-2",
+    "trace_id": "1ca0b3b0-dd25-4edb-9756-ecc13e92e6e1",
+    "required_fact": [
+      "history"
+    ],
+    "why_fact_is_required": {
+      "history": "Historical experience and delivery/quality risk are needed for the requested trade-off; transaction rows are not mandated."
+    },
+    "available_sources_for_fact": {
+      "history": [
+        "Procurement Supplier Performance"
+      ]
+    },
+    "agent_obtained_fact": true,
+    "required_specific_tool": true,
+    "corrected_required_specific_tool": false,
+    "grader_verdict": "OVER_CONSTRAINED",
+    "witnesses": {
+      "history": [
+        {
+          "path": "executions[7].result.content.offers[0]",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:42:05.215508Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[7].result.content.evaluations[0].offer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:42:05.215508Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[11].result.content.recommendation.selectedOffer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:42:05.215508Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[13].result.content.record",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:42:05.215508Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        }
+      ]
+    },
+    "retained_failure": null
+  },
+  {
+    "task_id": "RFQ-06",
+    "trial_id": "RFQ-06-2",
+    "trace_id": "a3849865-52d0-478c-80d1-ff31b33b8f8d",
+    "required_fact": [
+      "history"
+    ],
+    "why_fact_is_required": {
+      "history": "Historical experience and delivery/quality risk are needed for the requested trade-off; transaction rows are not mandated."
+    },
+    "available_sources_for_fact": {
+      "history": [
+        "Procurement Supplier Performance"
+      ]
+    },
+    "agent_obtained_fact": true,
+    "required_specific_tool": true,
+    "corrected_required_specific_tool": false,
+    "grader_verdict": "OVER_CONSTRAINED",
+    "witnesses": {
+      "history": [
+        {
+          "path": "executions[0].result.content.record",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:46:18.113374Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[1].result.content.recommendation.selectedOffer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:46:18.113374Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[9].result.content.offers[0]",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:46:18.113374Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[9].result.content.evaluations[0].offer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-02T08:46:18.113374Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        }
+      ]
+    },
+    "retained_failure": null
+  },
+  {
+    "task_id": "SRC-02",
+    "trial_id": "SRC-02-1",
+    "trace_id": "42ac7ac8-d090-4058-806f-9087106c8c0f",
+    "required_fact": [
+      "history"
+    ],
+    "why_fact_is_required": {
+      "history": "Historical experience and delivery/quality risk are needed for the requested trade-off; transaction rows are not mandated."
+    },
+    "available_sources_for_fact": {
+      "history": [
+        "Procurement Supplier Performance"
+      ]
+    },
+    "agent_obtained_fact": true,
+    "required_specific_tool": true,
+    "corrected_required_specific_tool": false,
+    "grader_verdict": "OVER_CONSTRAINED",
+    "witnesses": {
+      "history": [
+        {
+          "path": "executions[3].result.content.record",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-03T02:37:36.657622Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[7].result.content.offers[0]",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-03T02:37:36.657622Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[7].result.content.evaluations[0].offer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-03T02:37:36.657622Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[8].result.content.recommendation.selectedOffer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-001",
+          "version": "2026-10-03T02:37:36.657622Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        }
+      ]
+    },
+    "retained_failure": null
+  },
+  {
+    "task_id": "SRC-04",
+    "trial_id": "SRC-04-1",
+    "trace_id": "e5b05528-f0f9-410b-8431-5d3deea1e461",
+    "required_fact": [
+      "history"
+    ],
+    "why_fact_is_required": {
+      "history": "Historical experience and delivery/quality risk are needed for the requested trade-off; transaction rows are not mandated."
+    },
+    "available_sources_for_fact": {
+      "history": [
+        "Procurement Supplier Performance"
+      ]
+    },
+    "agent_obtained_fact": true,
+    "required_specific_tool": true,
+    "corrected_required_specific_tool": false,
+    "grader_verdict": "OVER_CONSTRAINED",
+    "witnesses": {
+      "history": [
+        {
+          "path": "executions[3].result.content.offers[1]",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-002",
+          "version": "2026-10-03T02:41:58.497140Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[3].result.content.evaluations[1].offer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-002",
+          "version": "2026-10-03T02:41:58.497140Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[7].result.content.record",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-002",
+          "version": "2026-10-03T02:41:58.497140Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[11].result.content.recommendation.selectedOffer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-002",
+          "version": "2026-10-03T02:41:58.497140Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        }
+      ]
+    },
+    "retained_failure": null
+  },
+  {
+    "task_id": "SRC-05",
+    "trial_id": "SRC-05-2",
+    "trace_id": "cd99b3f4-bf10-4458-bb99-870cffb66279",
+    "required_fact": [
+      "history"
+    ],
+    "why_fact_is_required": {
+      "history": "Historical experience and delivery/quality risk are needed for the requested trade-off; transaction rows are not mandated."
+    },
+    "available_sources_for_fact": {
+      "history": [
+        "Procurement Supplier Performance"
+      ]
+    },
+    "agent_obtained_fact": true,
+    "required_specific_tool": true,
+    "corrected_required_specific_tool": false,
+    "grader_verdict": "OVER_CONSTRAINED",
+    "witnesses": {
+      "history": [
+        {
+          "path": "executions[5].result.content.recommendation.selectedOffer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-003",
+          "version": "2026-10-03T02:44:57.166674Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[8].result.content.offers[2]",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-003",
+          "version": "2026-10-03T02:44:57.166674Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[8].result.content.evaluations[2].offer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-003",
+          "version": "2026-10-03T02:44:57.166674Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[10].result.content.record",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-003",
+          "version": "2026-10-03T02:44:57.166674Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        }
+      ]
+    },
+    "retained_failure": null
+  },
+  {
+    "task_id": "SRC-08",
+    "trial_id": "SRC-08-1",
+    "trace_id": "93cadae6-fbf1-4ed5-a8ab-95173108e730",
+    "required_fact": [
+      "history"
+    ],
+    "why_fact_is_required": {
+      "history": "Historical experience and delivery/quality risk are needed for the requested trade-off; transaction rows are not mandated."
+    },
+    "available_sources_for_fact": {
+      "history": [
+        "Procurement Supplier Performance"
+      ]
+    },
+    "agent_obtained_fact": true,
+    "required_specific_tool": true,
+    "corrected_required_specific_tool": false,
+    "grader_verdict": "OVER_CONSTRAINED",
+    "witnesses": {
+      "history": [
+        {
+          "path": "executions[0].result.content.record",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-003",
+          "version": "2026-10-03T02:49:54.254384Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[8].result.content.recommendation.selectedOffer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-003",
+          "version": "2026-10-03T02:49:54.254384Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[9].result.content.offers[2]",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-003",
+          "version": "2026-10-03T02:49:54.254384Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[9].result.content.evaluations[2].offer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-003",
+          "version": "2026-10-03T02:49:54.254384Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        }
+      ]
+    },
+    "retained_failure": null
+  },
+  {
+    "task_id": "SRC-08",
+    "trial_id": "SRC-08-3",
+    "trace_id": "ceb98e75-ba1f-4d26-a1b5-3b2cfce708c0",
+    "required_fact": [
+      "history"
+    ],
+    "why_fact_is_required": {
+      "history": "Historical experience and delivery/quality risk are needed for the requested trade-off; transaction rows are not mandated."
+    },
+    "available_sources_for_fact": {
+      "history": [
+        "Procurement Supplier Performance"
+      ]
+    },
+    "agent_obtained_fact": true,
+    "required_specific_tool": true,
+    "corrected_required_specific_tool": false,
+    "grader_verdict": "OVER_CONSTRAINED",
+    "witnesses": {
+      "history": [
+        {
+          "path": "executions[0].result.content.recommendation.selectedOffer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-003",
+          "version": "2026-10-03T02:51:12.621695Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[2].result.content.offers[2]",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-003",
+          "version": "2026-10-03T02:51:12.621695Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[2].result.content.evaluations[2].offer",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-003",
+          "version": "2026-10-03T02:51:12.621695Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        },
+        {
+          "path": "executions[5].result.content.record",
+          "entity_type": "Procurement Supplier Performance",
+          "entity_id": "V2-SUP-003",
+          "version": "2026-10-03T02:51:12.621695Z",
+          "verified_fields": [
+            "transactionCount",
+            "onTimeRate",
+            "qualityScore"
+          ]
+        }
+      ]
+    },
+    "retained_failure": null
+  }
+]

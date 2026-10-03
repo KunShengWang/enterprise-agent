@@ -1,0 +1,125 @@
+{
+  "command": "pwsh -NoProfile -File evals/regression/legacy-v1/run.ps1 -FullSuite",
+  "evidence_directory": "target/procurement-v0/v0-20261002-145056-5f7b6172",
+  "phases": [
+    {
+      "phase": "procurement",
+      "command": "mvn '-B' '-Devaluation.codeRevision=b0e82e2b603ae56370ce3ee4bc136669f0f78b34' '-Dsurefire.reportNameSuffix=v0-20261002-145056-5f7b6172-procurement' '-Dtest=*Procurement*Tests,JdbcProcurementCaseStorePostgresIT' 'test'",
+      "exitCode": 0,
+      "tests": 804,
+      "pass": 793,
+      "failures": 0,
+      "errors": 0,
+      "skip": 11
+    },
+    {
+      "phase": "replay",
+      "command": "mvn '-B' '-Devaluation.codeRevision=b0e82e2b603ae56370ce3ee4bc136669f0f78b34' '-Dsurefire.reportNameSuffix=v0-20261002-145056-5f7b6172-replay' '-Dtest=ProcurementArtifactReplayTests,ProcurementAnswerReplayTests,ProcurementAnswerPolicyTests,ProcurementAnswerRelationTests,ProcurementAnswerCompletenessTests,ProcurementAnswerAggregationTests,ProcurementAnswerV3ReplayTests,ProcurementComparisonMetricsTests,ProcurementComparisonReportsTests' '-Devaluation.artifact=target/procurement-evaluation/runtime-artifact.json' '-Danswer.artifact=target/procurement-evaluation/runtime-artifact.json' '-Danswer.v2.artifact=target/procurement-evaluation/runtime-artifact.json' '-Drelation.artifact=target/procurement-evaluation/runtime-artifact.json' '-Dcompleteness.artifact=target/procurement-evaluation/runtime-artifact.json' '-Danswer.v3.artifact=target/procurement-evaluation/runtime-artifact.json' 'test'",
+      "exitCode": 0,
+      "tests": 380,
+      "pass": 380,
+      "failures": 0,
+      "errors": 0,
+      "skip": 0
+    },
+    {
+      "phase": "full",
+      "command": "mvn '-B' '-Devaluation.codeRevision=b0e82e2b603ae56370ce3ee4bc136669f0f78b34' '-Dsurefire.reportNameSuffix=v0-20261002-145056-5f7b6172-full' 'test'",
+      "exitCode": 0,
+      "tests": 1193,
+      "pass": 1184,
+      "failures": 0,
+      "errors": 0,
+      "skip": 9
+    },
+    {
+      "phase": "build",
+      "command": "mvn '-B' '-Devaluation.codeRevision=b0e82e2b603ae56370ce3ee4bc136669f0f78b34' '-Dsurefire.reportNameSuffix=v0-20261002-145056-5f7b6172-build' '-DskipTests' 'package'",
+      "exitCode": 0,
+      "tests": 0,
+      "pass": 0,
+      "failures": 0,
+      "errors": 0,
+      "skip": 0
+    }
+  ],
+  "fixtures": [
+    {
+      "path": "data/procurement/aws-synthetic/01_suppliers.json",
+      "sha256": "d05878d688ba20c7240acad09e89e547930275f873cb3cfb4d404700680c65a3",
+      "actual_sha256": "d05878d688ba20c7240acad09e89e547930275f873cb3cfb4d404700680c65a3"
+    },
+    {
+      "path": "data/procurement/aws-synthetic/README.md",
+      "sha256": "9c826333dead0d5edba162634c6b8d054ea7f56ac1dced31aa9e7a18697c400a",
+      "actual_sha256": "9c826333dead0d5edba162634c6b8d054ea7f56ac1dced31aa9e7a18697c400a"
+    },
+    {
+      "path": "data/procurement/scenarios/complex_workstation_01.json",
+      "sha256": "a0b6760e51e71ddbcc23e9f79c7ab1266cd52b9e197620204067dd4784c3d4b8",
+      "actual_sha256": "a0b6760e51e71ddbcc23e9f79c7ab1266cd52b9e197620204067dd4784c3d4b8"
+    },
+    {
+      "path": "src/test/resources/procurement/benchmark/procurement-benchmark-v1.json",
+      "sha256": "f0c0763148783ab9e461ccf6a21fe86ba81e4a6681a2f0f423075f9b0c37f6b1",
+      "actual_sha256": "f0c0763148783ab9e461ccf6a21fe86ba81e4a6681a2f0f423075f9b0c37f6b1"
+    },
+    {
+      "path": "src/test/resources/procurement/evaluation/procurement-answer-policy-v1.json",
+      "sha256": "2588b6a4c336df497390dadf3fa91e312a2f81e6be3f43c473f9d5c365bfe8c4",
+      "actual_sha256": "2588b6a4c336df497390dadf3fa91e312a2f81e6be3f43c473f9d5c365bfe8c4"
+    }
+  ],
+  "skipped_suites": [
+    {
+      "name": "com.agent.platform.procurement.JdbcProcurementCaseStorePostgresIT(v0-20261002-145056-5f7b6172-procurement)",
+      "tests": 2,
+      "skipped": 2
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementAnswerAggregationTests(v0-20261002-145056-5f7b6172-procurement)",
+      "tests": 68,
+      "skipped": 1
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementAnswerCompletenessTests(v0-20261002-145056-5f7b6172-procurement)",
+      "tests": 66,
+      "skipped": 1
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementAnswerPolicyTests(v0-20261002-145056-5f7b6172-procurement)",
+      "tests": 63,
+      "skipped": 1
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementAnswerRelationTests(v0-20261002-145056-5f7b6172-procurement)",
+      "tests": 82,
+      "skipped": 1
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementAnswerReplayTests(v0-20261002-145056-5f7b6172-procurement)",
+      "tests": 1,
+      "skipped": 1
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementAnswerV3ReplayTests(v0-20261002-145056-5f7b6172-procurement)",
+      "tests": 28,
+      "skipped": 1
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementArtifactReplayTests(v0-20261002-145056-5f7b6172-procurement)",
+      "tests": 1,
+      "skipped": 1
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementComparisonMetricsTests(v0-20261002-145056-5f7b6172-procurement)",
+      "tests": 25,
+      "skipped": 1
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementComparisonReportsTests(v0-20261002-145056-5f7b6172-procurement)",
+      "tests": 46,
+      "skipped": 1
+    }
+  ]
+}

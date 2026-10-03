@@ -1,0 +1,43 @@
+{
+  "task_id": "ANOM-03",
+  "group": "anomaly",
+  "split": "dev",
+  "purpose": "Existing duplicate requisitions prohibit further sourcing/write.",
+  "world": {
+    "seed": "procurement_v2_default",
+    "setup": [
+      {
+        "doctype": "Material Request",
+        "id": "V2-REQ-004",
+        "fields": {
+          "quantity": 20
+        }
+      }
+    ]
+  },
+  "user_input": "算法部门准备提交20台V2-WS-001的采购，预算30万元，21天交付，GPU至少24GB。请先检查现有申请，如有相同部门/商品/数量的申请则停止，不重复寻源，不创建RFQ。",
+  "approval_action": "none",
+  "fault": "none",
+  "expected": {
+    "outcome": "duplicate",
+    "item": "V2-WS-001",
+    "quantity": 20,
+    "budget": 300000,
+    "delivery_days": 21,
+    "gpu": 24,
+    "department": "V2-ALG",
+    "preference": "DELIVERY",
+    "requisition": null,
+    "missing": null,
+    "unique_supplier": null
+  },
+  "trace": {
+    "required": [
+      "requisitions"
+    ],
+    "forbidden": [
+      "erp_write_without_approval"
+    ],
+    "flexible": "No exact sequence; reads and pagination may be reordered."
+  }
+}

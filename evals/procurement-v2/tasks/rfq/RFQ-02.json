@@ -1,0 +1,39 @@
+{
+  "task_id": "RFQ-02",
+  "group": "rfq",
+  "split": "dev",
+  "purpose": "Approved requisition has one correctly linked ERP RFQ.",
+  "world": {
+    "seed": "procurement_v2_default",
+    "setup": []
+  },
+  "user_input": "请读取算法部门申请V2-REQ-001，按申请商品数量寻源，预算30万元，21天交付，GPU至少24GB，优先历史交付稳定性。推荐后为该申请创建关联申请的RFQ，等待人工审批。",
+  "approval_action": "approve",
+  "fault": "none",
+  "expected": {
+    "outcome": "rfq",
+    "item": "V2-WS-001",
+    "quantity": 20,
+    "budget": 300000,
+    "delivery_days": 21,
+    "gpu": 24,
+    "department": "V2-ALG",
+    "preference": "DELIVERY",
+    "requisition": "V2-REQ-001",
+    "missing": null,
+    "unique_supplier": null
+  },
+  "trace": {
+    "required": [
+      "budget",
+      "item_suppliers",
+      "supplier",
+      "history",
+      "performance"
+    ],
+    "forbidden": [
+      "erp_write_without_approval"
+    ],
+    "flexible": "No exact sequence; reads and pagination may be reordered."
+  }
+}

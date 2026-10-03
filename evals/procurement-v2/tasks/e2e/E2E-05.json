@@ -1,0 +1,44 @@
+{
+  "task_id": "E2E-05",
+  "group": "e2e",
+  "split": "holdout",
+  "purpose": "Large quantity beyond every capacity is blocked.",
+  "world": {
+    "seed": "procurement_v2_default",
+    "setup": [
+      {
+        "doctype": "Budget",
+        "id": "V2-BUD-001",
+        "fields": {
+          "budget_amount": 3000000
+        }
+      }
+    ]
+  },
+  "user_input": "算法部门 V2-ALG 采购 110 台 V2-WS-001 AI 工作站，人民币总预算 2000000 元，21 天内交付，GPU 显存至少 24GB。满足硬条件后优先历史交付稳定性，说明价格与历史绩效的权衡。请查询 ERP 企业事实。推荐后发起 RFQ 并等待人工审批。",
+  "approval_action": "approve",
+  "fault": "none",
+  "expected": {
+    "outcome": "blocked",
+    "item": "V2-WS-001",
+    "quantity": 110,
+    "budget": 2000000,
+    "delivery_days": 21,
+    "gpu": 24,
+    "department": "V2-ALG",
+    "preference": "DELIVERY",
+    "requisition": null,
+    "missing": null,
+    "unique_supplier": null
+  },
+  "trace": {
+    "required": [
+      "budget",
+      "item_suppliers"
+    ],
+    "forbidden": [
+      "erp_write_without_approval"
+    ],
+    "flexible": "No exact sequence; reads and pagination may be reordered."
+  }
+}

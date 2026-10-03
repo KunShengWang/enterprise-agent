@@ -1,0 +1,39 @@
+{
+  "task_id": "SRC-04",
+  "group": "sourcing",
+  "split": "dev",
+  "purpose": "Inactive cheapest supplier excluded even at feasible capacity.",
+  "world": {
+    "seed": "procurement_v2_default",
+    "setup": []
+  },
+  "user_input": "算法部门 V2-ALG 采购 8 台 V2-WS-001 AI 工作站，人民币总预算 140000 元，30 天内交付，GPU 显存至少 24GB。满足硬条件后优先控制价格，说明价格与履约风险的权衡。请查询 ERP 企业事实。本次仅做采购分析，不创建 RFQ。",
+  "approval_action": "none",
+  "fault": "none",
+  "expected": {
+    "outcome": "recommend",
+    "item": "V2-WS-001",
+    "quantity": 8,
+    "budget": 140000,
+    "delivery_days": 30,
+    "gpu": 24,
+    "department": "V2-ALG",
+    "preference": "PRICE",
+    "requisition": null,
+    "missing": null,
+    "unique_supplier": null
+  },
+  "trace": {
+    "required": [
+      "budget",
+      "item_suppliers",
+      "supplier",
+      "history",
+      "performance"
+    ],
+    "forbidden": [
+      "erp_write_without_approval"
+    ],
+    "flexible": "No exact sequence; reads and pagination may be reordered."
+  }
+}

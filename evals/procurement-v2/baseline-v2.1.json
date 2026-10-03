@@ -1,0 +1,87 @@
+{
+  "eval_version": "procurement-eval-v2.1",
+  "production_sha": "b0e82e2b603ae56370ce3ee4bc136669f0f78b34",
+  "eval_implementation": {
+    "commit": null,
+    "status": "uncommitted Phase-2 implementation; production SHA does not contain Eval V2",
+    "branch": "feat/procurement-eval-v2"
+  },
+  "configured_model": "deepseek-chat",
+  "resolved_model": "deepseek-flash",
+  "resolved_models": [
+    "deepseek-flash"
+  ],
+  "provider": "deepseek",
+  "model_metadata_if_available": {
+    "exact_immutable_build": null
+  },
+  "model_reproducibility_limitation": "Provider does not expose an exact immutable model build; the same alias cannot guarantee identical future model weights.",
+  "model_comparability_warnings": [
+    "MODEL_IDENTITY_UNAVAILABLE"
+  ],
+  "seed_hash": "172cee7d8000d2e3462ca487e13a98dc269bc3a39e973bb81902d0d9098acc79",
+  "task_hash": "de3245d53adc72fdd9fb95b3dca4b9c80bf02b59913813350d43e3028243c350",
+  "grader_hash": "a37a7295798d4ad803685119da2d3d10e0947b3ff56e0116f4b3a6ecd49fda53",
+  "runner_hash": "bd6783268895e59b2fb73a9e428319947330724f0983157a9582b57909b6023f",
+  "production_working_tree_hash": "8e20c6d03996e0fb8e7ce6b163d4313190353a679387c5ad1fafdbc41a0e4562",
+  "prompt_hash": "d7cb51e12f9b4f30409e25165a27f5a68776012e112102d79657614d162189e8",
+  "tool_schema_hash": [
+    "909bb573787151d415dacbe82752d1290dd1958ee6e7a029e05f543a7cf35e81",
+    "e9f2196ebfbcba16fa828191975cb79918f6c014a83201879cc2967a73e12d72"
+  ],
+  "model_settings": {
+    "maxTokens": 4096,
+    "model": "deepseek-chat",
+    "temperature": 0.2
+  },
+  "dev_task_ids": [
+    "ANOM-01",
+    "ANOM-03",
+    "ANOM-04",
+    "ANOM-06",
+    "E2E-01",
+    "E2E-03",
+    "E2E-04",
+    "E2E-06",
+    "GOV-01",
+    "GOV-02",
+    "GOV-03",
+    "REQ-01",
+    "REQ-03",
+    "REQ-04",
+    "REQ-06",
+    "RFQ-01",
+    "RFQ-02",
+    "RFQ-04",
+    "RFQ-05",
+    "ROB-01",
+    "ROB-02",
+    "ROB-03",
+    "SRC-01",
+    "SRC-02",
+    "SRC-03",
+    "SRC-04",
+    "SRC-05",
+    "SRC-07"
+  ],
+  "holdout_task_ids": [
+    "ANOM-02",
+    "ANOM-05",
+    "E2E-02",
+    "E2E-05",
+    "GOV-04",
+    "REQ-02",
+    "REQ-05",
+    "RFQ-03",
+    "RFQ-06",
+    "ROB-04",
+    "SRC-06",
+    "SRC-08"
+  ],
+  "metric_definitions_version": "procurement-metrics-v2.0-accounting-v1",
+  "fact_contract_version": "canonical-facts-v2.1",
+  "run_id": "b0-20261003-v2.1-r1",
+  "complete": true,
+  "archive_sha256": "e52bec1b27b80341c47d8ab08ede3997f219e6763f06e478bdb5dba9e81d9a69",
+  "verification_script_sha256": "380e127a7c21801b90d7c5b2263606016908e485ce778fe67e7792ce31874644"
+}

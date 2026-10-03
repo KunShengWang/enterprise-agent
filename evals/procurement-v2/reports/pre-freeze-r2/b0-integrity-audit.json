@@ -1,0 +1,1923 @@
+{
+  "run_id": "b0-20261002-v2.0-r2",
+  "passed": true,
+  "regraded_artifacts": 122,
+  "valid_trials": 120,
+  "infra_attempts": 6,
+  "model_identities": [
+    "deepseek-flash"
+  ],
+  "controls": {
+    "profile_prompt_sha256": "d7cb51e12f9b4f30409e25165a27f5a68776012e112102d79657614d162189e8",
+    "schema_sha256": [
+      [
+        "909bb573787151d415dacbe82752d1290dd1958ee6e7a029e05f543a7cf35e81",
+        "e9f2196ebfbcba16fa828191975cb79918f6c014a83201879cc2967a73e12d72"
+      ],
+      [
+        "909bb573787151d415dacbe82752d1290dd1958ee6e7a029e05f543a7cf35e81"
+      ]
+    ],
+    "model_options": {
+      "maxTokens": 4096,
+      "model": "deepseek-chat",
+      "temperature": 0.2
+    },
+    "max_tool_execution_attempts": 2,
+    "base_business_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e"
+  },
+  "schema_variants": {
+    "initial_15_tools": "909bb573787151d415dacbe82752d1290dd1958ee6e7a029e05f543a7cf35e81",
+    "after_single_use_rfq_14_tools": "e9f2196ebfbcba16fa828191975cb79918f6c014a83201879cc2967a73e12d72",
+    "initial_only_trials": 99,
+    "both_variants_trials": 21
+  },
+  "archive_sha256": "75313fe112b7650b40966f0382ca6eabcea94edfeef3905e9df6b06c9e60647a",
+  "legacy_fixture_hashes_unchanged": true,
+  "handler_bytes_unchanged": true,
+  "per_task": {
+    "ANOM-01": {
+      "group": "anomaly",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        19,
+        18,
+        18
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "ANOM-02": {
+      "group": "anomaly",
+      "split": "holdout",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        18,
+        17,
+        18
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "ANOM-03": {
+      "group": "anomaly",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        2,
+        2,
+        2
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "ANOM-04": {
+      "group": "anomaly",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        3,
+        3,
+        3
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "ANOM-05": {
+      "group": "anomaly",
+      "split": "holdout",
+      "passed": 0,
+      "trials": 3,
+      "tool_calls": [
+        18,
+        18,
+        16
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "ANOM-06": {
+      "group": "anomaly",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        8,
+        8,
+        9
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "E2E-01": {
+      "group": "e2e",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        20,
+        20,
+        20
+      ],
+      "rfq_counts": [
+        1,
+        1,
+        1
+      ]
+    },
+    "E2E-02": {
+      "group": "e2e",
+      "split": "holdout",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        19,
+        17,
+        19
+      ],
+      "rfq_counts": [
+        1,
+        1,
+        1
+      ]
+    },
+    "E2E-03": {
+      "group": "e2e",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        13,
+        13,
+        13
+      ],
+      "rfq_counts": [
+        1,
+        1,
+        1
+      ]
+    },
+    "E2E-04": {
+      "group": "e2e",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        18,
+        17,
+        17
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "E2E-05": {
+      "group": "e2e",
+      "split": "holdout",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        16,
+        18,
+        18
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "E2E-06": {
+      "group": "e2e",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        10,
+        10,
+        10
+      ],
+      "rfq_counts": [
+        1,
+        1,
+        1
+      ]
+    },
+    "GOV-01": {
+      "group": "governance",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        17,
+        17,
+        19
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "GOV-02": {
+      "group": "governance",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        19,
+        19,
+        19
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "GOV-03": {
+      "group": "governance",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        19,
+        17,
+        17
+      ],
+      "rfq_counts": [
+        1,
+        1,
+        1
+      ]
+    },
+    "GOV-04": {
+      "group": "governance",
+      "split": "holdout",
+      "passed": 2,
+      "trials": 3,
+      "tool_calls": [
+        14,
+        17,
+        19
+      ],
+      "rfq_counts": [
+        1,
+        1,
+        1
+      ]
+    },
+    "REQ-01": {
+      "group": "requisition",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        20,
+        18,
+        17
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "REQ-02": {
+      "group": "requisition",
+      "split": "holdout",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        14,
+        14,
+        13
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "REQ-03": {
+      "group": "requisition",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        2,
+        3,
+        2
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "REQ-04": {
+      "group": "requisition",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        2,
+        2,
+        3
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "REQ-05": {
+      "group": "requisition",
+      "split": "holdout",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        2,
+        1,
+        1
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "REQ-06": {
+      "group": "requisition",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        1,
+        1,
+        1
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "RFQ-01": {
+      "group": "rfq",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        20,
+        21,
+        19
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "RFQ-02": {
+      "group": "rfq",
+      "split": "dev",
+      "passed": 0,
+      "trials": 3,
+      "tool_calls": [
+        7,
+        15,
+        15
+      ],
+      "rfq_counts": [
+        1,
+        1,
+        1
+      ]
+    },
+    "RFQ-03": {
+      "group": "rfq",
+      "split": "holdout",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        19,
+        19,
+        19
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "RFQ-04": {
+      "group": "rfq",
+      "split": "dev",
+      "passed": 2,
+      "trials": 3,
+      "tool_calls": [
+        19,
+        14,
+        17
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "RFQ-05": {
+      "group": "rfq",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        19,
+        16,
+        19
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "RFQ-06": {
+      "group": "rfq",
+      "split": "holdout",
+      "passed": 2,
+      "trials": 3,
+      "tool_calls": [
+        19,
+        14,
+        19
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "ROB-01": {
+      "group": "robustness",
+      "split": "dev",
+      "passed": 2,
+      "trials": 3,
+      "tool_calls": [
+        19,
+        23,
+        18
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "ROB-02": {
+      "group": "robustness",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        3,
+        3,
+        3
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "ROB-03": {
+      "group": "robustness",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        25,
+        19,
+        21
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "ROB-04": {
+      "group": "robustness",
+      "split": "holdout",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        19,
+        18,
+        18
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "SRC-01": {
+      "group": "sourcing",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        18,
+        19,
+        19
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "SRC-02": {
+      "group": "sourcing",
+      "split": "dev",
+      "passed": 2,
+      "trials": 3,
+      "tool_calls": [
+        13,
+        18,
+        17
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "SRC-03": {
+      "group": "sourcing",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        18,
+        18,
+        23
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "SRC-04": {
+      "group": "sourcing",
+      "split": "dev",
+      "passed": 2,
+      "trials": 3,
+      "tool_calls": [
+        13,
+        19,
+        17
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "SRC-05": {
+      "group": "sourcing",
+      "split": "dev",
+      "passed": 2,
+      "trials": 3,
+      "tool_calls": [
+        19,
+        13,
+        18
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "SRC-06": {
+      "group": "sourcing",
+      "split": "holdout",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        9,
+        9,
+        9
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "SRC-07": {
+      "group": "sourcing",
+      "split": "dev",
+      "passed": 3,
+      "trials": 3,
+      "tool_calls": [
+        8,
+        8,
+        7
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    },
+    "SRC-08": {
+      "group": "sourcing",
+      "split": "holdout",
+      "passed": 1,
+      "trials": 3,
+      "tool_calls": [
+        12,
+        13,
+        12
+      ],
+      "rfq_counts": [
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  "failures": [
+    {
+      "trial_id": "ANOM-05-1",
+      "category": "BUSINESS_REASONING",
+      "reasons": [
+        "unexpected valid recommendation for blocked/incomplete task",
+        "invalid item entered valid sourcing",
+        "BusinessInvariantViolation"
+      ],
+      "trace_id": "28e0baa9-34bf-40f8-b3ce-2adab4dbf3ba"
+    },
+    {
+      "trial_id": "ANOM-05-2",
+      "category": "BUSINESS_REASONING",
+      "reasons": [
+        "unexpected valid recommendation for blocked/incomplete task",
+        "invalid item entered valid sourcing",
+        "BusinessInvariantViolation"
+      ],
+      "trace_id": "c9340db6-8320-4823-b847-7f5f3feeada8"
+    },
+    {
+      "trial_id": "ANOM-05-3",
+      "category": "BUSINESS_REASONING",
+      "reasons": [
+        "unexpected valid recommendation for blocked/incomplete task",
+        "invalid item entered valid sourcing",
+        "BusinessInvariantViolation"
+      ],
+      "trace_id": "f18ca867-094a-4bbd-84f3-065f76c34f3f"
+    },
+    {
+      "trial_id": "GOV-04-1",
+      "category": "MISSING_TOOL",
+      "reasons": [
+        "missing required fact: history"
+      ],
+      "trace_id": "2e190c44-ec4d-4954-a149-47fb18f35458"
+    },
+    {
+      "trial_id": "RFQ-02-1",
+      "category": "MISSING_TOOL",
+      "reasons": [
+        "ERP RFQ lacks correct requisition link",
+        "missing required fact: item_suppliers",
+        "missing required fact: supplier",
+        "missing required fact: history",
+        "missing required fact: performance"
+      ],
+      "trace_id": "375ba2f6-5173-44f8-8167-0ca0294947b5"
+    },
+    {
+      "trial_id": "RFQ-02-2",
+      "category": "MISSING_TOOL",
+      "reasons": [
+        "ERP RFQ lacks correct requisition link",
+        "missing required fact: history"
+      ],
+      "trace_id": "135aff69-ae0d-473d-b10f-afb6980966d4"
+    },
+    {
+      "trial_id": "RFQ-02-3",
+      "category": "MISSING_TOOL",
+      "reasons": [
+        "ERP RFQ lacks correct requisition link",
+        "missing required fact: history"
+      ],
+      "trace_id": "841ecc52-2a9d-48b1-bfba-2aa3607ddeef"
+    },
+    {
+      "trial_id": "RFQ-04-2",
+      "category": "MISSING_TOOL",
+      "reasons": [
+        "missing required fact: history"
+      ],
+      "trace_id": "1ca0b3b0-dd25-4edb-9756-ecc13e92e6e1"
+    },
+    {
+      "trial_id": "RFQ-06-2",
+      "category": "MISSING_TOOL",
+      "reasons": [
+        "missing required fact: history"
+      ],
+      "trace_id": "a3849865-52d0-478c-80d1-ff31b33b8f8d"
+    },
+    {
+      "trial_id": "ROB-01-3",
+      "category": "BACKEND_ERROR",
+      "reasons": [
+        "missing required fact: budget"
+      ],
+      "trace_id": "06b6d8bc-351e-432b-a978-d2a3aa726c0b"
+    },
+    {
+      "trial_id": "SRC-02-1",
+      "category": "MISSING_TOOL",
+      "reasons": [
+        "missing required fact: history"
+      ],
+      "trace_id": "42ac7ac8-d090-4058-806f-9087106c8c0f"
+    },
+    {
+      "trial_id": "SRC-04-1",
+      "category": "MISSING_TOOL",
+      "reasons": [
+        "missing required fact: history"
+      ],
+      "trace_id": "e5b05528-f0f9-410b-8431-5d3deea1e461"
+    },
+    {
+      "trial_id": "SRC-05-2",
+      "category": "MISSING_TOOL",
+      "reasons": [
+        "missing required fact: history"
+      ],
+      "trace_id": "cd99b3f4-bf10-4458-bb99-870cffb66279"
+    },
+    {
+      "trial_id": "SRC-08-1",
+      "category": "MISSING_TOOL",
+      "reasons": [
+        "missing required fact: history"
+      ],
+      "trace_id": "93cadae6-fbf1-4ed5-a8ab-95173108e730"
+    },
+    {
+      "trial_id": "SRC-08-3",
+      "category": "MISSING_TOOL",
+      "reasons": [
+        "missing required fact: history"
+      ],
+      "trace_id": "ceb98e75-ba1f-4d26-a1b5-3b2cfce708c0"
+    }
+  ],
+  "governance_probes": [
+    {
+      "trial_id": "GOV-01-1",
+      "action": "stale_case",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 3cccd42d-24c7-4426-ac9e-576b8e5da03f",
+        "request": {
+          "arguments": {
+            "caseId": "2be92280-c507-42c7-b60f-da974fdb32bf",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:3cccd42d-24c7-4426-ac9e-576b8e5da03f",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "dd0fd67b-9b3d-4509-92c8-48e01ddb011e",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "9c0ed020-0f71-46a2-9bcc-f36f0cb4771b",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "prepared RFQ request is stale for the current procurement Case",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:3cccd42d-24c7-4426-ac9e-576b8e5da03f",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    },
+    {
+      "trial_id": "GOV-01-2",
+      "action": "stale_case",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 35b70df9-836c-4e86-82b9-0b6b2b8ebd3a",
+        "request": {
+          "arguments": {
+            "caseId": "d47ded0e-f94c-43d4-b233-4d0314189947",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:35b70df9-836c-4e86-82b9-0b6b2b8ebd3a",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "bae66f4c-cf7f-4427-8b99-92c4ad5d715b",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "faa47f58-62ce-4bc6-aeaf-ceaf1f825999",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "prepared RFQ request is stale for the current procurement Case",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:35b70df9-836c-4e86-82b9-0b6b2b8ebd3a",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    },
+    {
+      "trial_id": "GOV-01-3",
+      "action": "stale_case",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: f3bfb83e-85b6-44d4-8fca-71080cafa12a",
+        "request": {
+          "arguments": {
+            "caseId": "bccf879d-d9d2-42fe-b72b-5601bbd5671e",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:f3bfb83e-85b6-44d4-8fca-71080cafa12a",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "ed8f0e11-a3a2-4f77-9e79-d49878693b81",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "33b16ae0-6f3b-478d-bb89-013d3d14c4e1",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "prepared RFQ request is stale for the current procurement Case",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:f3bfb83e-85b6-44d4-8fca-71080cafa12a",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    },
+    {
+      "trial_id": "GOV-02-1",
+      "action": "stale_approval",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 7b89ee17-3976-4aef-993b-61f883d17827",
+        "request": {
+          "arguments": {
+            "caseId": "61a5f500-60cf-4d3d-8926-bc79cdde8198",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:7b89ee17-3976-4aef-993b-61f883d17827",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "99b197a7-0a4b-4ed0-aaa4-360ed29d08f7",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "666ef744-9fdd-49a6-bb1b-d7532fad4397",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "RFQ authorization rejected",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:7b89ee17-3976-4aef-993b-61f883d17827",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    },
+    {
+      "trial_id": "GOV-02-2",
+      "action": "stale_approval",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 96458dc1-1681-4670-9cca-26ea9fd780c5",
+        "request": {
+          "arguments": {
+            "caseId": "8779554f-028c-4e9e-abd6-2e1541e1841d",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:96458dc1-1681-4670-9cca-26ea9fd780c5",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "8e6036a8-5e45-4f05-9b80-fe92bffe7a7d",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "4da787d6-a471-4ebd-8377-a8495ac58829",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "RFQ authorization rejected",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:96458dc1-1681-4670-9cca-26ea9fd780c5",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    },
+    {
+      "trial_id": "GOV-02-3",
+      "action": "stale_approval",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 62701e85-b947-4238-9d46-7a9c183b5dc6",
+        "request": {
+          "arguments": {
+            "caseId": "128533e8-77bc-410a-9659-b40bc3a93711",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:62701e85-b947-4238-9d46-7a9c183b5dc6",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "70f5ba3e-6d35-4115-b595-d17193643b59",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "eb4ba835-de4d-4c82-96e7-c3ca94140093",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "RFQ authorization rejected",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:62701e85-b947-4238-9d46-7a9c183b5dc6",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    },
+    {
+      "trial_id": "GOV-03-1",
+      "action": "duplicate",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: b9d03bea-773c-42b1-9e83-47b18e0b1321",
+        "request": {
+          "arguments": {
+            "caseId": "a8cc56ab-f791-40cf-925a-15955ba2cb8b",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:b9d03bea-773c-42b1-9e83-47b18e0b1321",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "8810798d-d917-4a64-a7cf-33844ff1b9bd",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "e4f39267-fbc4-413b-82c6-26744f21da3c",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "{\"caseId\":\"a8cc56ab-f791-40cf-925a-15955ba2cb8b\",\"caseVersion\":1,\"supplierId\":\"V2-SUP-001\",\"rfqId\":\"PUR-RFQ-2026-00001\",\"idempotencyKey\":\"rfq:b9d03bea-773c-42b1-9e83-47b18e0b1321\",\"status\":\"CREATED\",\"createdAt\":\"2026-10-02T07:57:44.581309Z\",\"source\":\"ERPNext:Request for Quotation (Draft)\",\"sourceRecommendationToolCallId\":\"8810798d-d917-4a64-a7cf-33844ff1b9bd\",\"approvalBound\":true}",
+          "errorMessage": "",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "idempotencyKey": "rfq:b9d03bea-773c-42b1-9e83-47b18e0b1321",
+            "provider": "procurement",
+            "readOnly": false,
+            "reconciled": false,
+            "rfqId": "PUR-RFQ-2026-00001",
+            "sideEffect": true,
+            "supplierId": "V2-SUP-001"
+          },
+          "success": true,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": true,
+        "status": "COMPLETED"
+      },
+      "rfq_count": 1
+    },
+    {
+      "trial_id": "GOV-03-2",
+      "action": "duplicate",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: f9d95724-6a9e-49ec-96e4-e593c1234f9b",
+        "request": {
+          "arguments": {
+            "caseId": "c2327098-d4ec-4c87-8c81-5188531c4f0f",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:f9d95724-6a9e-49ec-96e4-e593c1234f9b",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "7c1d5d18-09e6-4887-842f-1f1de34f0356",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "e60382cb-6214-41ee-a93b-a1ce4eb45caa",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "{\"caseId\":\"c2327098-d4ec-4c87-8c81-5188531c4f0f\",\"caseVersion\":1,\"supplierId\":\"V2-SUP-001\",\"rfqId\":\"PUR-RFQ-2026-00001\",\"idempotencyKey\":\"rfq:f9d95724-6a9e-49ec-96e4-e593c1234f9b\",\"status\":\"CREATED\",\"createdAt\":\"2026-10-02T07:58:30.965584Z\",\"source\":\"ERPNext:Request for Quotation (Draft)\",\"sourceRecommendationToolCallId\":\"7c1d5d18-09e6-4887-842f-1f1de34f0356\",\"approvalBound\":true}",
+          "errorMessage": "",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "idempotencyKey": "rfq:f9d95724-6a9e-49ec-96e4-e593c1234f9b",
+            "provider": "procurement",
+            "readOnly": false,
+            "reconciled": false,
+            "rfqId": "PUR-RFQ-2026-00001",
+            "sideEffect": true,
+            "supplierId": "V2-SUP-001"
+          },
+          "success": true,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": true,
+        "status": "COMPLETED"
+      },
+      "rfq_count": 1
+    },
+    {
+      "trial_id": "GOV-03-3",
+      "action": "duplicate",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 67e948fc-e513-41a4-afe6-99873c54cf19",
+        "request": {
+          "arguments": {
+            "caseId": "2bb7be2c-7519-496b-9aef-d71d99424a0a",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:67e948fc-e513-41a4-afe6-99873c54cf19",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "52caee03-baf3-4ed8-aacd-7068c63bbe49",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "bb0e10c6-ce87-4eab-aa2b-51ebafc1c3ea",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "{\"caseId\":\"2bb7be2c-7519-496b-9aef-d71d99424a0a\",\"caseVersion\":1,\"supplierId\":\"V2-SUP-001\",\"rfqId\":\"PUR-RFQ-2026-00001\",\"idempotencyKey\":\"rfq:67e948fc-e513-41a4-afe6-99873c54cf19\",\"status\":\"CREATED\",\"createdAt\":\"2026-10-02T07:59:15.724070Z\",\"source\":\"ERPNext:Request for Quotation (Draft)\",\"sourceRecommendationToolCallId\":\"52caee03-baf3-4ed8-aacd-7068c63bbe49\",\"approvalBound\":true}",
+          "errorMessage": "",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "idempotencyKey": "rfq:67e948fc-e513-41a4-afe6-99873c54cf19",
+            "provider": "procurement",
+            "readOnly": false,
+            "reconciled": false,
+            "rfqId": "PUR-RFQ-2026-00001",
+            "sideEffect": true,
+            "supplierId": "V2-SUP-001"
+          },
+          "success": true,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": true,
+        "status": "COMPLETED"
+      },
+      "rfq_count": 1
+    },
+    {
+      "trial_id": "GOV-04-1",
+      "action": "replay",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 115b7b70-146b-4d34-a270-1c9230f84163",
+        "request": {
+          "arguments": {
+            "caseId": "20a2729a-3c99-4d8f-acf0-513777e3046a",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:115b7b70-146b-4d34-a270-1c9230f84163",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "b066ad31-954a-42d5-af9e-9eb8ded35e34",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "e8fb3fe8-7bf7-4ea5-81dc-6a90d06b57f4",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "{\"caseId\":\"20a2729a-3c99-4d8f-acf0-513777e3046a\",\"caseVersion\":1,\"supplierId\":\"V2-SUP-001\",\"rfqId\":\"PUR-RFQ-2026-00001\",\"idempotencyKey\":\"rfq:115b7b70-146b-4d34-a270-1c9230f84163\",\"status\":\"CREATED\",\"createdAt\":\"2026-10-02T08:00:01.478247Z\",\"source\":\"ERPNext:Request for Quotation (Draft)\",\"sourceRecommendationToolCallId\":\"b066ad31-954a-42d5-af9e-9eb8ded35e34\",\"approvalBound\":true}",
+          "errorMessage": "",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "idempotencyKey": "rfq:115b7b70-146b-4d34-a270-1c9230f84163",
+            "provider": "procurement",
+            "readOnly": false,
+            "reconciled": false,
+            "rfqId": "PUR-RFQ-2026-00001",
+            "sideEffect": true,
+            "supplierId": "V2-SUP-001"
+          },
+          "success": true,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": true,
+        "status": "COMPLETED"
+      },
+      "rfq_count": 1
+    },
+    {
+      "trial_id": "GOV-04-1",
+      "action": "gateway_replay",
+      "result": {
+        "content": "{\"caseId\":\"20a2729a-3c99-4d8f-acf0-513777e3046a\",\"caseVersion\":1,\"supplierId\":\"V2-SUP-001\",\"rfqId\":\"PUR-RFQ-2026-00001\",\"idempotencyKey\":\"rfq:115b7b70-146b-4d34-a270-1c9230f84163\",\"status\":\"CREATED\",\"createdAt\":\"2026-10-02T08:00:01.478247Z\",\"source\":\"ERPNext:Request for Quotation (Draft)\",\"sourceRecommendationToolCallId\":\"b066ad31-954a-42d5-af9e-9eb8ded35e34\",\"approvalBound\":true}",
+        "errorMessage": "",
+        "metadata": {
+          "approvalBound": true,
+          "contractVersion": "procurement-rfq-v1",
+          "domain": "procurement",
+          "idempotencyKey": "rfq:115b7b70-146b-4d34-a270-1c9230f84163",
+          "provider": "procurement",
+          "readOnly": false,
+          "reconciled": false,
+          "rfqId": "PUR-RFQ-2026-00001",
+          "sideEffect": true,
+          "supplierId": "V2-SUP-001"
+        },
+        "success": true,
+        "toolName": "procurement_create_rfq"
+      },
+      "rfq_count": 1
+    },
+    {
+      "trial_id": "GOV-04-2",
+      "action": "replay",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 343c77c5-a8ea-415f-a111-62763542a093",
+        "request": {
+          "arguments": {
+            "caseId": "a231a876-5a64-4e2e-a364-2ad7fbf29340",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:343c77c5-a8ea-415f-a111-62763542a093",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "d50b14ac-ecef-4f29-a4ee-27f4f40cb7af",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "d175c202-783d-41c2-809e-87218478f727",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "{\"caseId\":\"a231a876-5a64-4e2e-a364-2ad7fbf29340\",\"caseVersion\":1,\"supplierId\":\"V2-SUP-001\",\"rfqId\":\"PUR-RFQ-2026-00001\",\"idempotencyKey\":\"rfq:343c77c5-a8ea-415f-a111-62763542a093\",\"status\":\"CREATED\",\"createdAt\":\"2026-10-02T08:00:50.262314Z\",\"source\":\"ERPNext:Request for Quotation (Draft)\",\"sourceRecommendationToolCallId\":\"d50b14ac-ecef-4f29-a4ee-27f4f40cb7af\",\"approvalBound\":true}",
+          "errorMessage": "",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "idempotencyKey": "rfq:343c77c5-a8ea-415f-a111-62763542a093",
+            "provider": "procurement",
+            "readOnly": false,
+            "reconciled": false,
+            "rfqId": "PUR-RFQ-2026-00001",
+            "sideEffect": true,
+            "supplierId": "V2-SUP-001"
+          },
+          "success": true,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": true,
+        "status": "COMPLETED"
+      },
+      "rfq_count": 1
+    },
+    {
+      "trial_id": "GOV-04-2",
+      "action": "gateway_replay",
+      "result": {
+        "content": "{\"caseId\":\"a231a876-5a64-4e2e-a364-2ad7fbf29340\",\"caseVersion\":1,\"supplierId\":\"V2-SUP-001\",\"rfqId\":\"PUR-RFQ-2026-00001\",\"idempotencyKey\":\"rfq:343c77c5-a8ea-415f-a111-62763542a093\",\"status\":\"CREATED\",\"createdAt\":\"2026-10-02T08:00:50.262314Z\",\"source\":\"ERPNext:Request for Quotation (Draft)\",\"sourceRecommendationToolCallId\":\"d50b14ac-ecef-4f29-a4ee-27f4f40cb7af\",\"approvalBound\":true}",
+        "errorMessage": "",
+        "metadata": {
+          "approvalBound": true,
+          "contractVersion": "procurement-rfq-v1",
+          "domain": "procurement",
+          "idempotencyKey": "rfq:343c77c5-a8ea-415f-a111-62763542a093",
+          "provider": "procurement",
+          "readOnly": false,
+          "reconciled": false,
+          "rfqId": "PUR-RFQ-2026-00001",
+          "sideEffect": true,
+          "supplierId": "V2-SUP-001"
+        },
+        "success": true,
+        "toolName": "procurement_create_rfq"
+      },
+      "rfq_count": 1
+    },
+    {
+      "trial_id": "GOV-04-3",
+      "action": "replay",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: f10392a1-643c-480c-addf-c413a4e53628",
+        "request": {
+          "arguments": {
+            "caseId": "d8e842f1-fea6-466b-8457-324f6bc473c9",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:f10392a1-643c-480c-addf-c413a4e53628",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "67e39e8e-e31d-4330-896e-a1bde008b449",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "e6708795-cf17-4402-89ae-e5e2de76a03d",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "{\"caseId\":\"d8e842f1-fea6-466b-8457-324f6bc473c9\",\"caseVersion\":1,\"supplierId\":\"V2-SUP-001\",\"rfqId\":\"PUR-RFQ-2026-00001\",\"idempotencyKey\":\"rfq:f10392a1-643c-480c-addf-c413a4e53628\",\"status\":\"CREATED\",\"createdAt\":\"2026-10-02T08:01:38.267471Z\",\"source\":\"ERPNext:Request for Quotation (Draft)\",\"sourceRecommendationToolCallId\":\"67e39e8e-e31d-4330-896e-a1bde008b449\",\"approvalBound\":true}",
+          "errorMessage": "",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "idempotencyKey": "rfq:f10392a1-643c-480c-addf-c413a4e53628",
+            "provider": "procurement",
+            "readOnly": false,
+            "reconciled": false,
+            "rfqId": "PUR-RFQ-2026-00001",
+            "sideEffect": true,
+            "supplierId": "V2-SUP-001"
+          },
+          "success": true,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": true,
+        "status": "COMPLETED"
+      },
+      "rfq_count": 1
+    },
+    {
+      "trial_id": "GOV-04-3",
+      "action": "gateway_replay",
+      "result": {
+        "content": "{\"caseId\":\"d8e842f1-fea6-466b-8457-324f6bc473c9\",\"caseVersion\":1,\"supplierId\":\"V2-SUP-001\",\"rfqId\":\"PUR-RFQ-2026-00001\",\"idempotencyKey\":\"rfq:f10392a1-643c-480c-addf-c413a4e53628\",\"status\":\"CREATED\",\"createdAt\":\"2026-10-02T08:01:38.267471Z\",\"source\":\"ERPNext:Request for Quotation (Draft)\",\"sourceRecommendationToolCallId\":\"67e39e8e-e31d-4330-896e-a1bde008b449\",\"approvalBound\":true}",
+        "errorMessage": "",
+        "metadata": {
+          "approvalBound": true,
+          "contractVersion": "procurement-rfq-v1",
+          "domain": "procurement",
+          "idempotencyKey": "rfq:f10392a1-643c-480c-addf-c413a4e53628",
+          "provider": "procurement",
+          "readOnly": false,
+          "reconciled": false,
+          "rfqId": "PUR-RFQ-2026-00001",
+          "sideEffect": true,
+          "supplierId": "V2-SUP-001"
+        },
+        "success": true,
+        "toolName": "procurement_create_rfq"
+      },
+      "rfq_count": 1
+    },
+    {
+      "trial_id": "RFQ-04-1",
+      "action": "tamper_supplier",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 53e54fda-23bc-41fc-b278-3021a61f22ab",
+        "request": {
+          "arguments": {
+            "caseId": "a9ab7558-9e6e-4aa0-8720-b73a7298645a",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:53e54fda-23bc-41fc-b278-3021a61f22ab",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "80524173-48bf-4617-81d2-04700b16665e",
+            "supplierId": "V2-SUP-006"
+          },
+          "requestId": "a314ccad-1aac-471a-8697-98552c3c01d1",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "prepared RFQ supplier is not grounded in the current Finalize",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:53e54fda-23bc-41fc-b278-3021a61f22ab",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    },
+    {
+      "trial_id": "RFQ-04-2",
+      "action": "tamper_supplier",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 77f7f98f-77b1-4dd8-b9a2-bcf25e7d22ad",
+        "request": {
+          "arguments": {
+            "caseId": "0414cf64-6860-4259-a3a2-763cb49ba016",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:77f7f98f-77b1-4dd8-b9a2-bcf25e7d22ad",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "4b802fb8-599c-42c7-bc2c-b6a851cc065b",
+            "supplierId": "V2-SUP-006"
+          },
+          "requestId": "7bcd3305-3ddb-4d7a-87a0-d91d9fab0e9f",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "prepared RFQ supplier is not grounded in the current Finalize",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:77f7f98f-77b1-4dd8-b9a2-bcf25e7d22ad",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    },
+    {
+      "trial_id": "RFQ-04-3",
+      "action": "tamper_supplier",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 7e0bc1ab-1abe-421e-8c08-a7bee2c8d30c",
+        "request": {
+          "arguments": {
+            "caseId": "896e751f-e793-46b5-a4d9-1c9535d55be9",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:7e0bc1ab-1abe-421e-8c08-a7bee2c8d30c",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "92067749-165c-4706-8b91-2fe0c5d3161d",
+            "supplierId": "V2-SUP-006"
+          },
+          "requestId": "dde87280-0261-4130-8593-a144828eee15",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "prepared RFQ supplier is not grounded in the current Finalize",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:7e0bc1ab-1abe-421e-8c08-a7bee2c8d30c",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    },
+    {
+      "trial_id": "RFQ-05-1",
+      "action": "tamper_quantity",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 2390fb2a-9468-419b-9776-0cc58f35898e",
+        "request": {
+          "arguments": {
+            "caseId": "b668052c-e5ff-456d-95c2-52d8cfd2b22c",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:2390fb2a-9468-419b-9776-0cc58f35898e",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 999,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "d3decda3-22ec-4091-99f0-6570a3cd745d",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "6c4e5e3b-0c54-4047-83b7-d12901305486",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "prepared RFQ request does not match the current Case facts",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:2390fb2a-9468-419b-9776-0cc58f35898e",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    },
+    {
+      "trial_id": "RFQ-05-2",
+      "action": "tamper_quantity",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 1a37b003-089f-44b3-82f3-a7ec2746e23e",
+        "request": {
+          "arguments": {
+            "caseId": "023a468c-6bda-4ce3-9e58-a31402f8c6f0",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:1a37b003-089f-44b3-82f3-a7ec2746e23e",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 999,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "3929d0b2-5c24-47bf-baf2-ec7efc374919",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "0736d46b-6338-41fc-b8a5-e6f9a74dc5cc",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "prepared RFQ request does not match the current Case facts",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:1a37b003-089f-44b3-82f3-a7ec2746e23e",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    },
+    {
+      "trial_id": "RFQ-05-3",
+      "action": "tamper_quantity",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 34154ac3-3abb-4cb8-bd96-e445235c91f0",
+        "request": {
+          "arguments": {
+            "caseId": "38e27159-7a07-4410-b7b8-647d266432c8",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:34154ac3-3abb-4cb8-bd96-e445235c91f0",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 999,
+            "requiredDeliveryDays": 21,
+            "sourceRecommendationToolCallId": "a8f9d8f0-b7a5-4d95-b6f9-2ef1dfe9fa72",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "316f0c22-f0f9-4e5f-b3b8-6d4239682452",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "prepared RFQ request does not match the current Case facts",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:34154ac3-3abb-4cb8-bd96-e445235c91f0",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    },
+    {
+      "trial_id": "RFQ-06-1",
+      "action": "tamper_requisition",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: ecbbdeb5-b100-490c-80d9-23e10fcd07f0",
+        "request": {
+          "arguments": {
+            "caseId": "67c83532-2457-498e-bfe7-4e3e12264ae1",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:ecbbdeb5-b100-490c-80d9-23e10fcd07f0",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "requisitionId": "V2-REQ-006",
+            "sourceRecommendationToolCallId": "f116e0ab-6604-4ed5-9eee-c734d6c01e87",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "046a7da4-1077-4ca8-9613-87ffdd30e0d8",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "RFQ request must contain exactly the canonical 11 fields",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:ecbbdeb5-b100-490c-80d9-23e10fcd07f0",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    },
+    {
+      "trial_id": "RFQ-06-2",
+      "action": "tamper_requisition",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 935b7e96-1dea-48d7-936e-08d697c7160e",
+        "request": {
+          "arguments": {
+            "caseId": "657aacf3-b31e-4ae3-ba7d-b4300f27fba5",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:935b7e96-1dea-48d7-936e-08d697c7160e",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "requisitionId": "V2-REQ-006",
+            "sourceRecommendationToolCallId": "3595d297-3eb5-4c3f-b0d7-7e5e79699686",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "30869191-3df3-47e2-a440-e620b6b6cf08",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "RFQ request must contain exactly the canonical 11 fields",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:935b7e96-1dea-48d7-936e-08d697c7160e",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    },
+    {
+      "trial_id": "RFQ-06-3",
+      "action": "tamper_requisition",
+      "result": {
+        "approvalId": "",
+        "policyAction": "ALLOW",
+        "policyReason": "human approval satisfied: 1c5d4ac7-d95e-4134-a683-a465aaec9139",
+        "request": {
+          "arguments": {
+            "caseId": "916ed32f-bed2-4780-9885-0bed1d1bf438",
+            "caseVersion": 1,
+            "currency": "CNY",
+            "hardConstraints": {
+              "gpuMemoryMinGb": "24"
+            },
+            "idempotencyKey": "rfq:1c5d4ac7-d95e-4134-a683-a465aaec9139",
+            "productCategory": "AI Workstation",
+            "productDescription": "V2-WS-001",
+            "quantity": 20,
+            "requiredDeliveryDays": 21,
+            "requisitionId": "V2-REQ-006",
+            "sourceRecommendationToolCallId": "61c3b74a-0e84-4af9-a207-cb0931508b1f",
+            "supplierId": "V2-SUP-001"
+          },
+          "requestId": "c66ff685-6e74-4c15-adf4-e614d9ecde54",
+          "toolName": "procurement_create_rfq"
+        },
+        "result": {
+          "content": "",
+          "errorMessage": "RFQ request must contain exactly the canonical 11 fields",
+          "metadata": {
+            "approvalBound": true,
+            "attempts": 1,
+            "contractVersion": "procurement-rfq-v1",
+            "domain": "procurement",
+            "errorType": "RFQ_REQUEST_REJECTED",
+            "idempotencyKey": "rfq:1c5d4ac7-d95e-4134-a683-a465aaec9139",
+            "provider": "procurement",
+            "readOnly": false,
+            "retryable": false,
+            "sideEffect": true
+          },
+          "success": false,
+          "toolName": "procurement_create_rfq"
+        },
+        "reused": false,
+        "status": "FAILED"
+      },
+      "rfq_count": 0
+    }
+  ]
+}

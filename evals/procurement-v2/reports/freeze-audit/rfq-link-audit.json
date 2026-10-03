@@ -1,0 +1,41 @@
+[
+  {
+    "trial_id": "RFQ-02-1",
+    "requisition_id": "V2-REQ-001",
+    "setup_requisition_exists": true,
+    "user_requires_link": true,
+    "agent_obtained_requisition": true,
+    "case_item_quantity_match": true,
+    "erp_rfq_count": 1,
+    "erp_material_request_links": [
+      null
+    ],
+    "verdict": "VALID_FAIL: real business link absent; Agent did obtain the requisition; no string mismatch"
+  },
+  {
+    "trial_id": "RFQ-02-2",
+    "requisition_id": "V2-REQ-001",
+    "setup_requisition_exists": true,
+    "user_requires_link": true,
+    "agent_obtained_requisition": true,
+    "case_item_quantity_match": true,
+    "erp_rfq_count": 1,
+    "erp_material_request_links": [
+      null
+    ],
+    "verdict": "VALID_FAIL: real business link absent; Agent did obtain the requisition; no string mismatch"
+  },
+  {
+    "trial_id": "RFQ-02-3",
+    "requisition_id": "V2-REQ-001",
+    "setup_requisition_exists": true,
+    "user_requires_link": true,
+    "agent_obtained_requisition": true,
+    "case_item_quantity_match": true,
+    "erp_rfq_count": 1,
+    "erp_material_request_links": [
+      null
+    ],
+    "verdict": "VALID_FAIL: real business link absent; Agent did obtain the requisition; no string mismatch"
+  }
+]
