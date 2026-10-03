@@ -1,0 +1,5 @@
+{
+  "archive_entries_checked": 619,
+  "configured_secret_or_private_key_pattern_matches": [],
+  "scope": "environment and local ERP configured secret values of at least 12 characters; private key/API key patterns; not a universal secret detector"
+}

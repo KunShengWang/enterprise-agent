@@ -56,10 +56,13 @@ public class ToolResultProjector {
 
     private LinkedHashMap<String, Object> boundedMetadata(Map<String, Object> rawMetadata) {
         LinkedHashMap<String, Object> bounded = new LinkedHashMap<>();
+        Map<String, Object> visible = new LinkedHashMap<>(rawMetadata);
+        visible.keySet().removeIf(key -> key.startsWith("_harness"));
+        visible = Map.copyOf(visible);
         int count = 0;
-        for (Map.Entry<String, Object> entry : rawMetadata.entrySet()) {
+        for (Map.Entry<String, Object> entry : visible.entrySet()) {
             if (count++ >= 32) {
-                bounded.put("metadataEntriesOmitted", rawMetadata.size() - 32);
+                bounded.put("metadataEntriesOmitted", visible.size() - 32);
                 break;
             }
             String key = boundedExcerpt(String.valueOf(entry.getKey()), 128);

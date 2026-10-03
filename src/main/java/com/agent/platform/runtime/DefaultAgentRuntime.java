@@ -333,7 +333,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 // 执行工具
                 AgentToolRuntimeResult execution = toolRuntime.executeApproved(
                         approval,
-                        definition,
+                        boundedToolDefinition(definition, budget),
                         ToolPolicyContext.from(runId, sessionId, userId,
                                 claimed.request() == null ? Map.of() : claimed.request().metadata())
                 );
@@ -363,6 +363,12 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     approval.status() == ApprovalStatus.APPROVED
             );
             toolResults.add(projectedResult);
+            if (result.outcome() == com.agent.platform.tool.ToolExecutionOutcome.FATAL_ERROR) {
+                publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
+                        "approved tool failed fatally", toolResultPayload(approval.toolCallRequest().requestId(), result), effectiveListener);
+                return finish(runId, sessionId, userId, AgentRunState.FAILED, AgentStopReason.TOOL_ERROR,
+                        "工具发生不可恢复错误，运行已停止。", "", toolResults, usedTools, claimed.usedRag(), false, budget, effectiveListener);
+            }
             // 记录此刻 agent 的执行阶段，如果接下来发生崩溃，从上下文准备阶段继续
             checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
                     toolResults, usedTools, claimed.usedRag(), budget);
@@ -1089,7 +1095,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                         userId,
                         request.metadata(),
                         call,
-                        definition.get()
+                        boundedToolDefinition(definition.get(), budget)
                 );
                 publish(sessionId, userId, runId, AgentEventType.POLICY_DECIDED,
                         execution.policyReason(),
@@ -1173,6 +1179,10 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
                         toolResult.success() ? "capability completed" : "capability failure returned to model",
                         toolResultPayload(call.toolCallId(), toolResult), listener);
+                if (execution.outcome() == com.agent.platform.tool.ToolExecutionOutcome.FATAL_ERROR) {
+                    return finish(runId, sessionId, userId, AgentRunState.FAILED, AgentStopReason.TOOL_ERROR,
+                            "工具发生不可恢复错误，运行已停止。", "", toolResults, usedTools, usedRag, false, budget, listener);
+                }
                 checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
                         toolResults, usedTools, usedRag, budget);
             }
@@ -1595,6 +1605,15 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 || (DefaultAgentCapabilityRegistry.KNOWLEDGE_SEARCH.equals(pending.toolName()) && rawResult.success());
         // 扣除一次工具调用预算
         budget.recordToolCall();
+        if (rawResult.outcome() == com.agent.platform.tool.ToolExecutionOutcome.FATAL_ERROR) {
+            Map<String, Object> fatalPayload = new LinkedHashMap<>(toolResultPayload(pending.requestId(), rawResult));
+            fatalPayload.put("recoveredFromToolExecutionStore", true);
+            publish(sessionId, userId, claimed.runId(), AgentEventType.TOOL_COMPLETED,
+                    "persisted fatal tool result recovered", Map.copyOf(fatalPayload), listener);
+            return finish(claimed.runId(), sessionId, userId, AgentRunState.FAILED, AgentStopReason.TOOL_ERROR,
+                    "持久化工具结果为不可恢复错误，运行已停止。", claimed.approvalId(), toolResults, usedTools,
+                    usedRag, claimed.blockedByGuardrail(), budget, listener);
+        }
         // 写入 checkpoint：标志工具执行阶段结束，回到 CONTEXT_PREPARATION
         checkpoint(claimed.runId(), AgentRunPhase.CONTEXT_PREPARATION, null,
                 toolResults, usedTools, usedRag, budget);
@@ -2258,12 +2277,31 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                                String content,
                                Map<String, Object> payload,
                                AgentEventListener listener) {
-        // 往数据库中添加 agent 事件
+        Map<String, Object> enriched = new LinkedHashMap<>(payload);
+        AgentRunRecord record = runStore.find(runId).orElse(null);
+        enriched.put("runId", runId);
+        if (record != null) {
+            enriched.put("agent", record.executionProfile() == null ? "default" : record.executionProfile().name());
+            enriched.putIfAbsent("turn", record.budgetSnapshot() == null ? 0 : record.budgetSnapshot().turns());
+            if (type == AgentEventType.RUN_COMPLETED || type == AgentEventType.RUN_FAILED
+                    || type == AgentEventType.RUN_CANCELLED || type == AgentEventType.APPROVAL_REQUIRED
+                    || type == AgentEventType.RUN_PAUSED || type == AgentEventType.RUN_WAITING_INPUT) {
+                enriched.put("runtimeState", record.runtimeState());
+            }
+        }
+        if (type == AgentEventType.APPROVAL_REQUIRED) enriched.put("outcome", "APPROVAL_REQUIRED");
+        if (payload.get("toolName") instanceof String name) {
+            Map<?, ?> metadata = payload.get("metadata") instanceof Map<?, ?> map ? map : Map.of();
+            Object source = metadata.get("_harnessSource");
+            enriched.put("source", source != null ? source :
+                    "mcp".equals(metadata.get("provider")) || name.startsWith("mcp.") ? "MCP" : "LOCAL");
+        }
+        // Runtime observability adds only scalar metadata, never new payload copies.
         AgentEvent event = timelineStore.appendEvent(
                 sessionId,
                 userId,
                 runId,
-                new AgentEventDraft(type, content, payload)
+                new AgentEventDraft(type, content, enriched)
         );
         // 把事件推送前端
         dispatch(event, listener);
@@ -2371,11 +2409,21 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         }
     }
 
+    private ToolDefinition boundedToolDefinition(ToolDefinition definition, AgentRunBudget budget) {
+        Map<String, Object> metadata = new LinkedHashMap<>(definition.metadata());
+        metadata.put("_harnessDeadlineEpochMillis", budget.snapshot().deadline().toEpochMilli());
+        return new ToolDefinition(definition.name(), definition.description(), definition.inputSchema(), definition.riskLevel(), metadata);
+    }
+
     private Map<String, Object> toolResultPayload(String toolCallId, ToolCallResult result) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("toolCallId", toolCallId == null ? "" : toolCallId);
         payload.put("toolName", result.toolName());
         payload.put("success", result.success());
+        payload.put("outcome", result.outcome().name());
+        payload.put("durationMs", result.metadata().getOrDefault("_harnessDurationMs", 0));
+        Object attempts = result.metadata().getOrDefault("attempts", 1);
+        payload.put("retryCount", attempts instanceof Number n ? Math.max(0, n.intValue() - 1) : 0);
         payload.put("error", result.errorMessage() == null ? "" : result.errorMessage());
         payload.put("metadata", result.metadata());
         return Map.copyOf(payload);

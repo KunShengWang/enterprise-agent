@@ -1,0 +1,52 @@
+{
+  "hash_rule": "freeze groups canonicalize CRLF to LF; standalone harness and v22 digests use exact bytes",
+  "tasks": {
+    "checked": 40,
+    "changed": []
+  },
+  "seed": {
+    "checked": 8,
+    "changed": []
+  },
+  "world_contract": {
+    "checked": 1,
+    "changed": []
+  },
+  "model_reference": {
+    "checked": 1,
+    "changed": []
+  },
+  "graders": {
+    "checked": 4,
+    "changed": []
+  },
+  "runner": {
+    "checked": 6,
+    "changed": []
+  },
+  "production": {
+    "checked": 502,
+    "changed": [
+      "src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java"
+    ]
+  },
+  "harness_runner": {
+    "checked": 4,
+    "changed": []
+  },
+  "v22": {
+    "checked": 5,
+    "changed": []
+  },
+  "protected_handler": {
+    "sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+    "unchanged_from_task_start": true
+  },
+  "index_empty": true,
+  "head": "ad563544fce6ae2bc238d555c6bf70abc1f38a4a",
+  "branch": "feat/harness-core",
+  "tags": {
+    "procurement-harness-b0": "ad563544fce6ae2bc238d555c6bf70abc1f38a4a",
+    "procurement-eval-v2.2": "ad563544fce6ae2bc238d555c6bf70abc1f38a4a"
+  }
+}

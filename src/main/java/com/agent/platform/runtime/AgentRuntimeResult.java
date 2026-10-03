@@ -18,4 +18,8 @@ public record AgentRuntimeResult(
         approvalId = approvalId == null ? "" : approvalId;
         events = events == null ? List.of() : List.copyOf(events);
     }
+
+    public RunStatus status() {
+        return RunStatus.from(state, stopReason);
+    }
 }

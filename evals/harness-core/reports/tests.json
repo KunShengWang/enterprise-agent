@@ -1,0 +1,204 @@
+{
+  "source_baseline_sha": "ad563544fce6ae2bc238d555c6bf70abc1f38a4a",
+  "test_run_head": "ad563544fce6ae2bc238d555c6bf70abc1f38a4a",
+  "working_tree": "dirty with Phase-3 changes and protected user comments",
+  "java_l0_and_legacy": [
+    {
+      "phase": "procurement",
+      "command": "mvn '-B' '-Devaluation.codeRevision=ad563544fce6ae2bc238d555c6bf70abc1f38a4a' '-Dsurefire.reportNameSuffix=v0-20261003-170705-9c00d30c-procurement' '-Dtest=*Procurement*Tests,JdbcProcurementCaseStorePostgresIT' 'test'",
+      "exitCode": 0,
+      "tests": 807,
+      "pass": 796,
+      "failures": 0,
+      "errors": 0,
+      "skip": 11
+    },
+    {
+      "phase": "replay",
+      "command": "mvn '-B' '-Devaluation.codeRevision=ad563544fce6ae2bc238d555c6bf70abc1f38a4a' '-Dsurefire.reportNameSuffix=v0-20261003-170705-9c00d30c-replay' '-Dtest=ProcurementArtifactReplayTests,ProcurementAnswerReplayTests,ProcurementAnswerPolicyTests,ProcurementAnswerRelationTests,ProcurementAnswerCompletenessTests,ProcurementAnswerAggregationTests,ProcurementAnswerV3ReplayTests,ProcurementComparisonMetricsTests,ProcurementComparisonReportsTests' '-Devaluation.artifact=target/procurement-evaluation/runtime-artifact.json' '-Danswer.artifact=target/procurement-evaluation/runtime-artifact.json' '-Danswer.v2.artifact=target/procurement-evaluation/runtime-artifact.json' '-Drelation.artifact=target/procurement-evaluation/runtime-artifact.json' '-Dcompleteness.artifact=target/procurement-evaluation/runtime-artifact.json' '-Danswer.v3.artifact=target/procurement-evaluation/runtime-artifact.json' 'test'",
+      "exitCode": 0,
+      "tests": 380,
+      "pass": 380,
+      "failures": 0,
+      "errors": 0,
+      "skip": 0
+    },
+    {
+      "phase": "full",
+      "command": "mvn '-B' '-Devaluation.codeRevision=ad563544fce6ae2bc238d555c6bf70abc1f38a4a' '-Dsurefire.reportNameSuffix=v0-20261003-170705-9c00d30c-full' 'test'",
+      "exitCode": 0,
+      "tests": 1217,
+      "pass": 1208,
+      "failures": 0,
+      "errors": 0,
+      "skip": 9
+    },
+    {
+      "phase": "build",
+      "command": "mvn '-B' '-Devaluation.codeRevision=ad563544fce6ae2bc238d555c6bf70abc1f38a4a' '-Dsurefire.reportNameSuffix=v0-20261003-170705-9c00d30c-build' '-DskipTests' 'package'",
+      "exitCode": 0,
+      "tests": 0,
+      "pass": 0,
+      "failures": 0,
+      "errors": 0,
+      "skip": 0
+    }
+  ],
+  "new_test_suites": [
+    {
+      "name": "com.agent.platform.runtime.DefaultAgentRuntimeStateTests(v0-20261003-170705-9c00d30c-full)",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.agent.platform.runtime.HarnessCoreTests(v0-20261003-170705-9c00d30c-full)",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "skipped": [
+    {
+      "class": "com.agent.platform.procurement.ProcurementAnswerAggregationTests",
+      "test": "actualSavedScriptedRuntimeAnswerIsReportedHonestly",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementAnswerCompletenessTests",
+      "test": "actualHistoricalArtifactReplay",
+      "reason": "System property [completeness.artifact] does not exist"
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementAnswerPolicyTests",
+      "test": "explicitHistoricalArtifactReplay",
+      "reason": "System property [answer.v2.artifact] does not exist"
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementAnswerRelationTests",
+      "test": "replayActualHistoricalArtifactWithoutExecutingAnything",
+      "reason": "System property [relation.artifact] does not exist"
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementAnswerReplayTests",
+      "test": "regradesSavedAnswerTwiceWithoutExecution",
+      "reason": "System property [answer.artifact] does not exist"
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementAnswerV3ReplayTests",
+      "test": "savedRuntimeDiskReplayMatchesStep2WithoutChangingInputs",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementArtifactReplayTests",
+      "test": "regradesExistingArtifactFile",
+      "reason": "System property [evaluation.artifact] does not exist"
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementComparisonMetricsTests",
+      "test": "savedScriptedRuntimeIsSeparateFromSyntheticPass",
+      "reason": ""
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementComparisonReportsTests",
+      "test": "savedRuntimeFailAndDiagnosticsMatchStep2",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    }
+  ],
+  "python": {
+    "harness_runner": 2,
+    "canonical_v22": 13,
+    "frozen_graders": 30,
+    "frozen_accounting": 4,
+    "failures": 0
+  },
+  "test_environment_only": "JDK_JAVA_OPTIONS=-XX:TieredStopAtLevel=1; preserved 1s MCP test timeout; not applied to model eval",
+  "evidence": "target/procurement-v0/v0-20261003-170705-9c00d30c",
+  "fingerprints": [
+    {
+      "path": "data/procurement/aws-synthetic/01_suppliers.json",
+      "sha256": "d05878d688ba20c7240acad09e89e547930275f873cb3cfb4d404700680c65a3",
+      "unchanged": true
+    },
+    {
+      "path": "data/procurement/aws-synthetic/README.md",
+      "sha256": "9c826333dead0d5edba162634c6b8d054ea7f56ac1dced31aa9e7a18697c400a",
+      "unchanged": true
+    },
+    {
+      "path": "data/procurement/scenarios/complex_workstation_01.json",
+      "sha256": "a0b6760e51e71ddbcc23e9f79c7ab1266cd52b9e197620204067dd4784c3d4b8",
+      "unchanged": true
+    },
+    {
+      "path": "src/test/resources/procurement/benchmark/procurement-benchmark-v1.json",
+      "sha256": "f0c0763148783ab9e461ccf6a21fe86ba81e4a6681a2f0f423075f9b0c37f6b1",
+      "unchanged": true
+    },
+    {
+      "path": "src/test/resources/procurement/evaluation/procurement-answer-policy-v1.json",
+      "sha256": "2588b6a4c336df497390dadf3fa91e312a2f81e6be3f43c473f9d5c365bfe8c4",
+      "unchanged": true
+    }
+  ],
+  "new_java_tests": 19,
+  "verification_history": [
+    {
+      "evidence": "target/procurement-v0/v0-20261003-160714-4701f8b0",
+      "type": "intermediate compile error, fixed before tests"
+    },
+    {
+      "evidence": "target/procurement-v0/v0-20261003-160757-1278d01b",
+      "type": "4 MCP fake-JVM discovery timeout errors; 1209 tests, 1196 pass, 9 skip"
+    },
+    {
+      "evidence": "target/harness-l0-final.log",
+      "type": "2 test fixture allowlist failures + 2 MCP discovery startup errors; 86 tests"
+    },
+    {
+      "evidence": "target/harness-l0-verified.log",
+      "type": "86/86 pass after fixture correction and test JVM startup setting"
+    },
+    {
+      "evidence": "target/procurement-v0/v0-20261003-161426-77a3fea7",
+      "type": "intermediate passing full run: 1214 total / 1205 pass / 9 skip; superseded by structured backend-outcome coverage"
+    },
+    {
+      "evidence": "target/procurement-v0/v0-20261003-162637-8bbdd48b",
+      "type": "Pre fatal-checkpoint guard passing full suite: 1216 total / 1207 pass / 9 skip"
+    },
+    {
+      "evidence": "target/procurement-v0/v0-20261003-165955-4dc87335",
+      "type": "1217 total / 1207 pass / 0 failure / 1 error / 9 skip; Mockito restubbing invoked existing answer with null updater; test fixture fixed"
+    },
+    {
+      "evidence": "target/procurement-v0/v0-20261003-170357-53dede57",
+      "type": "Intermediate test compile error: missing doAnswer static import; fixed before tests"
+    },
+    {
+      "evidence": "target/harness-fatal-final.log",
+      "type": "After fixture and import corrections: RuntimeStateTests 21 + HarnessCoreTests 15 = 36/36 pass"
+    }
+  ],
+  "postgres_skips": [
+    {
+      "class": "com.agent.platform.procurement.JdbcProcurementCaseStorePostgresIT",
+      "test": "schemaMigrationAlignsLegacyJsonVersionAndRejectsStaleCasWriter",
+      "condition": "Environment variable [PROCUREMENT_POSTGRES_IT] with value [false] does not match regular expression [true]"
+    },
+    {
+      "class": "com.agent.platform.procurement.JdbcProcurementCaseStorePostgresIT",
+      "test": "onlyOneConcurrentWriterCanUpdateTheSameCaseVersion",
+      "condition": "Environment variable [PROCUREMENT_POSTGRES_IT] with value [false] does not match regular expression [true]"
+    }
+  ],
+  "real_postgres_integration": "not enabled; pre-existing environment gate",
+  "python_commands": [
+    "python -B -m unittest discover -s evals/harness-core -p 'test_*.py'",
+    "python -B -m unittest discover -s evals/procurement-v2.2 -p 'test_*.py'",
+    "python -B -m unittest discover -s evals/procurement-v2/graders -p 'test_*.py'",
+    "python -B -m unittest discover -s evals/procurement-v2/tests -p 'test_*.py'"
+  ]
+}

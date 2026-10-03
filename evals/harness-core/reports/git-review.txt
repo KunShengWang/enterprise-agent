@@ -1,0 +1,45 @@
+git status --short
+ M src/main/java/com/agent/platform/mcp/StdioMcpToolGateway.java
+ M src/main/java/com/agent/platform/procurement/tool/ProcurementToolHandler.java
+ M src/main/java/com/agent/platform/runtime/AgentRunBudget.java
+ M src/main/java/com/agent/platform/runtime/AgentRunRecord.java
+ M src/main/java/com/agent/platform/runtime/AgentRuntime.java
+ M src/main/java/com/agent/platform/runtime/AgentRuntimeResult.java
+ M src/main/java/com/agent/platform/runtime/AgentToolRuntimeResult.java
+ M src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java
+ M src/main/java/com/agent/platform/runtime/DefaultAgentToolRuntime.java
+ M src/main/java/com/agent/platform/runtime/ToolResultProjector.java
+ M src/main/java/com/agent/platform/tool/LocalToolExecutor.java
+ M src/main/java/com/agent/platform/tool/ToolCallResult.java
+ M src/main/java/com/agent/platform/tool/ToolDefinition.java
+ M src/test/java/com/agent/platform/runtime/DefaultAgentRuntimeStateTests.java
+ M src/test/java/com/agent/platform/tool/LocalToolExecutorTests.java
+?? docs/harness/
+?? evals/harness-core/
+?? src/main/java/com/agent/platform/runtime/AgentRunner.java
+?? src/main/java/com/agent/platform/runtime/RunStatus.java
+?? src/main/java/com/agent/platform/runtime/ToolExecutionDeadline.java
+?? src/main/java/com/agent/platform/tool/ToolExecutionOutcome.java
+?? src/main/java/com/agent/platform/tool/ToolRuntimeContract.java
+?? src/test/java/com/agent/platform/runtime/HarnessCoreTests.java
+
+git diff --check
+exit 0
+
+git diff --stat (tracked files only)
+ .../agent/platform/mcp/StdioMcpToolGateway.java    | 12 +++-
+ .../procurement/tool/ProcurementToolHandler.java   | 12 ++++
+ .../com/agent/platform/runtime/AgentRunBudget.java | 16 +++--
+ .../com/agent/platform/runtime/AgentRunRecord.java | 33 ++++++++++
+ .../com/agent/platform/runtime/AgentRuntime.java   |  2 +-
+ .../agent/platform/runtime/AgentRuntimeResult.java |  4 ++
+ .../platform/runtime/AgentToolRuntimeResult.java   |  9 +++
+ .../platform/runtime/DefaultAgentRuntime.java      | 56 ++++++++++++++--
+ .../platform/runtime/DefaultAgentToolRuntime.java  | 28 ++++----
+ .../platform/runtime/ToolResultProjector.java      |  7 +-
+ .../com/agent/platform/tool/LocalToolExecutor.java |  6 +-
+ .../com/agent/platform/tool/ToolCallResult.java    |  4 ++
+ .../com/agent/platform/tool/ToolDefinition.java    |  4 ++
+ .../runtime/DefaultAgentRuntimeStateTests.java     | 76 ++++++++++++++++++++++
+ .../platform/tool/LocalToolExecutorTests.java      |  1 +
+ 15 files changed, 243 insertions(+), 27 deletions(-)

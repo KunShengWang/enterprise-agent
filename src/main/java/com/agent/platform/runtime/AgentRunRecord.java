@@ -56,6 +56,39 @@ public record AgentRunRecord(
         updatedAt = updatedAt == null ? createdAt : updatedAt;
     }
 
+    /** Derived runtime-only view. No duplicate persisted state and no business facts. */
+    public java.util.Map<String, Object> runtimeState() {
+        AgentStopReason reason = switch (state) {
+            case COMPLETED -> AgentStopReason.COMPLETED;
+            case WAITING_APPROVAL -> AgentStopReason.WAITING_APPROVAL;
+            case WAITING_INPUT -> AgentStopReason.WAITING_INPUT;
+            case PAUSED, PAUSE_REQUESTED -> AgentStopReason.PAUSED;
+            default -> storedReason();
+        };
+        java.util.Map<String, Object> view = new java.util.LinkedHashMap<>();
+        view.put("runId", runId);
+        view.put("agentId", executionProfile == null ? "default" : executionProfile.name());
+        view.put("status", RunStatus.from(state, reason).name());
+        view.put("startedAt", createdAt.toString());
+        view.put("lastUpdatedAt", updatedAt.toString());
+        view.put("elapsedDurationMillis", Math.max(0, java.time.Duration.between(createdAt, updatedAt).toMillis()));
+        view.put("stopReason", reason.name());
+        view.put("pendingInterruption", approvalId.isBlank() ? (state == AgentRunState.WAITING_INPUT ? runId : "") : approvalId);
+        view.put("turnCount", budgetSnapshot == null ? 0 : budgetSnapshot.turns());
+        view.put("toolCallCount", budgetSnapshot == null ? 0 : budgetSnapshot.toolCalls());
+        view.put("tokenUsage", budgetSnapshot == null ? java.util.Map.of() : java.util.Map.of(
+                "input", budgetSnapshot.inputTokens(), "output", budgetSnapshot.outputTokens()));
+        return java.util.Map.copyOf(view);
+    }
+
+    private AgentStopReason storedReason() {
+        if (failureReason.isBlank()) return state == AgentRunState.RUNNING || state == AgentRunState.CREATED
+                ? AgentStopReason.IN_PROGRESS : AgentStopReason.INTERNAL_ERROR;
+        // Existing storage writes enum names, never exception messages, to this field.
+        try { return AgentStopReason.valueOf(failureReason); }
+        catch (IllegalArgumentException ignored) { return AgentStopReason.INTERNAL_ERROR; }
+    }
+
     public static AgentRunRecord create(String runId,
                                         String traceId,
                                         String conversationId,

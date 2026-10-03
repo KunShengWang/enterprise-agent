@@ -38,6 +38,7 @@ class LocalToolExecutorTests {
 
         assertFalse(result.success());
         assertEquals("missing required argument: x", result.errorMessage());
+        assertEquals(ToolExecutionOutcome.VALIDATION_ERROR, result.outcome());
         assertEquals(0, gateway.boundCalls);
         assertEquals(0, mcpProvider.getIfAvailableCalls);
         assertEquals(1, recorder.records.size());

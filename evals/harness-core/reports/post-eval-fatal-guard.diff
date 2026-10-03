@@ -1,0 +1,57 @@
+--- dev/src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java
++++ final/src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java
+@@ -363,6 +363,12 @@
+                     approval.status() == ApprovalStatus.APPROVED
+             );
+             toolResults.add(projectedResult);
++            if (result.outcome() == com.agent.platform.tool.ToolExecutionOutcome.FATAL_ERROR) {
++                publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
++                        "approved tool failed fatally", toolResultPayload(approval.toolCallRequest().requestId(), result), effectiveListener);
++                return finish(runId, sessionId, userId, AgentRunState.FAILED, AgentStopReason.TOOL_ERROR,
++                        "工具发生不可恢复错误，运行已停止。", "", toolResults, usedTools, claimed.usedRag(), false, budget, effectiveListener);
++            }
+             // 记录此刻 agent 的执行阶段，如果接下来发生崩溃，从上下文准备阶段继续
+             checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
+                     toolResults, usedTools, claimed.usedRag(), budget);
+@@ -371,10 +377,6 @@
+                     result.success() ? "approved tool completed" : "approved tool returned failure",
+                     toolResultPayload(approval.toolCallRequest().requestId(), result), effectiveListener);
+             AgentRequest request = claimed.request();
+-            if (result.outcome() == com.agent.platform.tool.ToolExecutionOutcome.FATAL_ERROR) {
+-                return finish(runId, sessionId, userId, AgentRunState.FAILED, AgentStopReason.TOOL_ERROR,
+-                        "工具发生不可恢复错误，运行已停止。", "", toolResults, usedTools, claimed.usedRag(), false, budget, effectiveListener);
+-            }
+             // ⑤ 把结果接回 executeLoop，继续跑
+             return executeLoop(request, runId, leaseOwnerId, sessionId, userId, budget, toolResults, usedTools,
+                     claimed.usedRag(), profile, effectiveListener);
+@@ -1177,12 +1179,12 @@
+                 publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
+                         toolResult.success() ? "capability completed" : "capability failure returned to model",
+                         toolResultPayload(call.toolCallId(), toolResult), listener);
+-                checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
+-                        toolResults, usedTools, usedRag, budget);
+                 if (execution.outcome() == com.agent.platform.tool.ToolExecutionOutcome.FATAL_ERROR) {
+                     return finish(runId, sessionId, userId, AgentRunState.FAILED, AgentStopReason.TOOL_ERROR,
+                             "工具发生不可恢复错误，运行已停止。", "", toolResults, usedTools, usedRag, false, budget, listener);
+                 }
++                checkpoint(runId, AgentRunPhase.CONTEXT_PREPARATION, null,
++                        toolResults, usedTools, usedRag, budget);
+             }
+         }
+     }
+@@ -1603,6 +1605,15 @@
+                 || (DefaultAgentCapabilityRegistry.KNOWLEDGE_SEARCH.equals(pending.toolName()) && rawResult.success());
+         // 扣除一次工具调用预算
+         budget.recordToolCall();
++        if (rawResult.outcome() == com.agent.platform.tool.ToolExecutionOutcome.FATAL_ERROR) {
++            Map<String, Object> fatalPayload = new LinkedHashMap<>(toolResultPayload(pending.requestId(), rawResult));
++            fatalPayload.put("recoveredFromToolExecutionStore", true);
++            publish(sessionId, userId, claimed.runId(), AgentEventType.TOOL_COMPLETED,
++                    "persisted fatal tool result recovered", Map.copyOf(fatalPayload), listener);
++            return finish(claimed.runId(), sessionId, userId, AgentRunState.FAILED, AgentStopReason.TOOL_ERROR,
++                    "持久化工具结果为不可恢复错误，运行已停止。", claimed.approvalId(), toolResults, usedTools,
++                    usedRag, claimed.blockedByGuardrail(), budget, listener);
++        }
+         // 写入 checkpoint：标志工具执行阶段结束，回到 CONTEXT_PREPARATION
+         checkpoint(claimed.runId(), AgentRunPhase.CONTEXT_PREPARATION, null,
+                 toolResults, usedTools, usedRag, budget);

@@ -1,0 +1,34 @@
+{
+  "base_commit": "ad563544fce6ae2bc238d555c6bf70abc1f38a4a",
+  "dev_source": "dev-production-snapshot.zip",
+  "changes_after_dev": [
+    "src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java"
+  ],
+  "post_eval_patch": "post-eval-fatal-guard.diff",
+  "validation": "Deterministic tests only; no additional real-model eval",
+  "files": {
+    "src/main/java/com/agent/platform/mcp/StdioMcpToolGateway.java": "d16dd11f7e396f08654e7c230301cbb5553b0a40b7fe3206ddabe62c8168b066",
+    "src/main/java/com/agent/platform/runtime/AgentRunBudget.java": "091018f816b08fcf218ffabc601df7e9b97f427f284535a0e5ab73803bc76a88",
+    "src/main/java/com/agent/platform/runtime/AgentRunRecord.java": "81588b195adad9290e8716254be94ac519e9f5b520c762445b15b549e9360a9d",
+    "src/main/java/com/agent/platform/runtime/AgentRunner.java": "d1c8e91d7d3b7a474095cbf2244939f87283b409934101ebec569a3d53f35799",
+    "src/main/java/com/agent/platform/runtime/AgentRuntime.java": "0adf63f9a7771634b07c0641a84b614c2f9b1fb6e8c8e751c6f95b8bc8260410",
+    "src/main/java/com/agent/platform/runtime/AgentRuntimeResult.java": "bbae416ebce06b646898319db3d6dff458499a0b37c6090b9a5cd5ade9832414",
+    "src/main/java/com/agent/platform/runtime/AgentToolRuntimeResult.java": "52a8f9436e42e966442b316633f317a5e1dac71b7bb565761ce23a7a6e4b8dad",
+    "src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java": "0d441ea133017fc5320fd5ef3db9dd5a7436af5f0dbcf94ba091126eaa1e5e59",
+    "src/main/java/com/agent/platform/runtime/DefaultAgentToolRuntime.java": "af3e2e90653d3d63d96fcfa628210462d937a853950713811b7a8f268ba31f44",
+    "src/main/java/com/agent/platform/runtime/RunStatus.java": "a8a47ace97504286824a87597c8f97beba35ee82c29477c06c888e1f56baea5b",
+    "src/main/java/com/agent/platform/runtime/ToolExecutionDeadline.java": "88233ac3005e188a73eb78cdab15aa910c7524900d97146f58481ae738e7388a",
+    "src/main/java/com/agent/platform/runtime/ToolResultProjector.java": "311185a69fa0e8f34a8b7d45eefaad9cd190da7b031f46938821d40010df3ab2",
+    "src/main/java/com/agent/platform/tool/LocalToolExecutor.java": "6fc6c4b0d1753a2498ee8037ad5a57ef248ebfcd73f3be212bacf83fadea01c9",
+    "src/main/java/com/agent/platform/tool/ToolCallResult.java": "f44311139e92b9964b2918248e844e0cfa3968043272855c9fbc4e3ab06065ee",
+    "src/main/java/com/agent/platform/tool/ToolDefinition.java": "c49b5fcd915b28ba291e461ec25bdd105782174f62fd315860f6a842f4e7bd17",
+    "src/main/java/com/agent/platform/tool/ToolExecutionOutcome.java": "488a99c832545be5815b6fa6f3d5d440bbf81f9cf3ce9cf9ecad5d9108566b92",
+    "src/main/java/com/agent/platform/tool/ToolRuntimeContract.java": "99ee87644224bd571690e280b5ecca9d092f232444a79fd0f16c89e8a4281562"
+  },
+  "test_source_files": {
+    "src/test/java/com/agent/platform/runtime/HarnessCoreTests.java": "55b6654778d8a3506d923b525f73c833ccf7f91b686c5947565fbc40c4013336",
+    "src/test/java/com/agent/platform/runtime/DefaultAgentRuntimeStateTests.java": "1f4960ef4183bccdf7de16ccbc9e9acb9621e9372d6a82662a7cd44f3a7d48ae",
+    "src/test/java/com/agent/platform/tool/LocalToolExecutorTests.java": "2f291528c457d88d13a3908e6a738f854b932e636ff7d5bdeb5ae349758fd6a5"
+  },
+  "final_deterministic_evidence": "target/procurement-v0/v0-20261003-170705-9c00d30c"
+}

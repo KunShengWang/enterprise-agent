@@ -1,0 +1,8 @@
+{
+  "run_id": "harness-core-dev-20261003-r1",
+  "persisted_execution_recovery_events": [],
+  "fatal_outcome_events": [],
+  "model_requests_checked": 229,
+  "internal_metadata_leaks": [],
+  "post_eval_change_policy": "Only fatal termination/checkpoint recovery is amended afterwards; preserve actual Dev source and do not rerun paid Dev."
+}

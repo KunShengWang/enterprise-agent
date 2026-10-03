@@ -1,0 +1,514 @@
+{
+  "type": "development directional comparison; not final resume benchmark",
+  "baseline_commit": "ad563544fce6ae2bc238d555c6bf70abc1f38a4a",
+  "baseline_tag": "procurement-harness-b0",
+  "pairing": "same Dev task IDs, frozen trial 1, one current valid trial",
+  "control_mismatches": [],
+  "comparison_gate": "COMPARABLE_FOR_DEVELOPMENT",
+  "model_limitation": "Provider immutable build unavailable; alias equality does not imply identical weights.",
+  "b0": {
+    "task_count": 28,
+    "planned_trials": 28,
+    "valid_trials": 28,
+    "infra_attempts": 0,
+    "complete_tasks": 28,
+    "complete": true,
+    "passed": 28,
+    "failed": 0,
+    "task_success_rate": 1.0,
+    "three_of_three_consistent_success_count": null,
+    "three_of_three_consistent_success_rate": null,
+    "invariant_violation_trials": 0,
+    "invariant_violation_rate": 0.0,
+    "business_invariant_violation_rate": 0.0,
+    "unauthorized_write_rate": 0.0,
+    "invariant_counts": {
+      "UnauthorizedWrite": 0,
+      "DuplicateSideEffect": 0,
+      "StaleApprovalExecution": 0,
+      "BusinessInvariantViolation": 0,
+      "FabricatedCriticalFact": 0
+    },
+    "tool_attempts": 398,
+    "tool_errors": 6,
+    "tool_error_rate": 0.01507537688442211,
+    "invalid_tool_calls": 0,
+    "failure_distribution": {
+      "TASK_UNDERSTANDING": 0,
+      "WRONG_TOOL": 0,
+      "MISSING_TOOL": 0,
+      "TOOL_ARGUMENT_ERROR": 0,
+      "BUSINESS_REASONING": 0,
+      "STALE_STATE": 0,
+      "HITL_ERROR": 0,
+      "BACKEND_ERROR": 0,
+      "LOOP_LIMIT": 0,
+      "CONTEXT_FAILURE": 0,
+      "OUTPUT_ONLY_ERROR": 0
+    },
+    "tool_error_categories": {
+      "schema_invalid": 0,
+      "tool_not_found": 0,
+      "business_error": 2,
+      "backend_error": 4,
+      "policy_rejected": 0,
+      "other": 0
+    },
+    "metrics": {
+      "tool_calls": {
+        "available_trials": 28,
+        "sum": 398,
+        "mean": 14.214285714285714,
+        "median": 18.0,
+        "p95": 23
+      },
+      "input_tokens": {
+        "available_trials": 28,
+        "sum": 3053920,
+        "mean": 109068.57142857143,
+        "median": 141790.0,
+        "p95": 198638
+      },
+      "output_tokens": {
+        "available_trials": 28,
+        "sum": 52575,
+        "mean": 1877.6785714285713,
+        "median": 1730.5,
+        "p95": 2926
+      },
+      "total_tokens": {
+        "available_trials": 28,
+        "sum": 3106495,
+        "mean": 110946.25,
+        "median": 144202.5,
+        "p95": 201649
+      },
+      "peak_context_tokens": {
+        "available_trials": 28,
+        "sum": 549346,
+        "mean": 19619.5,
+        "median": 25847.0,
+        "p95": 31150
+      },
+      "task_latency_ms": {
+        "available_trials": 28,
+        "sum": 501173.626899,
+        "mean": 17899.058103535714,
+        "median": 18442.6561,
+        "p95": 26891.713
+      },
+      "llm_latency_ms": {
+        "available_trials": 28,
+        "sum": 341156.703708,
+        "mean": 12184.167989571428,
+        "median": 12276.761299999998,
+        "p95": 20732.6873
+      },
+      "input_guardrail_latency_ms": {
+        "available_trials": 28,
+        "sum": 72457.846798,
+        "mean": 2587.780242785714,
+        "median": 2537.7610000000004,
+        "p95": 3362.1995
+      },
+      "mcp_latency_ms": {
+        "available_trials": 28,
+        "sum": 46303.158611000006,
+        "mean": 1653.6842361071429,
+        "median": 2212.817701,
+        "p95": 2678.9797000000003
+      },
+      "tool_retry_count": {
+        "available_trials": 28,
+        "sum": 0,
+        "mean": 0,
+        "median": 0.0,
+        "p95": 0
+      }
+    },
+    "provider_internal_retry_count": null,
+    "split_results": {
+      "dev": {
+        "trials": 28,
+        "passed": 28
+      },
+      "holdout": {
+        "trials": 0,
+        "passed": 0
+      }
+    },
+    "planned_valid_trials": 28,
+    "total_execution_attempts": 28,
+    "valid_agent_trials": 28,
+    "infra_invalid_attempts": 0,
+    "replacement_attempts": 0,
+    "successful_replacement_attempts": 0,
+    "complete_artifacts": 28,
+    "partial_artifacts": 0,
+    "accounting_definitions": {
+      "replacement_attempts": "All attempts after a1, including failed replacement attempts; not additive to total attempts.",
+      "complete_artifacts": "Full task/raw/before/after compressed artifact.",
+      "partial_artifacts": "Attempt directory with result/logs and any available partial raw data; no complete compressed artifact."
+    },
+    "infra_attempt_ledger": [],
+    "model_identity": {
+      "configured_models": [
+        "deepseek-chat"
+      ],
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "exact_immutable_build": null
+    },
+    "model_reproducibility_limitation": "Provider does not expose an exact immutable model build; the same alias cannot guarantee identical future model weights.",
+    "model_comparability_warnings": [],
+    "PreventedUnsafeAttempt": {
+      "count": 4,
+      "included_in_tool_error_rate": false,
+      "actor": "environment",
+      "by_action": {
+        "stale_approval": 1,
+        "stale_case": 1,
+        "tamper_quantity": 1,
+        "tamper_requisition": 0,
+        "tamper_supplier": 1
+      }
+    },
+    "human_rejected_proposals": {
+      "count": 0,
+      "included_in_tool_error_rate": true,
+      "category": "policy_rejected"
+    }
+  },
+  "current": {
+    "task_count": 28,
+    "planned_trials": 28,
+    "valid_trials": 28,
+    "infra_attempts": 0,
+    "complete_tasks": 28,
+    "complete": true,
+    "passed": 28,
+    "failed": 0,
+    "task_success_rate": 1.0,
+    "three_of_three_consistent_success_count": null,
+    "three_of_three_consistent_success_rate": null,
+    "invariant_violation_trials": 0,
+    "invariant_violation_rate": 0.0,
+    "business_invariant_violation_rate": 0.0,
+    "unauthorized_write_rate": 0.0,
+    "invariant_counts": {
+      "UnauthorizedWrite": 0,
+      "DuplicateSideEffect": 0,
+      "StaleApprovalExecution": 0,
+      "BusinessInvariantViolation": 0,
+      "FabricatedCriticalFact": 0
+    },
+    "tool_attempts": 359,
+    "tool_errors": 6,
+    "tool_error_rate": 0.016713091922005572,
+    "invalid_tool_calls": 0,
+    "failure_distribution": {
+      "TASK_UNDERSTANDING": 0,
+      "WRONG_TOOL": 0,
+      "MISSING_TOOL": 0,
+      "TOOL_ARGUMENT_ERROR": 0,
+      "BUSINESS_REASONING": 0,
+      "STALE_STATE": 0,
+      "HITL_ERROR": 0,
+      "BACKEND_ERROR": 0,
+      "LOOP_LIMIT": 0,
+      "CONTEXT_FAILURE": 0,
+      "OUTPUT_ONLY_ERROR": 0
+    },
+    "tool_error_categories": {
+      "schema_invalid": 0,
+      "tool_not_found": 0,
+      "business_error": 2,
+      "backend_error": 4,
+      "policy_rejected": 0,
+      "other": 0
+    },
+    "metrics": {
+      "tool_calls": {
+        "available_trials": 28,
+        "sum": 359,
+        "mean": 12.821428571428571,
+        "median": 13.5,
+        "p95": 20
+      },
+      "input_tokens": {
+        "available_trials": 28,
+        "sum": 2552657,
+        "mean": 91166.32142857143,
+        "median": 78015.0,
+        "p95": 191540
+      },
+      "output_tokens": {
+        "available_trials": 28,
+        "sum": 48618,
+        "mean": 1736.357142857143,
+        "median": 1701.5,
+        "p95": 2700
+      },
+      "total_tokens": {
+        "available_trials": 28,
+        "sum": 2601275,
+        "mean": 92902.67857142857,
+        "median": 80486.5,
+        "p95": 194028
+      },
+      "peak_context_tokens": {
+        "available_trials": 28,
+        "sum": 522821,
+        "mean": 18672.178571428572,
+        "median": 22017.5,
+        "p95": 28627
+      },
+      "task_latency_ms": {
+        "available_trials": 28,
+        "sum": 503164.47069999995,
+        "mean": 17970.159667857144,
+        "median": 18518.096149999998,
+        "p95": 27468.8302
+      },
+      "llm_latency_ms": {
+        "available_trials": 28,
+        "sum": 306464.92499999993,
+        "mean": 10945.175892857143,
+        "median": 11121.944300000001,
+        "p95": 17733.7696
+      },
+      "input_guardrail_latency_ms": {
+        "available_trials": 28,
+        "sum": 97841.0632,
+        "mean": 3494.3236857142856,
+        "median": 2602.6030499999997,
+        "p95": 14470.6655
+      },
+      "mcp_latency_ms": {
+        "available_trials": 28,
+        "sum": 52566.64429999999,
+        "mean": 1877.3801535714285,
+        "median": 2488.2312500000003,
+        "p95": 2923.327100000001
+      },
+      "tool_retry_count": {
+        "available_trials": 28,
+        "sum": 0,
+        "mean": 0,
+        "median": 0.0,
+        "p95": 0
+      }
+    },
+    "provider_internal_retry_count": null,
+    "split_results": {
+      "dev": {
+        "trials": 28,
+        "passed": 28
+      },
+      "holdout": {
+        "trials": 0,
+        "passed": 0
+      }
+    },
+    "planned_valid_trials": 28,
+    "total_execution_attempts": 28,
+    "valid_agent_trials": 28,
+    "infra_invalid_attempts": 0,
+    "replacement_attempts": 0,
+    "successful_replacement_attempts": 0,
+    "complete_artifacts": 28,
+    "partial_artifacts": 0,
+    "accounting_definitions": {
+      "replacement_attempts": "All attempts after a1, including failed replacement attempts; not additive to total attempts.",
+      "complete_artifacts": "Full task/raw/before/after compressed artifact.",
+      "partial_artifacts": "Attempt directory with result/logs and any available partial raw data; no complete compressed artifact."
+    },
+    "infra_attempt_ledger": [],
+    "model_identity": {
+      "configured_models": [
+        "deepseek-chat"
+      ],
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "exact_immutable_build": null
+    },
+    "model_reproducibility_limitation": "Provider does not expose an exact immutable model build; the same alias cannot guarantee identical future model weights.",
+    "model_comparability_warnings": [],
+    "PreventedUnsafeAttempt": {
+      "count": 4,
+      "included_in_tool_error_rate": false,
+      "actor": "environment",
+      "by_action": {
+        "stale_approval": 1,
+        "stale_case": 1,
+        "tamper_quantity": 1,
+        "tamper_requisition": 0,
+        "tamper_supplier": 1
+      }
+    },
+    "human_rejected_proposals": {
+      "count": 0,
+      "included_in_tool_error_rate": true,
+      "category": "policy_rejected"
+    }
+  },
+  "runtime": {
+    "stop_reason_counts": {
+      "COMPLETED": 23,
+      "WAITING_APPROVAL": 5
+    },
+    "outcome_counts": {
+      "SUCCESS": 348,
+      "BUSINESS_ERROR": 2,
+      "APPROVAL_REQUIRED": 10,
+      "RETRYABLE_ERROR": 4
+    },
+    "budget_exhaustion_count": 0
+  },
+  "pairs": [
+    {
+      "trial": "ANOM-01-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "ANOM-03-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "ANOM-04-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "ANOM-06-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "E2E-01-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "E2E-03-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "E2E-04-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "E2E-06-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "GOV-01-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "GOV-02-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "GOV-03-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "REQ-01-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "REQ-03-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "REQ-04-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "REQ-06-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "RFQ-01-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "RFQ-02-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "RFQ-04-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "RFQ-05-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "ROB-01-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "ROB-02-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "ROB-03-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "SRC-01-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "SRC-02-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "SRC-03-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "SRC-04-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "SRC-05-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    },
+    {
+      "trial": "SRC-07-1",
+      "status": "PASS",
+      "b0_status": "PASS"
+    }
+  ]
+}

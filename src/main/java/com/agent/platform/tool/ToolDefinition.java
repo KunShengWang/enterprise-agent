@@ -13,4 +13,8 @@ public record ToolDefinition(
     public ToolDefinition {
         metadata = metadata == null ? Map.of() : Map.copyOf(metadata);
     }
+
+    public ToolRuntimeContract runtimeContract() {
+        return ToolRuntimeContract.from(this);
+    }
 }

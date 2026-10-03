@@ -191,7 +191,7 @@ public class StdioMcpToolGateway implements McpToolGateway {
 
     private ToolCallResult executeBound(ServerRuntime runtime, McpSession session,
                                         ToolBinding binding, ToolCallRequest request) {
-        Map<String, Object> metadata = bindingMetadata(binding, runtime.specification, null);
+        Map<String, Object> metadata = new LinkedHashMap<>(bindingMetadata(binding, runtime.specification, null));
         try {
             Map<String, Object> params = new LinkedHashMap<>();
             params.put("name", binding.originalToolName());
@@ -199,15 +199,25 @@ public class StdioMcpToolGateway implements McpToolGateway {
             Map<?, ?> result = session.request("tools/call", params);
             String content = contentText(result);
             boolean isError = Boolean.TRUE.equals(result.get("isError"));
+            if (isError) {
+                // Error envelope only. Preserve original content and existing retry behavior.
+                try {
+                    String code = objectMapper.readTree(content).path("error").path("code").asText("");
+                    if (!code.isBlank() && code.length() <= 128) metadata.put("_harnessErrorCode", code);
+                } catch (RuntimeException ignored) { /* Legacy unstructured business error. */ }
+            }
             return new ToolCallResult(request.toolName(), !isError, content, isError ? content : "", metadata);
         }
         catch (McpRequestTimeoutException exception) {
+            metadata.put("_harnessOutcome", "RETRYABLE_ERROR");
             return failure(request.toolName(), "MCP tool call timed out", metadata);
         }
         catch (McpProtocolException exception) {
+            metadata.put("_harnessOutcome", "FATAL_ERROR");
             return failure(request.toolName(), "MCP tool call returned a protocol error", metadata);
         }
         catch (McpTransportException exception) {
+            metadata.put("_harnessOutcome", "RETRYABLE_ERROR");
             runtime.invalidate(session, exception.getClass().getSimpleName());
             return failure(request.toolName(), "MCP transport failed", metadata);
         }

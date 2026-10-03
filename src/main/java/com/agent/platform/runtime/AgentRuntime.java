@@ -2,7 +2,7 @@ package com.agent.platform.runtime;
 
 import com.agent.platform.agent.AgentRequest;
 
-public interface AgentRuntime {
+public interface AgentRuntime extends AgentRunner {
 
     AgentRuntimeResult run(AgentRequest request, AgentEventListener listener);
 

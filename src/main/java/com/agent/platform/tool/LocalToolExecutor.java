@@ -60,7 +60,7 @@ public class LocalToolExecutor implements ToolExecutor {
                     false,
                     "",
                     "tool execution failed: " + exception.getClass().getSimpleName(),
-                    Map.of("provider", "unknown")
+                    Map.of("provider", "unknown", "_harnessOutcome", "FATAL_ERROR")
             );
         }
         toolRunRecorder.record(new ToolCallRecord(
@@ -79,7 +79,7 @@ public class LocalToolExecutor implements ToolExecutor {
     private ToolCallResult executeInternal(ToolCallRequest request, ToolExecutionContext context) {
         // 校验 toolName
         if (request == null || request.toolName() == null || request.toolName().isBlank()) {
-            return new ToolCallResult("", false, "", "toolName must not be blank", Map.of("provider", "unknown"));
+            return new ToolCallResult("", false, "", "toolName must not be blank", Map.of("provider", "unknown", "_harnessOutcome", "VALIDATION_ERROR"));
         }
         if (BusinessRetirementPolicy.retiredTool(request.toolName())) {
             return new ToolCallResult(request.toolName(), false, "", BusinessRetirementPolicy.MESSAGE,
@@ -88,7 +88,7 @@ public class LocalToolExecutor implements ToolExecutor {
         // 找 ToolDefinition
         Optional<ToolDefinition> definition = toolRegistry.findTool(request.toolName());
         if (definition.isEmpty()) {
-            return new ToolCallResult(request.toolName(), false, "", "unknown tool: " + request.toolName(), Map.of("provider", "unknown"));
+            return new ToolCallResult(request.toolName(), false, "", "unknown tool: " + request.toolName(), Map.of("provider", "unknown", "_harnessOutcome", "VALIDATION_ERROR"));
         }
 
         // 参数校验（parameterValidator）

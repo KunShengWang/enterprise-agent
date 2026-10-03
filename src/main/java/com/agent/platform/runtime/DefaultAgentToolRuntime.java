@@ -127,7 +127,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         }
 
         // 工具执行
-        return executeClaimed(runId, request, policy.action(), policy.reason(), executionContext(policyContext));
+        return executeClaimed(runId, request, policy.action(), policy.reason(), executionContext(policyContext), definition);
     }
 
     /**
@@ -187,7 +187,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                 request,
                 GuardrailAction.ALLOW,
                 "human approval satisfied: " + approval.approvalId(),
-                executionContext(context)
+                executionContext(context), definition
         );
     }
 
@@ -195,7 +195,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                                                   ToolCallRequest request,
                                                   GuardrailAction policyAction,
                                                   String policyReason,
-                                                  ToolExecutionContext executionContext) {
+                                                  ToolExecutionContext executionContext, ToolDefinition definition) {
         // "工具调用 claim 就是分布式幂等锁——同一个 toolCallId 全局只执行一次，已经执行过的直接返回缓存结果；如果同时多个请求抢执行权，数据库行锁保证只有一个赢
         ToolExecutionClaim claim = toolExecutionStore.claim(runId, request);
         // 没拿到执行权
@@ -224,7 +224,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
             );
         }
         // 拿到执行权 → 真正执行
-        ToolCallResult result = executeWithRetry(request, executionContext);// 有最大重试次数的执行工具
+        ToolCallResult result = executeWithRetry(request, executionContext, definition);// 有最大重试次数的执行工具
         try {
             if (result.success()) {
                 toolExecutionStore.markSucceeded(request.requestId(), result);
@@ -298,16 +298,19 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
     }
 
     private ToolCallResult executeWithRetry(ToolCallRequest request,
-                                            ToolExecutionContext executionContext) {
+                                            ToolExecutionContext executionContext, ToolDefinition definition) {
+        long started = System.nanoTime();
         // 工具的执行有最大重试次数
         int maxAttempts = Math.max(1, properties.getMaxToolExecutionAttempts());
         ToolCallResult lastResult = null;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 // 工具执行
-                lastResult = capabilityExecutor instanceof ContextualAgentCapabilityExecutor contextual
-                        ? contextual.execute(request, executionContext)// 带上下文执行（走这个）
-                        : capabilityExecutor.execute(request);// 普通执行
+                lastResult = ToolExecutionDeadline.call(request, definition, () ->
+                        capabilityExecutor instanceof ContextualAgentCapabilityExecutor contextual
+                                ? contextual.execute(request, executionContext) : capabilityExecutor.execute(request));
+                if (lastResult == null) lastResult = new ToolCallResult(request.toolName(), false, "",
+                        "capability returned no result", Map.of("_harnessOutcome", "FATAL_ERROR", "retryable", false));
             }
             catch (RuntimeException exception) {
                 // 失败标记可重试
@@ -316,7 +319,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                         false,
                         "",
                         "capability execution failed: " + exception.getClass().getSimpleName(),
-                        Map.of("attempt", attempt, "retryable", true)
+                        Map.of("attempt", attempt, "retryable", true, "_harnessOutcome", "RETRYABLE_ERROR")
                 );
             }
             if (lastResult.success() // ① 成功了 → 不用重试
@@ -324,7 +327,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                     || attempt >= maxAttempts // ③ 重试次数用完了 → 不能再试了
             ) {
                 // 由于条件 ③（attempt >= maxAttempts）在最后一次循环必然成立，所以理论上这个方法一定会在循环内 return——不会走到循环外
-                return withAttemptMetadata(lastResult, attempt);
+                return withAttemptMetadata(lastResult, attempt, started, definition);
             }
             sleepBackoff(attempt);// 指数退避
         }
@@ -369,9 +372,12 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         );
     }
 
-    private ToolCallResult withAttemptMetadata(ToolCallResult result, int attempt) {
+    private ToolCallResult withAttemptMetadata(ToolCallResult result, int attempt, long started, ToolDefinition definition) {
         java.util.LinkedHashMap<String, Object> metadata = new java.util.LinkedHashMap<>(result.metadata());
         metadata.put("attempts", attempt);
+        metadata.put("_harnessDurationMs", (System.nanoTime() - started) / 1_000_000.0);
+        metadata.put("_harnessSource", definition.runtimeContract().source().name());
+        metadata.put("_harnessOutcome", result.outcome().name());
         return new ToolCallResult(
                 result.toolName(),
                 result.success(),

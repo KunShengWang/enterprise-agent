@@ -42,6 +42,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -528,6 +529,99 @@ class DefaultAgentRuntimeStateTests {
         assertEquals(24_000L, overflowEvent.payload().get("tokenBudget"));
         assertEquals(12_000L, overflowEvent.payload().get("retryBudget"));
         assertEquals(true, overflowEvent.payload().get("compactionPerformed"));
+    }
+
+    @Test
+    void harnessUnknownToolReturnsToModelWithinSameRun() {
+        Fixture fixture = harnessFixture();
+        when(fixture.modelGateway.nextTurn(any())).thenReturn(toolTurn("missing"), finalTurn("recovered"));
+        var events = new ArrayList<AgentEventDraft>(); recordEvents(fixture, events);
+        var result = fixture.runtime().run(new AgentRequest("s", "u", "question", Map.of()), harnessProfile(fixture), AgentEventListener.NOOP);
+        assertEquals(AgentStopReason.COMPLETED, result.stopReason());
+        assertEquals(1, result.budget().toolCalls());
+        assertTrue(events.stream().anyMatch(e -> "VALIDATION_ERROR".equals(e.payload().get("outcome"))));
+        verify(fixture.toolRuntime, never()).execute(any(),any(),any(),any(),any(),any());
+    }
+
+    @Test
+    void harnessUnknownToolLoopStopsAtToolBudget() {
+        Fixture fixture = harnessFixture(); fixture.properties.setMaxToolCallsPerRun(1);
+        when(fixture.modelGateway.nextTurn(any())).thenReturn(toolTurn("missing"));
+        var result = fixture.runtime().run(new AgentRequest("s", "u", "question", Map.of()), harnessProfile(fixture), AgentEventListener.NOOP);
+        assertEquals(AgentStopReason.TOOL_BUDGET_EXHAUSTED,result.stopReason());
+        assertEquals(1,result.budget().toolCalls());
+    }
+
+    @Test
+    void fatalModelErrorStopsWithoutToolExecutionOrAnotherModelTurn() {
+        Fixture fixture = harnessFixture();
+        doAnswer(invocation -> {
+            throw new LlmCallException("MODEL_AUTH_ERROR", "model authentication rejected", null);
+        }).when(fixture.modelGateway).nextTurn(any(), any());
+
+        AgentRuntimeResult result = fixture.runtime().run(
+                new AgentRequest("session-model-fatal", "user-1", "question", Map.of()),
+                harnessProfile(fixture), AgentEventListener.NOOP);
+
+        assertEquals(AgentStopReason.MODEL_ERROR, result.stopReason());
+        assertEquals(RunStatus.FAILED, result.status());
+        assertEquals(AgentRunState.FAILED, fixture.persisted.get().state());
+        verify(fixture.modelGateway).nextTurn(any(), any());
+        verify(fixture.toolRuntime, never()).execute(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void harnessFatalToolStopsBeforeAnotherModelInvocation() {
+        Fixture fixture = harnessFixture();
+        List<AgentRunRecord> checkpoints = new ArrayList<>();
+        doAnswer(call -> {
+            java.util.function.UnaryOperator<AgentRunRecord> update=call.getArgument(1);
+            AgentRunRecord record=update.apply(fixture.persisted.get());
+            checkpoints.add(record);fixture.persisted.set(record);return record;
+        }).when(fixture.runStore).update(anyString(),any());
+        ToolDefinition definition = new ToolDefinition("ticket_status","tool","{}",ToolRiskLevel.LOW,Map.of());
+        when(fixture.capabilityRegistry.findCapability("ticket_status")).thenReturn(Optional.of(definition));
+        when(fixture.modelGateway.nextTurn(any())).thenReturn(toolTurn("ticket_status"));
+        when(fixture.toolRuntime.execute(any(),any(),any(),any(),any(),any())).thenAnswer(call -> {
+            AgentToolCall requested = call.getArgument(4);
+            return new AgentToolRuntimeResult(AgentToolExecutionStatus.FAILED,
+                    new ToolCallRequest(requested.toolName(),requested.toolCallId(),Map.of()),
+                    new ToolCallResult("ticket_status",false,"","failed",Map.of("_harnessOutcome","FATAL_ERROR")),
+                    GuardrailAction.ALLOW,"ok","",false);
+        });
+        var result=fixture.runtime().run(new AgentRequest("s","u","question",Map.of()),harnessProfile(fixture),AgentEventListener.NOOP);
+        assertEquals(AgentStopReason.TOOL_ERROR,result.stopReason());
+        assertEquals(RunStatus.FAILED,result.status());
+        verify(fixture.modelGateway).nextTurn(any());
+        assertTrue(checkpoints.stream().noneMatch(r -> !r.toolResults().isEmpty()
+                && r.phase()==AgentRunPhase.CONTEXT_PREPARATION));
+    }
+
+    @Test
+    void persistedFatalToolResultStopsWithoutReexecutingOrReplanning() {
+        Fixture fixture=new Fixture();
+        var result=fixture.recoverCertainToolExecution(ToolExecutionState.FAILED,
+                new ToolCallResult("ticket_close",false,"","fatal",Map.of("_harnessOutcome","FATAL_ERROR")));
+        assertEquals(AgentStopReason.TOOL_ERROR,result.stopReason());
+        assertEquals(RunStatus.FAILED,result.status());
+        verify(fixture.modelGateway,never()).nextTurn(any(),any());
+        verify(fixture.toolRuntime,never()).execute(any(),any(),any(),any(),any(),any());
+    }
+
+    private Fixture harnessFixture() {
+        Fixture fixture=new Fixture(); configureRunPersistence(fixture);
+        when(fixture.contextManager.project(anyString(),anyString(),anyString(),anyString(),anyLong(),any(AgentExecutionProfile.class)))
+                .thenReturn(new AgentContextView(List.of(),0,0,false));
+        return fixture;
+    }
+
+    private AgentModelTurn toolTurn(String name) {
+        return new AgentModelTurn("",List.of(new AgentToolCall("call",name,Map.of(),"")),"",
+                new LlmUsage(10,5,15,0,0,"test","test"),"tool_calls");
+    }
+
+    private AgentExecutionProfile harnessProfile(Fixture fixture) {
+        return new AgentExecutionProfile("test", "prompt", Set.of("missing", "ticket_status"), AgentRunLimits.from(fixture.properties), false);
     }
 
     private static AgentModelTurn finalTurn(String answer) {

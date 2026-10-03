@@ -13,4 +13,8 @@ public record ToolCallResult(
     public ToolCallResult {
         metadata = metadata == null ? Map.of() : Map.copyOf(metadata);
     }
+
+    public ToolExecutionOutcome outcome() {
+        return ToolExecutionOutcome.from(this);
+    }
 }
