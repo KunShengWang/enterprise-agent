@@ -1,0 +1,833 @@
+{
+  "estimate_method": "ConservativeTokenEstimator: ceil(ASCII/4)+non-ASCII UTF16 units; excludes provider wrappers/framing; not provider usage",
+  "selected_tasks": [
+    "REQ-03",
+    "SRC-01",
+    "RFQ-02",
+    "E2E-04"
+  ],
+  "sources": {
+    "Harness B0": {
+      "REQ-03": {
+        "turns": [
+          {
+            "turn": 1,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 51,
+            "tool_result": 0,
+            "other": 0,
+            "total_estimated": 3707
+          },
+          {
+            "turn": 2,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 72,
+            "tool_result": 371,
+            "other": 30,
+            "total_estimated": 4129
+          }
+        ],
+        "provider_model_prompt_tokens": 8585,
+        "provider_model_output_tokens": 446
+      },
+      "SRC-01": {
+        "turns": [
+          {
+            "turn": 1,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 90,
+            "tool_result": 0,
+            "other": 0,
+            "total_estimated": 3746
+          },
+          {
+            "turn": 2,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 121,
+            "tool_result": 1042,
+            "other": 47,
+            "total_estimated": 4866
+          },
+          {
+            "turn": 3,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 121,
+            "tool_result": 1579,
+            "other": 57,
+            "total_estimated": 5413
+          },
+          {
+            "turn": 4,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 121,
+            "tool_result": 2646,
+            "other": 171,
+            "total_estimated": 6594
+          },
+          {
+            "turn": 5,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 121,
+            "tool_result": 3368,
+            "other": 189,
+            "total_estimated": 7334
+          },
+          {
+            "turn": 6,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 121,
+            "tool_result": 3988,
+            "other": 207,
+            "total_estimated": 7972
+          },
+          {
+            "turn": 7,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 121,
+            "tool_result": 4505,
+            "other": 225,
+            "total_estimated": 8507
+          },
+          {
+            "turn": 8,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 121,
+            "tool_result": 4919,
+            "other": 243,
+            "total_estimated": 8939
+          },
+          {
+            "turn": 9,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 121,
+            "tool_result": 5436,
+            "other": 261,
+            "total_estimated": 9474
+          },
+          {
+            "turn": 10,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 121,
+            "tool_result": 5747,
+            "other": 279,
+            "total_estimated": 9803
+          },
+          {
+            "turn": 11,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 137,
+            "run_state": 0,
+            "conversation": 143,
+            "tool_result": 5958,
+            "other": 344,
+            "total_estimated": 10238
+          },
+          {
+            "turn": 12,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 137,
+            "run_state": 0,
+            "conversation": 143,
+            "tool_result": 10837,
+            "other": 352,
+            "total_estimated": 15125
+          },
+          {
+            "turn": 13,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 137,
+            "run_state": 0,
+            "conversation": 170,
+            "tool_result": 14318,
+            "other": 467,
+            "total_estimated": 18748
+          }
+        ],
+        "provider_model_prompt_tokens": 162791,
+        "provider_model_output_tokens": 2850
+      },
+      "RFQ-02": {
+        "turns": [
+          {
+            "turn": 1,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 70,
+            "tool_result": 0,
+            "other": 0,
+            "total_estimated": 3726
+          },
+          {
+            "turn": 2,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 86,
+            "tool_result": 370,
+            "other": 32,
+            "total_estimated": 4144
+          },
+          {
+            "turn": 3,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 86,
+            "tool_result": 554,
+            "other": 45,
+            "total_estimated": 4341
+          },
+          {
+            "turn": 4,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 86,
+            "tool_result": 1225,
+            "other": 62,
+            "total_estimated": 5029
+          },
+          {
+            "turn": 5,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 86,
+            "tool_result": 1762,
+            "other": 72,
+            "total_estimated": 5576
+          },
+          {
+            "turn": 6,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 86,
+            "tool_result": 2830,
+            "other": 186,
+            "total_estimated": 6758
+          },
+          {
+            "turn": 7,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 86,
+            "tool_result": 3552,
+            "other": 204,
+            "total_estimated": 7498
+          },
+          {
+            "turn": 8,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 86,
+            "tool_result": 4069,
+            "other": 222,
+            "total_estimated": 8033
+          },
+          {
+            "turn": 9,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 138,
+            "run_state": 0,
+            "conversation": 101,
+            "tool_result": 4281,
+            "other": 287,
+            "total_estimated": 8463
+          },
+          {
+            "turn": 10,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 138,
+            "run_state": 0,
+            "conversation": 101,
+            "tool_result": 9158,
+            "other": 295,
+            "total_estimated": 13348
+          },
+          {
+            "turn": 11,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 138,
+            "run_state": 0,
+            "conversation": 101,
+            "tool_result": 12645,
+            "other": 417,
+            "total_estimated": 16957
+          },
+          {
+            "turn": 12,
+            "instructions": 1693,
+            "tool_schema": 1749,
+            "business_state": 138,
+            "run_state": 0,
+            "conversation": 138,
+            "tool_result": 12881,
+            "other": 423,
+            "total_estimated": 17022
+          }
+        ],
+        "provider_model_prompt_tokens": 139239,
+        "provider_model_output_tokens": 2287
+      },
+      "E2E-04": {
+        "turns": [
+          {
+            "turn": 1,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 93,
+            "tool_result": 0,
+            "other": 0,
+            "total_estimated": 3749
+          },
+          {
+            "turn": 2,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 1039,
+            "other": 47,
+            "total_estimated": 4865
+          },
+          {
+            "turn": 3,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 1576,
+            "other": 57,
+            "total_estimated": 5412
+          },
+          {
+            "turn": 4,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 2644,
+            "other": 171,
+            "total_estimated": 6594
+          },
+          {
+            "turn": 5,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 3366,
+            "other": 189,
+            "total_estimated": 7334
+          },
+          {
+            "turn": 6,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 3883,
+            "other": 207,
+            "total_estimated": 7869
+          },
+          {
+            "turn": 7,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 4400,
+            "other": 225,
+            "total_estimated": 8404
+          },
+          {
+            "turn": 8,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 5016,
+            "other": 243,
+            "total_estimated": 9038
+          },
+          {
+            "turn": 9,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 5429,
+            "other": 261,
+            "total_estimated": 9469
+          },
+          {
+            "turn": 10,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 138,
+            "run_state": 0,
+            "conversation": 144,
+            "tool_result": 5641,
+            "other": 326,
+            "total_estimated": 9905
+          },
+          {
+            "turn": 11,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 138,
+            "run_state": 0,
+            "conversation": 144,
+            "tool_result": 10437,
+            "other": 334,
+            "total_estimated": 14709
+          },
+          {
+            "turn": 12,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 138,
+            "run_state": 0,
+            "conversation": 257,
+            "tool_result": 10624,
+            "other": 351,
+            "total_estimated": 15026
+          }
+        ],
+        "provider_model_prompt_tokens": 141066,
+        "provider_model_output_tokens": 2308
+      }
+    },
+    "Phase 3 Dev": {
+      "REQ-03": {
+        "turns": [
+          {
+            "turn": 1,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 51,
+            "tool_result": 0,
+            "other": 0,
+            "total_estimated": 3707
+          },
+          {
+            "turn": 2,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 91,
+            "tool_result": 1042,
+            "other": 47,
+            "total_estimated": 4836
+          },
+          {
+            "turn": 3,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 142,
+            "run_state": 0,
+            "conversation": 127,
+            "tool_result": 1265,
+            "other": 97,
+            "total_estimated": 5287
+          }
+        ],
+        "provider_model_prompt_tokens": 16140,
+        "provider_model_output_tokens": 1021
+      },
+      "SRC-01": {
+        "turns": [
+          {
+            "turn": 1,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 90,
+            "tool_result": 0,
+            "other": 0,
+            "total_estimated": 3746
+          },
+          {
+            "turn": 2,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 1041,
+            "other": 47,
+            "total_estimated": 4867
+          },
+          {
+            "turn": 3,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 1578,
+            "other": 57,
+            "total_estimated": 5414
+          },
+          {
+            "turn": 4,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 2645,
+            "other": 171,
+            "total_estimated": 6595
+          },
+          {
+            "turn": 5,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 3367,
+            "other": 189,
+            "total_estimated": 7335
+          },
+          {
+            "turn": 6,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 3987,
+            "other": 207,
+            "total_estimated": 7973
+          },
+          {
+            "turn": 7,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 4504,
+            "other": 225,
+            "total_estimated": 8508
+          },
+          {
+            "turn": 8,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 4918,
+            "other": 243,
+            "total_estimated": 8940
+          },
+          {
+            "turn": 9,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 5435,
+            "other": 261,
+            "total_estimated": 9475
+          },
+          {
+            "turn": 10,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 123,
+            "tool_result": 5745,
+            "other": 279,
+            "total_estimated": 9803
+          },
+          {
+            "turn": 11,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 137,
+            "run_state": 0,
+            "conversation": 139,
+            "tool_result": 5956,
+            "other": 344,
+            "total_estimated": 10232
+          },
+          {
+            "turn": 12,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 137,
+            "run_state": 0,
+            "conversation": 139,
+            "tool_result": 10833,
+            "other": 352,
+            "total_estimated": 15117
+          },
+          {
+            "turn": 13,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 137,
+            "run_state": 0,
+            "conversation": 139,
+            "tool_result": 14317,
+            "other": 470,
+            "total_estimated": 18719
+          }
+        ],
+        "provider_model_prompt_tokens": 162611,
+        "provider_model_output_tokens": 2666
+      },
+      "RFQ-02": {
+        "turns": [
+          {
+            "turn": 1,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 70,
+            "tool_result": 0,
+            "other": 0,
+            "total_estimated": 3726
+          },
+          {
+            "turn": 2,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 86,
+            "tool_result": 371,
+            "other": 32,
+            "total_estimated": 4145
+          },
+          {
+            "turn": 3,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 86,
+            "tool_result": 555,
+            "other": 45,
+            "total_estimated": 4342
+          },
+          {
+            "turn": 4,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 86,
+            "tool_result": 1223,
+            "other": 62,
+            "total_estimated": 5027
+          },
+          {
+            "turn": 5,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 86,
+            "tool_result": 1760,
+            "other": 72,
+            "total_estimated": 5574
+          },
+          {
+            "turn": 6,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 86,
+            "tool_result": 2650,
+            "other": 167,
+            "total_estimated": 6559
+          },
+          {
+            "turn": 7,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 138,
+            "run_state": 0,
+            "conversation": 105,
+            "tool_result": 2862,
+            "other": 232,
+            "total_estimated": 6993
+          },
+          {
+            "turn": 8,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 138,
+            "run_state": 0,
+            "conversation": 105,
+            "tool_result": 7739,
+            "other": 240,
+            "total_estimated": 11878
+          },
+          {
+            "turn": 9,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 138,
+            "run_state": 0,
+            "conversation": 105,
+            "tool_result": 11228,
+            "other": 362,
+            "total_estimated": 15489
+          },
+          {
+            "turn": 10,
+            "instructions": 1693,
+            "tool_schema": 1749,
+            "business_state": 138,
+            "run_state": 0,
+            "conversation": 138,
+            "tool_result": 11464,
+            "other": 368,
+            "total_estimated": 15550
+          }
+        ],
+        "provider_model_prompt_tokens": 107960,
+        "provider_model_output_tokens": 2057
+      },
+      "E2E-04": {
+        "turns": [
+          {
+            "turn": 1,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 93,
+            "tool_result": 0,
+            "other": 0,
+            "total_estimated": 3749
+          },
+          {
+            "turn": 2,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 118,
+            "tool_result": 1579,
+            "other": 57,
+            "total_estimated": 5410
+          },
+          {
+            "turn": 3,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 0,
+            "run_state": 0,
+            "conversation": 118,
+            "tool_result": 2646,
+            "other": 171,
+            "total_estimated": 6591
+          },
+          {
+            "turn": 4,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 138,
+            "run_state": 0,
+            "conversation": 134,
+            "tool_result": 2858,
+            "other": 236,
+            "total_estimated": 7022
+          },
+          {
+            "turn": 5,
+            "instructions": 1693,
+            "tool_schema": 1963,
+            "business_state": 138,
+            "run_state": 0,
+            "conversation": 134,
+            "tool_result": 7654,
+            "other": 244,
+            "total_estimated": 11826
+          }
+        ],
+        "provider_model_prompt_tokens": 45562,
+        "provider_model_output_tokens": 1678
+      }
+    }
+  }
+}

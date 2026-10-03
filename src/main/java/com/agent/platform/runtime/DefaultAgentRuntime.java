@@ -75,6 +75,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
     private final MemoryService memoryService;
     private final LlmCostCalculator costCalculator;
     private final ToolResultProjector toolResultProjector;
+    private final ContextAssembler contextAssembler;
 
     /** 仅保存本实例中正在执行的取消句柄，持久取消事实仍写入 AgentRunControlStore。 */
     private final ConcurrentMap<String, AgentRunBudget> activeBudgets = new ConcurrentHashMap<>();
@@ -126,6 +127,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         this.memoryService = memoryService;
         this.costCalculator = costCalculator;
         this.toolResultProjector = toolResultProjector;
+        this.contextAssembler = new ContextAssembler(tokenEstimator, toolExecutionStore, toolResultProjector);
     }
 
     @Override
@@ -738,9 +740,11 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     contextTokenBudget,
                     profile
             );
-            AgentContextView context = projectedContext;
-            boolean contextBudgetCompactionRequested = projectedContext.omittedMessages() > 0;
-            if (contextBudgetCompactionRequested) {
+            AgentContextView context = contextAssembler.assemble(projectedContext, profile,
+                    runStore.find(runId).orElse(null), capabilitiesFor(profile, request.metadata(), usedTools), contextTokenBudget);
+            boolean contextBudgetCompactionRequested = profile.contextPolicy().enabled()
+                    ? Boolean.TRUE.equals(context.metadata().get("compactionPerformed")) : projectedContext.omittedMessages() > 0;
+            if (contextBudgetCompactionRequested && !profile.contextPolicy().enabled()) {
                 context = contextManager.compact(
                         sessionId, userId, tenantId, runId, request.question(), contextTokenBudget,
                         "context_budget", profile
@@ -863,7 +867,10 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                         // ① 压缩上下文，预算减半
                         long retryBudget = Math.max(1, contextTokenBudget / 2);
                         AgentContextView beforeOverflowCompaction = context;
-                        context = contextManager.compact(
+                        context = profile.contextPolicy().enabled() ? contextAssembler.assemble(
+                                contextManager.project(sessionId, userId, tenantId, request.question(), retryBudget, profile),
+                                profile, runStore.find(runId).orElse(null), capabilitiesFor(profile, request.metadata(), usedTools), retryBudget)
+                                : contextManager.compact(
                                 sessionId, userId, tenantId, runId, request.question(), retryBudget,
                                 "provider_context_overflow", profile
                         );
@@ -2079,6 +2086,10 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 - Math.max(0, properties.getContextOutputReserveTokens())
                 - Math.max(0, properties.getContextSafetyMarginTokens())
                 - staticTokens;
+        if (profile.contextPolicy().enabled()) {
+            availableWindow = Math.min(availableWindow, profile.contextPolicy().maxContextTokens()
+                    - profile.contextPolicy().reservedOutputTokens() - properties.getContextSafetyMarginTokens() - staticTokens);
+        }
         return Math.max(1, Math.min(profile.limits().maxInputTokens(), availableWindow));
     }
 

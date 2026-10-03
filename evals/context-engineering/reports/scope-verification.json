@@ -1,0 +1,72 @@
+{
+  "head": "cfb29cdf31ca240802cc86c2b9f9642f7fbfde42",
+  "branch": "feat/context-engineering",
+  "smoke_dev_final_source_identical": true,
+  "handler_bytes_unchanged": true,
+  "handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "handler_unstaged": true,
+  "index_empty": true,
+  "diff_check_exit": 0,
+  "frozen_paths_unchanged": true,
+  "fixtures": {
+    "data/procurement/aws-synthetic/01_suppliers.json": true,
+    "data/procurement/aws-synthetic/README.md": true,
+    "data/procurement/scenarios/complex_workstation_01.json": true,
+    "src/test/resources/procurement/benchmark/procurement-benchmark-v1.json": true,
+    "src/test/resources/procurement/evaluation/procurement-answer-policy-v1.json": true
+  },
+  "phase3_tag": "cfb29cdf31ca240802cc86c2b9f9642f7fbfde42",
+  "model_trials": {
+    "smoke": {
+      "mode": "smoke",
+      "tasks": [
+        "REQ-01",
+        "REQ-03",
+        "ANOM-01",
+        "SRC-01",
+        "RFQ-01",
+        "RFQ-02",
+        "GOV-01",
+        "ROB-01",
+        "E2E-01"
+      ],
+      "trials_per_task": 1,
+      "holdout": false
+    },
+    "dev": {
+      "mode": "dev",
+      "tasks": [
+        "ANOM-01",
+        "ANOM-03",
+        "ANOM-04",
+        "ANOM-06",
+        "E2E-01",
+        "E2E-03",
+        "E2E-04",
+        "E2E-06",
+        "GOV-01",
+        "GOV-02",
+        "GOV-03",
+        "REQ-01",
+        "REQ-03",
+        "REQ-04",
+        "REQ-06",
+        "RFQ-01",
+        "RFQ-02",
+        "RFQ-04",
+        "RFQ-05",
+        "ROB-01",
+        "ROB-02",
+        "ROB-03",
+        "SRC-01",
+        "SRC-02",
+        "SRC-03",
+        "SRC-04",
+        "SRC-05",
+        "SRC-07"
+      ],
+      "trials_per_task": 1,
+      "holdout": false
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "configured_secret_matches": [],
+  "files_scanned": 24,
+  "archive_members_scanned": true,
+  "scope": "Known configured key/token/password/secret values; not a general proof against all unknown secrets."
+}

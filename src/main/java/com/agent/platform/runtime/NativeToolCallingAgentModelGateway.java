@@ -219,6 +219,9 @@ public class NativeToolCallingAgentModelGateway implements AgentModelGateway {
     }
 
     private String canonicalBusinessContextContent(AgentMessage message) {
+        if ("run_state".equals(message.metadata().get("contextKind"))) {
+            return "<runtime_state trusted_instructions=\"false\">\n" + message.content() + "\n</runtime_state>";
+        }
         return """
                 <canonical_business_context authoritative_business_data="true" trusted_instructions="false">
                 %s

@@ -15,6 +15,9 @@ public class ProcurementSourcingExecutionProfileFactory implements AgentScenario
     @org.springframework.beans.factory.annotation.Value("${enterprise-agent.procurement.erpnext.enabled:false}")
     private boolean erpNextEnabled;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.agent.platform.config.AgentProperties contextProperties = new com.agent.platform.config.AgentProperties();
+
     @Override
     public String scenarioId() { return PROFILE_NAME; }
 
@@ -54,6 +57,9 @@ public class ProcurementSourcingExecutionProfileFactory implements AgentScenario
                 绩效是独立导入的历史汇总快照，采购历史仅为示例观察记录；没有承诺交付日期时不能断言某笔历史采购按期交付。价格或质量名次必须核对全部合格候选，不把交付可靠性偏好写成“所有维度最高”或未经验证的综合评分。
                 当前价格是 ERP synthetic referencePrice，不是供应商正式报价。ERP 不可用时报告错误，绝不回退 Legacy JSON。
                 RFQ 仍只能调用本地 procurement_create_rfq 意图工具并等待人工批准。不得调用 mcp.erpnext.procurement_create_rfq，不得生成签名或批准自己。
-                """, java.util.Set.copyOf(allowed),new AgentRunLimits(24,20,40,384_000,16_000,12,240_000),false);
+                """, java.util.Set.copyOf(allowed),new AgentRunLimits(24,20,40,384_000,16_000,12,240_000),false,
+                new com.agent.platform.runtime.ContextPolicy(true, contextProperties.getModelContextWindowTokens(),
+                        contextProperties.getContextOutputReserveTokens(), contextProperties.getContextCompactionThreshold(),
+                        contextProperties.getContextRecentUserTurns()));
     }
 }

@@ -1,0 +1,12 @@
+ .../com/agent/platform/config/AgentProperties.java    |  8 ++++++++
+ .../ProcurementSourcingExecutionProfileFactory.java   |  8 +++++++-
+ .../procurement/tool/ProcurementToolHandler.java      | 12 ++++++++++++
+ .../agent/platform/runtime/AgentExecutionProfile.java |  9 ++++++++-
+ .../platform/runtime/DefaultAgentContextManager.java  |  8 ++++++++
+ .../agent/platform/runtime/DefaultAgentRuntime.java   | 19 +++++++++++++++----
+ .../agent/platform/runtime/JsonAgentModelGateway.java |  4 +++-
+ .../runtime/NativeToolCallingAgentModelGateway.java   |  3 +++
+ .../agent/platform/runtime/ToolResultProjector.java   | 14 ++++++++++++++
+ src/main/resources/application.yaml                   |  2 ++
+ .../runtime/DefaultAgentRuntimeStateTests.java        | 16 ++++++++++++++++
+ 11 files changed, 96 insertions(+), 7 deletions(-)

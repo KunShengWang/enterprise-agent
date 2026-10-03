@@ -27,6 +27,14 @@ public class AgentProperties {
 
     private int contextSummaryMaxTokens = 1_500;
 
+    private double contextCompactionThreshold = 0.75;
+    private int contextRecentUserTurns = 2;
+
+    public double getContextCompactionThreshold() { return contextCompactionThreshold; }
+    public void setContextCompactionThreshold(double value) { contextCompactionThreshold = value; }
+    public int getContextRecentUserTurns() { return contextRecentUserTurns; }
+    public void setContextRecentUserTurns(int value) { contextRecentUserTurns = value; }
+
     private int maxContextOverflowRetries = 1;
 
     private int maxModelProtocolRetries = 1;

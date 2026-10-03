@@ -85,6 +85,14 @@ public class DefaultAgentContextManager implements AgentContextManager {
         long budget = Math.max(1, maxTokens);
         List<AgentMessage> canonicalContexts = freshCanonicalContexts(
                 sessionId, userId, tenantId, profile);
+        if (profile != null && profile.contextPolicy().enabled()) {
+            // The assembler owns this opt-in policy; do not irreversibly pre-trim its source.
+            List<AgentMessage> source = new ArrayList<>(canonicalContexts);
+            timeline.stream().filter(m -> m.type() != AgentMessageType.CONTEXT_SUMMARY
+                    && m.type() != AgentMessageType.CANONICAL_CONTEXT).forEach(source::add);
+            return new AgentContextView(source, source.stream().mapToLong(this::tokens).sum(),0,false,
+                    Map.of("source", "fresh canonical state and persisted timeline", "contextEngineering",true));
+        }
         long canonicalTokens = canonicalContexts.stream().mapToLong(this::tokens).sum();
         // 获取最新的消息摘要
         AgentMessage latestSummary = latestSummary(timeline);

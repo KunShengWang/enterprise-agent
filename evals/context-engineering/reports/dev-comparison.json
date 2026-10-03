@@ -1,0 +1,2603 @@
+{
+  "type": "single-trial development directional comparison, not final benchmark",
+  "comparison_gate": "COMPARABLE_FOR_DEVELOPMENT",
+  "control_mismatches": [],
+  "caveat": "Context composition is the intended variable. Model alias has no immutable build; tool trajectories can vary. No stable causal efficiency claim.",
+  "b0": {
+    "task_count": 28,
+    "planned_trials": 28,
+    "valid_trials": 28,
+    "infra_attempts": 0,
+    "complete_tasks": 28,
+    "complete": true,
+    "passed": 28,
+    "failed": 0,
+    "task_success_rate": 1.0,
+    "three_of_three_consistent_success_count": null,
+    "three_of_three_consistent_success_rate": null,
+    "invariant_violation_trials": 0,
+    "invariant_violation_rate": 0.0,
+    "business_invariant_violation_rate": 0.0,
+    "unauthorized_write_rate": 0.0,
+    "invariant_counts": {
+      "UnauthorizedWrite": 0,
+      "DuplicateSideEffect": 0,
+      "StaleApprovalExecution": 0,
+      "BusinessInvariantViolation": 0,
+      "FabricatedCriticalFact": 0
+    },
+    "tool_attempts": 398,
+    "tool_errors": 6,
+    "tool_error_rate": 0.01507537688442211,
+    "invalid_tool_calls": 0,
+    "failure_distribution": {
+      "TASK_UNDERSTANDING": 0,
+      "WRONG_TOOL": 0,
+      "MISSING_TOOL": 0,
+      "TOOL_ARGUMENT_ERROR": 0,
+      "BUSINESS_REASONING": 0,
+      "STALE_STATE": 0,
+      "HITL_ERROR": 0,
+      "BACKEND_ERROR": 0,
+      "LOOP_LIMIT": 0,
+      "CONTEXT_FAILURE": 0,
+      "OUTPUT_ONLY_ERROR": 0
+    },
+    "tool_error_categories": {
+      "schema_invalid": 0,
+      "tool_not_found": 0,
+      "business_error": 2,
+      "backend_error": 4,
+      "policy_rejected": 0,
+      "other": 0
+    },
+    "metrics": {
+      "tool_calls": {
+        "available_trials": 28,
+        "sum": 398,
+        "mean": 14.214285714285714,
+        "median": 18.0,
+        "p95": 23
+      },
+      "input_tokens": {
+        "available_trials": 28,
+        "sum": 3053920,
+        "mean": 109068.57142857143,
+        "median": 141790.0,
+        "p95": 198638
+      },
+      "output_tokens": {
+        "available_trials": 28,
+        "sum": 52575,
+        "mean": 1877.6785714285713,
+        "median": 1730.5,
+        "p95": 2926
+      },
+      "total_tokens": {
+        "available_trials": 28,
+        "sum": 3106495,
+        "mean": 110946.25,
+        "median": 144202.5,
+        "p95": 201649
+      },
+      "peak_context_tokens": {
+        "available_trials": 28,
+        "sum": 549346,
+        "mean": 19619.5,
+        "median": 25847.0,
+        "p95": 31150
+      },
+      "task_latency_ms": {
+        "available_trials": 28,
+        "sum": 501173.626899,
+        "mean": 17899.058103535714,
+        "median": 18442.6561,
+        "p95": 26891.713
+      },
+      "llm_latency_ms": {
+        "available_trials": 28,
+        "sum": 341156.703708,
+        "mean": 12184.167989571428,
+        "median": 12276.761299999998,
+        "p95": 20732.6873
+      },
+      "input_guardrail_latency_ms": {
+        "available_trials": 28,
+        "sum": 72457.846798,
+        "mean": 2587.780242785714,
+        "median": 2537.7610000000004,
+        "p95": 3362.1995
+      },
+      "mcp_latency_ms": {
+        "available_trials": 28,
+        "sum": 46303.158611000006,
+        "mean": 1653.6842361071429,
+        "median": 2212.817701,
+        "p95": 2678.9797000000003
+      },
+      "tool_retry_count": {
+        "available_trials": 28,
+        "sum": 0,
+        "mean": 0,
+        "median": 0.0,
+        "p95": 0
+      }
+    },
+    "provider_internal_retry_count": null,
+    "split_results": {
+      "dev": {
+        "trials": 28,
+        "passed": 28
+      },
+      "holdout": {
+        "trials": 0,
+        "passed": 0
+      }
+    },
+    "planned_valid_trials": 28,
+    "total_execution_attempts": 28,
+    "valid_agent_trials": 28,
+    "infra_invalid_attempts": 0,
+    "replacement_attempts": 0,
+    "successful_replacement_attempts": 0,
+    "complete_artifacts": 28,
+    "partial_artifacts": 0,
+    "accounting_definitions": {
+      "replacement_attempts": "All attempts after a1, including failed replacement attempts; not additive to total attempts.",
+      "complete_artifacts": "Full task/raw/before/after compressed artifact.",
+      "partial_artifacts": "Attempt directory with result/logs and any available partial raw data; no complete compressed artifact."
+    },
+    "infra_attempt_ledger": [],
+    "model_identity": {
+      "configured_models": [
+        "deepseek-chat"
+      ],
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "exact_immutable_build": null
+    },
+    "model_reproducibility_limitation": "Provider does not expose an exact immutable model build; the same alias cannot guarantee identical future model weights.",
+    "model_comparability_warnings": [],
+    "PreventedUnsafeAttempt": {
+      "count": 4,
+      "included_in_tool_error_rate": false,
+      "actor": "environment",
+      "by_action": {
+        "stale_approval": 1,
+        "stale_case": 1,
+        "tamper_quantity": 1,
+        "tamper_requisition": 0,
+        "tamper_supplier": 1
+      }
+    },
+    "human_rejected_proposals": {
+      "count": 0,
+      "included_in_tool_error_rate": true,
+      "category": "policy_rejected"
+    }
+  },
+  "phase3": {
+    "task_count": 28,
+    "planned_trials": 28,
+    "valid_trials": 28,
+    "infra_attempts": 0,
+    "complete_tasks": 28,
+    "complete": true,
+    "passed": 28,
+    "failed": 0,
+    "task_success_rate": 1.0,
+    "three_of_three_consistent_success_count": null,
+    "three_of_three_consistent_success_rate": null,
+    "invariant_violation_trials": 0,
+    "invariant_violation_rate": 0.0,
+    "business_invariant_violation_rate": 0.0,
+    "unauthorized_write_rate": 0.0,
+    "invariant_counts": {
+      "UnauthorizedWrite": 0,
+      "DuplicateSideEffect": 0,
+      "StaleApprovalExecution": 0,
+      "BusinessInvariantViolation": 0,
+      "FabricatedCriticalFact": 0
+    },
+    "tool_attempts": 359,
+    "tool_errors": 6,
+    "tool_error_rate": 0.016713091922005572,
+    "invalid_tool_calls": 0,
+    "failure_distribution": {
+      "TASK_UNDERSTANDING": 0,
+      "WRONG_TOOL": 0,
+      "MISSING_TOOL": 0,
+      "TOOL_ARGUMENT_ERROR": 0,
+      "BUSINESS_REASONING": 0,
+      "STALE_STATE": 0,
+      "HITL_ERROR": 0,
+      "BACKEND_ERROR": 0,
+      "LOOP_LIMIT": 0,
+      "CONTEXT_FAILURE": 0,
+      "OUTPUT_ONLY_ERROR": 0
+    },
+    "tool_error_categories": {
+      "schema_invalid": 0,
+      "tool_not_found": 0,
+      "business_error": 2,
+      "backend_error": 4,
+      "policy_rejected": 0,
+      "other": 0
+    },
+    "metrics": {
+      "tool_calls": {
+        "available_trials": 28,
+        "sum": 359,
+        "mean": 12.821428571428571,
+        "median": 13.5,
+        "p95": 20
+      },
+      "input_tokens": {
+        "available_trials": 28,
+        "sum": 2552657,
+        "mean": 91166.32142857143,
+        "median": 78015.0,
+        "p95": 191540
+      },
+      "output_tokens": {
+        "available_trials": 28,
+        "sum": 48618,
+        "mean": 1736.357142857143,
+        "median": 1701.5,
+        "p95": 2700
+      },
+      "total_tokens": {
+        "available_trials": 28,
+        "sum": 2601275,
+        "mean": 92902.67857142857,
+        "median": 80486.5,
+        "p95": 194028
+      },
+      "peak_context_tokens": {
+        "available_trials": 28,
+        "sum": 522821,
+        "mean": 18672.178571428572,
+        "median": 22017.5,
+        "p95": 28627
+      },
+      "task_latency_ms": {
+        "available_trials": 28,
+        "sum": 503164.47069999995,
+        "mean": 17970.159667857144,
+        "median": 18518.096149999998,
+        "p95": 27468.8302
+      },
+      "llm_latency_ms": {
+        "available_trials": 28,
+        "sum": 306464.92499999993,
+        "mean": 10945.175892857143,
+        "median": 11121.944300000001,
+        "p95": 17733.7696
+      },
+      "input_guardrail_latency_ms": {
+        "available_trials": 28,
+        "sum": 97841.0632,
+        "mean": 3494.3236857142856,
+        "median": 2602.6030499999997,
+        "p95": 14470.6655
+      },
+      "mcp_latency_ms": {
+        "available_trials": 28,
+        "sum": 52566.64429999999,
+        "mean": 1877.3801535714285,
+        "median": 2488.2312500000003,
+        "p95": 2923.327100000001
+      },
+      "tool_retry_count": {
+        "available_trials": 28,
+        "sum": 0,
+        "mean": 0,
+        "median": 0.0,
+        "p95": 0
+      }
+    },
+    "provider_internal_retry_count": null,
+    "split_results": {
+      "dev": {
+        "trials": 28,
+        "passed": 28
+      },
+      "holdout": {
+        "trials": 0,
+        "passed": 0
+      }
+    },
+    "planned_valid_trials": 28,
+    "total_execution_attempts": 28,
+    "valid_agent_trials": 28,
+    "infra_invalid_attempts": 0,
+    "replacement_attempts": 0,
+    "successful_replacement_attempts": 0,
+    "complete_artifacts": 28,
+    "partial_artifacts": 0,
+    "accounting_definitions": {
+      "replacement_attempts": "All attempts after a1, including failed replacement attempts; not additive to total attempts.",
+      "complete_artifacts": "Full task/raw/before/after compressed artifact.",
+      "partial_artifacts": "Attempt directory with result/logs and any available partial raw data; no complete compressed artifact."
+    },
+    "infra_attempt_ledger": [],
+    "model_identity": {
+      "configured_models": [
+        "deepseek-chat"
+      ],
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "exact_immutable_build": null
+    },
+    "model_reproducibility_limitation": "Provider does not expose an exact immutable model build; the same alias cannot guarantee identical future model weights.",
+    "model_comparability_warnings": [],
+    "PreventedUnsafeAttempt": {
+      "count": 4,
+      "included_in_tool_error_rate": false,
+      "actor": "environment",
+      "by_action": {
+        "stale_approval": 1,
+        "stale_case": 1,
+        "tamper_quantity": 1,
+        "tamper_requisition": 0,
+        "tamper_supplier": 1
+      }
+    },
+    "human_rejected_proposals": {
+      "count": 0,
+      "included_in_tool_error_rate": true,
+      "category": "policy_rejected"
+    }
+  },
+  "phase4": {
+    "task_count": 28,
+    "planned_trials": 28,
+    "valid_trials": 28,
+    "infra_attempts": 0,
+    "complete_tasks": 28,
+    "complete": true,
+    "passed": 28,
+    "failed": 0,
+    "task_success_rate": 1.0,
+    "three_of_three_consistent_success_count": null,
+    "three_of_three_consistent_success_rate": null,
+    "invariant_violation_trials": 0,
+    "invariant_violation_rate": 0.0,
+    "business_invariant_violation_rate": 0.0,
+    "unauthorized_write_rate": 0.0,
+    "invariant_counts": {
+      "UnauthorizedWrite": 0,
+      "DuplicateSideEffect": 0,
+      "StaleApprovalExecution": 0,
+      "BusinessInvariantViolation": 0,
+      "FabricatedCriticalFact": 0
+    },
+    "tool_attempts": 310,
+    "tool_errors": 6,
+    "tool_error_rate": 0.01935483870967742,
+    "invalid_tool_calls": 0,
+    "failure_distribution": {
+      "TASK_UNDERSTANDING": 0,
+      "WRONG_TOOL": 0,
+      "MISSING_TOOL": 0,
+      "TOOL_ARGUMENT_ERROR": 0,
+      "BUSINESS_REASONING": 0,
+      "STALE_STATE": 0,
+      "HITL_ERROR": 0,
+      "BACKEND_ERROR": 0,
+      "LOOP_LIMIT": 0,
+      "CONTEXT_FAILURE": 0,
+      "OUTPUT_ONLY_ERROR": 0
+    },
+    "tool_error_categories": {
+      "schema_invalid": 0,
+      "tool_not_found": 0,
+      "business_error": 2,
+      "backend_error": 4,
+      "policy_rejected": 0,
+      "other": 0
+    },
+    "metrics": {
+      "tool_calls": {
+        "available_trials": 28,
+        "sum": 310,
+        "mean": 11.071428571428571,
+        "median": 13.0,
+        "p95": 18
+      },
+      "input_tokens": {
+        "available_trials": 28,
+        "sum": 1487912,
+        "mean": 53139.71428571428,
+        "median": 61381.5,
+        "p95": 93642
+      },
+      "output_tokens": {
+        "available_trials": 28,
+        "sum": 43995,
+        "mean": 1571.25,
+        "median": 1658.5,
+        "p95": 2471
+      },
+      "total_tokens": {
+        "available_trials": 28,
+        "sum": 1531907,
+        "mean": 54710.96428571428,
+        "median": 63224.0,
+        "p95": 96636
+      },
+      "peak_context_tokens": {
+        "available_trials": 28,
+        "sum": 387125,
+        "mean": 13825.892857142857,
+        "median": 17549.5,
+        "p95": 20479
+      },
+      "task_latency_ms": {
+        "available_trials": 28,
+        "sum": 457512.4709,
+        "mean": 16339.731103571428,
+        "median": 17461.4797,
+        "p95": 22704.9574
+      },
+      "llm_latency_ms": {
+        "available_trials": 28,
+        "sum": 257575.321,
+        "mean": 9199.118607142856,
+        "median": 10336.503250000002,
+        "p95": 14294.663
+      },
+      "input_guardrail_latency_ms": {
+        "available_trials": 28,
+        "sum": 81906.2218,
+        "mean": 2925.2222071428573,
+        "median": 2903.1498,
+        "p95": 3180.4758
+      },
+      "mcp_latency_ms": {
+        "available_trials": 28,
+        "sum": 64953.6521,
+        "mean": 2319.7732892857143,
+        "median": 3106.7562,
+        "p95": 3584.1385999999993
+      },
+      "tool_retry_count": {
+        "available_trials": 28,
+        "sum": 0,
+        "mean": 0,
+        "median": 0.0,
+        "p95": 0
+      }
+    },
+    "provider_internal_retry_count": null,
+    "split_results": {
+      "dev": {
+        "trials": 28,
+        "passed": 28
+      },
+      "holdout": {
+        "trials": 0,
+        "passed": 0
+      }
+    },
+    "planned_valid_trials": 28,
+    "total_execution_attempts": 28,
+    "valid_agent_trials": 28,
+    "infra_invalid_attempts": 0,
+    "replacement_attempts": 0,
+    "successful_replacement_attempts": 0,
+    "complete_artifacts": 28,
+    "partial_artifacts": 0,
+    "accounting_definitions": {
+      "replacement_attempts": "All attempts after a1, including failed replacement attempts; not additive to total attempts.",
+      "complete_artifacts": "Full task/raw/before/after compressed artifact.",
+      "partial_artifacts": "Attempt directory with result/logs and any available partial raw data; no complete compressed artifact."
+    },
+    "infra_attempt_ledger": [],
+    "model_identity": {
+      "configured_models": [
+        "deepseek-chat"
+      ],
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "exact_immutable_build": null
+    },
+    "model_reproducibility_limitation": "Provider does not expose an exact immutable model build; the same alias cannot guarantee identical future model weights.",
+    "model_comparability_warnings": [],
+    "PreventedUnsafeAttempt": {
+      "count": 4,
+      "included_in_tool_error_rate": false,
+      "actor": "environment",
+      "by_action": {
+        "stale_approval": 1,
+        "stale_case": 1,
+        "tamper_quantity": 1,
+        "tamper_requisition": 0,
+        "tamper_supplier": 1
+      }
+    },
+    "human_rejected_proposals": {
+      "count": 0,
+      "included_in_tool_error_rate": true,
+      "category": "policy_rejected"
+    }
+  },
+  "runtime": {
+    "stop_reasons": {
+      "COMPLETED": 23,
+      "WAITING_APPROVAL": 5
+    }
+  },
+  "context": {
+    "accounting": "estimated local partitions, excludes provider framing; bytes/tokens count repeated per-turn projections",
+    "totals": {
+      "conversationMessagesRemoved": 0,
+      "duplicateToolPairsRemoved": 3,
+      "rawToolResultBytes": 1621482,
+      "projectedToolResultBytes": 1156002,
+      "rawToolResultEstimatedTokens": 406733,
+      "projectedToolResultEstimatedTokens": 290364,
+      "contextTokensBefore": 640296,
+      "contextTokensAfter": 489495,
+      "compactionEvents": 133
+    },
+    "estimated_peak_per_task": {
+      "ANOM-01": 6813,
+      "ANOM-03": 4395,
+      "ANOM-04": 4653,
+      "ANOM-06": 6396,
+      "E2E-01": 12352,
+      "E2E-03": 7944,
+      "E2E-04": 9366,
+      "E2E-06": 7308,
+      "GOV-01": 12405,
+      "GOV-02": 13495,
+      "GOV-03": 12412,
+      "REQ-01": 12485,
+      "REQ-03": 3803,
+      "REQ-04": 3802,
+      "REQ-06": 3919,
+      "RFQ-01": 12451,
+      "RFQ-02": 11243,
+      "RFQ-04": 12937,
+      "RFQ-05": 12479,
+      "ROB-01": 12998,
+      "ROB-02": 4208,
+      "ROB-03": 12322,
+      "SRC-01": 12927,
+      "SRC-02": 12385,
+      "SRC-03": 11442,
+      "SRC-04": 13826,
+      "SRC-05": 12067,
+      "SRC-07": 5675
+    },
+    "observed_tool_counts": [
+      14,
+      15
+    ]
+  },
+  "composition": {
+    "ANOM-01": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 126,
+          "tool_result": 703,
+          "other": 47,
+          "total_estimated": 4630
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 159,
+          "tool_result": 1975,
+          "other": 171,
+          "total_estimated": 6059
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 181,
+          "tool_result": 2180,
+          "other": 236,
+          "total_estimated": 6489
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 181,
+          "tool_result": 2424,
+          "other": 244,
+          "total_estimated": 6741
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 217,
+          "tool_result": 2424,
+          "other": 244,
+          "total_estimated": 6777
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 250,
+          "tool_result": 2424,
+          "other": 244,
+          "total_estimated": 6810
+        }
+      ],
+      "provider_model_prompt_tokens": 54216,
+      "provider_model_output_tokens": 2319
+    },
+    "ANOM-03": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 68,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3820
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 87,
+          "tool_result": 527,
+          "other": 27,
+          "total_estimated": 4395
+        }
+      ],
+      "provider_model_prompt_tokens": 9280,
+      "provider_model_output_tokens": 513
+    },
+    "ANOM-04": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 109,
+          "tool_result": 747,
+          "other": 42,
+          "total_estimated": 4652
+        }
+      ],
+      "provider_model_prompt_tokens": 9763,
+      "provider_model_output_tokens": 589
+    },
+    "ANOM-06": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 113,
+          "tool_result": 491,
+          "other": 47,
+          "total_estimated": 4405
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 97,
+          "conversation": 113,
+          "tool_result": 1039,
+          "other": 98,
+          "total_estimated": 5003
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 113,
+          "tool_result": 1368,
+          "other": 111,
+          "total_estimated": 5346
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 113,
+          "tool_result": 1855,
+          "other": 123,
+          "total_estimated": 5845
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 129,
+          "tool_result": 2059,
+          "other": 188,
+          "total_estimated": 6268
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 129,
+          "tool_result": 2175,
+          "other": 196,
+          "total_estimated": 6392
+        }
+      ],
+      "provider_model_prompt_tokens": 47070,
+      "provider_model_output_tokens": 1585
+    },
+    "E2E-01": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 90,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3842
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 97,
+          "conversation": 116,
+          "tool_result": 702,
+          "other": 47,
+          "total_estimated": 4618
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 116,
+          "tool_result": 1031,
+          "other": 57,
+          "total_estimated": 4958
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 116,
+          "tool_result": 1931,
+          "other": 171,
+          "total_estimated": 5972
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 137,
+          "run_state": 98,
+          "conversation": 132,
+          "tool_result": 2135,
+          "other": 236,
+          "total_estimated": 6394
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 137,
+          "run_state": 98,
+          "conversation": 132,
+          "tool_result": 5132,
+          "other": 244,
+          "total_estimated": 9399
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 137,
+          "run_state": 99,
+          "conversation": 132,
+          "tool_result": 7954,
+          "other": 359,
+          "total_estimated": 12337
+        },
+        {
+          "turn": 8,
+          "instructions": 1693,
+          "tool_schema": 1749,
+          "business_state": 137,
+          "run_state": 108,
+          "conversation": 168,
+          "tool_result": 8128,
+          "other": 365,
+          "total_estimated": 12348
+        }
+      ],
+      "provider_model_prompt_tokens": 82849,
+      "provider_model_output_tokens": 1950
+    },
+    "E2E-03": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 123,
+          "tool_result": 563,
+          "other": 47,
+          "total_estimated": 4487
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 123,
+          "tool_result": 1152,
+          "other": 113,
+          "total_estimated": 5142
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 123,
+          "tool_result": 1463,
+          "other": 131,
+          "total_estimated": 5471
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 123,
+          "tool_result": 1718,
+          "other": 149,
+          "total_estimated": 5744
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 139,
+          "tool_result": 1922,
+          "other": 214,
+          "total_estimated": 6167
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 139,
+          "tool_result": 2754,
+          "other": 222,
+          "total_estimated": 7007
+        },
+        {
+          "turn": 8,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 155,
+          "tool_result": 3603,
+          "other": 290,
+          "total_estimated": 7940
+        },
+        {
+          "turn": 9,
+          "instructions": 1693,
+          "tool_schema": 1749,
+          "business_state": 138,
+          "run_state": 108,
+          "conversation": 180,
+          "tool_result": 3777,
+          "other": 296,
+          "total_estimated": 7941
+        }
+      ],
+      "provider_model_prompt_tokens": 70535,
+      "provider_model_output_tokens": 1740
+    },
+    "E2E-04": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 97,
+          "conversation": 122,
+          "tool_result": 701,
+          "other": 47,
+          "total_estimated": 4623
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 97,
+          "conversation": 122,
+          "tool_result": 1074,
+          "other": 57,
+          "total_estimated": 5006
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 97,
+          "conversation": 122,
+          "tool_result": 1973,
+          "other": 171,
+          "total_estimated": 6019
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 137,
+          "tool_result": 2178,
+          "other": 236,
+          "total_estimated": 6443
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 137,
+          "tool_result": 5090,
+          "other": 244,
+          "total_estimated": 9363
+        }
+      ],
+      "provider_model_prompt_tokens": 46195,
+      "provider_model_output_tokens": 1642
+    },
+    "E2E-06": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 117,
+          "tool_result": 491,
+          "other": 47,
+          "total_estimated": 4409
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 97,
+          "conversation": 117,
+          "tool_result": 1123,
+          "other": 98,
+          "total_estimated": 5091
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 133,
+          "tool_result": 1327,
+          "other": 163,
+          "total_estimated": 5515
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 133,
+          "tool_result": 2160,
+          "other": 171,
+          "total_estimated": 6356
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 154,
+          "tool_result": 3009,
+          "other": 239,
+          "total_estimated": 7294
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1749,
+          "business_state": 138,
+          "run_state": 107,
+          "conversation": 190,
+          "tool_result": 3183,
+          "other": 245,
+          "total_estimated": 7305
+        }
+      ],
+      "provider_model_prompt_tokens": 51338,
+      "provider_model_output_tokens": 1581
+    },
+    "GOV-01": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 119,
+          "tool_result": 703,
+          "other": 47,
+          "total_estimated": 4623
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 119,
+          "tool_result": 1076,
+          "other": 57,
+          "total_estimated": 5006
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 119,
+          "tool_result": 1976,
+          "other": 171,
+          "total_estimated": 6020
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 135,
+          "tool_result": 2181,
+          "other": 236,
+          "total_estimated": 6444
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 135,
+          "tool_result": 5178,
+          "other": 244,
+          "total_estimated": 9449
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 135,
+          "tool_result": 8008,
+          "other": 366,
+          "total_estimated": 12402
+        }
+      ],
+      "provider_model_prompt_tokens": 64559,
+      "provider_model_output_tokens": 1132
+    },
+    "GOV-02": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 123,
+          "tool_result": 703,
+          "other": 47,
+          "total_estimated": 4627
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 123,
+          "tool_result": 1032,
+          "other": 57,
+          "total_estimated": 4966
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 123,
+          "tool_result": 1932,
+          "other": 171,
+          "total_estimated": 5980
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 123,
+          "tool_result": 2341,
+          "other": 189,
+          "total_estimated": 6407
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 123,
+          "tool_result": 2678,
+          "other": 207,
+          "total_estimated": 6762
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 123,
+          "tool_result": 3015,
+          "other": 225,
+          "total_estimated": 7117
+        },
+        {
+          "turn": 8,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 142,
+          "tool_result": 3220,
+          "other": 290,
+          "total_estimated": 7544
+        },
+        {
+          "turn": 9,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 142,
+          "tool_result": 6217,
+          "other": 298,
+          "total_estimated": 10550
+        },
+        {
+          "turn": 10,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 142,
+          "tool_result": 9041,
+          "other": 416,
+          "total_estimated": 13492
+        }
+      ],
+      "provider_model_prompt_tokens": 99027,
+      "provider_model_output_tokens": 1349
+    },
+    "GOV-03": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 124,
+          "tool_result": 700,
+          "other": 47,
+          "total_estimated": 4625
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 124,
+          "tool_result": 1073,
+          "other": 57,
+          "total_estimated": 5008
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 124,
+          "tool_result": 1973,
+          "other": 171,
+          "total_estimated": 6022
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 140,
+          "tool_result": 2178,
+          "other": 236,
+          "total_estimated": 6446
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 140,
+          "tool_result": 5173,
+          "other": 244,
+          "total_estimated": 9449
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 140,
+          "tool_result": 7998,
+          "other": 362,
+          "total_estimated": 12393
+        },
+        {
+          "turn": 8,
+          "instructions": 1693,
+          "tool_schema": 1749,
+          "business_state": 138,
+          "run_state": 108,
+          "conversation": 180,
+          "tool_result": 8172,
+          "other": 368,
+          "total_estimated": 12408
+        }
+      ],
+      "provider_model_prompt_tokens": 83360,
+      "provider_model_output_tokens": 2038
+    },
+    "REQ-01": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 58,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3810
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 74,
+          "tool_result": 317,
+          "other": 32,
+          "total_estimated": 4177
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 74,
+          "tool_result": 475,
+          "other": 45,
+          "total_estimated": 4348
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 74,
+          "tool_result": 859,
+          "other": 62,
+          "total_estimated": 4749
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 74,
+          "tool_result": 1188,
+          "other": 72,
+          "total_estimated": 5088
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 74,
+          "tool_result": 1938,
+          "other": 167,
+          "total_estimated": 5933
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 74,
+          "tool_result": 2087,
+          "other": 186,
+          "total_estimated": 6101
+        },
+        {
+          "turn": 8,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 90,
+          "tool_result": 2292,
+          "other": 251,
+          "total_estimated": 6525
+        },
+        {
+          "turn": 9,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 90,
+          "tool_result": 5289,
+          "other": 259,
+          "total_estimated": 9530
+        },
+        {
+          "turn": 10,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 90,
+          "tool_result": 8118,
+          "other": 381,
+          "total_estimated": 12482
+        }
+      ],
+      "provider_model_prompt_tokens": 83769,
+      "provider_model_output_tokens": 2166
+    },
+    "REQ-03": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 51,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3803
+        }
+      ],
+      "provider_model_prompt_tokens": 4093,
+      "provider_model_output_tokens": 280
+    },
+    "REQ-04": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 50,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3802
+        }
+      ],
+      "provider_model_prompt_tokens": 4093,
+      "provider_model_output_tokens": 360
+    },
+    "REQ-06": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 42,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3794
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 97,
+          "conversation": 51,
+          "tool_result": 100,
+          "other": 15,
+          "total_estimated": 3919
+        }
+      ],
+      "provider_model_prompt_tokens": 8369,
+      "provider_model_output_tokens": 212
+    },
+    "RFQ-01": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 126,
+          "tool_result": 703,
+          "other": 47,
+          "total_estimated": 4630
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 126,
+          "tool_result": 1076,
+          "other": 57,
+          "total_estimated": 5013
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 126,
+          "tool_result": 1976,
+          "other": 171,
+          "total_estimated": 6027
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 142,
+          "tool_result": 2181,
+          "other": 236,
+          "total_estimated": 6451
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 142,
+          "tool_result": 5177,
+          "other": 244,
+          "total_estimated": 9455
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 191,
+          "tool_result": 8002,
+          "other": 362,
+          "total_estimated": 12448
+        }
+      ],
+      "provider_model_prompt_tokens": 64844,
+      "provider_model_output_tokens": 1197
+    },
+    "RFQ-02": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 70,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3822
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 92,
+          "tool_result": 802,
+          "other": 41,
+          "total_estimated": 4689
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 92,
+          "tool_result": 961,
+          "other": 54,
+          "total_estimated": 4861
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 92,
+          "tool_result": 1166,
+          "other": 119,
+          "total_estimated": 5269
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 92,
+          "tool_result": 4161,
+          "other": 127,
+          "total_estimated": 8272
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 92,
+          "tool_result": 6991,
+          "other": 249,
+          "total_estimated": 11224
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1749,
+          "business_state": 138,
+          "run_state": 107,
+          "conversation": 132,
+          "tool_result": 7165,
+          "other": 255,
+          "total_estimated": 11239
+        }
+      ],
+      "provider_model_prompt_tokens": 67081,
+      "provider_model_output_tokens": 1681
+    },
+    "RFQ-04": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 124,
+          "tool_result": 660,
+          "other": 47,
+          "total_estimated": 4585
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 132,
+          "run_state": 98,
+          "conversation": 152,
+          "tool_result": 1724,
+          "other": 184,
+          "total_estimated": 5946
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 132,
+          "run_state": 98,
+          "conversation": 169,
+          "tool_result": 2473,
+          "other": 279,
+          "total_estimated": 6807
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 132,
+          "run_state": 99,
+          "conversation": 192,
+          "tool_result": 5468,
+          "other": 287,
+          "total_estimated": 9834
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 132,
+          "run_state": 99,
+          "conversation": 350,
+          "tool_result": 8293,
+          "other": 405,
+          "total_estimated": 12935
+        }
+      ],
+      "provider_model_prompt_tokens": 60447,
+      "provider_model_output_tokens": 1597
+    },
+    "RFQ-05": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 126,
+          "tool_result": 703,
+          "other": 47,
+          "total_estimated": 4630
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 156,
+          "tool_result": 1976,
+          "other": 171,
+          "total_estimated": 6057
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 178,
+          "tool_result": 2181,
+          "other": 236,
+          "total_estimated": 6487
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 195,
+          "tool_result": 5176,
+          "other": 244,
+          "total_estimated": 9507
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 221,
+          "tool_result": 8000,
+          "other": 362,
+          "total_estimated": 12476
+        }
+      ],
+      "provider_model_prompt_tokens": 58574,
+      "provider_model_output_tokens": 1204
+    },
+    "ROB-01": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 124,
+          "tool_result": 640,
+          "other": 47,
+          "total_estimated": 4565
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 97,
+          "conversation": 168,
+          "tool_result": 1665,
+          "other": 144,
+          "total_estimated": 5730
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 186,
+          "tool_result": 2414,
+          "other": 239,
+          "total_estimated": 6593
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 203,
+          "tool_result": 2619,
+          "other": 304,
+          "total_estimated": 7019
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 203,
+          "tool_result": 5616,
+          "other": 312,
+          "total_estimated": 10024
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 232,
+          "tool_result": 8441,
+          "other": 430,
+          "total_estimated": 12996
+        }
+      ],
+      "provider_model_prompt_tokens": 70322,
+      "provider_model_output_tokens": 2437
+    },
+    "ROB-02": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 118,
+          "tool_result": 288,
+          "other": 47,
+          "total_estimated": 4207
+        }
+      ],
+      "provider_model_prompt_tokens": 8908,
+      "provider_model_output_tokens": 775
+    },
+    "ROB-03": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 126,
+          "tool_result": 620,
+          "other": 47,
+          "total_estimated": 4547
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 126,
+          "tool_result": 993,
+          "other": 57,
+          "total_estimated": 4930
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 126,
+          "tool_result": 1892,
+          "other": 171,
+          "total_estimated": 5943
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 145,
+          "tool_result": 2097,
+          "other": 237,
+          "total_estimated": 6371
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 145,
+          "tool_result": 5094,
+          "other": 245,
+          "total_estimated": 9376
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 145,
+          "tool_result": 7919,
+          "other": 363,
+          "total_estimated": 12320
+        }
+      ],
+      "provider_model_prompt_tokens": 64021,
+      "provider_model_output_tokens": 2199
+    },
+    "SRC-01": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 90,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3842
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 121,
+          "tool_result": 703,
+          "other": 47,
+          "total_estimated": 4625
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 160,
+          "tool_result": 1570,
+          "other": 131,
+          "total_estimated": 5615
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 178,
+          "tool_result": 2320,
+          "other": 226,
+          "total_estimated": 6478
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 137,
+          "run_state": 99,
+          "conversation": 228,
+          "tool_result": 2524,
+          "other": 291,
+          "total_estimated": 6935
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 137,
+          "run_state": 99,
+          "conversation": 245,
+          "tool_result": 5521,
+          "other": 299,
+          "total_estimated": 9957
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 137,
+          "run_state": 98,
+          "conversation": 273,
+          "tool_result": 8345,
+          "other": 417,
+          "total_estimated": 12926
+        }
+      ],
+      "provider_model_prompt_tokens": 69479,
+      "provider_model_output_tokens": 2315
+    },
+    "SRC-02": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 97,
+          "conversation": 119,
+          "tool_result": 660,
+          "other": 47,
+          "total_estimated": 4579
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 119,
+          "tool_result": 1029,
+          "other": 57,
+          "total_estimated": 4959
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 119,
+          "tool_result": 1929,
+          "other": 171,
+          "total_estimated": 5973
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 135,
+          "tool_result": 2134,
+          "other": 236,
+          "total_estimated": 6397
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 135,
+          "tool_result": 5129,
+          "other": 244,
+          "total_estimated": 9400
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 164,
+          "tool_result": 7959,
+          "other": 366,
+          "total_estimated": 12382
+        }
+      ],
+      "provider_model_prompt_tokens": 64054,
+      "provider_model_output_tokens": 2025
+    },
+    "SRC-03": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 119,
+          "tool_result": 703,
+          "other": 47,
+          "total_estimated": 4623
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 148,
+          "tool_result": 1775,
+          "other": 196,
+          "total_estimated": 6011
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 170,
+          "tool_result": 2674,
+          "other": 310,
+          "total_estimated": 7047
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 184,
+          "tool_result": 3083,
+          "other": 328,
+          "total_estimated": 7488
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 98,
+          "conversation": 184,
+          "tool_result": 3420,
+          "other": 346,
+          "total_estimated": 7842
+        },
+        {
+          "turn": 7,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 184,
+          "tool_result": 3731,
+          "other": 364,
+          "total_estimated": 8172
+        },
+        {
+          "turn": 8,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 214,
+          "tool_result": 5353,
+          "other": 372,
+          "total_estimated": 9832
+        },
+        {
+          "turn": 9,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 138,
+          "run_state": 99,
+          "conversation": 235,
+          "tool_result": 6858,
+          "other": 454,
+          "total_estimated": 11440
+        }
+      ],
+      "provider_model_prompt_tokens": 93442,
+      "provider_model_output_tokens": 2960
+    },
+    "SRC-04": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 90,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3842
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 123,
+          "tool_result": 703,
+          "other": 47,
+          "total_estimated": 4627
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 157,
+          "tool_result": 1975,
+          "other": 171,
+          "total_estimated": 6057
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 137,
+          "run_state": 98,
+          "conversation": 179,
+          "tool_result": 2179,
+          "other": 235,
+          "total_estimated": 6484
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 137,
+          "run_state": 98,
+          "conversation": 204,
+          "tool_result": 5860,
+          "other": 243,
+          "total_estimated": 10198
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 137,
+          "run_state": 99,
+          "conversation": 288,
+          "tool_result": 9302,
+          "other": 340,
+          "total_estimated": 13822
+        }
+      ],
+      "provider_model_prompt_tokens": 61918,
+      "provider_model_output_tokens": 2016
+    },
+    "SRC-05": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 90,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3842
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 97,
+          "conversation": 121,
+          "tool_result": 703,
+          "other": 47,
+          "total_estimated": 4624
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 156,
+          "tool_result": 1932,
+          "other": 174,
+          "total_estimated": 6016
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 137,
+          "run_state": 97,
+          "conversation": 204,
+          "tool_result": 2136,
+          "other": 239,
+          "total_estimated": 6469
+        },
+        {
+          "turn": 5,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 137,
+          "run_state": 98,
+          "conversation": 232,
+          "tool_result": 5081,
+          "other": 247,
+          "total_estimated": 9451
+        },
+        {
+          "turn": 6,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 137,
+          "run_state": 99,
+          "conversation": 277,
+          "tool_result": 7559,
+          "other": 338,
+          "total_estimated": 12066
+        }
+      ],
+      "provider_model_prompt_tokens": 57740,
+      "provider_model_output_tokens": 2081
+    },
+    "SRC-07": {
+      "turns": [
+        {
+          "turn": 1,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 96,
+          "conversation": 93,
+          "tool_result": 0,
+          "other": 0,
+          "total_estimated": 3845
+        },
+        {
+          "turn": 2,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 118,
+          "tool_result": 491,
+          "other": 47,
+          "total_estimated": 4410
+        },
+        {
+          "turn": 3,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 118,
+          "tool_result": 1158,
+          "other": 98,
+          "total_estimated": 5128
+        },
+        {
+          "turn": 4,
+          "instructions": 1693,
+          "tool_schema": 1963,
+          "business_state": 0,
+          "run_state": 98,
+          "conversation": 167,
+          "tool_result": 1645,
+          "other": 107,
+          "total_estimated": 5673
+        }
+      ],
+      "provider_model_prompt_tokens": 23187,
+      "provider_model_output_tokens": 1066
+    }
+  }
+}

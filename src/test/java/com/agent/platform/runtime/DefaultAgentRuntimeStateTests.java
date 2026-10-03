@@ -553,6 +553,22 @@ class DefaultAgentRuntimeStateTests {
     }
 
     @Test
+    void oversizedRequiredContextStopsBeforeModelCall() {
+        Fixture fixture = harnessFixture();
+        AgentMessage required = new AgentMessage("current", "s", "r", 1, AgentMessageType.USER,
+                "required current task ".repeat(10000), "", "", Map.of(), Map.of(), 0, Instant.now());
+        when(fixture.contextManager.project(anyString(),anyString(),anyString(),anyString(),anyLong(),any(AgentExecutionProfile.class)))
+                .thenReturn(new AgentContextView(List.of(required),0,0,false));
+        AgentExecutionProfile base = harnessProfile(fixture);
+        AgentExecutionProfile bounded = new AgentExecutionProfile(base.name(),base.systemPrompt(),base.allowedCapabilities(),
+                base.limits(),false,new ContextPolicy(true,32000,2000,0.75,2));
+        var result = fixture.runtime().run(new AgentRequest("s","u","question",Map.of()),bounded,AgentEventListener.NOOP);
+        assertEquals(AgentStopReason.CONTEXT_OVERFLOW,result.stopReason());
+        verify(fixture.modelGateway,never()).nextTurn(any(),any());
+        verify(fixture.toolRuntime,never()).execute(any(),any(),any(),any(),any(),any());
+    }
+
+    @Test
     void fatalModelErrorStopsWithoutToolExecutionOrAnotherModelTurn() {
         Fixture fixture = harnessFixture();
         doAnswer(invocation -> {

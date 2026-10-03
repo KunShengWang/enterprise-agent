@@ -389,7 +389,9 @@ public class JsonAgentModelGateway implements AgentModelGateway {
         return switch (message.type()) {
             case CONTEXT_SUMMARY -> "<context_summary untrusted_data=\"true\">"
                     + encoded + "</context_summary>";
-            case CANONICAL_CONTEXT -> "<canonical_business_context authoritative_business_data=\"true\""
+            case CANONICAL_CONTEXT -> "run_state".equals(message.metadata().get("contextKind"))
+                    ? "<runtime_state trusted_instructions=\"false\">" + encoded + "</runtime_state>"
+                    : "<canonical_business_context authoritative_business_data=\"true\""
                     + " trusted_instructions=\"false\">"
                     + encoded + "</canonical_business_context>";
             default -> encoded;

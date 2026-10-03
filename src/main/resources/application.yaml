@@ -30,6 +30,8 @@ enterprise-agent:
   max-output-tokens-per-run: ${AGENT_MAX_OUTPUT_TOKENS_PER_RUN:8000}
   model-context-window-tokens: ${AGENT_MODEL_CONTEXT_WINDOW_TOKENS:32000}
   context-output-reserve-tokens: ${AGENT_CONTEXT_OUTPUT_RESERVE_TOKENS:2000}
+  context-compaction-threshold: ${AGENT_CONTEXT_COMPACTION_THRESHOLD:0.75}
+  context-recent-user-turns: ${AGENT_CONTEXT_RECENT_USER_TURNS:2}
   context-safety-margin-tokens: ${AGENT_CONTEXT_SAFETY_MARGIN_TOKENS:1000}
   context-summary-max-tokens: ${AGENT_CONTEXT_SUMMARY_MAX_TOKENS:1500}
   max-context-overflow-retries: ${AGENT_CONTEXT_OVERFLOW_RETRIES:1}

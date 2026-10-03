@@ -1,0 +1,67 @@
+{
+  "command": "mvn -B '-Dtest=ContextEngineeringTests,HarnessCoreTests,DefaultAgentRuntimeStateTests,DefaultAgentContextManagerTests,ProcurementCaseContextRendererTests,NativeToolCallingAgentModelGatewayTests,JsonAgentModelGatewayTests,AgentRunBudgetTests,DefaultAgentToolRuntimeApprovalBindingTests' '-Dsurefire.reportNameSuffix=context-l0-r3' test",
+  "suites": [
+    {
+      "name": "com.agent.platform.procurement.ProcurementCaseContextRendererTests(context-l0-r3)",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.runtime.AgentRunBudgetTests(context-l0-r3)",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.runtime.ContextEngineeringTests(context-l0-r3)",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.runtime.DefaultAgentContextManagerTests(context-l0-r3)",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.runtime.DefaultAgentRuntimeStateTests(context-l0-r3)",
+      "tests": "23",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.runtime.DefaultAgentToolRuntimeApprovalBindingTests(context-l0-r3)",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.runtime.HarnessCoreTests(context-l0-r3)",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.runtime.NativeToolCallingAgentModelGatewayTests(context-l0-r3)",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "totals": {
+    "tests": 77,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

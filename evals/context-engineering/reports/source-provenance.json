@@ -1,0 +1,21 @@
+{
+  "files": {
+    "src/main/java/com/agent/platform/config/AgentProperties.java": "7fdb01f5b3fdb83e33dd2c472c9785362e43db690d1ed9ce6fc32a37e26297fa",
+    "src/main/java/com/agent/platform/procurement/config/ProcurementSourcingExecutionProfileFactory.java": "e773a6c3f291b335ad2efdcf627c353b421a951cfc794da38124b5cb4aeaf15f",
+    "src/main/java/com/agent/platform/runtime/AgentExecutionProfile.java": "0d11087534f7130cf7857e4b211ba1cd6fea88f361aabbbbb7e74c3a888df39c",
+    "src/main/java/com/agent/platform/runtime/ContextAssembler.java": "0ffe01f30d5a1f5e40cdb8ec05daa47f38a38d3feeaf103de60f59bbf84ae854",
+    "src/main/java/com/agent/platform/runtime/ContextPolicy.java": "fd3933c58543c8e0e7316563c3fecbb1e881ae4776065bd2b30dfd6e492942ca",
+    "src/main/java/com/agent/platform/runtime/DefaultAgentContextManager.java": "c437e3262de9eb06bfce5384494f0051656580123e95bfb0c6a163049602ea05",
+    "src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java": "bd2836f6aa6880afc117dca3703aaaae2750dc148c4fc3d51336692debb1b392",
+    "src/main/java/com/agent/platform/runtime/JsonAgentModelGateway.java": "caed6d6b14c689771a5b2d26e092530114f6e95f0c843895bed9f46f513e3dbf",
+    "src/main/java/com/agent/platform/runtime/NativeToolCallingAgentModelGateway.java": "edb44ca1542548e65a7324fa07c03ad9bc4464a786723121b6d98a415d99606f",
+    "src/main/java/com/agent/platform/runtime/StructuredToolProjection.java": "692a5c49aa4ae55d6e32c43ba093adfcb2b74f0b93265b322a589d22d417968d",
+    "src/main/java/com/agent/platform/runtime/ToolResultProjector.java": "4cbcf24100d2079d0b1928ed29646123b5550f36e1defdf733137a0578cad686",
+    "src/main/resources/application.yaml": "3ae14b61fddabbc3c4d51c5ed992cb3eabebcdf6df8c710e29b719c123ef78c4",
+    "src/test/java/com/agent/platform/runtime/ContextEngineeringTests.java": "412723bf5b8740e7f74af1012c53b5e772d8ddf205c459d819b2aa3692517d84",
+    "src/test/java/com/agent/platform/runtime/DefaultAgentRuntimeStateTests.java": "2b8df1846083a48a1c9556fe3c45e5602c2cc0244b111761f39f7761d64a26fa"
+  },
+  "sha256": "2a72e6b6b8641dc7a7e9d741fb32e8b9a60f7c885100891d1a66ba44673d41e8",
+  "configured_secret_matches": 0,
+  "scanned_files": 14
+}

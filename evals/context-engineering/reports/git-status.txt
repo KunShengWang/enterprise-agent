@@ -1,0 +1,18 @@
+ M src/main/java/com/agent/platform/config/AgentProperties.java
+ M src/main/java/com/agent/platform/procurement/config/ProcurementSourcingExecutionProfileFactory.java
+ M src/main/java/com/agent/platform/procurement/tool/ProcurementToolHandler.java
+ M src/main/java/com/agent/platform/runtime/AgentExecutionProfile.java
+ M src/main/java/com/agent/platform/runtime/DefaultAgentContextManager.java
+ M src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java
+ M src/main/java/com/agent/platform/runtime/JsonAgentModelGateway.java
+ M src/main/java/com/agent/platform/runtime/NativeToolCallingAgentModelGateway.java
+ M src/main/java/com/agent/platform/runtime/ToolResultProjector.java
+ M src/main/resources/application.yaml
+ M src/test/java/com/agent/platform/runtime/DefaultAgentRuntimeStateTests.java
+?? docs/harness/context-engineering.md
+?? docs/harness/phase4-report.md
+?? evals/context-engineering/
+?? src/main/java/com/agent/platform/runtime/ContextAssembler.java
+?? src/main/java/com/agent/platform/runtime/ContextPolicy.java
+?? src/main/java/com/agent/platform/runtime/StructuredToolProjection.java
+?? src/test/java/com/agent/platform/runtime/ContextEngineeringTests.java

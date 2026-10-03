@@ -1,0 +1,22 @@
+{
+  "branch": "feat/context-engineering",
+  "head": "cfb29cdf31ca240802cc86c2b9f9642f7fbfde42",
+  "handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "index_empty": true,
+  "phase4_source_files": [
+    "src/main/java/com/agent/platform/config/AgentProperties.java",
+    "src/main/java/com/agent/platform/procurement/config/ProcurementSourcingExecutionProfileFactory.java",
+    "src/main/java/com/agent/platform/runtime/AgentExecutionProfile.java",
+    "src/main/java/com/agent/platform/runtime/DefaultAgentContextManager.java",
+    "src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java",
+    "src/main/java/com/agent/platform/runtime/JsonAgentModelGateway.java",
+    "src/main/java/com/agent/platform/runtime/NativeToolCallingAgentModelGateway.java",
+    "src/main/java/com/agent/platform/runtime/ToolResultProjector.java",
+    "src/main/resources/application.yaml",
+    "src/test/java/com/agent/platform/runtime/DefaultAgentRuntimeStateTests.java",
+    "src/main/java/com/agent/platform/runtime/ContextAssembler.java",
+    "src/main/java/com/agent/platform/runtime/ContextPolicy.java",
+    "src/main/java/com/agent/platform/runtime/StructuredToolProjection.java",
+    "src/test/java/com/agent/platform/runtime/ContextEngineeringTests.java"
+  ]
+}

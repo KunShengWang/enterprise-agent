@@ -23,6 +23,20 @@ public class ToolResultProjector {
         this.properties = properties;
     }
 
+    /** Working-context projection only: raw store and approval/finalize contracts are untouched. */
+    public ToolCallResult projectForContext(String toolCallId, ToolCallResult raw) {
+        String content = raw.content() == null ? "" : raw.content();
+        String projected = raw.success() ? new StructuredToolProjection().project(content) : content;
+        LinkedHashMap<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("untrustedToolData", true);
+        metadata.put("rawReference", "tool-execution:" + toolCallId);
+        metadata.put("contentSha256", sha256(content));
+        metadata.put("projection", projected.equals(content) ? "FULL" : "STRUCTURED_LOSSLESS_FACTS");
+        for (String key : java.util.List.of("manualReview", "policyAction", "validation", "errorType", "retryable"))
+            if (raw.metadata().containsKey(key)) metadata.put(key, raw.metadata().get(key));
+        return new ToolCallResult(raw.toolName(), raw.success(), projected, raw.errorMessage(), metadata);
+    }
+
     public ToolCallResult project(String toolCallId, ToolCallResult raw, boolean rawPersisted) {
         String content = raw.content() == null ? "" : raw.content();
         String error = raw.errorMessage() == null ? "" : raw.errorMessage();

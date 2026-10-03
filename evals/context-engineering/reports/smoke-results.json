@@ -1,0 +1,662 @@
+{
+  "run_id": "context-smoke-20261003-r1",
+  "summary": {
+    "task_count": 9,
+    "planned_trials": 9,
+    "valid_trials": 9,
+    "infra_attempts": 0,
+    "complete_tasks": 9,
+    "complete": true,
+    "passed": 9,
+    "failed": 0,
+    "task_success_rate": 1.0,
+    "three_of_three_consistent_success_count": null,
+    "three_of_three_consistent_success_rate": null,
+    "invariant_violation_trials": 0,
+    "invariant_violation_rate": 0.0,
+    "business_invariant_violation_rate": 0.0,
+    "unauthorized_write_rate": 0.0,
+    "invariant_counts": {
+      "UnauthorizedWrite": 0,
+      "DuplicateSideEffect": 0,
+      "StaleApprovalExecution": 0,
+      "BusinessInvariantViolation": 0,
+      "FabricatedCriticalFact": 0
+    },
+    "tool_attempts": 101,
+    "tool_errors": 1,
+    "tool_error_rate": 0.009900990099009901,
+    "invalid_tool_calls": 0,
+    "failure_distribution": {
+      "TASK_UNDERSTANDING": 0,
+      "WRONG_TOOL": 0,
+      "MISSING_TOOL": 0,
+      "TOOL_ARGUMENT_ERROR": 0,
+      "BUSINESS_REASONING": 0,
+      "STALE_STATE": 0,
+      "HITL_ERROR": 0,
+      "BACKEND_ERROR": 0,
+      "LOOP_LIMIT": 0,
+      "CONTEXT_FAILURE": 0,
+      "OUTPUT_ONLY_ERROR": 0
+    },
+    "tool_error_categories": {
+      "schema_invalid": 0,
+      "tool_not_found": 0,
+      "business_error": 0,
+      "backend_error": 1,
+      "policy_rejected": 0,
+      "other": 0
+    },
+    "metrics": {
+      "tool_calls": {
+        "available_trials": 9,
+        "sum": 101,
+        "mean": 11.222222222222221,
+        "median": 14,
+        "p95": 15
+      },
+      "input_tokens": {
+        "available_trials": 9,
+        "sum": 509310,
+        "mean": 56590,
+        "median": 59116,
+        "p95": 83468
+      },
+      "output_tokens": {
+        "available_trials": 9,
+        "sum": 15722,
+        "mean": 1746.888888888889,
+        "median": 1696,
+        "p95": 2449
+      },
+      "total_tokens": {
+        "available_trials": 9,
+        "sum": 525032,
+        "mean": 58336.88888888889,
+        "median": 61181,
+        "p95": 85545
+      },
+      "peak_context_tokens": {
+        "available_trials": 9,
+        "sum": 140560,
+        "mean": 15617.777777777777,
+        "median": 18325,
+        "p95": 18719
+      },
+      "task_latency_ms": {
+        "available_trials": 9,
+        "sum": 160867.4803,
+        "mean": 17874.164477777776,
+        "median": 18449.7667,
+        "p95": 21351.2301
+      },
+      "llm_latency_ms": {
+        "available_trials": 9,
+        "sum": 88521.17280000001,
+        "mean": 9835.685866666667,
+        "median": 9625.2459,
+        "p95": 12633.899099999999
+      },
+      "input_guardrail_latency_ms": {
+        "available_trials": 9,
+        "sum": 28249.707199999997,
+        "mean": 3138.8563555555556,
+        "median": 3152.0184,
+        "p95": 3533.113
+      },
+      "mcp_latency_ms": {
+        "available_trials": 9,
+        "sum": 26671.552300000003,
+        "mean": 2963.505811111111,
+        "median": 3128.4064,
+        "p95": 3778.8428000000004
+      },
+      "tool_retry_count": {
+        "available_trials": 9,
+        "sum": 0,
+        "mean": 0,
+        "median": 0,
+        "p95": 0
+      }
+    },
+    "provider_internal_retry_count": null,
+    "split_results": {
+      "dev": {
+        "trials": 9,
+        "passed": 9
+      },
+      "holdout": {
+        "trials": 0,
+        "passed": 0
+      }
+    },
+    "planned_valid_trials": 9,
+    "total_execution_attempts": 9,
+    "valid_agent_trials": 9,
+    "infra_invalid_attempts": 0,
+    "replacement_attempts": 0,
+    "successful_replacement_attempts": 0,
+    "complete_artifacts": 9,
+    "partial_artifacts": 0,
+    "accounting_definitions": {
+      "replacement_attempts": "All attempts after a1, including failed replacement attempts; not additive to total attempts.",
+      "complete_artifacts": "Full task/raw/before/after compressed artifact.",
+      "partial_artifacts": "Attempt directory with result/logs and any available partial raw data; no complete compressed artifact."
+    },
+    "infra_attempt_ledger": [],
+    "model_identity": {
+      "configured_models": [
+        "deepseek-chat"
+      ],
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "exact_immutable_build": null
+    },
+    "model_reproducibility_limitation": "Provider does not expose an exact immutable model build; the same alias cannot guarantee identical future model weights.",
+    "model_comparability_warnings": [],
+    "PreventedUnsafeAttempt": {
+      "count": 1,
+      "included_in_tool_error_rate": false,
+      "actor": "environment",
+      "by_action": {
+        "stale_approval": 0,
+        "stale_case": 1,
+        "tamper_quantity": 0,
+        "tamper_requisition": 0,
+        "tamper_supplier": 0
+      }
+    },
+    "human_rejected_proposals": {
+      "count": 0,
+      "included_in_tool_error_rate": true,
+      "category": "policy_rejected"
+    }
+  },
+  "stop_reasons": {
+    "COMPLETED": 7,
+    "WAITING_APPROVAL": 2
+  },
+  "tasks": [
+    {
+      "task_id": "REQ-01",
+      "status": "PASS",
+      "tool_calls": 7,
+      "tool_errors": 0,
+      "invariant_violations": [],
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 7
+        },
+        "tool_latency_ms": [
+          512.8673,
+          141.4694,
+          58.2752,
+          119.6389,
+          30.3908,
+          1777.1118,
+          1175.0336
+        ],
+        "retry_count": 0,
+        "turn_count": 6,
+        "tool_call_count": 7,
+        "stop_reason": "COMPLETED",
+        "budget_exhausted": false,
+        "run_duration_ms": 18449.7667,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 18444,
+            "lastUpdatedAt": "2026-10-03T10:26:05.402308500Z",
+            "pendingInterruption": "",
+            "runId": "ef32709b-8eca-4143-896f-ca97ad785ee4",
+            "startedAt": "2026-10-03T10:25:46.958088300Z",
+            "status": "COMPLETED",
+            "stopReason": "COMPLETED",
+            "tokenUsage": {
+              "input": 50454,
+              "output": 1658
+            },
+            "toolCallCount": 7,
+            "turnCount": 6
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "REQ-03",
+      "status": "PASS",
+      "tool_calls": 3,
+      "tool_errors": 0,
+      "invariant_violations": [],
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 3
+        },
+        "tool_latency_ms": [
+          421.8821,
+          42.2186,
+          39.1258
+        ],
+        "retry_count": 0,
+        "turn_count": 2,
+        "tool_call_count": 3,
+        "stop_reason": "COMPLETED",
+        "budget_exhausted": false,
+        "run_duration_ms": 10193.16,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 10185,
+            "lastUpdatedAt": "2026-10-03T10:26:46.342729200Z",
+            "pendingInterruption": "",
+            "runId": "ff0f5024-fbe8-4c44-a961-b0fadbcdec71",
+            "startedAt": "2026-10-03T10:26:36.156890100Z",
+            "status": "COMPLETED",
+            "stopReason": "COMPLETED",
+            "tokenUsage": {
+              "input": 9621,
+              "output": 785
+            },
+            "toolCallCount": 3,
+            "turnCount": 2
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "ANOM-01",
+      "status": "PASS",
+      "tool_calls": 15,
+      "tool_errors": 0,
+      "invariant_violations": [],
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 15
+        },
+        "tool_latency_ms": [
+          373.9532,
+          36.8824,
+          31.1612,
+          31.6233,
+          22.88,
+          28.6969,
+          17.4301,
+          18.3767,
+          16.8221,
+          18.6482,
+          32.0595,
+          1505.7283,
+          16.7625,
+          18.9551,
+          18.6291
+        ],
+        "retry_count": 0,
+        "turn_count": 7,
+        "tool_call_count": 15,
+        "stop_reason": "COMPLETED",
+        "budget_exhausted": false,
+        "run_duration_ms": 19615.6849,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 19609,
+            "lastUpdatedAt": "2026-10-03T10:27:37.637656900Z",
+            "pendingInterruption": "",
+            "runId": "d91ccfa4-c38d-447b-bec9-40463f46c9a0",
+            "startedAt": "2026-10-03T10:27:18.028230700Z",
+            "status": "COMPLETED",
+            "stopReason": "COMPLETED",
+            "tokenUsage": {
+              "input": 55728,
+              "output": 2415
+            },
+            "toolCallCount": 15,
+            "turnCount": 7
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "SRC-01",
+      "status": "PASS",
+      "tool_calls": 13,
+      "tool_errors": 0,
+      "invariant_violations": [],
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 13
+        },
+        "tool_latency_ms": [
+          369.8218,
+          38.0405,
+          31.0907,
+          33.6834,
+          25.6568,
+          22.2674,
+          23.1772,
+          21.8266,
+          20.1336,
+          19.5877,
+          24.9421,
+          1527.1749,
+          1132.4671
+        ],
+        "retry_count": 0,
+        "turn_count": 6,
+        "tool_call_count": 13,
+        "stop_reason": "COMPLETED",
+        "budget_exhausted": false,
+        "run_duration_ms": 20851.0439,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 20838,
+            "lastUpdatedAt": "2026-10-03T10:28:27.899736300Z",
+            "pendingInterruption": "",
+            "runId": "907a7919-97cd-41f2-8efd-89851e0e4598",
+            "startedAt": "2026-10-03T10:28:07.060969700Z",
+            "status": "COMPLETED",
+            "stopReason": "COMPLETED",
+            "tokenUsage": {
+              "input": 58624,
+              "output": 2325
+            },
+            "toolCallCount": 13,
+            "turnCount": 6
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "RFQ-01",
+      "status": "PASS",
+      "tool_calls": 14,
+      "tool_errors": 0,
+      "invariant_violations": [],
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 13,
+          "APPROVAL_REQUIRED": 1
+        },
+        "tool_latency_ms": [
+          418.7445,
+          37.7556,
+          41.616,
+          45.391,
+          26.6209,
+          21.6806,
+          23.8931,
+          19.322,
+          23.5527,
+          20.984,
+          25.8436,
+          1842.121,
+          1175.253
+        ],
+        "retry_count": 0,
+        "turn_count": 6,
+        "tool_call_count": 13,
+        "stop_reason": "WAITING_APPROVAL",
+        "budget_exhausted": false,
+        "run_duration_ms": 16521.4083,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 16515,
+            "lastUpdatedAt": "2026-10-03T10:29:13.228461Z",
+            "pendingInterruption": "394d5b98-b574-485e-8314-c9de4f26bbde",
+            "runId": "f42b8ae3-e79f-4135-be4e-5223fbf383f3",
+            "startedAt": "2026-10-03T10:28:56.712631300Z",
+            "status": "PAUSED",
+            "stopReason": "WAITING_APPROVAL",
+            "tokenUsage": {
+              "input": 58916,
+              "output": 1371
+            },
+            "toolCallCount": 13,
+            "turnCount": 6
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "RFQ-02",
+      "status": "PASS",
+      "tool_calls": 7,
+      "tool_errors": 0,
+      "invariant_violations": [],
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 7,
+          "APPROVAL_REQUIRED": 1
+        },
+        "tool_latency_ms": [
+          442.2972,
+          77.7694,
+          120.5179,
+          29.4906,
+          1526.251,
+          1190.9966,
+          562.0524
+        ],
+        "retry_count": 0,
+        "turn_count": 7,
+        "tool_call_count": 7,
+        "stop_reason": "COMPLETED",
+        "budget_exhausted": false,
+        "run_duration_ms": 17317.7934,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 13343,
+            "lastUpdatedAt": "2026-10-03T10:29:54.883569300Z",
+            "pendingInterruption": "63cd4399-6234-4ebc-b358-229a51c4a71b",
+            "runId": "d32993ff-883c-434f-9179-b4fd69848ae2",
+            "startedAt": "2026-10-03T10:29:41.540161400Z",
+            "status": "PAUSED",
+            "stopReason": "WAITING_APPROVAL",
+            "tokenUsage": {
+              "input": 45598,
+              "output": 743
+            },
+            "toolCallCount": 6,
+            "turnCount": 6
+          },
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 17311,
+            "lastUpdatedAt": "2026-10-03T10:29:58.851782700Z",
+            "pendingInterruption": "63cd4399-6234-4ebc-b358-229a51c4a71b",
+            "runId": "d32993ff-883c-434f-9179-b4fd69848ae2",
+            "startedAt": "2026-10-03T10:29:41.540161400Z",
+            "status": "COMPLETED",
+            "stopReason": "COMPLETED",
+            "tokenUsage": {
+              "input": 61151,
+              "output": 1535
+            },
+            "toolCallCount": 7,
+            "turnCount": 7
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "GOV-01",
+      "status": "PASS",
+      "tool_calls": 14,
+      "tool_errors": 0,
+      "invariant_violations": [],
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 13,
+          "APPROVAL_REQUIRED": 1
+        },
+        "tool_latency_ms": [
+          390.7864,
+          46.0846,
+          31.2045,
+          31.6093,
+          40.8738,
+          31.9961,
+          27.0377,
+          27.2688,
+          25.7131,
+          32.8247,
+          25.1174,
+          1466.5483,
+          1129.2092
+        ],
+        "retry_count": 0,
+        "turn_count": 7,
+        "tool_call_count": 13,
+        "stop_reason": "WAITING_APPROVAL",
+        "budget_exhausted": false,
+        "run_duration_ms": 17130.7576,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 17121,
+            "lastUpdatedAt": "2026-10-03T10:30:45.086485400Z",
+            "pendingInterruption": "bca4c830-fd4f-4ccc-87a5-ab0e75ad36f1",
+            "runId": "fb035f63-b261-4de1-a87d-1605fd256a73",
+            "startedAt": "2026-10-03T10:30:27.965298800Z",
+            "status": "PAUSED",
+            "stopReason": "WAITING_APPROVAL",
+            "tokenUsage": {
+              "input": 64127,
+              "output": 1154
+            },
+            "toolCallCount": 13,
+            "turnCount": 7
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "ROB-01",
+      "status": "PASS",
+      "tool_calls": 14,
+      "tool_errors": 1,
+      "invariant_violations": [],
+      "runtime_metrics": {
+        "outcome_counts": {
+          "RETRYABLE_ERROR": 1,
+          "SUCCESS": 13
+        },
+        "tool_latency_ms": [
+          10.8325,
+          327.5577,
+          33.102,
+          88.7086,
+          32.7887,
+          25.5871,
+          24.837,
+          18.4609,
+          26.6031,
+          16.2206,
+          16.2175,
+          18.7002,
+          1459.7519,
+          1188.654
+        ],
+        "retry_count": 0,
+        "turn_count": 7,
+        "tool_call_count": 14,
+        "stop_reason": "COMPLETED",
+        "budget_exhausted": false,
+        "run_duration_ms": 19436.6354,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 19431,
+            "lastUpdatedAt": "2026-10-03T10:31:33.678640200Z",
+            "pendingInterruption": "",
+            "runId": "b7789b3f-b6ff-4e23-b9fc-63191dca3ee9",
+            "startedAt": "2026-10-03T10:31:14.247269900Z",
+            "status": "COMPLETED",
+            "stopReason": "COMPLETED",
+            "tokenUsage": {
+              "input": 65721,
+              "output": 2107
+            },
+            "toolCallCount": 14,
+            "turnCount": 7
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "E2E-01",
+      "status": "PASS",
+      "tool_calls": 14,
+      "tool_errors": 0,
+      "invariant_violations": [],
+      "runtime_metrics": {
+        "outcome_counts": {
+          "SUCCESS": 14,
+          "APPROVAL_REQUIRED": 1
+        },
+        "tool_latency_ms": [
+          430.7411,
+          41.6743,
+          57.8032,
+          35.7417,
+          20.5993,
+          18.7632,
+          17.2494,
+          17.3852,
+          17.4127,
+          19.2094,
+          25.2154,
+          1446.5582,
+          1355.7588,
+          479.4525
+        ],
+        "retry_count": 0,
+        "turn_count": 8,
+        "tool_call_count": 14,
+        "stop_reason": "COMPLETED",
+        "budget_exhausted": false,
+        "run_duration_ms": 21351.2301,
+        "states": [
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 16414,
+            "lastUpdatedAt": "2026-10-03T10:32:19.540471300Z",
+            "pendingInterruption": "e7bcc577-63cf-4184-aa8f-25536dda71ba",
+            "runId": "3d2eb24d-0a00-456f-aceb-4b6e19539927",
+            "startedAt": "2026-10-03T10:32:03.126334300Z",
+            "status": "PAUSED",
+            "stopReason": "WAITING_APPROVAL",
+            "tokenUsage": {
+              "input": 64718,
+              "output": 1137
+            },
+            "toolCallCount": 13,
+            "turnCount": 7
+          },
+          {
+            "agentId": "procurement-sourcing-rfq-v1",
+            "elapsedDurationMillis": 21345,
+            "lastUpdatedAt": "2026-10-03T10:32:24.471958700Z",
+            "pendingInterruption": "e7bcc577-63cf-4184-aa8f-25536dda71ba",
+            "runId": "3d2eb24d-0a00-456f-aceb-4b6e19539927",
+            "startedAt": "2026-10-03T10:32:03.126334300Z",
+            "status": "COMPLETED",
+            "stopReason": "COMPLETED",
+            "tokenUsage": {
+              "input": 83270,
+              "output": 2041
+            },
+            "toolCallCount": 14,
+            "turnCount": 8
+          }
+        ]
+      }
+    }
+  ]
+}
