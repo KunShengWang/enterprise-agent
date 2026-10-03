@@ -1,0 +1,37 @@
+{
+  "branch": "fix/procurement-v2-contracts",
+  "head": "13759383e988cafee936f5ac297299080eba9cc3",
+  "phase25_uncommitted": true,
+  "staged_paths": [],
+  "diff_check_passed": true,
+  "protected_handler_sha256": "8F3EEA10DF78F9E8F5010A4D2CE72EE049962FDC4E3B4D98CFCD7518CE2E7F6D",
+  "protected_handler_unchanged": true,
+  "protected_handler_unstaged": true,
+  "frozen_eval_git_diff_empty": true,
+  "harness_baseline_tag_absent": true,
+  "remote_eval_refs": [
+    "13759383e988cafee936f5ac297299080eba9cc3\trefs/heads/feat/procurement-eval-v2",
+    "13759383e988cafee936f5ac297299080eba9cc3\trefs/tags/procurement-eval-v2.1"
+  ],
+  "git_status_short": [
+    " M src/main/java/com/agent/platform/procurement/application/ProcurementDecisionEngine.java",
+    " M src/main/java/com/agent/platform/procurement/erp/ErpNextProcurementAdapter.java",
+    " M src/main/java/com/agent/platform/procurement/erp/ErpNextProcurementRfqGateway.java",
+    " M src/main/java/com/agent/platform/procurement/erp/ErpRfqApprovalGuard.java",
+    " M src/main/java/com/agent/platform/procurement/erp/ProcurementErpAdapter.java",
+    " M src/main/java/com/agent/platform/procurement/erp/ProcurementMcpService.java",
+    " M src/main/java/com/agent/platform/procurement/tool/ProcurementRfqApprovalPreparer.java",
+    " M src/main/java/com/agent/platform/procurement/tool/ProcurementRfqGateway.java",
+    " M src/main/java/com/agent/platform/procurement/tool/ProcurementRfqToolHandler.java",
+    " M src/main/java/com/agent/platform/procurement/tool/ProcurementToolHandler.java",
+    " M src/test/java/com/agent/platform/procurement/erp/ErpNextAdapterTests.java",
+    " M src/test/java/com/agent/platform/procurement/erp/ErpNextProcurementIT.java",
+    " M src/test/java/com/agent/platform/procurement/erp/ErpNextRfqGatewayTests.java",
+    " M src/test/java/com/agent/platform/procurement/erp/ErpRfqControlledTestSupport.java",
+    "?? docs/baselines/procurement-v2-contracts-stabilization.md",
+    "?? evals/procurement-contracts/",
+    "?? src/main/java/com/agent/platform/procurement/erp/CanonicalRequisitionBinding.java",
+    "?? src/test/java/com/agent/platform/procurement/erp/CanonicalRequisitionBindingTests.java",
+    "?? src/test/java/com/agent/platform/procurement/erp/ProcurementItemContractTests.java"
+  ]
+}

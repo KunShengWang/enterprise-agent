@@ -1,0 +1,189 @@
+{
+  "baseline": "Frozen B0 V2.1",
+  "experiment": "Business-Stabilized Single-Agent Run",
+  "task_repeat_keys_matched": 120,
+  "failed_to_passed": [
+    "ANOM-05-1",
+    "ANOM-05-2",
+    "ANOM-05-3",
+    "RFQ-02-1",
+    "RFQ-02-2",
+    "RFQ-02-3"
+  ],
+  "passed_to_failed": [
+    "E2E-04-1",
+    "ROB-03-1"
+  ],
+  "task_success": {
+    "before": 0.95,
+    "after": 0.9833333333333333
+  },
+  "consistent_success": {
+    "before": 38,
+    "after": 38
+  },
+  "metrics": {
+    "tool_calls": {
+      "before": {
+        "available_trials": 120,
+        "sum": 1626,
+        "mean": 13.55,
+        "median": 17.0,
+        "p95": 20
+      },
+      "after": {
+        "available_trials": 120,
+        "sum": 1672,
+        "mean": 13.933333333333334,
+        "median": 17.0,
+        "p95": 20
+      }
+    },
+    "input_tokens": {
+      "before": {
+        "available_trials": 120,
+        "sum": 12191099,
+        "mean": 101592.49166666667,
+        "median": 118601.0,
+        "p95": 179615
+      },
+      "after": {
+        "available_trials": 120,
+        "sum": 12800184,
+        "mean": 106668.2,
+        "median": 125425.5,
+        "p95": 193546
+      }
+    },
+    "output_tokens": {
+      "before": {
+        "available_trials": 120,
+        "sum": 221858,
+        "mean": 1848.8166666666666,
+        "median": 2004.0,
+        "p95": 2792
+      },
+      "after": {
+        "available_trials": 120,
+        "sum": 225379,
+        "mean": 1878.1583333333333,
+        "median": 1997.0,
+        "p95": 2917
+      }
+    },
+    "total_tokens": {
+      "before": {
+        "available_trials": 120,
+        "sum": 12412957,
+        "mean": 103441.30833333333,
+        "median": 120804.0,
+        "p95": 182135
+      },
+      "after": {
+        "available_trials": 120,
+        "sum": 13025563,
+        "mean": 108546.35833333334,
+        "median": 127595.0,
+        "p95": 196313
+      }
+    },
+    "peak_context_tokens": {
+      "before": {
+        "available_trials": 120,
+        "sum": 2283037,
+        "mean": 19025.308333333334,
+        "median": 21603.5,
+        "p95": 29325
+      },
+      "after": {
+        "available_trials": 120,
+        "sum": 2402246,
+        "mean": 20018.716666666667,
+        "median": 23337.0,
+        "p95": 31150
+      }
+    },
+    "task_latency_ms": {
+      "before": {
+        "available_trials": 120,
+        "sum": 2171428.411896,
+        "mean": 18095.2367658,
+        "median": 19270.1879495,
+        "p95": 25762.861
+      },
+      "after": {
+        "available_trials": 120,
+        "sum": 2151405.947595,
+        "mean": 17928.382896625,
+        "median": 18809.25615,
+        "p95": 25259.8262
+      }
+    },
+    "llm_latency_ms": {
+      "before": {
+        "available_trials": 120,
+        "sum": 1397102.3189999997,
+        "mean": 11642.519325,
+        "median": 11918.220099999999,
+        "p95": 17854.0815
+      },
+      "after": {
+        "available_trials": 120,
+        "sum": 1455291.861909999,
+        "mean": 12127.432182583334,
+        "median": 12502.92265,
+        "p95": 18455.586399
+      }
+    },
+    "input_guardrail_latency_ms": {
+      "before": {
+        "available_trials": 120,
+        "sum": 339432.6166020002,
+        "mean": 2828.60513835,
+        "median": 2683.8066500000004,
+        "p95": 3393.7589
+      },
+      "after": {
+        "available_trials": 120,
+        "sum": 311784.1057989999,
+        "mean": 2598.2008816583334,
+        "median": 2576.59905,
+        "p95": 3154.4664
+      }
+    },
+    "mcp_latency_ms": {
+      "before": {
+        "available_trials": 120,
+        "sum": 242532.578822,
+        "mean": 2021.1048235166668,
+        "median": 2528.9572019999996,
+        "p95": 3095.610000000001
+      },
+      "after": {
+        "available_trials": 120,
+        "sum": 211414.296102,
+        "mean": 1761.78580085,
+        "median": 2205.78415,
+        "p95": 2726.1484019999994
+      }
+    },
+    "tool_retry_count": {
+      "before": {
+        "available_trials": 120,
+        "sum": 0,
+        "mean": 0,
+        "median": 0.0,
+        "p95": 0
+      },
+      "after": {
+        "available_trials": 120,
+        "sum": 0,
+        "mean": 0,
+        "median": 0.0,
+        "p95": 0
+      }
+    }
+  },
+  "attribution": "Six defect trials recovered after Business Contract Fix. Two new frozen FAIL results reflect observed ERP idx drift. No Harness optimization. Token/latency differences descriptive; same provider alias is not an immutable model build.",
+  "harness_b0_candidate": false
+}

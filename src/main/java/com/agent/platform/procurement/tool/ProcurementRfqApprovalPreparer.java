@@ -77,6 +77,9 @@ public class ProcurementRfqApprovalPreparer implements ApprovalToolCallRequestPr
         authoritative.put("currency", state.currency());
         authoritative.put("requiredDeliveryDays", state.requiredDeliveryDays());
         authoritative.put("hardConstraints", state.hardConstraints());
+        String requisitionId = com.agent.platform.procurement.erp.CanonicalRequisitionBinding.resolve(
+                toolExecutionStore.findByRun(trusted.runId()), state, objectMapper);
+        if (requisitionId != null) authoritative.put("requisitionId", requisitionId);
         authoritative.put("sourceRecommendationToolCallId", finalizeExecution.toolCallId());
         authoritative.put("idempotencyKey", "rfq:" + approvalId.trim());
         return new ToolCallRequest(request.toolName(), request.requestId(), authoritative);

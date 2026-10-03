@@ -1,0 +1,34 @@
+{
+  "known_secret_scan_passed": true,
+  "scanned_entries": 30,
+  "secret_value_count": 3,
+  "hits": [],
+  "diff_check_passed": true,
+  "git_status_short": [
+    " M src/main/java/com/agent/platform/procurement/application/ProcurementDecisionEngine.java",
+    " M src/main/java/com/agent/platform/procurement/erp/ErpNextProcurementAdapter.java",
+    " M src/main/java/com/agent/platform/procurement/erp/ErpNextProcurementRfqGateway.java",
+    " M src/main/java/com/agent/platform/procurement/erp/ErpRfqApprovalGuard.java",
+    " M src/main/java/com/agent/platform/procurement/erp/ProcurementErpAdapter.java",
+    " M src/main/java/com/agent/platform/procurement/erp/ProcurementMcpService.java",
+    " M src/main/java/com/agent/platform/procurement/tool/ProcurementRfqApprovalPreparer.java",
+    " M src/main/java/com/agent/platform/procurement/tool/ProcurementRfqGateway.java",
+    " M src/main/java/com/agent/platform/procurement/tool/ProcurementRfqToolHandler.java",
+    " M src/main/java/com/agent/platform/procurement/tool/ProcurementToolHandler.java",
+    " M src/test/java/com/agent/platform/procurement/erp/ErpNextAdapterTests.java",
+    " M src/test/java/com/agent/platform/procurement/erp/ErpNextProcurementIT.java",
+    " M src/test/java/com/agent/platform/procurement/erp/ErpNextRfqGatewayTests.java",
+    " M src/test/java/com/agent/platform/procurement/erp/ErpRfqControlledTestSupport.java",
+    "?? docs/baselines/procurement-v2-contracts-stabilization.md",
+    "?? docs/baselines/procurement-v2.2-canonical-hash-audit.md",
+    "?? evals/procurement-contracts/",
+    "?? evals/procurement-v2.2/",
+    "?? src/main/java/com/agent/platform/procurement/erp/CanonicalRequisitionBinding.java",
+    "?? src/test/java/com/agent/platform/procurement/erp/CanonicalRequisitionBindingTests.java",
+    "?? src/test/java/com/agent/platform/procurement/erp/ProcurementItemContractTests.java"
+  ],
+  "new_scope": [
+    "evals/procurement-v2.2/",
+    "docs/baselines/procurement-v2.2-canonical-hash-audit.md"
+  ]
+}

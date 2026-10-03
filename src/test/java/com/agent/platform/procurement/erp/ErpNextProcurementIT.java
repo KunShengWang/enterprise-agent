@@ -59,14 +59,15 @@ class ErpNextProcurementIT {
         Files.writeString(Path.of("target/erpnext/provider-demo.json"),json.writerWithDefaultPrettyPrinter().writeValueAsString(Map.of("dataSource","ERPNext","candidates",candidates,"offers",offers,"evaluation",evaluation,"evidence",evidence)));
     }
     @Test void approvedCanonicalRequestCreatesOneDraftAndUnsignedCallIsRejected() throws Exception {
-        var execution=ErpRfqControlledTestSupport.approveAndExecute(guard -> new ErpNextProcurementRfqGateway(mcp,json,RfqAuthorization.fromEnvironment(),guard),json);
+        var execution=ErpRfqControlledTestSupport.approveAndExecute(guard -> new ErpNextProcurementRfqGateway(mcp,json,RfqAuthorization.fromEnvironment(),guard),json,"V2-REQ-001");
         var receipt=execution.rfqId();var gateway=execution.gateway();
         var record=adapter.getRfq(receipt).orElseThrow();
         assertEquals("Draft",record.status());assertEquals(20,record.quantity());
-        var same=gateway.create(new ProcurementRfqGateway.CreateRequest(record.idempotencyKey(),"V2-SUP-001","AI Workstation","V2-WS-001",20,"CNY",21,Map.of()));
+        var same=gateway.create(new ProcurementRfqGateway.CreateRequest(record.idempotencyKey(),"V2-SUP-001","AI Workstation","V2-WS-001",20,"CNY",21,Map.of(),"V2-REQ-001"));
         assertEquals(receipt,same.rfqId());
         var rows=ErpNextClient.fromEnvironment().list("Request for Quotation",List.of(List.of("custom_procurement_key","=",record.idempotencyKey())),0,10);
         assertEquals(1,rows.size());
+        assertEquals("V2-REQ-001",ErpNextClient.fromEnvironment().get("Request for Quotation",receipt).orElseThrow().path("items").get(0).path("material_request").asText());
         var definition=mcp.discoverTools().stream().filter(d->d.name().equals("mcp.erpnext.procurement_create_rfq")).findFirst().orElseThrow();
         var unsigned=mcp.callTool(definition,new ToolCallRequest(definition.name(),"unsigned",Map.of("request",Map.of("idempotencyKey","rfq:unsigned"))));
         assertFalse(unsigned.success());assertTrue(adapter.findRfqByIdempotencyKey("rfq:unsigned").isEmpty());

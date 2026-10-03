@@ -137,6 +137,11 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
                 || !parsed.supplierId().equals(finalized.supplierId())) {
             throw new IllegalArgumentException("prepared RFQ supplier is not grounded in the current Finalize");
         }
+        String requisitionId = com.agent.platform.procurement.erp.CanonicalRequisitionBinding.resolve(
+                toolExecutionStore.findByRun(trusted.runId()), current.state(), objectMapper);
+        if (!java.util.Objects.equals(requisitionId, parsed.gatewayRequest().requisitionId())) {
+            throw new IllegalArgumentException("prepared RFQ requisition does not match the current Run facts");
+        }
         return parsed;
     }
 
@@ -145,8 +150,10 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
             throw new IllegalArgumentException("unsupported procurement RFQ tool");
         }
         Map<String, Object> arguments = request.arguments();
-        if (!CANONICAL_ARGUMENTS.equals(arguments.keySet())) {
-            throw new IllegalArgumentException("RFQ request must contain exactly the canonical 11 fields");
+        var keys = new java.util.HashSet<>(arguments.keySet());
+        keys.remove("requisitionId");
+        if (!CANONICAL_ARGUMENTS.equals(keys)) {
+            throw new IllegalArgumentException("RFQ request must contain canonical fields and only the optional requisition binding");
         }
         String caseId = requiredString(arguments, "caseId");
         long caseVersion = requiredLong(arguments, "caseVersion");
@@ -164,7 +171,8 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
         }
         ProcurementRfqGateway.CreateRequest gatewayRequest = new ProcurementRfqGateway.CreateRequest(
                 idempotencyKey, supplierId, productCategory, productDescription,
-                quantity, currency, requiredDeliveryDays, hardConstraints);
+                quantity, currency, requiredDeliveryDays, hardConstraints,
+                arguments.containsKey("requisitionId") ? requiredString(arguments, "requisitionId") : null);
         return new ParsedPreparedRfq(caseId, caseVersion, supplierId, productCategory, productDescription,
                 quantity, currency, requiredDeliveryDays, hardConstraints,
                 sourceRecommendationToolCallId, idempotencyKey, gatewayRequest);

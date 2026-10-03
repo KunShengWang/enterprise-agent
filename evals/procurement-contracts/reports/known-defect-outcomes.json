@@ -1,0 +1,89 @@
+[
+  {
+    "trial_id": "ANOM-05-1",
+    "status": "PASS",
+    "artifact_sha256": "48cb62a443fe8ac34df2853eb2bded19103818c1c74cc92376515467d6a3d2fa",
+    "invariant_violations": [],
+    "rfq_count": 0,
+    "material_requests": [],
+    "expected_requisition": null,
+    "eligible_suppliers": [],
+    "selected_supplier": null
+  },
+  {
+    "trial_id": "ANOM-05-2",
+    "status": "PASS",
+    "artifact_sha256": "1f69606f117ea19754c72ef26f07a9fe5aa3ae10361f69a5b7311a415fe5d477",
+    "invariant_violations": [],
+    "rfq_count": 0,
+    "material_requests": [],
+    "expected_requisition": null,
+    "eligible_suppliers": [],
+    "selected_supplier": null
+  },
+  {
+    "trial_id": "ANOM-05-3",
+    "status": "PASS",
+    "artifact_sha256": "46346dd1ac26877eb710f5b1dd4807bf3b6a20d077660f5a040071813bd8f4fa",
+    "invariant_violations": [],
+    "rfq_count": 0,
+    "material_requests": [],
+    "expected_requisition": null,
+    "eligible_suppliers": [],
+    "selected_supplier": null
+  },
+  {
+    "trial_id": "RFQ-02-1",
+    "status": "PASS",
+    "artifact_sha256": "fab210bf20e0d03eeb2be5b1de4b1eef16826a96b04e3ca339ff6da665b2b760",
+    "invariant_violations": [],
+    "rfq_count": 1,
+    "material_requests": [
+      "V2-REQ-001"
+    ],
+    "expected_requisition": "V2-REQ-001",
+    "eligible_suppliers": [
+      "V2-SUP-001",
+      "V2-SUP-002",
+      "V2-SUP-003",
+      "V2-SUP-005"
+    ],
+    "selected_supplier": "V2-SUP-001"
+  },
+  {
+    "trial_id": "RFQ-02-2",
+    "status": "PASS",
+    "artifact_sha256": "e2f000df4abc75d7fda14d2995760e532a4d486ac6106eaee677edade9b49705",
+    "invariant_violations": [],
+    "rfq_count": 1,
+    "material_requests": [
+      "V2-REQ-001"
+    ],
+    "expected_requisition": "V2-REQ-001",
+    "eligible_suppliers": [
+      "V2-SUP-001",
+      "V2-SUP-002",
+      "V2-SUP-003",
+      "V2-SUP-005"
+    ],
+    "selected_supplier": "V2-SUP-001"
+  },
+  {
+    "trial_id": "RFQ-02-3",
+    "status": "PASS",
+    "artifact_sha256": "dface680689e4117e32ebb8efa6dde4877f36a50994f8df0561a62b487e4215c",
+    "invariant_violations": [],
+    "rfq_count": 1,
+    "material_requests": [
+      "V2-REQ-001"
+    ],
+    "expected_requisition": "V2-REQ-001",
+    "eligible_suppliers": [
+      "V2-SUP-001",
+      "V2-SUP-002",
+      "V2-SUP-003",
+      "V2-SUP-005"
+    ],
+    "selected_supplier": "V2-SUP-001"
+  }
+]

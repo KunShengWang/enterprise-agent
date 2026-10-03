@@ -69,7 +69,13 @@ public final class ErpNextProcurementAdapter implements ProcurementErpAdapter {
         if(existing.isPresent()) return same(existing.get(),digest);
         Supplier supplier=getSupplier(r.supplierId()).orElseThrow(() -> new ProcurementErpException(ERP_NOT_FOUND));
         Item item=getItem(r.itemId()).orElseThrow(() -> new ProcurementErpException(ERP_NOT_FOUND));
-        if(!supplier.approved()) throw new ProcurementErpException(ERP_VALIDATION_ERROR);
+        if(!supplier.approved() || !item.active()) throw new ProcurementErpException(ERP_VALIDATION_ERROR);
+        if(r.requisitionId()!=null) {
+            Requisition requisition=getRequisition(r.requisitionId()).orElseThrow(() -> new ProcurementErpException(ERP_NOT_FOUND));
+            if(!requisition.itemId().equals(item.id()) || requisition.quantity()!=r.quantity()
+                    || Set.of("Cancelled","Stopped").contains(requisition.status()))
+                throw new ProcurementErpException(ERP_VALIDATION_ERROR);
+        }
         var relations=listItemSuppliers(item.id(),0,200).records().stream().filter(v -> v.supplierId().equals(supplier.id())).toList();
         if(relations.size()!=1 || relations.get(0).capacityUnits()<r.quantity() || !relations.get(0).currency().equals(r.currency()) ||
                 relations.get(0).leadTimeDays()>r.deliveryDays()) throw new ProcurementErpException(ERP_VALIDATION_ERROR);
@@ -79,8 +85,10 @@ public final class ErpNextProcurementAdapter implements ProcurementErpAdapter {
         doc.put("status","Draft"); doc.put("custom_procurement_key",r.idempotencyKey());
         doc.put("custom_request_digest",digest); doc.put("custom_procurement_seed","v2-workstations");
         doc.put("suppliers",List.of(Map.of("supplier",supplier.id(),"send_email",0)));
-        doc.put("items",List.of(Map.of("item_code",item.id(),"qty",r.quantity(),"uom",item.uom(),"stock_uom",item.uom(),
-                "conversion_factor",1,"schedule_date",LocalDate.now(ZoneOffset.UTC).plusDays(r.deliveryDays()).toString())));
+        Map<String,Object> line=new LinkedHashMap<>(Map.of("item_code",item.id(),"qty",r.quantity(),"uom",item.uom(),"stock_uom",item.uom(),
+                "conversion_factor",1,"schedule_date",LocalDate.now(ZoneOffset.UTC).plusDays(r.deliveryDays()).toString()));
+        if(r.requisitionId()!=null) line.put("material_request",r.requisitionId());
+        doc.put("items",List.of(line));
         try { return same(rfq(client.create("Request for Quotation",doc)),digest); }
         catch(ProcurementErpException ex) {
             // Unique ERP column arbitrates concurrent writers. No blind retry of POST, including timeouts.
@@ -94,7 +102,7 @@ public final class ErpNextProcurementAdapter implements ProcurementErpAdapter {
     private Supplier supplier(JsonNode n) { return new Supplier(text(n,"name"),text(n,"supplier_name"),
             integer(n,"disabled")==0 && text(n,"custom_approval_status").equals("Approved"),text(n,"custom_capacity"),source("Supplier",n)); }
     private Item item(JsonNode n) { return new Item(text(n,"name"),text(n,"item_name"),text(n,"item_group"),
-            text(n,"stock_uom"),integer(n,"custom_gpu_memory_gb"),text(n,"custom_warranty"),source("Item",n)); }
+            text(n,"stock_uom"),integer(n,"custom_gpu_memory_gb"),text(n,"custom_warranty"),source("Item",n),integer(n,"disabled")==0); }
     private Requisition requisition(JsonNode n) {
         company(n); JsonNode line=single(n,"items");
         return new Requisition(text(n,"name"),text(n,"custom_department_id"),text(line,"item_code"),integer(line,"qty"),

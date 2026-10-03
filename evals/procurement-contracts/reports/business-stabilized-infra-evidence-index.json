@@ -1,0 +1,94 @@
+{
+  "archive_sha256": "e8105954cd099e50124b79b72c67696a32dbe14f6ab03b6b5edda876895b0cfc",
+  "attempt_ids": [
+    "GOV-04-2-a1",
+    "GOV-04-2-a2",
+    "RFQ-01-3-a1"
+  ],
+  "entries": [
+    {
+      "path": "GOV-04-2-a1/agent.log",
+      "sha256": "31e2ce9c058494e15773438a2553eefc0eeefc71b93d408f0c2958bf82f1cadd"
+    },
+    {
+      "path": "GOV-04-2-a1/artifact.json.gz",
+      "sha256": "fd0945eea4effcf219ee01646df3beaf64191cc950c06204e0338ec25de9e9eb"
+    },
+    {
+      "path": "GOV-04-2-a1/raw.json",
+      "sha256": "cd6fa8eecb313bcdb4f3af74925c52a018cd21fd4da2554d123266880bd177b5"
+    },
+    {
+      "path": "GOV-04-2-a1/raw.json.trace.jsonl",
+      "sha256": "d41c03e10306361fe394e8c0993e1bd6bead21cf79831023918f78e721e37dcd"
+    },
+    {
+      "path": "GOV-04-2-a1/reset.json",
+      "sha256": "2c9472d3acd8f5e19eb1bef0aea21f73bd23bd416799631538c84d1ca094ed63"
+    },
+    {
+      "path": "GOV-04-2-a1/reset.log",
+      "sha256": "fc799a0ee00fe2a2f85e93e8911f34eb508531e38f7427a5964c49a2179312fa"
+    },
+    {
+      "path": "GOV-04-2-a1/result.json",
+      "sha256": "c48b10d6a9a8f0594090946ee629a53b88d9400ec9f03ab51af2c36c5fed70cc"
+    },
+    {
+      "path": "GOV-04-2-a1/snapshot.json",
+      "sha256": "5ae2a5242e7fa14198f7711f3b1e82bceb9f90b152e9a62ec458dcba8b628c57"
+    },
+    {
+      "path": "GOV-04-2-a1/snapshot.log",
+      "sha256": "7c060b9a028e6e0d2a76ecf6b011b5b640f18fb888e28cf209c2f594097dd0fd"
+    },
+    {
+      "path": "GOV-04-2-a2/agent.log",
+      "sha256": "6cb1e6646c462f8c6d80c7cb1f659f3695e159c33cf466548fed3e2ec3c6262e"
+    },
+    {
+      "path": "GOV-04-2-a2/artifact.json.gz",
+      "sha256": "41f24a04c2667e74930acaf02a9bdf4e7ae90bf9c790fe8b3a22f65e602db55f"
+    },
+    {
+      "path": "GOV-04-2-a2/raw.json",
+      "sha256": "181644455f135ff9362f752730050a9d2d21455f06a87353dca2e8504182f0a3"
+    },
+    {
+      "path": "GOV-04-2-a2/raw.json.trace.jsonl",
+      "sha256": "78348825953458735c40112872e6bc2d7c878e178f976fab55d757a0d8b290ea"
+    },
+    {
+      "path": "GOV-04-2-a2/reset.json",
+      "sha256": "f6130ea741c5161f2cb3c24fccbd240e6f2cba1d02c5bd85c7094c4778eebe30"
+    },
+    {
+      "path": "GOV-04-2-a2/reset.log",
+      "sha256": "fc799a0ee00fe2a2f85e93e8911f34eb508531e38f7427a5964c49a2179312fa"
+    },
+    {
+      "path": "GOV-04-2-a2/result.json",
+      "sha256": "7351a2cc615eebf1a1e285062054993b2eadf08b0a25a2c3d1c986f65e6aecaf"
+    },
+    {
+      "path": "GOV-04-2-a2/snapshot.json",
+      "sha256": "8835f45e74013627adb9a9d3279581ce99496132e1fb996559b5c715401db865"
+    },
+    {
+      "path": "GOV-04-2-a2/snapshot.log",
+      "sha256": "7c060b9a028e6e0d2a76ecf6b011b5b640f18fb888e28cf209c2f594097dd0fd"
+    },
+    {
+      "path": "RFQ-01-3-a1/reset.json",
+      "sha256": "d316fd4c9ad7a2f1126eef05b016449d63fa5c2bb0437ac4d73667996a70ef58"
+    },
+    {
+      "path": "RFQ-01-3-a1/reset.log",
+      "sha256": "40595c4406570dbfdfeeebce495397173b639cb6978ec56d5bd2a88f2c4f3e24"
+    },
+    {
+      "path": "RFQ-01-3-a1/result.json",
+      "sha256": "d2130ab601978febb823e0918515c80e45a606359e880fc897fbcaaf6d09ecd7"
+    }
+  ]
+}

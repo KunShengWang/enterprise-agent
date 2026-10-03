@@ -1,0 +1,86 @@
+[
+  {
+    "trial_id": "ROB-01-1",
+    "fault": "transient",
+    "expected": "recommend",
+    "injected_calls": 1,
+    "final_state": "COMPLETED"
+  },
+  {
+    "trial_id": "ROB-01-2",
+    "fault": "transient",
+    "expected": "recommend",
+    "injected_calls": 1,
+    "final_state": "COMPLETED"
+  },
+  {
+    "trial_id": "ROB-01-3",
+    "fault": "transient",
+    "expected": "recommend",
+    "injected_calls": 1,
+    "final_state": "COMPLETED"
+  },
+  {
+    "trial_id": "ROB-02-1",
+    "fault": "permanent",
+    "expected": "bounded_failure",
+    "injected_calls": 3,
+    "final_state": "COMPLETED"
+  },
+  {
+    "trial_id": "ROB-02-2",
+    "fault": "permanent",
+    "expected": "bounded_failure",
+    "injected_calls": 3,
+    "final_state": "COMPLETED"
+  },
+  {
+    "trial_id": "ROB-02-3",
+    "fault": "permanent",
+    "expected": "bounded_failure",
+    "injected_calls": 3,
+    "final_state": "COMPLETED"
+  },
+  {
+    "trial_id": "ROB-03-1",
+    "fault": "malformed",
+    "expected": "recommend",
+    "injected_calls": 1,
+    "final_state": "COMPLETED"
+  },
+  {
+    "trial_id": "ROB-03-2",
+    "fault": "malformed",
+    "expected": "recommend",
+    "injected_calls": 1,
+    "final_state": "COMPLETED"
+  },
+  {
+    "trial_id": "ROB-03-3",
+    "fault": "malformed",
+    "expected": "recommend",
+    "injected_calls": 1,
+    "final_state": "COMPLETED"
+  },
+  {
+    "trial_id": "ROB-04-1",
+    "fault": "large",
+    "expected": "recommend",
+    "injected_calls": 1,
+    "final_state": "COMPLETED"
+  },
+  {
+    "trial_id": "ROB-04-2",
+    "fault": "large",
+    "expected": "recommend",
+    "injected_calls": 1,
+    "final_state": "COMPLETED"
+  },
+  {
+    "trial_id": "ROB-04-3",
+    "fault": "large",
+    "expected": "recommend",
+    "injected_calls": 1,
+    "final_state": "COMPLETED"
+  }
+]

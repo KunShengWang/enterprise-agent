@@ -46,7 +46,8 @@ public final class ErpRfqApprovalGuard {
             var expected=new ProcurementRfqGateway.CreateRequest(a.path("idempotencyKey").asText(),
                     a.path("supplierId").asText(),a.path("productCategory").asText(),a.path("productDescription").asText(),
                     a.path("quantity").asInt(),a.path("currency").asText(),a.path("requiredDeliveryDays").asInt(),
-                    json.convertValue(a.get("hardConstraints"),new tools.jackson.core.type.TypeReference<Map<String,String>>(){}));
+                    json.convertValue(a.get("hardConstraints"),new tools.jackson.core.type.TypeReference<Map<String,String>>(){}),
+                    a.has("requisitionId")?a.path("requisitionId").asText():null);
             if (!expected.equals(request)) reject();
             return approval.expiresAt();
         } catch (RuntimeException ex) { throw new ProcurementRfqGateway.RejectedRequestException(); }

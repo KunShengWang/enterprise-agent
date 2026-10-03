@@ -11,7 +11,12 @@ public interface ProcurementErpAdapter {
     record Source(String backend, String entityType, String entityId, Instant retrievedAt, Instant version) { }
     record Page<T>(List<T> records, Integer nextOffset) { }
     record Supplier(String id, String name, boolean approved, String capacity, Source source) { }
-    record Item(String id, String name, String category, String uom, int gpuMemoryGb, String warranty, Source source) { }
+    record Item(String id, String name, String category, String uom, int gpuMemoryGb, String warranty, Source source,
+                boolean active) {
+        public Item(String id, String name, String category, String uom, int gpuMemoryGb, String warranty, Source source) {
+            this(id, name, category, uom, gpuMemoryGb, warranty, source, true);
+        }
+    }
     record ItemSupplier(String id, String itemId, String supplierId, BigDecimal referencePrice,
                         String currency, int leadTimeDays, int capacityUnits, Source source) { }
     record BudgetStatus(String id, String departmentId, BigDecimal allocated, BigDecimal committed,
@@ -23,7 +28,13 @@ public interface ProcurementErpAdapter {
     record Requisition(String id, String departmentId, String itemId, int quantity,
                        LocalDate requiredBy, String status, Source source) { }
     record RfqRequest(String idempotencyKey, String supplierId, String itemId, int quantity,
-                      int deliveryDays, String currency) { }
+                      int deliveryDays, String currency,
+                      @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+                      String requisitionId) {
+        public RfqRequest(String idempotencyKey, String supplierId, String itemId, int quantity, int deliveryDays, String currency) {
+            this(idempotencyKey, supplierId, itemId, quantity, deliveryDays, currency, null);
+        }
+    }
     record RfqRecord(String id, String idempotencyKey, String supplierId, String itemId,
                      int quantity, String status, String requestDigest, Source source) { }
     Optional<Requisition> getRequisition(String id);

@@ -1,0 +1,4552 @@
+[
+  {
+    "trial_id": "E2E-04-1",
+    "all_snapshot_differences": [
+      {
+        "path": "/baseBusinessHash",
+        "before": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e",
+        "after": null,
+        "before_present": true,
+        "after_present": false
+      },
+      {
+        "path": "/businessHash",
+        "before": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e",
+        "after": "59228fb0d4e0bd5ecc77c4a59bc03e141ff9f95aa901253987124468424f5e1d"
+      },
+      {
+        "path": "/facts/items/0/idx",
+        "before": 0,
+        "after": 1
+      },
+      {
+        "path": "/facts/items/7/idx",
+        "before": 0,
+        "after": 1
+      },
+      {
+        "path": "/facts/suppliers/2/idx",
+        "before": 0,
+        "after": 3
+      }
+    ],
+    "entity_field_differences": [
+      {
+        "path": "/facts/items/0/idx",
+        "before": 0,
+        "after": 1,
+        "entity_id": "V2-WS-001",
+        "entity_type": "Item"
+      },
+      {
+        "path": "/facts/items/7/idx",
+        "before": 0,
+        "after": 1,
+        "entity_id": "V2-WS-008",
+        "entity_type": "Item"
+      },
+      {
+        "path": "/facts/suppliers/2/idx",
+        "before": 0,
+        "after": 3,
+        "entity_id": "V2-SUP-003",
+        "entity_type": "Supplier"
+      }
+    ],
+    "canonical_before": {
+      "contract": "canonical-business-state-v2.2",
+      "masters": {
+        "suppliers": [
+          {
+            "id": "V2-SUP-001",
+            "name": "Nebula Forge Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "HIGH",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-002",
+            "name": "Cobalt Finch Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "MEDIUM",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-003",
+            "name": "Amber Circuit Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "HIGH",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-004",
+            "name": "Silver Moss Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "LOW",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-005",
+            "name": "Violet Harbor Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "MEDIUM",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-006",
+            "name": "Copper Kite Fictional",
+            "active": false,
+            "approvalStatus": "Inactive",
+            "capacity": "LOW",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          }
+        ],
+        "items": [
+          {
+            "id": "V2-WS-001",
+            "code": "V2-WS-001",
+            "name": "AI Workstation 01",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 24,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-001",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-002",
+            "code": "V2-WS-002",
+            "name": "AI Workstation 02",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 32,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-002",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-003",
+            "code": "V2-WS-003",
+            "name": "AI Workstation 03",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 48,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-003",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-004",
+            "code": "V2-WS-004",
+            "name": "AI Workstation 04",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 16,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-004",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-005",
+            "code": "V2-WS-005",
+            "name": "AI Workstation 05",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 24,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-005",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-006",
+            "code": "V2-WS-006",
+            "name": "AI Workstation 06",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 32,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-006",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-007",
+            "code": "V2-WS-007",
+            "name": "AI Workstation 07",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 48,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-007",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-008",
+            "code": "V2-WS-008",
+            "name": "AI Workstation 08",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 64,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-008",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-009",
+            "code": "V2-WS-009",
+            "name": "AI Workstation 09",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 24,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-009",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-010",
+            "code": "V2-WS-010",
+            "name": "AI Workstation 10",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 32,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-010",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          }
+        ],
+        "item_suppliers": [
+          {
+            "id": "V2-REL-01-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-001",
+            "referencePrice": 12800.0,
+            "currency": "CNY",
+            "leadTimeDays": 12,
+            "capacityUnits": 80,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-02-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-002",
+            "referencePrice": 10900.0,
+            "currency": "CNY",
+            "leadTimeDays": 20,
+            "capacityUnits": 35,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-03-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-003",
+            "referencePrice": 13700.0,
+            "currency": "CNY",
+            "leadTimeDays": 10,
+            "capacityUnits": 100,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-04-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-004",
+            "referencePrice": 11900.0,
+            "currency": "CNY",
+            "leadTimeDays": 25,
+            "capacityUnits": 12,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-05-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-005",
+            "referencePrice": 12500.0,
+            "currency": "CNY",
+            "leadTimeDays": 16,
+            "capacityUnits": 45,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-06-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-006",
+            "referencePrice": 9800.0,
+            "currency": "CNY",
+            "leadTimeDays": 8,
+            "capacityUnits": 10,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-06-02",
+            "itemId": "V2-WS-002",
+            "supplierId": "V2-SUP-006",
+            "referencePrice": 10300.0,
+            "currency": "CNY",
+            "leadTimeDays": 8,
+            "capacityUnits": 10,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-01-03",
+            "itemId": "V2-WS-003",
+            "supplierId": "V2-SUP-001",
+            "referencePrice": 13800.0,
+            "currency": "CNY",
+            "leadTimeDays": 12,
+            "capacityUnits": 80,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-02-04",
+            "itemId": "V2-WS-004",
+            "supplierId": "V2-SUP-002",
+            "referencePrice": 12400.0,
+            "currency": "CNY",
+            "leadTimeDays": 20,
+            "capacityUnits": 35,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-03-05",
+            "itemId": "V2-WS-005",
+            "supplierId": "V2-SUP-003",
+            "referencePrice": 15700.0,
+            "currency": "CNY",
+            "leadTimeDays": 10,
+            "capacityUnits": 100,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-01-06",
+            "itemId": "V2-WS-006",
+            "supplierId": "V2-SUP-001",
+            "referencePrice": 15300.0,
+            "currency": "CNY",
+            "leadTimeDays": 12,
+            "capacityUnits": 80,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-04-06",
+            "itemId": "V2-WS-006",
+            "supplierId": "V2-SUP-004",
+            "referencePrice": 14400.0,
+            "currency": "CNY",
+            "leadTimeDays": 25,
+            "capacityUnits": 12,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-02-07",
+            "itemId": "V2-WS-007",
+            "supplierId": "V2-SUP-002",
+            "referencePrice": 13900.0,
+            "currency": "CNY",
+            "leadTimeDays": 20,
+            "capacityUnits": 35,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-05-07",
+            "itemId": "V2-WS-007",
+            "supplierId": "V2-SUP-005",
+            "referencePrice": 15500.0,
+            "currency": "CNY",
+            "leadTimeDays": 16,
+            "capacityUnits": 45,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-03-08",
+            "itemId": "V2-WS-008",
+            "supplierId": "V2-SUP-003",
+            "referencePrice": 17200.0,
+            "currency": "CNY",
+            "leadTimeDays": 10,
+            "capacityUnits": 100,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-06-08",
+            "itemId": "V2-WS-008",
+            "supplierId": "V2-SUP-006",
+            "referencePrice": 13300.0,
+            "currency": "CNY",
+            "leadTimeDays": 8,
+            "capacityUnits": 10,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-04-09",
+            "itemId": "V2-WS-009",
+            "supplierId": "V2-SUP-004",
+            "referencePrice": 15900.0,
+            "currency": "CNY",
+            "leadTimeDays": 25,
+            "capacityUnits": 12,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-05-10",
+            "itemId": "V2-WS-010",
+            "supplierId": "V2-SUP-005",
+            "referencePrice": 17000.0,
+            "currency": "CNY",
+            "leadTimeDays": 16,
+            "capacityUnits": 45,
+            "lifecycle": 0
+          }
+        ],
+        "departments": [
+          {
+            "id": "V2-ALG",
+            "name": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "active": true,
+            "parentDepartment": "All Departments",
+            "isGroup": 0,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-ENG",
+            "name": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "active": true,
+            "parentDepartment": "All Departments",
+            "isGroup": 0,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SIM",
+            "name": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "active": true,
+            "parentDepartment": "All Departments",
+            "isGroup": 0,
+            "lifecycle": 0
+          }
+        ],
+        "budgets": [
+          {
+            "id": "V2-BUD-001",
+            "departmentId": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "allocated": 600000.0,
+            "committed": 180000.0,
+            "currency": "CNY",
+            "fiscalYear": "2026",
+            "throughFiscalYear": "2026",
+            "startsOn": "2026-01-01",
+            "endsOn": "2026-12-31",
+            "lifecycle": 0,
+            "costCenter": "V2-ALG - SAL",
+            "account": "Tax Expense - SAL",
+            "budget_distribution": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-BUD-001",
+                "startsOn": "2026-01-01",
+                "endsOn": "2026-12-31",
+                "amount": 600000.0,
+                "percent": 100.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-BUD-002",
+            "departmentId": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "allocated": 450000.0,
+            "committed": 210000.0,
+            "currency": "CNY",
+            "fiscalYear": "2026",
+            "throughFiscalYear": "2026",
+            "startsOn": "2026-01-01",
+            "endsOn": "2026-12-31",
+            "lifecycle": 0,
+            "costCenter": "V2-SIM - SAL",
+            "account": "Tax Expense - SAL",
+            "budget_distribution": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-BUD-002",
+                "startsOn": "2026-01-01",
+                "endsOn": "2026-12-31",
+                "amount": 450000.0,
+                "percent": 100.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-BUD-003",
+            "departmentId": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "allocated": 320000.0,
+            "committed": 80000.0,
+            "currency": "CNY",
+            "fiscalYear": "2026",
+            "throughFiscalYear": "2026",
+            "startsOn": "2026-01-01",
+            "endsOn": "2026-12-31",
+            "lifecycle": 0,
+            "costCenter": "V2-ENG - SAL",
+            "account": "Tax Expense - SAL",
+            "budget_distribution": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-BUD-003",
+                "startsOn": "2026-01-01",
+                "endsOn": "2026-12-31",
+                "amount": 320000.0,
+                "percent": 100.0,
+                "lifecycle": 0
+              }
+            ]
+          }
+        ],
+        "purchase_history": [
+          {
+            "id": "V2-HIST-01-01",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 13000.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-05",
+            "deliveredOn": "2026-01-17",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-02",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 12975.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-26",
+            "deliveredOn": "2026-02-07",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-03",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 12950.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-16",
+            "deliveredOn": "2026-02-28",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-04",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 12925.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-09",
+            "deliveredOn": "2026-03-21",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-05",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 8,
+            "unitPrice": 12900.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-30",
+            "deliveredOn": "2026-04-11",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-06",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 9,
+            "unitPrice": 12875.0,
+            "currency": "CNY",
+            "orderedOn": "2026-04-20",
+            "deliveredOn": "2026-05-02",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-01",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 10800.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-06",
+            "deliveredOn": "2026-02-02",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-02",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 10775.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-27",
+            "deliveredOn": "2026-02-23",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-03",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 10750.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-17",
+            "deliveredOn": "2026-03-16",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-04",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 10725.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-10",
+            "deliveredOn": "2026-04-06",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-05",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 8,
+            "unitPrice": 10700.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-31",
+            "deliveredOn": "2026-04-27",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-01",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 13900.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-07",
+            "deliveredOn": "2026-01-18",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-02",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 13875.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-28",
+            "deliveredOn": "2026-02-08",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-03",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 13850.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-18",
+            "deliveredOn": "2026-03-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-04",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 13825.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-11",
+            "deliveredOn": "2026-03-22",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-04-01",
+            "supplierId": "V2-SUP-004",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 12100.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-08",
+            "deliveredOn": "2026-02-06",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-04-02",
+            "supplierId": "V2-SUP-004",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 12075.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-29",
+            "deliveredOn": "2026-02-27",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-04-03",
+            "supplierId": "V2-SUP-004",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 12050.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-19",
+            "deliveredOn": "2026-03-20",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-01",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 12700.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-09",
+            "deliveredOn": "2026-01-27",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-02",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 12675.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-30",
+            "deliveredOn": "2026-02-17",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-03",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 12650.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-20",
+            "deliveredOn": "2026-03-10",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-04",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 12625.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-13",
+            "deliveredOn": "2026-03-31",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-06-01",
+            "supplierId": "V2-SUP-006",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 9900.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-10",
+            "deliveredOn": "2026-02-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-06-02",
+            "supplierId": "V2-SUP-006",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 9875.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-31",
+            "deliveredOn": "2026-02-22",
+            "lifecycle": 0
+          }
+        ],
+        "supplier_performance": [
+          {
+            "id": "V2-SUP-001",
+            "supplierId": "V2-SUP-001",
+            "transactionCount": 6,
+            "onTimeRate": 0.98,
+            "qualityScore": 96.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-002",
+            "supplierId": "V2-SUP-002",
+            "transactionCount": 5,
+            "onTimeRate": 0.65,
+            "qualityScore": 97.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-003",
+            "supplierId": "V2-SUP-003",
+            "transactionCount": 4,
+            "onTimeRate": 0.96,
+            "qualityScore": 95.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-004",
+            "supplierId": "V2-SUP-004",
+            "transactionCount": 3,
+            "onTimeRate": 0.72,
+            "qualityScore": 82.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-005",
+            "supplierId": "V2-SUP-005",
+            "transactionCount": 4,
+            "onTimeRate": 0.88,
+            "qualityScore": 90.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-006",
+            "supplierId": "V2-SUP-006",
+            "transactionCount": 2,
+            "onTimeRate": 0.55,
+            "qualityScore": 76.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          }
+        ],
+        "sample_requisitions": [
+          {
+            "id": "V2-REQ-001",
+            "departmentId": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-001",
+                "itemId": "V2-WS-001",
+                "quantity": 20.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 20.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-002",
+            "departmentId": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-002",
+                "itemId": "V2-WS-002",
+                "quantity": 6.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 6.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-003",
+            "departmentId": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-003",
+                "itemId": "V2-WS-003",
+                "quantity": 7.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 7.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-004",
+            "departmentId": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-004",
+                "itemId": "V2-WS-001",
+                "quantity": 8.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 8.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-005",
+            "departmentId": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-005",
+                "itemId": "V2-WS-002",
+                "quantity": 9.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 9.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-006",
+            "departmentId": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-006",
+                "itemId": "V2-WS-003",
+                "quantity": 10.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 10.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          }
+        ]
+      },
+      "rfqs": []
+    },
+    "canonical_after": {
+      "contract": "canonical-business-state-v2.2",
+      "masters": {
+        "suppliers": [
+          {
+            "id": "V2-SUP-001",
+            "name": "Nebula Forge Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "HIGH",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-002",
+            "name": "Cobalt Finch Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "MEDIUM",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-003",
+            "name": "Amber Circuit Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "HIGH",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-004",
+            "name": "Silver Moss Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "LOW",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-005",
+            "name": "Violet Harbor Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "MEDIUM",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-006",
+            "name": "Copper Kite Fictional",
+            "active": false,
+            "approvalStatus": "Inactive",
+            "capacity": "LOW",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          }
+        ],
+        "items": [
+          {
+            "id": "V2-WS-001",
+            "code": "V2-WS-001",
+            "name": "AI Workstation 01",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 24,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-001",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-002",
+            "code": "V2-WS-002",
+            "name": "AI Workstation 02",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 32,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-002",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-003",
+            "code": "V2-WS-003",
+            "name": "AI Workstation 03",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 48,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-003",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-004",
+            "code": "V2-WS-004",
+            "name": "AI Workstation 04",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 16,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-004",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-005",
+            "code": "V2-WS-005",
+            "name": "AI Workstation 05",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 24,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-005",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-006",
+            "code": "V2-WS-006",
+            "name": "AI Workstation 06",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 32,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-006",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-007",
+            "code": "V2-WS-007",
+            "name": "AI Workstation 07",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 48,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-007",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-008",
+            "code": "V2-WS-008",
+            "name": "AI Workstation 08",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 64,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-008",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-009",
+            "code": "V2-WS-009",
+            "name": "AI Workstation 09",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 24,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-009",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-010",
+            "code": "V2-WS-010",
+            "name": "AI Workstation 10",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 32,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-010",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          }
+        ],
+        "item_suppliers": [
+          {
+            "id": "V2-REL-01-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-001",
+            "referencePrice": 12800.0,
+            "currency": "CNY",
+            "leadTimeDays": 12,
+            "capacityUnits": 80,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-02-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-002",
+            "referencePrice": 10900.0,
+            "currency": "CNY",
+            "leadTimeDays": 20,
+            "capacityUnits": 35,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-03-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-003",
+            "referencePrice": 13700.0,
+            "currency": "CNY",
+            "leadTimeDays": 10,
+            "capacityUnits": 100,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-04-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-004",
+            "referencePrice": 11900.0,
+            "currency": "CNY",
+            "leadTimeDays": 25,
+            "capacityUnits": 12,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-05-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-005",
+            "referencePrice": 12500.0,
+            "currency": "CNY",
+            "leadTimeDays": 16,
+            "capacityUnits": 45,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-06-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-006",
+            "referencePrice": 9800.0,
+            "currency": "CNY",
+            "leadTimeDays": 8,
+            "capacityUnits": 10,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-06-02",
+            "itemId": "V2-WS-002",
+            "supplierId": "V2-SUP-006",
+            "referencePrice": 10300.0,
+            "currency": "CNY",
+            "leadTimeDays": 8,
+            "capacityUnits": 10,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-01-03",
+            "itemId": "V2-WS-003",
+            "supplierId": "V2-SUP-001",
+            "referencePrice": 13800.0,
+            "currency": "CNY",
+            "leadTimeDays": 12,
+            "capacityUnits": 80,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-02-04",
+            "itemId": "V2-WS-004",
+            "supplierId": "V2-SUP-002",
+            "referencePrice": 12400.0,
+            "currency": "CNY",
+            "leadTimeDays": 20,
+            "capacityUnits": 35,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-03-05",
+            "itemId": "V2-WS-005",
+            "supplierId": "V2-SUP-003",
+            "referencePrice": 15700.0,
+            "currency": "CNY",
+            "leadTimeDays": 10,
+            "capacityUnits": 100,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-01-06",
+            "itemId": "V2-WS-006",
+            "supplierId": "V2-SUP-001",
+            "referencePrice": 15300.0,
+            "currency": "CNY",
+            "leadTimeDays": 12,
+            "capacityUnits": 80,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-04-06",
+            "itemId": "V2-WS-006",
+            "supplierId": "V2-SUP-004",
+            "referencePrice": 14400.0,
+            "currency": "CNY",
+            "leadTimeDays": 25,
+            "capacityUnits": 12,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-02-07",
+            "itemId": "V2-WS-007",
+            "supplierId": "V2-SUP-002",
+            "referencePrice": 13900.0,
+            "currency": "CNY",
+            "leadTimeDays": 20,
+            "capacityUnits": 35,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-05-07",
+            "itemId": "V2-WS-007",
+            "supplierId": "V2-SUP-005",
+            "referencePrice": 15500.0,
+            "currency": "CNY",
+            "leadTimeDays": 16,
+            "capacityUnits": 45,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-03-08",
+            "itemId": "V2-WS-008",
+            "supplierId": "V2-SUP-003",
+            "referencePrice": 17200.0,
+            "currency": "CNY",
+            "leadTimeDays": 10,
+            "capacityUnits": 100,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-06-08",
+            "itemId": "V2-WS-008",
+            "supplierId": "V2-SUP-006",
+            "referencePrice": 13300.0,
+            "currency": "CNY",
+            "leadTimeDays": 8,
+            "capacityUnits": 10,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-04-09",
+            "itemId": "V2-WS-009",
+            "supplierId": "V2-SUP-004",
+            "referencePrice": 15900.0,
+            "currency": "CNY",
+            "leadTimeDays": 25,
+            "capacityUnits": 12,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-05-10",
+            "itemId": "V2-WS-010",
+            "supplierId": "V2-SUP-005",
+            "referencePrice": 17000.0,
+            "currency": "CNY",
+            "leadTimeDays": 16,
+            "capacityUnits": 45,
+            "lifecycle": 0
+          }
+        ],
+        "departments": [
+          {
+            "id": "V2-ALG",
+            "name": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "active": true,
+            "parentDepartment": "All Departments",
+            "isGroup": 0,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-ENG",
+            "name": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "active": true,
+            "parentDepartment": "All Departments",
+            "isGroup": 0,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SIM",
+            "name": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "active": true,
+            "parentDepartment": "All Departments",
+            "isGroup": 0,
+            "lifecycle": 0
+          }
+        ],
+        "budgets": [
+          {
+            "id": "V2-BUD-001",
+            "departmentId": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "allocated": 600000.0,
+            "committed": 180000.0,
+            "currency": "CNY",
+            "fiscalYear": "2026",
+            "throughFiscalYear": "2026",
+            "startsOn": "2026-01-01",
+            "endsOn": "2026-12-31",
+            "lifecycle": 0,
+            "costCenter": "V2-ALG - SAL",
+            "account": "Tax Expense - SAL",
+            "budget_distribution": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-BUD-001",
+                "startsOn": "2026-01-01",
+                "endsOn": "2026-12-31",
+                "amount": 600000.0,
+                "percent": 100.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-BUD-002",
+            "departmentId": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "allocated": 450000.0,
+            "committed": 210000.0,
+            "currency": "CNY",
+            "fiscalYear": "2026",
+            "throughFiscalYear": "2026",
+            "startsOn": "2026-01-01",
+            "endsOn": "2026-12-31",
+            "lifecycle": 0,
+            "costCenter": "V2-SIM - SAL",
+            "account": "Tax Expense - SAL",
+            "budget_distribution": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-BUD-002",
+                "startsOn": "2026-01-01",
+                "endsOn": "2026-12-31",
+                "amount": 450000.0,
+                "percent": 100.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-BUD-003",
+            "departmentId": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "allocated": 320000.0,
+            "committed": 80000.0,
+            "currency": "CNY",
+            "fiscalYear": "2026",
+            "throughFiscalYear": "2026",
+            "startsOn": "2026-01-01",
+            "endsOn": "2026-12-31",
+            "lifecycle": 0,
+            "costCenter": "V2-ENG - SAL",
+            "account": "Tax Expense - SAL",
+            "budget_distribution": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-BUD-003",
+                "startsOn": "2026-01-01",
+                "endsOn": "2026-12-31",
+                "amount": 320000.0,
+                "percent": 100.0,
+                "lifecycle": 0
+              }
+            ]
+          }
+        ],
+        "purchase_history": [
+          {
+            "id": "V2-HIST-01-01",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 13000.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-05",
+            "deliveredOn": "2026-01-17",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-02",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 12975.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-26",
+            "deliveredOn": "2026-02-07",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-03",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 12950.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-16",
+            "deliveredOn": "2026-02-28",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-04",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 12925.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-09",
+            "deliveredOn": "2026-03-21",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-05",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 8,
+            "unitPrice": 12900.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-30",
+            "deliveredOn": "2026-04-11",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-06",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 9,
+            "unitPrice": 12875.0,
+            "currency": "CNY",
+            "orderedOn": "2026-04-20",
+            "deliveredOn": "2026-05-02",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-01",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 10800.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-06",
+            "deliveredOn": "2026-02-02",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-02",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 10775.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-27",
+            "deliveredOn": "2026-02-23",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-03",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 10750.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-17",
+            "deliveredOn": "2026-03-16",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-04",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 10725.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-10",
+            "deliveredOn": "2026-04-06",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-05",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 8,
+            "unitPrice": 10700.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-31",
+            "deliveredOn": "2026-04-27",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-01",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 13900.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-07",
+            "deliveredOn": "2026-01-18",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-02",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 13875.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-28",
+            "deliveredOn": "2026-02-08",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-03",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 13850.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-18",
+            "deliveredOn": "2026-03-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-04",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 13825.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-11",
+            "deliveredOn": "2026-03-22",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-04-01",
+            "supplierId": "V2-SUP-004",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 12100.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-08",
+            "deliveredOn": "2026-02-06",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-04-02",
+            "supplierId": "V2-SUP-004",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 12075.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-29",
+            "deliveredOn": "2026-02-27",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-04-03",
+            "supplierId": "V2-SUP-004",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 12050.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-19",
+            "deliveredOn": "2026-03-20",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-01",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 12700.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-09",
+            "deliveredOn": "2026-01-27",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-02",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 12675.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-30",
+            "deliveredOn": "2026-02-17",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-03",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 12650.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-20",
+            "deliveredOn": "2026-03-10",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-04",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 12625.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-13",
+            "deliveredOn": "2026-03-31",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-06-01",
+            "supplierId": "V2-SUP-006",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 9900.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-10",
+            "deliveredOn": "2026-02-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-06-02",
+            "supplierId": "V2-SUP-006",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 9875.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-31",
+            "deliveredOn": "2026-02-22",
+            "lifecycle": 0
+          }
+        ],
+        "supplier_performance": [
+          {
+            "id": "V2-SUP-001",
+            "supplierId": "V2-SUP-001",
+            "transactionCount": 6,
+            "onTimeRate": 0.98,
+            "qualityScore": 96.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-002",
+            "supplierId": "V2-SUP-002",
+            "transactionCount": 5,
+            "onTimeRate": 0.65,
+            "qualityScore": 97.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-003",
+            "supplierId": "V2-SUP-003",
+            "transactionCount": 4,
+            "onTimeRate": 0.96,
+            "qualityScore": 95.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-004",
+            "supplierId": "V2-SUP-004",
+            "transactionCount": 3,
+            "onTimeRate": 0.72,
+            "qualityScore": 82.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-005",
+            "supplierId": "V2-SUP-005",
+            "transactionCount": 4,
+            "onTimeRate": 0.88,
+            "qualityScore": 90.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-006",
+            "supplierId": "V2-SUP-006",
+            "transactionCount": 2,
+            "onTimeRate": 0.55,
+            "qualityScore": 76.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          }
+        ],
+        "sample_requisitions": [
+          {
+            "id": "V2-REQ-001",
+            "departmentId": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-001",
+                "itemId": "V2-WS-001",
+                "quantity": 20.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 20.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-002",
+            "departmentId": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-002",
+                "itemId": "V2-WS-002",
+                "quantity": 6.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 6.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-003",
+            "departmentId": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-003",
+                "itemId": "V2-WS-003",
+                "quantity": 7.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 7.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-004",
+            "departmentId": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-004",
+                "itemId": "V2-WS-001",
+                "quantity": 8.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 8.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-005",
+            "departmentId": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-005",
+                "itemId": "V2-WS-002",
+                "quantity": 9.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 9.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-006",
+            "departmentId": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-006",
+                "itemId": "V2-WS-003",
+                "quantity": 10.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 10.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          }
+        ]
+      },
+      "rfqs": []
+    },
+    "versions_unchanged": true,
+    "rfq_count": 0
+  },
+  {
+    "trial_id": "ROB-03-1",
+    "all_snapshot_differences": [
+      {
+        "path": "/baseBusinessHash",
+        "before": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e",
+        "after": null,
+        "before_present": true,
+        "after_present": false
+      },
+      {
+        "path": "/businessHash",
+        "before": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e",
+        "after": "b8fc54b8d2a553e3d7517ef3d824391dfc01621d7af636f82ec1a54b85967576"
+      },
+      {
+        "path": "/facts/suppliers/0/idx",
+        "before": 0,
+        "after": 1
+      }
+    ],
+    "entity_field_differences": [
+      {
+        "path": "/facts/suppliers/0/idx",
+        "before": 0,
+        "after": 1,
+        "entity_id": "V2-SUP-001",
+        "entity_type": "Supplier"
+      }
+    ],
+    "canonical_before": {
+      "contract": "canonical-business-state-v2.2",
+      "masters": {
+        "suppliers": [
+          {
+            "id": "V2-SUP-001",
+            "name": "Nebula Forge Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "HIGH",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-002",
+            "name": "Cobalt Finch Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "MEDIUM",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-003",
+            "name": "Amber Circuit Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "HIGH",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-004",
+            "name": "Silver Moss Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "LOW",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-005",
+            "name": "Violet Harbor Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "MEDIUM",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-006",
+            "name": "Copper Kite Fictional",
+            "active": false,
+            "approvalStatus": "Inactive",
+            "capacity": "LOW",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          }
+        ],
+        "items": [
+          {
+            "id": "V2-WS-001",
+            "code": "V2-WS-001",
+            "name": "AI Workstation 01",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 24,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-001",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-002",
+            "code": "V2-WS-002",
+            "name": "AI Workstation 02",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 32,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-002",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-003",
+            "code": "V2-WS-003",
+            "name": "AI Workstation 03",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 48,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-003",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-004",
+            "code": "V2-WS-004",
+            "name": "AI Workstation 04",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 16,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-004",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-005",
+            "code": "V2-WS-005",
+            "name": "AI Workstation 05",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 24,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-005",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-006",
+            "code": "V2-WS-006",
+            "name": "AI Workstation 06",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 32,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-006",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-007",
+            "code": "V2-WS-007",
+            "name": "AI Workstation 07",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 48,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-007",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-008",
+            "code": "V2-WS-008",
+            "name": "AI Workstation 08",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 64,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-008",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-009",
+            "code": "V2-WS-009",
+            "name": "AI Workstation 09",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 24,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-009",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-010",
+            "code": "V2-WS-010",
+            "name": "AI Workstation 10",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 32,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-010",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          }
+        ],
+        "item_suppliers": [
+          {
+            "id": "V2-REL-01-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-001",
+            "referencePrice": 12800.0,
+            "currency": "CNY",
+            "leadTimeDays": 12,
+            "capacityUnits": 80,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-02-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-002",
+            "referencePrice": 10900.0,
+            "currency": "CNY",
+            "leadTimeDays": 20,
+            "capacityUnits": 35,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-03-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-003",
+            "referencePrice": 13700.0,
+            "currency": "CNY",
+            "leadTimeDays": 10,
+            "capacityUnits": 100,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-04-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-004",
+            "referencePrice": 11900.0,
+            "currency": "CNY",
+            "leadTimeDays": 25,
+            "capacityUnits": 12,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-05-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-005",
+            "referencePrice": 12500.0,
+            "currency": "CNY",
+            "leadTimeDays": 16,
+            "capacityUnits": 45,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-06-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-006",
+            "referencePrice": 9800.0,
+            "currency": "CNY",
+            "leadTimeDays": 8,
+            "capacityUnits": 10,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-06-02",
+            "itemId": "V2-WS-002",
+            "supplierId": "V2-SUP-006",
+            "referencePrice": 10300.0,
+            "currency": "CNY",
+            "leadTimeDays": 8,
+            "capacityUnits": 10,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-01-03",
+            "itemId": "V2-WS-003",
+            "supplierId": "V2-SUP-001",
+            "referencePrice": 13800.0,
+            "currency": "CNY",
+            "leadTimeDays": 12,
+            "capacityUnits": 80,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-02-04",
+            "itemId": "V2-WS-004",
+            "supplierId": "V2-SUP-002",
+            "referencePrice": 12400.0,
+            "currency": "CNY",
+            "leadTimeDays": 20,
+            "capacityUnits": 35,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-03-05",
+            "itemId": "V2-WS-005",
+            "supplierId": "V2-SUP-003",
+            "referencePrice": 15700.0,
+            "currency": "CNY",
+            "leadTimeDays": 10,
+            "capacityUnits": 100,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-01-06",
+            "itemId": "V2-WS-006",
+            "supplierId": "V2-SUP-001",
+            "referencePrice": 15300.0,
+            "currency": "CNY",
+            "leadTimeDays": 12,
+            "capacityUnits": 80,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-04-06",
+            "itemId": "V2-WS-006",
+            "supplierId": "V2-SUP-004",
+            "referencePrice": 14400.0,
+            "currency": "CNY",
+            "leadTimeDays": 25,
+            "capacityUnits": 12,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-02-07",
+            "itemId": "V2-WS-007",
+            "supplierId": "V2-SUP-002",
+            "referencePrice": 13900.0,
+            "currency": "CNY",
+            "leadTimeDays": 20,
+            "capacityUnits": 35,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-05-07",
+            "itemId": "V2-WS-007",
+            "supplierId": "V2-SUP-005",
+            "referencePrice": 15500.0,
+            "currency": "CNY",
+            "leadTimeDays": 16,
+            "capacityUnits": 45,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-03-08",
+            "itemId": "V2-WS-008",
+            "supplierId": "V2-SUP-003",
+            "referencePrice": 17200.0,
+            "currency": "CNY",
+            "leadTimeDays": 10,
+            "capacityUnits": 100,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-06-08",
+            "itemId": "V2-WS-008",
+            "supplierId": "V2-SUP-006",
+            "referencePrice": 13300.0,
+            "currency": "CNY",
+            "leadTimeDays": 8,
+            "capacityUnits": 10,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-04-09",
+            "itemId": "V2-WS-009",
+            "supplierId": "V2-SUP-004",
+            "referencePrice": 15900.0,
+            "currency": "CNY",
+            "leadTimeDays": 25,
+            "capacityUnits": 12,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-05-10",
+            "itemId": "V2-WS-010",
+            "supplierId": "V2-SUP-005",
+            "referencePrice": 17000.0,
+            "currency": "CNY",
+            "leadTimeDays": 16,
+            "capacityUnits": 45,
+            "lifecycle": 0
+          }
+        ],
+        "departments": [
+          {
+            "id": "V2-ALG",
+            "name": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "active": true,
+            "parentDepartment": "All Departments",
+            "isGroup": 0,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-ENG",
+            "name": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "active": true,
+            "parentDepartment": "All Departments",
+            "isGroup": 0,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SIM",
+            "name": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "active": true,
+            "parentDepartment": "All Departments",
+            "isGroup": 0,
+            "lifecycle": 0
+          }
+        ],
+        "budgets": [
+          {
+            "id": "V2-BUD-001",
+            "departmentId": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "allocated": 600000.0,
+            "committed": 180000.0,
+            "currency": "CNY",
+            "fiscalYear": "2026",
+            "throughFiscalYear": "2026",
+            "startsOn": "2026-01-01",
+            "endsOn": "2026-12-31",
+            "lifecycle": 0,
+            "costCenter": "V2-ALG - SAL",
+            "account": "Tax Expense - SAL",
+            "budget_distribution": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-BUD-001",
+                "startsOn": "2026-01-01",
+                "endsOn": "2026-12-31",
+                "amount": 600000.0,
+                "percent": 100.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-BUD-002",
+            "departmentId": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "allocated": 450000.0,
+            "committed": 210000.0,
+            "currency": "CNY",
+            "fiscalYear": "2026",
+            "throughFiscalYear": "2026",
+            "startsOn": "2026-01-01",
+            "endsOn": "2026-12-31",
+            "lifecycle": 0,
+            "costCenter": "V2-SIM - SAL",
+            "account": "Tax Expense - SAL",
+            "budget_distribution": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-BUD-002",
+                "startsOn": "2026-01-01",
+                "endsOn": "2026-12-31",
+                "amount": 450000.0,
+                "percent": 100.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-BUD-003",
+            "departmentId": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "allocated": 320000.0,
+            "committed": 80000.0,
+            "currency": "CNY",
+            "fiscalYear": "2026",
+            "throughFiscalYear": "2026",
+            "startsOn": "2026-01-01",
+            "endsOn": "2026-12-31",
+            "lifecycle": 0,
+            "costCenter": "V2-ENG - SAL",
+            "account": "Tax Expense - SAL",
+            "budget_distribution": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-BUD-003",
+                "startsOn": "2026-01-01",
+                "endsOn": "2026-12-31",
+                "amount": 320000.0,
+                "percent": 100.0,
+                "lifecycle": 0
+              }
+            ]
+          }
+        ],
+        "purchase_history": [
+          {
+            "id": "V2-HIST-01-01",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 13000.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-05",
+            "deliveredOn": "2026-01-17",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-02",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 12975.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-26",
+            "deliveredOn": "2026-02-07",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-03",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 12950.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-16",
+            "deliveredOn": "2026-02-28",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-04",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 12925.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-09",
+            "deliveredOn": "2026-03-21",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-05",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 8,
+            "unitPrice": 12900.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-30",
+            "deliveredOn": "2026-04-11",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-06",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 9,
+            "unitPrice": 12875.0,
+            "currency": "CNY",
+            "orderedOn": "2026-04-20",
+            "deliveredOn": "2026-05-02",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-01",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 10800.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-06",
+            "deliveredOn": "2026-02-02",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-02",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 10775.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-27",
+            "deliveredOn": "2026-02-23",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-03",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 10750.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-17",
+            "deliveredOn": "2026-03-16",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-04",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 10725.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-10",
+            "deliveredOn": "2026-04-06",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-05",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 8,
+            "unitPrice": 10700.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-31",
+            "deliveredOn": "2026-04-27",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-01",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 13900.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-07",
+            "deliveredOn": "2026-01-18",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-02",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 13875.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-28",
+            "deliveredOn": "2026-02-08",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-03",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 13850.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-18",
+            "deliveredOn": "2026-03-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-04",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 13825.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-11",
+            "deliveredOn": "2026-03-22",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-04-01",
+            "supplierId": "V2-SUP-004",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 12100.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-08",
+            "deliveredOn": "2026-02-06",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-04-02",
+            "supplierId": "V2-SUP-004",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 12075.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-29",
+            "deliveredOn": "2026-02-27",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-04-03",
+            "supplierId": "V2-SUP-004",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 12050.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-19",
+            "deliveredOn": "2026-03-20",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-01",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 12700.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-09",
+            "deliveredOn": "2026-01-27",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-02",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 12675.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-30",
+            "deliveredOn": "2026-02-17",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-03",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 12650.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-20",
+            "deliveredOn": "2026-03-10",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-04",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 12625.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-13",
+            "deliveredOn": "2026-03-31",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-06-01",
+            "supplierId": "V2-SUP-006",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 9900.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-10",
+            "deliveredOn": "2026-02-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-06-02",
+            "supplierId": "V2-SUP-006",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 9875.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-31",
+            "deliveredOn": "2026-02-22",
+            "lifecycle": 0
+          }
+        ],
+        "supplier_performance": [
+          {
+            "id": "V2-SUP-001",
+            "supplierId": "V2-SUP-001",
+            "transactionCount": 6,
+            "onTimeRate": 0.98,
+            "qualityScore": 96.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-002",
+            "supplierId": "V2-SUP-002",
+            "transactionCount": 5,
+            "onTimeRate": 0.65,
+            "qualityScore": 97.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-003",
+            "supplierId": "V2-SUP-003",
+            "transactionCount": 4,
+            "onTimeRate": 0.96,
+            "qualityScore": 95.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-004",
+            "supplierId": "V2-SUP-004",
+            "transactionCount": 3,
+            "onTimeRate": 0.72,
+            "qualityScore": 82.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-005",
+            "supplierId": "V2-SUP-005",
+            "transactionCount": 4,
+            "onTimeRate": 0.88,
+            "qualityScore": 90.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-006",
+            "supplierId": "V2-SUP-006",
+            "transactionCount": 2,
+            "onTimeRate": 0.55,
+            "qualityScore": 76.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          }
+        ],
+        "sample_requisitions": [
+          {
+            "id": "V2-REQ-001",
+            "departmentId": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-001",
+                "itemId": "V2-WS-001",
+                "quantity": 20.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 20.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-002",
+            "departmentId": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-002",
+                "itemId": "V2-WS-002",
+                "quantity": 6.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 6.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-003",
+            "departmentId": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-003",
+                "itemId": "V2-WS-003",
+                "quantity": 7.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 7.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-004",
+            "departmentId": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-004",
+                "itemId": "V2-WS-001",
+                "quantity": 8.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 8.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-005",
+            "departmentId": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-005",
+                "itemId": "V2-WS-002",
+                "quantity": 9.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 9.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-006",
+            "departmentId": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-006",
+                "itemId": "V2-WS-003",
+                "quantity": 10.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 10.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          }
+        ]
+      },
+      "rfqs": []
+    },
+    "canonical_after": {
+      "contract": "canonical-business-state-v2.2",
+      "masters": {
+        "suppliers": [
+          {
+            "id": "V2-SUP-001",
+            "name": "Nebula Forge Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "HIGH",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-002",
+            "name": "Cobalt Finch Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "MEDIUM",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-003",
+            "name": "Amber Circuit Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "HIGH",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-004",
+            "name": "Silver Moss Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "LOW",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-005",
+            "name": "Violet Harbor Fictional",
+            "active": true,
+            "approvalStatus": "Approved",
+            "capacity": "MEDIUM",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          },
+          {
+            "id": "V2-SUP-006",
+            "name": "Copper Kite Fictional",
+            "active": false,
+            "approvalStatus": "Inactive",
+            "capacity": "LOW",
+            "lifecycle": 0,
+            "group": "All Supplier Groups",
+            "type": "Company",
+            "frozen": 0,
+            "onHold": 0,
+            "holdType": "All",
+            "releaseDate": null,
+            "preventRfq": 0
+          }
+        ],
+        "items": [
+          {
+            "id": "V2-WS-001",
+            "code": "V2-WS-001",
+            "name": "AI Workstation 01",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 24,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-001",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-002",
+            "code": "V2-WS-002",
+            "name": "AI Workstation 02",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 32,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-002",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-003",
+            "code": "V2-WS-003",
+            "name": "AI Workstation 03",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 48,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-003",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-004",
+            "code": "V2-WS-004",
+            "name": "AI Workstation 04",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 16,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-004",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-005",
+            "code": "V2-WS-005",
+            "name": "AI Workstation 05",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 24,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-005",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-006",
+            "code": "V2-WS-006",
+            "name": "AI Workstation 06",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 32,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-006",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-007",
+            "code": "V2-WS-007",
+            "name": "AI Workstation 07",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 48,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-007",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-008",
+            "code": "V2-WS-008",
+            "name": "AI Workstation 08",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 64,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-008",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-009",
+            "code": "V2-WS-009",
+            "name": "AI Workstation 09",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 24,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-009",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-WS-010",
+            "code": "V2-WS-010",
+            "name": "AI Workstation 10",
+            "category": "AI Workstation",
+            "active": true,
+            "uom": "Nos",
+            "gpuMemoryGb": 32,
+            "warranty": "36 months",
+            "lifecycle": 0,
+            "purchasable": 1,
+            "stockItem": 0,
+            "endOfLife": "2099-12-31",
+            "purchaseUom": null,
+            "minimumOrder": 0.0,
+            "uoms": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-WS-010",
+                "uom": "Nos",
+                "conversionFactor": 1.0,
+                "lifecycle": 0
+              }
+            ]
+          }
+        ],
+        "item_suppliers": [
+          {
+            "id": "V2-REL-01-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-001",
+            "referencePrice": 12800.0,
+            "currency": "CNY",
+            "leadTimeDays": 12,
+            "capacityUnits": 80,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-02-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-002",
+            "referencePrice": 10900.0,
+            "currency": "CNY",
+            "leadTimeDays": 20,
+            "capacityUnits": 35,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-03-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-003",
+            "referencePrice": 13700.0,
+            "currency": "CNY",
+            "leadTimeDays": 10,
+            "capacityUnits": 100,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-04-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-004",
+            "referencePrice": 11900.0,
+            "currency": "CNY",
+            "leadTimeDays": 25,
+            "capacityUnits": 12,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-05-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-005",
+            "referencePrice": 12500.0,
+            "currency": "CNY",
+            "leadTimeDays": 16,
+            "capacityUnits": 45,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-06-01",
+            "itemId": "V2-WS-001",
+            "supplierId": "V2-SUP-006",
+            "referencePrice": 9800.0,
+            "currency": "CNY",
+            "leadTimeDays": 8,
+            "capacityUnits": 10,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-06-02",
+            "itemId": "V2-WS-002",
+            "supplierId": "V2-SUP-006",
+            "referencePrice": 10300.0,
+            "currency": "CNY",
+            "leadTimeDays": 8,
+            "capacityUnits": 10,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-01-03",
+            "itemId": "V2-WS-003",
+            "supplierId": "V2-SUP-001",
+            "referencePrice": 13800.0,
+            "currency": "CNY",
+            "leadTimeDays": 12,
+            "capacityUnits": 80,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-02-04",
+            "itemId": "V2-WS-004",
+            "supplierId": "V2-SUP-002",
+            "referencePrice": 12400.0,
+            "currency": "CNY",
+            "leadTimeDays": 20,
+            "capacityUnits": 35,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-03-05",
+            "itemId": "V2-WS-005",
+            "supplierId": "V2-SUP-003",
+            "referencePrice": 15700.0,
+            "currency": "CNY",
+            "leadTimeDays": 10,
+            "capacityUnits": 100,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-01-06",
+            "itemId": "V2-WS-006",
+            "supplierId": "V2-SUP-001",
+            "referencePrice": 15300.0,
+            "currency": "CNY",
+            "leadTimeDays": 12,
+            "capacityUnits": 80,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-04-06",
+            "itemId": "V2-WS-006",
+            "supplierId": "V2-SUP-004",
+            "referencePrice": 14400.0,
+            "currency": "CNY",
+            "leadTimeDays": 25,
+            "capacityUnits": 12,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-02-07",
+            "itemId": "V2-WS-007",
+            "supplierId": "V2-SUP-002",
+            "referencePrice": 13900.0,
+            "currency": "CNY",
+            "leadTimeDays": 20,
+            "capacityUnits": 35,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-05-07",
+            "itemId": "V2-WS-007",
+            "supplierId": "V2-SUP-005",
+            "referencePrice": 15500.0,
+            "currency": "CNY",
+            "leadTimeDays": 16,
+            "capacityUnits": 45,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-03-08",
+            "itemId": "V2-WS-008",
+            "supplierId": "V2-SUP-003",
+            "referencePrice": 17200.0,
+            "currency": "CNY",
+            "leadTimeDays": 10,
+            "capacityUnits": 100,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-06-08",
+            "itemId": "V2-WS-008",
+            "supplierId": "V2-SUP-006",
+            "referencePrice": 13300.0,
+            "currency": "CNY",
+            "leadTimeDays": 8,
+            "capacityUnits": 10,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-04-09",
+            "itemId": "V2-WS-009",
+            "supplierId": "V2-SUP-004",
+            "referencePrice": 15900.0,
+            "currency": "CNY",
+            "leadTimeDays": 25,
+            "capacityUnits": 12,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-REL-05-10",
+            "itemId": "V2-WS-010",
+            "supplierId": "V2-SUP-005",
+            "referencePrice": 17000.0,
+            "currency": "CNY",
+            "leadTimeDays": 16,
+            "capacityUnits": 45,
+            "lifecycle": 0
+          }
+        ],
+        "departments": [
+          {
+            "id": "V2-ALG",
+            "name": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "active": true,
+            "parentDepartment": "All Departments",
+            "isGroup": 0,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-ENG",
+            "name": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "active": true,
+            "parentDepartment": "All Departments",
+            "isGroup": 0,
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SIM",
+            "name": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "active": true,
+            "parentDepartment": "All Departments",
+            "isGroup": 0,
+            "lifecycle": 0
+          }
+        ],
+        "budgets": [
+          {
+            "id": "V2-BUD-001",
+            "departmentId": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "allocated": 600000.0,
+            "committed": 180000.0,
+            "currency": "CNY",
+            "fiscalYear": "2026",
+            "throughFiscalYear": "2026",
+            "startsOn": "2026-01-01",
+            "endsOn": "2026-12-31",
+            "lifecycle": 0,
+            "costCenter": "V2-ALG - SAL",
+            "account": "Tax Expense - SAL",
+            "budget_distribution": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-BUD-001",
+                "startsOn": "2026-01-01",
+                "endsOn": "2026-12-31",
+                "amount": 600000.0,
+                "percent": 100.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-BUD-002",
+            "departmentId": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "allocated": 450000.0,
+            "committed": 210000.0,
+            "currency": "CNY",
+            "fiscalYear": "2026",
+            "throughFiscalYear": "2026",
+            "startsOn": "2026-01-01",
+            "endsOn": "2026-12-31",
+            "lifecycle": 0,
+            "costCenter": "V2-SIM - SAL",
+            "account": "Tax Expense - SAL",
+            "budget_distribution": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-BUD-002",
+                "startsOn": "2026-01-01",
+                "endsOn": "2026-12-31",
+                "amount": 450000.0,
+                "percent": 100.0,
+                "lifecycle": 0
+              }
+            ]
+          },
+          {
+            "id": "V2-BUD-003",
+            "departmentId": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "allocated": 320000.0,
+            "committed": 80000.0,
+            "currency": "CNY",
+            "fiscalYear": "2026",
+            "throughFiscalYear": "2026",
+            "startsOn": "2026-01-01",
+            "endsOn": "2026-12-31",
+            "lifecycle": 0,
+            "costCenter": "V2-ENG - SAL",
+            "account": "Tax Expense - SAL",
+            "budget_distribution": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-BUD-003",
+                "startsOn": "2026-01-01",
+                "endsOn": "2026-12-31",
+                "amount": 320000.0,
+                "percent": 100.0,
+                "lifecycle": 0
+              }
+            ]
+          }
+        ],
+        "purchase_history": [
+          {
+            "id": "V2-HIST-01-01",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 13000.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-05",
+            "deliveredOn": "2026-01-17",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-02",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 12975.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-26",
+            "deliveredOn": "2026-02-07",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-03",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 12950.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-16",
+            "deliveredOn": "2026-02-28",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-04",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 12925.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-09",
+            "deliveredOn": "2026-03-21",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-05",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 8,
+            "unitPrice": 12900.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-30",
+            "deliveredOn": "2026-04-11",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-01-06",
+            "supplierId": "V2-SUP-001",
+            "itemId": "V2-WS-001",
+            "quantity": 9,
+            "unitPrice": 12875.0,
+            "currency": "CNY",
+            "orderedOn": "2026-04-20",
+            "deliveredOn": "2026-05-02",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-01",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 10800.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-06",
+            "deliveredOn": "2026-02-02",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-02",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 10775.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-27",
+            "deliveredOn": "2026-02-23",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-03",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 10750.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-17",
+            "deliveredOn": "2026-03-16",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-04",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 10725.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-10",
+            "deliveredOn": "2026-04-06",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-02-05",
+            "supplierId": "V2-SUP-002",
+            "itemId": "V2-WS-001",
+            "quantity": 8,
+            "unitPrice": 10700.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-31",
+            "deliveredOn": "2026-04-27",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-01",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 13900.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-07",
+            "deliveredOn": "2026-01-18",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-02",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 13875.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-28",
+            "deliveredOn": "2026-02-08",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-03",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 13850.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-18",
+            "deliveredOn": "2026-03-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-03-04",
+            "supplierId": "V2-SUP-003",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 13825.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-11",
+            "deliveredOn": "2026-03-22",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-04-01",
+            "supplierId": "V2-SUP-004",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 12100.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-08",
+            "deliveredOn": "2026-02-06",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-04-02",
+            "supplierId": "V2-SUP-004",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 12075.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-29",
+            "deliveredOn": "2026-02-27",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-04-03",
+            "supplierId": "V2-SUP-004",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 12050.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-19",
+            "deliveredOn": "2026-03-20",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-01",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 12700.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-09",
+            "deliveredOn": "2026-01-27",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-02",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 12675.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-30",
+            "deliveredOn": "2026-02-17",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-03",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 6,
+            "unitPrice": 12650.0,
+            "currency": "CNY",
+            "orderedOn": "2026-02-20",
+            "deliveredOn": "2026-03-10",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-05-04",
+            "supplierId": "V2-SUP-005",
+            "itemId": "V2-WS-001",
+            "quantity": 7,
+            "unitPrice": 12625.0,
+            "currency": "CNY",
+            "orderedOn": "2026-03-13",
+            "deliveredOn": "2026-03-31",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-06-01",
+            "supplierId": "V2-SUP-006",
+            "itemId": "V2-WS-001",
+            "quantity": 4,
+            "unitPrice": 9900.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-10",
+            "deliveredOn": "2026-02-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-HIST-06-02",
+            "supplierId": "V2-SUP-006",
+            "itemId": "V2-WS-001",
+            "quantity": 5,
+            "unitPrice": 9875.0,
+            "currency": "CNY",
+            "orderedOn": "2026-01-31",
+            "deliveredOn": "2026-02-22",
+            "lifecycle": 0
+          }
+        ],
+        "supplier_performance": [
+          {
+            "id": "V2-SUP-001",
+            "supplierId": "V2-SUP-001",
+            "transactionCount": 6,
+            "onTimeRate": 0.98,
+            "qualityScore": 96.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-002",
+            "supplierId": "V2-SUP-002",
+            "transactionCount": 5,
+            "onTimeRate": 0.65,
+            "qualityScore": 97.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-003",
+            "supplierId": "V2-SUP-003",
+            "transactionCount": 4,
+            "onTimeRate": 0.96,
+            "qualityScore": 95.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-004",
+            "supplierId": "V2-SUP-004",
+            "transactionCount": 3,
+            "onTimeRate": 0.72,
+            "qualityScore": 82.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-005",
+            "supplierId": "V2-SUP-005",
+            "transactionCount": 4,
+            "onTimeRate": 0.88,
+            "qualityScore": 90.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          },
+          {
+            "id": "V2-SUP-006",
+            "supplierId": "V2-SUP-006",
+            "transactionCount": 2,
+            "onTimeRate": 0.55,
+            "qualityScore": 76.0,
+            "observedOn": "2026-09-01",
+            "lifecycle": 0
+          }
+        ],
+        "sample_requisitions": [
+          {
+            "id": "V2-REQ-001",
+            "departmentId": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-001",
+                "itemId": "V2-WS-001",
+                "quantity": 20.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 20.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-002",
+            "departmentId": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-002",
+                "itemId": "V2-WS-002",
+                "quantity": 6.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 6.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-003",
+            "departmentId": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-003",
+                "itemId": "V2-WS-003",
+                "quantity": 7.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 7.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-004",
+            "departmentId": "V2-ALG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-004",
+                "itemId": "V2-WS-001",
+                "quantity": 8.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 8.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-005",
+            "departmentId": "V2-SIM",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-005",
+                "itemId": "V2-WS-002",
+                "quantity": 9.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 9.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          },
+          {
+            "id": "V2-REQ-006",
+            "departmentId": "V2-ENG",
+            "company": "Synthetic AI Labs",
+            "type": "Purchase",
+            "status": "Draft",
+            "lifecycle": 0,
+            "orderedOn": "2026-10-01",
+            "requiredBy": "2026-12-15",
+            "items": [
+              {
+                "ordinal": 1,
+                "parentId": "V2-REQ-006",
+                "itemId": "V2-WS-003",
+                "quantity": 10.0,
+                "uom": "Nos",
+                "stockUom": "Nos",
+                "stockQuantity": 10.0,
+                "conversionFactor": 1.0,
+                "requiredBy": "2026-12-15",
+                "lifecycle": 0,
+                "warehouse": null
+              }
+            ]
+          }
+        ]
+      },
+      "rfqs": []
+    },
+    "versions_unchanged": true,
+    "rfq_count": 0
+  }
+]

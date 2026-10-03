@@ -32,6 +32,9 @@ public class ProcurementDecisionEngine {
 
     private List<String> failures(ProcurementCaseState state, SupplierCandidate candidate, SupplierOffer offer) {
         List<String> result = new ArrayList<>();
+        // ERP-backed offers carry the canonical Item state and provenance. Legacy offers have no Item status contract.
+        if (offer.specifications().containsKey("itemActive")
+                && !Boolean.TRUE.equals(offer.specifications().get("itemActive"))) result.add("INACTIVE_ITEM");
         state.hardConstraints().keySet().stream().filter(key -> !SUPPORTED_HARD_CONSTRAINTS.contains(key))
                 .sorted().forEach(key -> result.add("UNSUPPORTED_HARD_CONSTRAINT:" + key));
         if (!offer.currency().equalsIgnoreCase(state.currency())) result.add("CURRENCY_MISMATCH");

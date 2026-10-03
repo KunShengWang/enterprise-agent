@@ -1,0 +1,27 @@
+{
+  "base_commit": "13759383e988cafee936f5ac297299080eba9cc3",
+  "branch": "fix/procurement-v2-contracts",
+  "uncommitted": true,
+  "staged": false,
+  "protected_handler_excluded": true,
+  "production_working_tree_hash": "444ef142764904ef309edfcd3aaada6baad5ecf8436859339e0654fb9ac0139d",
+  "files": {
+    "src/main/java/com/agent/platform/procurement/application/ProcurementDecisionEngine.java": "378c7483a19c76922ed036f2233d3743e5790d91afb0ff4b1979e8a9ab257821",
+    "src/main/java/com/agent/platform/procurement/erp/CanonicalRequisitionBinding.java": "02bc05c76479c9ab961a624d2096d40341f7dde8d93e189a467b5c6fba01c44f",
+    "src/main/java/com/agent/platform/procurement/erp/ErpNextProcurementAdapter.java": "1ce5c79248902c3ba24fee9bd01bb1fb88da70816f65df508b33132acc70257f",
+    "src/main/java/com/agent/platform/procurement/erp/ErpNextProcurementRfqGateway.java": "6c62b4d712950ad2db75afc8f674311bbebe4d744d8abc10e00c6c4780f5cd01",
+    "src/main/java/com/agent/platform/procurement/erp/ErpRfqApprovalGuard.java": "7bd55bdb47e29f37a6005a162e93cc97a439933dec6706367ae26eb92666fcf8",
+    "src/main/java/com/agent/platform/procurement/erp/ProcurementErpAdapter.java": "aa99c36e0b330a595a7a1f06189f112eda6f6585bb2a2ec3c15720c5bdb0497f",
+    "src/main/java/com/agent/platform/procurement/erp/ProcurementMcpService.java": "41386fbbaadf6a824d56787e1841c5a320d93222b31651ee9d230d5c8082ed7d",
+    "src/main/java/com/agent/platform/procurement/tool/ProcurementRfqApprovalPreparer.java": "9ced30be489e9c7497bc56fc92fa2c2806c5d0e969b20a95d4cc6d0ec0f41d66",
+    "src/main/java/com/agent/platform/procurement/tool/ProcurementRfqGateway.java": "43fe96197f2bd08debc90979c9d771b149002ff1ca72b7a350f7663e808dc12e",
+    "src/main/java/com/agent/platform/procurement/tool/ProcurementRfqToolHandler.java": "977ea1520c09ec16f9ffe0614358ad2ffacd4c182f4d70099a017e4f46e6d8ce",
+    "src/test/java/com/agent/platform/procurement/erp/CanonicalRequisitionBindingTests.java": "7670831feae8159aa5400a28bd3b1b545bc27c5beac2a2645a5688bf17e9baea",
+    "src/test/java/com/agent/platform/procurement/erp/ErpNextAdapterTests.java": "2f2e0c9e9ef1c81e7967e6b67735a898e348e1ef0c5a937ec2ea7b4d17ec0b4a",
+    "src/test/java/com/agent/platform/procurement/erp/ErpNextProcurementIT.java": "8dac000768bdf7c9399c79e2b7a59e739c9b5277e3233febc2bc7eb4df21bd7a",
+    "src/test/java/com/agent/platform/procurement/erp/ErpNextRfqGatewayTests.java": "3e4b2c7adb090142364cda0d279a3b1f5e889654671d7e8473a9fed4151c189b",
+    "src/test/java/com/agent/platform/procurement/erp/ErpRfqControlledTestSupport.java": "d58eb3665368635a0d463eac154230e61a7007470b5b9283ce178814266c064a",
+    "src/test/java/com/agent/platform/procurement/erp/ProcurementItemContractTests.java": "0ca9bad0807964e615e29ba579fee94590a39d62a826d12ff00f527ba461cce6"
+  },
+  "archive_sha256": "a2e5d708ee39f3b1f427167f152fa073b3fb5a91bdb976ffbeb2ee3b6ccc6da7"
+}

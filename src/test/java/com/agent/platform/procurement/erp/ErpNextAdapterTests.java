@@ -49,8 +49,10 @@ class ErpNextAdapterTests {
         var s=adapter.getSupplier("ID-1").orElseThrow();assertTrue(s.approved());assertEquals("Fictional Supplier",s.name());
         assertEquals("ERPNext",s.source().backend());assertEquals("Supplier",s.source().entityType());
         assertEquals(Instant.parse("2026-10-01T01:02:03.123456Z"),s.source().version());assertEquals("token test-key:test-secret",auth);
-        response=row("item_name","Workstation","item_group","AI Workstation","stock_uom","Nos","custom_gpu_memory_gb",24,"custom_warranty","3 years");
-        var item=adapter.getItem("ID-1").orElseThrow();assertEquals(24,item.gpuMemoryGb());assertEquals("Nos",item.uom());
+        response=row("disabled",0,"item_name","Workstation","item_group","AI Workstation","stock_uom","Nos","custom_gpu_memory_gb",24,"custom_warranty","3 years");
+        var item=adapter.getItem("ID-1").orElseThrow();assertEquals(24,item.gpuMemoryGb());assertEquals("Nos",item.uom());assertTrue(item.active());
+        response=row("disabled",1,"item_name","Workstation","item_group","AI Workstation","stock_uom","Nos","custom_gpu_memory_gb",24,"custom_warranty","3 years");
+        assertFalse(adapter.getItem("ID-1").orElseThrow().active());
     }
     @Test void decimalBudgetAndPurchaseHistoryMapping(){
         response=List.of(row("budget_amount",new BigDecimal("300000.27"),"custom_committed_amount",new BigDecimal("100.12"),"custom_currency","CNY","from_fiscal_year","2026"));
@@ -109,15 +111,17 @@ class ErpNextAdapterTests {
                 .thenAnswer(i->stored.get()==null?List.of():List.of(stored.get()));
         org.mockito.Mockito.when(transport.get("Request for Quotation","ID-1")).thenAnswer(i->Optional.ofNullable(stored.get()));
         org.mockito.Mockito.when(transport.get("Supplier","SUP")).thenReturn(Optional.of(json.valueToTree(row("name","SUP","supplier_name","Fictional","disabled",0,"custom_approval_status","Approved","custom_capacity","HIGH"))));
-        org.mockito.Mockito.when(transport.get("Item","SKU")).thenReturn(Optional.of(json.valueToTree(row("name","SKU","item_name","WS","item_group","AI Workstation","stock_uom","Nos","custom_gpu_memory_gb",24,"custom_warranty","3 years"))));
+        org.mockito.Mockito.when(transport.get("Item","SKU")).thenReturn(Optional.of(json.valueToTree(row("disabled",0,"name","SKU","item_name","WS","item_group","AI Workstation","stock_uom","Nos","custom_gpu_memory_gb",24,"custom_warranty","3 years"))));
         org.mockito.Mockito.when(transport.list(org.mockito.ArgumentMatchers.eq("Procurement Item Supplier"),org.mockito.ArgumentMatchers.anyList(),org.mockito.ArgumentMatchers.eq(0),org.mockito.ArgumentMatchers.eq(200)))
                 .thenReturn(List.of(json.valueToTree(row("item","SKU","supplier","SUP","reference_price",12800,"currency","CNY","lead_time_days",12,"capacity_units",80))));
         org.mockito.Mockito.when(transport.create(org.mockito.ArgumentMatchers.eq("Request for Quotation"),org.mockito.ArgumentMatchers.anyMap())).thenAnswer(i->{
             posts.incrementAndGet();Map<String,Object> doc=new LinkedHashMap<>(i.getArgument(1));doc.put("name","ID-1");doc.put("modified","2026-10-01 00:00:00");
             stored.set(json.valueToTree(doc));throw new ProcurementErpException(ERP_CONFLICT);
         });
-        var request=new ProcurementErpAdapter.RfqRequest("rfq:1","SUP","SKU",20,21,"CNY");
-        var first=erp.createRfq(request);assertEquals(first.id(),erp.createRfq(request).id());assertEquals(1,posts.get());
+        org.mockito.Mockito.when(transport.get("Material Request","MR-A")).thenReturn(Optional.of(json.valueToTree(row("name","MR-A","company","Synthetic AI Labs","custom_department_id","V2-ALG","status","Draft","items",List.of(Map.of("item_code","SKU","qty",20,"schedule_date","2026-10-31"))))));
+        var request=new ProcurementErpAdapter.RfqRequest("rfq:1","SUP","SKU",20,21,"CNY","MR-A");
+        var first=erp.createRfq(request);assertEquals(first.id(),erp.createRfq(request).id());assertEquals(1,posts.get());assertEquals("MR-A",stored.get().path("items").get(0).path("material_request").asText());
+        assertCode(ERP_CONFLICT,()->erp.createRfq(new ProcurementErpAdapter.RfqRequest("rfq:1","SUP","SKU",20,21,"CNY","MR-B")));
         assertCode(ERP_CONFLICT,()->erp.createRfq(new ProcurementErpAdapter.RfqRequest("rfq:1","SUP","SKU",21,21,"CNY")));
         assertEquals(1,posts.get());
     }

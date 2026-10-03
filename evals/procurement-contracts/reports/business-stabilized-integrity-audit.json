@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "run_id": "business-stabilized-20261003-r1",
+  "regraded_artifacts": 122,
+  "valid_trials": 120,
+  "frozen_eval_and_b0_unchanged": true,
+  "baseline_prompt_and_model_options_and_visible_tool_schemas_unchanged": true,
+  "model_comparability_warning_trials": [],
+  "before_rfq_empty_trials": 120,
+  "distinct_run_ids": 120,
+  "distinct_case_ids": 97,
+  "distinct_approval_ids": 42,
+  "no_cross_trial_leak": true,
+  "protected_handler_unchanged": true,
+  "legacy_fingerprints_unchanged": 5,
+  "known_defect_trials_passed": 6,
+  "archive_sha256": "f26a4ccb88ab06c22a3a78951a456a1d0aa7f14337db2b3ef6581473e0d762aa",
+  "verification_script_sha256": "9c9ba48c1ab048a8b08b868910ab9b18583082d13e6225cde2ee879135ba666b",
+  "infra_attempts_archived": 3,
+  "production_review_snapshot_verified": true,
+  "output_wrapper_unchanged": true
+}

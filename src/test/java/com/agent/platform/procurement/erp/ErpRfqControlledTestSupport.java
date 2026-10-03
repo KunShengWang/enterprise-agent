@@ -21,6 +21,9 @@ import static org.mockito.Mockito.*;
 final class ErpRfqControlledTestSupport {
     record Result(String rfqId, String key, ProcurementRfqGateway gateway) {}
     static Result approveAndExecute(java.util.function.Function<ErpRfqApprovalGuard,ProcurementRfqGateway> factory,ObjectMapper json){
+        return approveAndExecute(factory,json,null);
+    }
+    static Result approveAndExecute(java.util.function.Function<ErpRfqApprovalGuard,ProcurementRfqGateway> factory,ObjectMapper json,String requisitionId){
         var cases=mock(ProcurementCaseStore.class);var executions=mock(ToolExecutionStore.class);
         var state=new ProcurementCaseState("AI Workstation","V2-WS-001",20,new BigDecimal("300000"),"CNY",21,Map.of(),Map.of(),Set.of(),List.of(),"SOURCING");
         var current=new ProcurementCase("erp-case","tenant","conversation","buyer",ProcurementCaseStatus.SOURCING,state,Instant.now(),Instant.now(),1,"patch-1");
@@ -30,7 +33,14 @@ final class ErpRfqControlledTestSupport {
                 "recommendedSupplier",Map.of("supplierId","V2-SUP-001"),"selectedOffer",Map.of("supplierId","V2-SUP-001")))),"",Map.of());
         var record=ToolExecutionRecord.running("erp-run",new ToolCallRequest(ProcurementToolCatalog.RECOMMENDATION_FINALIZE,"finalize-1",Map.of()))
                 .withResult(ToolExecutionState.SUCCEEDED,finalized,"");
-        when(executions.findByRun("erp-run")).thenReturn(List.of(record));when(executions.findToolExecution("finalize-1")).thenReturn(Optional.of(record));
+        var facts=new ArrayList<ToolExecutionRecord>();facts.add(record);
+        if(requisitionId!=null) {
+            var source=new ProcurementErpAdapter.Source("ERPNext","Material Request",requisitionId,Instant.now(),Instant.now());
+            var req=new ProcurementErpAdapter.Requisition(requisitionId,"V2-ALG","V2-WS-001",20,java.time.LocalDate.now().plusDays(21),"Draft",source);
+            var call=new ToolCallRequest("mcp.erpnext.procurement_get_requisition","read-requisition",Map.of("id",requisitionId));
+            facts.add(ToolExecutionRecord.running("erp-run",call).withResult(ToolExecutionState.SUCCEEDED,new ToolCallResult(call.toolName(),true,json.writeValueAsString(Map.of("record",req)),"",Map.of()),""));
+        }
+        when(executions.findByRun("erp-run")).thenReturn(facts);when(executions.findToolExecution("finalize-1")).thenReturn(Optional.of(record));
         when(executions.claim(eq("erp-run"),any())).thenAnswer(i->{
             ToolCallRequest r=i.getArgument(1);
             when(executions.findToolExecution(r.requestId())).thenReturn(Optional.of(ToolExecutionRecord.running("erp-run",r)));
@@ -56,8 +66,9 @@ final class ErpRfqControlledTestSupport {
         assertEquals(AgentToolExecutionStatus.WAITING_APPROVAL,waiting.status());verify(observed,never()).create(any());
         assertEquals("V2-SUP-001",pending.get().toolCallRequest().arguments().get("supplierId"));
         var request=pending.get();
+        assertEquals(requisitionId,request.toolCallRequest().arguments().get("requisitionId"));
         var requested=new ApprovalRecord(request.approvalId(),"erp-run","conversation",request.toolCallRequest(),"test",ApprovalStatus.REQUESTED,"","",Instant.now(),null);
-        var create=new ProcurementRfqGateway.CreateRequest("rfq:"+request.approvalId(),"V2-SUP-001","AI Workstation","V2-WS-001",20,"CNY",21,Map.of());
+        var create=new ProcurementRfqGateway.CreateRequest("rfq:"+request.approvalId(),"V2-SUP-001","AI Workstation","V2-WS-001",20,"CNY",21,Map.of(),requisitionId);
         // Direct gateway and handler invocations cannot manufacture an approval.
         assertRejected(gateway,create);
         when(approvalStore.find(request.approvalId())).thenReturn(Optional.of(requested));
@@ -91,6 +102,12 @@ final class ErpRfqControlledTestSupport {
         var tampered=new ProcurementRfqGateway.CreateRequest(create.idempotencyKey(),create.supplierId(),create.productCategory(),create.productDescription(),21,"CNY",21,Map.of());
         assertRejected(gateway,tampered);
         assertTrue(gateway.findByIdempotencyKey(create.idempotencyKey()).isEmpty());
+        if(requisitionId!=null) {
+            var altered=new ProcurementRfqGateway.CreateRequest(create.idempotencyKey(),create.supplierId(),create.productCategory(),create.productDescription(),20,"CNY",21,Map.of(),"MR-B");
+            assertRejected(gateway,altered);
+            var args=new LinkedHashMap<String,Object>(request.toolCallRequest().arguments());args.put("requisitionId","MR-B");
+            assertFalse(handler.execute(new ToolCallRequest(definition.name(),request.toolCallRequest().requestId(),args),new ToolExecutionContext("erp-run","conversation","buyer","tenant",Set.of(),Map.of())).success());
+        }
         clearInvocations(observed);
         var result=runtime.executeApproved(approved,definition,context);
         assertEquals(AgentToolExecutionStatus.COMPLETED,result.status(),String.valueOf(result));verify(observed,times(1)).create(any());

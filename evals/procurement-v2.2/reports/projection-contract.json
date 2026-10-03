@@ -1,0 +1,34 @@
+{
+  "version": "canonical-business-state-v2.2",
+  "fields": {
+    "suppliers": "id:name name:supplier_name active:!disabled approvalStatus:custom_approval_status capacity:custom_capacity lifecycle:docstatus group:supplier_group type:supplier_type frozen:is_frozen onHold:on_hold holdType:hold_type releaseDate:release_date preventRfq:prevent_rfqs",
+    "items": "id:name code:item_code name:item_name category:item_group active:!disabled uom:stock_uom gpuMemoryGb:custom_gpu_memory_gb warranty:custom_warranty lifecycle:docstatus purchasable:is_purchase_item stockItem:is_stock_item endOfLife:end_of_life purchaseUom:purchase_uom minimumOrder:min_order_qty",
+    "item_suppliers": "id:name itemId:item supplierId:supplier referencePrice:reference_price currency:currency leadTimeDays:lead_time_days capacityUnits:capacity_units lifecycle:docstatus",
+    "departments": "id:name name:department_name company:company active:!disabled parentDepartment:parent_department isGroup:is_group lifecycle:docstatus",
+    "budgets": "id:name departmentId:custom_department_id company:company allocated:budget_amount committed:custom_committed_amount currency:custom_currency fiscalYear:from_fiscal_year throughFiscalYear:to_fiscal_year startsOn:budget_start_date endsOn:budget_end_date lifecycle:docstatus costCenter:cost_center account:account",
+    "purchase_history": "id:name supplierId:supplier itemId:item quantity:quantity unitPrice:unit_price currency:currency orderedOn:ordered_on deliveredOn:delivered_on lifecycle:docstatus",
+    "supplier_performance": "id:name supplierId:supplier transactionCount:transaction_count onTimeRate:on_time_rate qualityScore:quality_score observedOn:observation_date lifecycle:docstatus",
+    "sample_requisitions": "id:name departmentId:custom_department_id company:company type:material_request_type status:status lifecycle:docstatus orderedOn:transaction_date requiredBy:schedule_date",
+    "rfqs": "id:name idempotencyKey:custom_procurement_key requestDigest:custom_request_digest company:company status:status lifecycle:docstatus transactionDate:transaction_date requiredBy:schedule_date subject:subject message:message_for_supplier terms:terms",
+    "requisition_line": "ordinal:idx parentId:parent itemId:item_code quantity:qty uom:uom stockUom:stock_uom stockQuantity:stock_qty conversionFactor:conversion_factor requiredBy:schedule_date lifecycle:docstatus warehouse:warehouse",
+    "rfq_line": "ordinal:idx parentId:parent itemId:item_code quantity:qty uom:uom stockUom:stock_uom stockQuantity:stock_qty conversionFactor:conversion_factor requiredBy:schedule_date requisitionId:material_request requisitionLineId:material_request_item lifecycle:docstatus warehouse:warehouse",
+    "rfq_supplier": "ordinal:idx parentId:parent supplierId:supplier sendEmail:send_email emailSent:email_sent quoteStatus:quote_status lifecycle:docstatus contact:contact email:email_id",
+    "uom": "ordinal:idx parentId:parent uom:uom conversionFactor:conversion_factor lifecycle:docstatus",
+    "budget_period": "ordinal:idx parentId:parent startsOn:start_date endsOn:end_date amount:amount percent:percent lifecycle:docstatus"
+  },
+  "ordered_children": {
+    "items": {
+      "uoms": "uom"
+    },
+    "budgets": {
+      "budget_distribution": "budget_period"
+    },
+    "sample_requisitions": {
+      "items": "requisition_line"
+    },
+    "rfqs": {
+      "items": "rfq_line",
+      "suppliers": "rfq_supplier"
+    }
+  }
+}

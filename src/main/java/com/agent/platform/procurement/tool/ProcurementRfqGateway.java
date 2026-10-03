@@ -26,8 +26,14 @@ public interface ProcurementRfqGateway {
             int quantity,
             String currency,
             int requiredDeliveryDays,
-            Map<String, String> hardConstraints
+            Map<String, String> hardConstraints,
+            String requisitionId
     ) {
+        public CreateRequest(String idempotencyKey, String supplierId, String productCategory, String productDescription,
+                             int quantity, String currency, int requiredDeliveryDays, Map<String, String> hardConstraints) {
+            this(idempotencyKey, supplierId, productCategory, productDescription, quantity, currency,
+                    requiredDeliveryDays, hardConstraints, null);
+        }
         public CreateRequest {
             idempotencyKey = required(idempotencyKey, "idempotencyKey");
             supplierId = required(supplierId, "supplierId");
@@ -39,6 +45,7 @@ public interface ProcurementRfqGateway {
                 throw new IllegalArgumentException("requiredDeliveryDays must be positive");
             }
             hardConstraints = hardConstraints == null ? Map.of() : Map.copyOf(hardConstraints);
+            if (requisitionId != null) requisitionId = required(requisitionId, "requisitionId");
         }
 
         private static String required(String value, String name) {

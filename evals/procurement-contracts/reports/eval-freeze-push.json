@@ -1,0 +1,9 @@
+{
+  "commit": "13759383e988cafee936f5ac297299080eba9cc3",
+  "message": "测试：冻结采购 Eval V2.1 评测基线",
+  "branch": "feat/procurement-eval-v2",
+  "tag": "procurement-eval-v2.1",
+  "remote_branch_verified": true,
+  "remote_tag_verified": true,
+  "protected_handler_sha256": "8F3EEA10DF78F9E8F5010A4D2CE72EE049962FDC4E3B4D98CFCD7518CE2E7F6D"
+}

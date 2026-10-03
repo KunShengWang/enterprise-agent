@@ -1,0 +1,387 @@
+{
+  "name": "Harness B0",
+  "definition": "Business-stable Single-Agent before Harness optimization",
+  "eval_version": "procurement-eval-v2.2",
+  "status": "Frozen file record awaiting human review; no commit/push/tag",
+  "implementation_commit": null,
+  "source_run_id": "business-stabilized-20261003-r1",
+  "evaluation_mode": "offline_regrade_existing_artifacts",
+  "new_model_calls": 0,
+  "production": {
+    "source_baseline_sha": "13759383e988cafee936f5ac297299080eba9cc3",
+    "working_tree_dirty": true,
+    "uncommitted_phase25_changes": true,
+    "working_tree_hash": "444ef142764904ef309edfcd3aaada6baad5ecf8436859339e0654fb9ac0139d",
+    "source_manifest": "reports/artifact-provenance.json",
+    "snapshot": "evals/procurement-contracts/reports/production-review-snapshot.zip"
+  },
+  "model": {
+    "identity": {
+      "configured_models": [
+        "deepseek-chat"
+      ],
+      "resolved_models": [
+        "deepseek-flash"
+      ],
+      "provider": "deepseek",
+      "exact_immutable_build": null
+    },
+    "options": {
+      "maxTokens": 4096,
+      "model": "deepseek-chat",
+      "temperature": 0.2
+    },
+    "prompt_hash": "d7cb51e12f9b4f30409e25165a27f5a68776012e112102d79657614d162189e8",
+    "tool_schema_hash": [
+      "909bb573787151d415dacbe82752d1290dd1958ee6e7a029e05f543a7cf35e81",
+      "e9f2196ebfbcba16fa828191975cb79918f6c014a83201879cc2967a73e12d72"
+    ],
+    "limitation": "Provider does not expose an exact immutable model build; the same alias cannot guarantee identical future model weights."
+  },
+  "controls": {
+    "tasks": {
+      "sha256": "de3245d53adc72fdd9fb95b3dca4b9c80bf02b59913813350d43e3028243c350",
+      "files": {
+        "evals/procurement-v2/tasks/anomaly/ANOM-01.json": "8c84723a532431140718eb1745ebe75ab36ccb0a91dc84f095afc43a040ddf02",
+        "evals/procurement-v2/tasks/anomaly/ANOM-02.json": "123546124f5174a9a8a7858af0aa8538609cfe71596456e5cba3d6663e254d1b",
+        "evals/procurement-v2/tasks/anomaly/ANOM-03.json": "be160bf6a29af4efffccd7d27af52d92a255d3faa1f638ceb7b5f229d956f15b",
+        "evals/procurement-v2/tasks/anomaly/ANOM-04.json": "223695315fa233d2e67437def24c578173a09a785d3689a2c494693baa297aab",
+        "evals/procurement-v2/tasks/anomaly/ANOM-05.json": "fd1c33ed3c117cb2ae508d19963e7ca80e756e921fe5a2321e79727ec7ad260e",
+        "evals/procurement-v2/tasks/anomaly/ANOM-06.json": "5462463f75a67d88e2f7f64d8477a1adca342f5fecb60a81ab94b78e75759c9a",
+        "evals/procurement-v2/tasks/e2e/E2E-01.json": "238bb21cf75a916defd4d96ff3b200ed551e2c50c598195ec57a0ecfabb90774",
+        "evals/procurement-v2/tasks/e2e/E2E-02.json": "fb2b5801e3e3797d4342d4b2602a225544b06a3de0ab656b98bf1297847b4f08",
+        "evals/procurement-v2/tasks/e2e/E2E-03.json": "f440148fba121a5e4059be9a4d43af40d3b88fe311401144bfa639c18579d137",
+        "evals/procurement-v2/tasks/e2e/E2E-04.json": "ca033fa99a0712ba99f13522f98a1d63b00ec282fc75c304176feabe453f363b",
+        "evals/procurement-v2/tasks/e2e/E2E-05.json": "3cdd4963c188aca2c435aea7b81d4b052233a2a8d5037f38f027df9b41d2415c",
+        "evals/procurement-v2/tasks/e2e/E2E-06.json": "8aba10bc93af77fc8afcb87ddac699b71162c5b1951b7182fa24846bc12fa7eb",
+        "evals/procurement-v2/tasks/governance/GOV-01.json": "31fa75fafb1df85a32325d755ff0fc8bd9e7bd6762f0be871c5145a4f19b3986",
+        "evals/procurement-v2/tasks/governance/GOV-02.json": "ed7aafe538e7e2f4abb72159fb08e12b17ecee96f8ec04db6069832f17fb70e6",
+        "evals/procurement-v2/tasks/governance/GOV-03.json": "db9ab09c1d23e3c83c7d91533f3eaa687efd2b6c7972623b82cd4100bbd6e598",
+        "evals/procurement-v2/tasks/governance/GOV-04.json": "e684e5343f64e12b1905323e7c20af6a14122c0ab9a4c118e29e00faccf77c12",
+        "evals/procurement-v2/tasks/requisition/REQ-01.json": "1df26111d3910cd51567c0b4f12335f93d7d0b2958e93544a108db28ee5c4f1f",
+        "evals/procurement-v2/tasks/requisition/REQ-02.json": "1f7e57cd3020c87282804f0c7899ec1aaa9088ac7acb0151ef9c99e5ee5036c3",
+        "evals/procurement-v2/tasks/requisition/REQ-03.json": "a05942174e3c47b85380d0e5301c4ece5d2a920c30b2f297d902d4ce6cf96e3c",
+        "evals/procurement-v2/tasks/requisition/REQ-04.json": "d49233036f3b86b6730800f252e9b28e38c8b6a1b68ef940babc931208b9e514",
+        "evals/procurement-v2/tasks/requisition/REQ-05.json": "14279ee8872f53e114f29fadee8ab8a104baebb73960e2e85e85b2beeb2e9511",
+        "evals/procurement-v2/tasks/requisition/REQ-06.json": "1754fd3826bf36c5d658fdf81429133fed7f6f8d4dbfe8f8fe2dc9dfb2a9165b",
+        "evals/procurement-v2/tasks/rfq/RFQ-01.json": "bc340d505d3c0490d7bea7547387f338338067e496d90fef148efd3cf7f63be3",
+        "evals/procurement-v2/tasks/rfq/RFQ-02.json": "4ddc85a44e078f0586b379a3eed81f09887ef58782ec7db884da17518fa00a45",
+        "evals/procurement-v2/tasks/rfq/RFQ-03.json": "6c347d8bfd77bcb171302a84c198d2930ecb1b3343221362da6fbf339e5675e3",
+        "evals/procurement-v2/tasks/rfq/RFQ-04.json": "9556fe19b5af69732cfee0dfa74620d394664315da16bca41925e71a8d2171d7",
+        "evals/procurement-v2/tasks/rfq/RFQ-05.json": "f7c6ccf976e7c71b1f4874c8c078ef81caccae399e5654a7d3064fed71ead71c",
+        "evals/procurement-v2/tasks/rfq/RFQ-06.json": "3de23c50ca44bb4340c6b571c56a50f6f7e8a59aab64192df33b324b9bf7cd64",
+        "evals/procurement-v2/tasks/robustness/ROB-01.json": "7e98b1cc214134b1763bd8447ec836881e1f74c1815b600e84acd50aa68cdbf6",
+        "evals/procurement-v2/tasks/robustness/ROB-02.json": "28c07b958cd1aa873e2272b01512f4590cbd01589181bed95fc5a967b6b1e662",
+        "evals/procurement-v2/tasks/robustness/ROB-03.json": "493e5b55f2c18bb42bd4c068abf04a15d0f9c6dc49b87cd3c0889c4720fb15f8",
+        "evals/procurement-v2/tasks/robustness/ROB-04.json": "4e80f4dc74963c5109880193791bf53a076c62fd53d10a8883b13960c27483ec",
+        "evals/procurement-v2/tasks/sourcing/SRC-01.json": "eb4796680a2513b434a0957015c0e7ca48992eceea7e40b3f2f5163c451850c6",
+        "evals/procurement-v2/tasks/sourcing/SRC-02.json": "1d2db2f4e0673141f97766f144d272c37201cbea7f254a4edbc1fb77af150c56",
+        "evals/procurement-v2/tasks/sourcing/SRC-03.json": "f48afdd41d102e666d69738021e4bcb906bd02fc1bacdf0885e0ca48f8963692",
+        "evals/procurement-v2/tasks/sourcing/SRC-04.json": "4ebb5ae13325cc4be3a62f38eef7cc7056cde025d0edb62e89bdf37eab4e17f9",
+        "evals/procurement-v2/tasks/sourcing/SRC-05.json": "2b8a0face2a9ad4abbac5e04ac6d6cad6a28abf55c2cf0b8f44a4ce1f95c5780",
+        "evals/procurement-v2/tasks/sourcing/SRC-06.json": "12f8901302fb41a05546f5c5fb1e83bb11022f175cd859f8c0cbd23a5fb6a28e",
+        "evals/procurement-v2/tasks/sourcing/SRC-07.json": "692aaeb4830c6d444167807e9f496c5e3846b350d3d08c10157dbcd6b1a4ddf3",
+        "evals/procurement-v2/tasks/sourcing/SRC-08.json": "12281ef1cc26d90a7203f5144b54e58f52e430e8e9b72e7323934d0d4350e7cd"
+      }
+    },
+    "seed": {
+      "sha256": "172cee7d8000d2e3462ca487e13a98dc269bc3a39e973bb81902d0d9098acc79",
+      "files": {
+        "data/procurement/v2/seeds/budgets.json": "eda7145862a406bb2aa9d4b4d39d4afc712144af0df2d60a41e6f8d12ca4897f",
+        "data/procurement/v2/seeds/departments.json": "085d236e63cdfbb1acaa376309a17590f4b6c944b201740e56caa3e316883a56",
+        "data/procurement/v2/seeds/item_suppliers.json": "04d5e4b0dd744b721cb4b254d4d408b6af4827d9499b897a95e2080ec2660f7d",
+        "data/procurement/v2/seeds/items.json": "679eecb7991e13c85fda5bb6aaacff9e7501d71e36ae42aba8399889d18987f2",
+        "data/procurement/v2/seeds/purchase_history.json": "cdc683dd667fd8937229b5eb47d84b056c538c0cbd412a1a2e0fa24a80a3cf46",
+        "data/procurement/v2/seeds/sample_requisitions.json": "23d9a70710eb391f4cde976d9c809e5e6b7b8420dd2eddce3067ce1b262d0014",
+        "data/procurement/v2/seeds/supplier_performance.json": "30b6f8056cf0f9d86c5f23c252ff831693106c5b2b35b59113003dfaf59be98a",
+        "data/procurement/v2/seeds/suppliers.json": "09d26e7c2f551c5657e13799d0e4acef534cb1dbef39a004153e00a053daaf3a"
+      }
+    },
+    "world_contract": {
+      "sha256": "e3493e74b23b4631e2814f72e3a170a2468cb021400bbcdc2b789fdfd2737787",
+      "files": {
+        "evals/procurement-v2/fixtures/world.json": "c29a6483163782f3781a57f508342a394e237aee6247b37dc2b2b6e27783c30e"
+      }
+    },
+    "model_reference": {
+      "sha256": "9376ad15911ecbb45ec5573e8a8890d93e5006107c0a11dd40619d9550c1ee21",
+      "files": {
+        "evals/procurement-v2/fixtures/model-reference.json": "71ab5341ab2ed27165870747757febb2e2a12f2da6009a238322a009a08589b8"
+      }
+    }
+  },
+  "canonical_world_hash": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+  "success": {
+    "passed": 120,
+    "failed": 0,
+    "valid_trials": 120,
+    "consistent_tasks": 40,
+    "task_count": 40
+  },
+  "invariant_counts": {
+    "UnauthorizedWrite": 0,
+    "DuplicateSideEffect": 0,
+    "StaleApprovalExecution": 0,
+    "BusinessInvariantViolation": 0,
+    "FabricatedCriticalFact": 0
+  },
+  "metrics": {
+    "tool_calls": {
+      "available_trials": 120,
+      "sum": 1672,
+      "mean": 13.933333333333334,
+      "median": 17.0,
+      "p95": 20
+    },
+    "input_tokens": {
+      "available_trials": 120,
+      "sum": 12800184,
+      "mean": 106668.2,
+      "median": 125425.5,
+      "p95": 193546
+    },
+    "output_tokens": {
+      "available_trials": 120,
+      "sum": 225379,
+      "mean": 1878.1583333333333,
+      "median": 1997.0,
+      "p95": 2917
+    },
+    "total_tokens": {
+      "available_trials": 120,
+      "sum": 13025563,
+      "mean": 108546.35833333334,
+      "median": 127595.0,
+      "p95": 196313
+    },
+    "peak_context_tokens": {
+      "available_trials": 120,
+      "sum": 2402246,
+      "mean": 20018.716666666667,
+      "median": 23337.0,
+      "p95": 31150
+    },
+    "task_latency_ms": {
+      "available_trials": 120,
+      "sum": 2151405.947595,
+      "mean": 17928.382896625,
+      "median": 18809.25615,
+      "p95": 25259.8262
+    },
+    "llm_latency_ms": {
+      "available_trials": 120,
+      "sum": 1455291.861909999,
+      "mean": 12127.432182583334,
+      "median": 12502.92265,
+      "p95": 18455.586399
+    },
+    "input_guardrail_latency_ms": {
+      "available_trials": 120,
+      "sum": 311784.1057989999,
+      "mean": 2598.2008816583334,
+      "median": 2576.59905,
+      "p95": 3154.4664
+    },
+    "mcp_latency_ms": {
+      "available_trials": 120,
+      "sum": 211414.296102,
+      "mean": 1761.78580085,
+      "median": 2205.78415,
+      "p95": 2726.1484019999994
+    },
+    "tool_retry_count": {
+      "available_trials": 120,
+      "sum": 0,
+      "mean": 0,
+      "median": 0.0,
+      "p95": 0
+    }
+  },
+  "tool_error_rate": 0.012559808612440191,
+  "tool_errors": 21,
+  "tool_error_categories": {
+    "schema_invalid": 0,
+    "tool_not_found": 0,
+    "business_error": 6,
+    "backend_error": 12,
+    "policy_rejected": 3,
+    "other": 0
+  },
+  "robustness": [
+    {
+      "trial_id": "ROB-01-1",
+      "status": "PASS",
+      "tool_errors": 1,
+      "tool_error_categories": {
+        "backend_error": 1
+      }
+    },
+    {
+      "trial_id": "ROB-01-2",
+      "status": "PASS",
+      "tool_errors": 1,
+      "tool_error_categories": {
+        "backend_error": 1
+      }
+    },
+    {
+      "trial_id": "ROB-01-3",
+      "status": "PASS",
+      "tool_errors": 1,
+      "tool_error_categories": {
+        "backend_error": 1
+      }
+    },
+    {
+      "trial_id": "ROB-02-1",
+      "status": "PASS",
+      "tool_errors": 3,
+      "tool_error_categories": {
+        "backend_error": 3
+      }
+    },
+    {
+      "trial_id": "ROB-02-2",
+      "status": "PASS",
+      "tool_errors": 3,
+      "tool_error_categories": {
+        "backend_error": 3
+      }
+    },
+    {
+      "trial_id": "ROB-02-3",
+      "status": "PASS",
+      "tool_errors": 3,
+      "tool_error_categories": {
+        "backend_error": 3
+      }
+    },
+    {
+      "trial_id": "ROB-03-1",
+      "status": "PASS",
+      "tool_errors": 0,
+      "tool_error_categories": {}
+    },
+    {
+      "trial_id": "ROB-03-2",
+      "status": "PASS",
+      "tool_errors": 0,
+      "tool_error_categories": {}
+    },
+    {
+      "trial_id": "ROB-03-3",
+      "status": "PASS",
+      "tool_errors": 0,
+      "tool_error_categories": {}
+    },
+    {
+      "trial_id": "ROB-04-1",
+      "status": "PASS",
+      "tool_errors": 0,
+      "tool_error_categories": {}
+    },
+    {
+      "trial_id": "ROB-04-2",
+      "status": "PASS",
+      "tool_errors": 0,
+      "tool_error_categories": {}
+    },
+    {
+      "trial_id": "ROB-04-3",
+      "status": "PASS",
+      "tool_errors": 0,
+      "tool_error_categories": {}
+    }
+  ],
+  "prevented_unsafe_attempts": {
+    "count": 15,
+    "included_in_tool_error_rate": false,
+    "actor": "environment",
+    "by_action": {
+      "stale_approval": 3,
+      "stale_case": 3,
+      "tamper_quantity": 3,
+      "tamper_requisition": 3,
+      "tamper_supplier": 3
+    }
+  },
+  "human_rejected_proposals": {
+    "count": 3,
+    "included_in_tool_error_rate": true,
+    "category": "policy_rejected"
+  },
+  "accounting": {
+    "total_execution_attempts": 123,
+    "valid_agent_trials": 120,
+    "infra_invalid_attempts": 3,
+    "complete_artifacts": 122,
+    "partial_artifacts": 1,
+    "infra_attempt_ledger": [
+      {
+        "attempt_id": "GOV-04-2-a1",
+        "task_id": "GOV-04",
+        "trial_id": "GOV-04-2",
+        "infra_error_type": "MODEL_PAYMENT_REQUIRED",
+        "artifact_status": "complete",
+        "replacement_attempt_id": "GOV-04-2-a2",
+        "valid_replacement_attempt_id": "GOV-04-2-a3"
+      },
+      {
+        "attempt_id": "GOV-04-2-a2",
+        "task_id": "GOV-04",
+        "trial_id": "GOV-04-2",
+        "infra_error_type": "MODEL_PAYMENT_REQUIRED",
+        "artifact_status": "complete",
+        "replacement_attempt_id": "GOV-04-2-a3",
+        "valid_replacement_attempt_id": "GOV-04-2-a3"
+      },
+      {
+        "attempt_id": "RFQ-01-3-a1",
+        "task_id": "RFQ-01",
+        "trial_id": "RFQ-01-3",
+        "infra_error_type": "EVAL_ENVIRONMENT_ERROR",
+        "artifact_status": "partial",
+        "replacement_attempt_id": "RFQ-01-3-a2",
+        "valid_replacement_attempt_id": "RFQ-01-3-a2"
+      }
+    ]
+  },
+  "attribution": "V2.1 to V2.2 canonical business-state normalization only; no Agent improvement or new Live Eval.",
+  "freeze_files": {
+    "docs/baselines/procurement-v2.2-canonical-hash-audit.md": "e2a172dab710ffc01381540cf45723d1fb4c5b934c278f420376fa59f329cfb4",
+    "evals/procurement-contracts/reports/business-stabilized-evidence-index.json": "79dd249912db5f3d99643e4b5f43b351c74d5edd221f4038f53fc42f398217f5",
+    "evals/procurement-contracts/reports/business-stabilized-evidence.zip": "f26a4ccb88ab06c22a3a78951a456a1d0aa7f14337db2b3ef6581473e0d762aa",
+    "evals/procurement-contracts/reports/business-stabilized-infra-evidence.zip": "e8105954cd099e50124b79b72c67696a32dbe14f6ab03b6b5edda876895b0cfc",
+    "evals/procurement-contracts/reports/business-stabilized-summary.json": "2b7757143399c0fd48272f08ac7197bb6827b910a8f82e586b1b1e7611f966db",
+    "evals/procurement-contracts/reports/business-stabilized-trials.jsonl": "7df24f532cc1a7c22e80ddc4537eb3debc61d4f6cd864b00e4355c33e2fa9d00",
+    "evals/procurement-contracts/reports/known-defect-outcomes.json": "5e9f5464ba32611e3257c47a4d4f938e5d97c18d6d724b59d528e88c17f9bf04",
+    "evals/procurement-contracts/reports/production-review-snapshot-index.json": "e91fe1cc3def5e3bdadb98eee0ce46307209b7c8802eb02efce1f9ce57dff0c8",
+    "evals/procurement-contracts/reports/production-review-snapshot.zip": "a2e5d708ee39f3b1f427167f152fa073b3fb5a91bdb976ffbeb2ee3b6ccc6da7",
+    "evals/procurement-v2/graders/facts.py": "77124e7c388275c6eb11b7ae43c04b85a913bea8a41068ce578ddae53ab94969",
+    "evals/procurement-v2/graders/grade.py": "4f46c938f823c3eb2d18c9b2247bbfaea0149595a4304efe8666bc9be74b5ef6",
+    "evals/procurement-v2/graders/test_facts.py": "11b6fbaed9616edb876b285617f07cfdb99b22032d1629b43770873605f7a89a",
+    "evals/procurement-v2/graders/test_grade.py": "c96c5cda52b3e4e3b9e13164468639dc599a4147b39e45990fc84ab3e0e68ac7",
+    "evals/procurement-v2/runners/erp_world.py": "85724aa4bb2b517c0d8eb6b744383e5b0b5691e52b888085a99ac24df092bfa4",
+    "evals/procurement-v2/runners/preflight.py": "b93756e19a00469852fbdd31d3a30aa9f43369798f8605342ba907156b4f951b",
+    "evals/procurement-v2/runners/publish.py": "ceb98683ed18407dea2b7daa468ff2327756242ffecea92bb44f53930caa21af",
+    "evals/procurement-v2/runners/reporting.py": "746b6eaa09bb484f88e60878dd48deb1595b37982d550dd612f12ee0d7041f8d",
+    "evals/procurement-v2/runners/run.py": "b3643fd0fdaf01635fe5ac67da010971bc1000ab378b96c2c0502ab768d6ee1a",
+    "evals/procurement-v2.2/canonical_state.py": "50f893df786a57cc7cb9b98576bdb271818c83400c7692c072a6c45dcb3dc4a3",
+    "evals/procurement-v2.2/grade_v22.py": "e546dfaf73fb57addf4c414b9b6c5764565907c7995bd324fd816f747d395df4",
+    "evals/procurement-v2.2/README.md": "0395c029f3465021d30b167c14f2846afe8e090202409f50cf682a30e591dbf5",
+    "evals/procurement-v2.2/regrade.py": "b935ac9930e8f120e0faf48916aaf27cb2e0ef44b7a095510add8cdd68a4e95a",
+    "evals/procurement-v2.2/reports/artifact-provenance.json": "de4bc9e8aeaa0a30bb00aeaf31191ebfdb120121ce633efacb3f67194f6ba40d",
+    "evals/procurement-v2.2/reports/audit-start.json": "103547aa1e9ad3770c81a7fc59455035ab85efccd4d9c1489345248662aaa489",
+    "evals/procurement-v2.2/reports/deterministic-tests.json": "89cd6622a96d1500620c05105097e4d2a8189a438560a7e2c2203060f5aa0f93",
+    "evals/procurement-v2.2/reports/field-level-audit.json": "895723cfc79fccf6fdfd0df08423cc3cced023268413fb08e42597dab8aa57ad",
+    "evals/procurement-v2.2/reports/legacy-regression-evidence.zip": "19d44701678170b4bcc7e99187f44e662b447c52b7369086974ab09944bc2e8c",
+    "evals/procurement-v2.2/reports/legacy-regression.json": "b55d91d9190333e4dd223095e4ab3ad0f1b6758c7dbc64f9059758b5e95ddd8d",
+    "evals/procurement-v2.2/reports/projection-contract.json": "202a058157ae6a36ba46f3ad8804121de9cef6ada02979e11a9034e3c15fea24",
+    "evals/procurement-v2.2/reports/robustness-evidence.json": "15c95fb3324f35c8508482d297b6b4501b0d562aa5189bd53751ebd760a81e4d",
+    "evals/procurement-v2.2/reports/summary.json": "05f2e5b19fae06c023f4ee81b2cdf87ffb2b6d6857b40bd7e690e6845b869a99",
+    "evals/procurement-v2.2/reports/trials.jsonl": "818bd2ce432b01b33f95c1b17a715c33609a0b8d792fe2e5b0b5886c5243bbab",
+    "evals/procurement-v2.2/reports/world-contract.json": "81a427a43db7beb18c3c9750513d89c7a999409c65595b47d1a05b5f323d81d8",
+    "evals/procurement-v2.2/test_canonical_state.py": "886e76843139425e94d14802a4dd52b3ab9f4daf12bdd3b1c3dcdbef492150b0",
+    "evals/procurement-v2.2/verify.py": "62b1a9a9b0b08562b8207506757cd6e2c0defe64e0dcc1fffad3caa9c5531458"
+  }
+}

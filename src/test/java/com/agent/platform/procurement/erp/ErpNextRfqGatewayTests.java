@@ -52,14 +52,14 @@ class ErpNextRfqGatewayTests {
         var transport=mock(McpToolGateway.class);
         var definitions=service.tools().stream().map(t->new ToolDefinition("mcp.erpnext."+t.get("name"),(String)t.get("description"),json.writeValueAsString(t.get("inputSchema")),ToolRiskLevel.LOW,Map.of())).toList();
         when(transport.discoverTools()).thenReturn(definitions);
-        when(adapter.createRfq(any())).thenAnswer(i->{RfqRequest r=i.getArgument(0);return new RfqRecord("RFQ-1",r.idempotencyKey(),r.supplierId(),r.itemId(),r.quantity(),"Draft","digest",new Source("ERPNext","Request for Quotation","RFQ-1",Instant.now(),Instant.now()));});
+        when(adapter.createRfq(any())).thenAnswer(i->{RfqRequest r=i.getArgument(0);assertEquals("MR-A",r.requisitionId());return new RfqRecord("RFQ-1",r.idempotencyKey(),r.supplierId(),r.itemId(),r.quantity(),"Draft","digest",new Source("ERPNext","Request for Quotation","RFQ-1",Instant.now(),Instant.now()));});
         when(transport.callTool(any(ToolDefinition.class),any(ToolCallRequest.class))).thenAnswer(i->{
             ToolCallRequest r=i.getArgument(1);
             if(r.toolName().endsWith("procurement_get_rfq")) return new ToolCallResult(r.toolName(),false,"{\"error\":{\"code\":\"ERP_NOT_FOUND\"}}","",Map.of());
             Object result=service.call(r.toolName().substring("mcp.erpnext.".length()),json.valueToTree(r.arguments()));
             return new ToolCallResult(r.toolName(),true,json.writeValueAsString(result),"",Map.of());
         });
-        assertEquals("RFQ-1",ErpRfqControlledTestSupport.approveAndExecute(guard -> new ErpNextProcurementRfqGateway(transport,json,signer,guard),json).rfqId());verify(adapter,times(1)).createRfq(any());
+        assertEquals("RFQ-1",ErpRfqControlledTestSupport.approveAndExecute(guard -> new ErpNextProcurementRfqGateway(transport,json,signer,guard),json,"MR-A").rfqId());verify(adapter,times(1)).createRfq(any());
     }
     @Test void cancelledOrMalformedErpReceiptCannotBecomeCreated(){
         var json=new ObjectMapper();var transport=mock(McpToolGateway.class);

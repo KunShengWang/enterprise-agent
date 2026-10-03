@@ -95,6 +95,9 @@ public final class ProcurementMcpService {
                     !budget.currency().equals(relation.currency()) || relation.referencePrice().multiply(BigDecimal.valueOf(qty)).compareTo(budget.available())>0) continue;
             Map<String,Object> specs=new TreeMap<>();
             specs.put("gpuMemoryGb",item.gpuMemoryGb()); specs.put("capacityUnits",relation.capacityUnits());
+            specs.put("itemActive",item.active());
+            specs.put("itemSource",Map.of("backend",item.source().backend(),"entityType",item.source().entityType(),
+                    "entityId",item.id(),"version",item.source().version().toString()));
             specs.put("onTimeRate",p.onTimeRate()); specs.put("qualityScore",p.qualityScore()); specs.put("transactionCount",p.transactionCount());
             specs.put("performanceEntity",p.source().entityType()+":"+p.source().entityId());
             specs.put("performanceVersion",p.source().version().toString()); specs.put("priceBasis","ERP_REFERENCE_PRICE");
@@ -133,7 +136,9 @@ public final class ProcurementMcpService {
     private static Object schema(Class<?> type) {
         if(type.isRecord()) {
             Map<String,Object> fields=new LinkedHashMap<>(); for(var c:type.getRecordComponents()) fields.put(c.getName(),schema(c.getType()));
-            return object(fields,List.copyOf(fields.keySet()));
+            List<String> required=new ArrayList<>(fields.keySet());
+            if(type==RfqRequest.class) required.remove("requisitionId");
+            return object(fields,required);
         }
         if(type==boolean.class) return Map.of("type","boolean");
         if(type==int.class) return Map.of("type","integer","minimum",0,"maximum",Integer.MAX_VALUE);

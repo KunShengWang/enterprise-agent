@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "baseline": "Harness B0",
+  "protocol": "procurement-eval-v2.2",
+  "baseline_record_sha256": "4216474fd4c70188dc329e5b706dee16c9c2bc0157963da6cedcd35060361300",
+  "freeze_files_verified": 35,
+  "preexisting_files_unchanged": 781,
+  "head": "13759383e988cafee936f5ac297299080eba9cc3",
+  "branch": "fix/procurement-v2-contracts",
+  "index_empty": true,
+  "tags_unchanged": true,
+  "source_artifacts_unchanged": true,
+  "production_unchanged": true,
+  "protected_handler_unchanged": true,
+  "legacy_fingerprints_unchanged": 5,
+  "uncommitted": true
+}

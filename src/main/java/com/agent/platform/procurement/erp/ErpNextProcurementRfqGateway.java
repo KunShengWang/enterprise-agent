@@ -29,7 +29,7 @@ public class ErpNextProcurementRfqGateway implements ProcurementRfqGateway {
     }
     public Receipt create(CreateRequest r) {
         Instant approvalExpiry=approvals.requireApproved(r);
-        var domain=new ProcurementErpAdapter.RfqRequest(r.idempotencyKey(),r.supplierId(),r.productDescription(),r.quantity(),r.requiredDeliveryDays(),r.currency());
+        var domain=new ProcurementErpAdapter.RfqRequest(r.idempotencyKey(),r.supplierId(),r.productDescription(),r.quantity(),r.requiredDeliveryDays(),r.currency(),r.requisitionId());
         long expires=Math.min(Instant.now().getEpochSecond()+120,approvalExpiry.getEpochSecond());
         if(expires<=Instant.now().getEpochSecond()) throw new RejectedRequestException();
         return receipt(call("procurement_create_rfq",Map.of("request",domain,"expiresAt",expires,"signature",signer.sign(domain,expires))));

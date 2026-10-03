@@ -1,0 +1,39 @@
+{
+  "trial_id": "E2E-04-1",
+  "original_grade": "FAIL",
+  "original_failure": "BusinessInvariantViolation",
+  "grade_unchanged": true,
+  "artifact": "target/procurement-v2/business-stabilized-20261003-r1/E2E-04-1-a1/artifact.json.gz",
+  "fact_changes": [
+    {
+      "path": "/facts/items/0/idx",
+      "before": 0,
+      "after": 1
+    },
+    {
+      "path": "/facts/items/7/idx",
+      "before": 0,
+      "after": 1
+    },
+    {
+      "path": "/facts/suppliers/2/idx",
+      "before": 0,
+      "after": 3
+    }
+  ],
+  "rfq_count": 0,
+  "environment_actions": [],
+  "scheduled_job_evidence": {
+    "jobs": [
+      {
+        "name": "2087tki9ee",
+        "method": "frappe.model.utils.link_count.update_link_count",
+        "last_execution": "2026-10-03 05:32:18.469538"
+      }
+    ],
+    "timezone": "UTC",
+    "source": "# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors\n# License: MIT. See LICENSE\n\nfrom collections import defaultdict\nfrom random import random\n\nimport frappe\n\nignore_doctypes = {\n\t\"DocType\",\n\t\"Print Format\",\n\t\"Role\",\n\t\"Module Def\",\n\t\"Communication\",\n\t\"ToDo\",\n\t\"Version\",\n\t\"Error Log\",\n\t\"Scheduled Job Log\",\n\t\"Event Sync Log\",\n\t\"Event Update Log\",\n\t\"Access Log\",\n\t\"View Log\",\n\t\"Activity Log\",\n\t\"Notification Log\",\n\t\"Email Queue\",\n\t\"DocShare\",\n\t\"Document Follow\",\n\t\"Console Log\",\n\t\"User\",\n}\n\n\nLINK_COUNT_BUFFER_SIZE = 256\n\n\ndef notify_link_count(doctype, name):\n\t\"\"\"updates link count for given document\"\"\"\n\n\tif doctype in ignore_doctypes or not frappe.request or random() < 0.9:  # Sample 10%\n\t\treturn\n\n\tif not hasattr(frappe.local, \"_link_count\"):\n\t\tfrappe.local._link_count = defaultdict(int)\n\t\tfrappe.db.after_commit.add(flush_local_link_count)\n\n\tfrappe.local._link_count[(doctype, name)] += 1\n\n\ndef flush_local_link_count():\n\t\"\"\"flush from local before ending request\"\"\"\n\tnew_links = getattr(frappe.local, \"_link_count\", None)\n\tif not new_links:\n\t\treturn\n\n\tlink_count = frappe.cache.get_value(\"_link_count\") or {}\n\n\tflush = False\n\tfor key, value in new_links.items():\n\t\tif key in link_count:\n\t\t\tlink_count[key] += value\n\t\telif len(link_count) < LINK_COUNT_BUFFER_SIZE:\n\t\t\tlink_count[key] = value\n\t\telse:\n\t\t\tcontinue\n\t\tflush = True\n\n\tif flush:\n\t\tfrappe.cache.set_value(\"_link_count\", link_count)\n\tnew_links.clear()\n\n\ndef update_link_count():\n\t\"\"\"increment link count in the `idx` column for the given document\"\"\"\n\tlink_count = frappe.cache.get_value(\"_link_count\")\n\n\tif link_count:\n\t\tfor (doctype, name), count in link_count.items():\n\t\t\ttry:\n\t\t\t\ttable = frappe.qb.DocType(doctype)\n\t\t\t\tfrappe.qb.update(table).set(table.idx, table.idx + count).where(table.name == name).run()\n\t\t\t\tfrappe.db.commit()\n\t\t\texcept Exception as e:\n\t\t\t\tif not frappe.db.is_table_missing(e):  # table not found, single\n\t\t\t\t\traise e\n\t# reset the count\n\tfrappe.cache.delete_value(\"_link_count\")\n",
+    "scheduler_hook_excerpt": "\t\t\"0/15 * * * *\": [\n\t\t\t\"frappe.email.doctype.email_account.email_account.notify_unreplied\",\n\t\t\t\"frappe.utils.global_search.sync_global_search\",\n\t\t\t\"frappe.deferred_insert.save_to_db\",\n\t\t\t\"frappe.automation.doctype.reminder.reminder.send_reminders\",\n\t\t\t\"frappe.model.utils.link_count.update_link_count\",\n\t\t\t\"frappe.utils.telemetry.pulse.client.send_queued_events\",\n\t\t],"
+  },
+  "conclusion": "Only three idx fields changed. Frappe link-count job writes idx and last_execution falls within this trial. Preserve frozen FAIL; do not count as passing or change grader/environment in this experiment."
+}

@@ -1,0 +1,17 @@
+{
+  "attempt_id": "RFQ-01-3-a1",
+  "status": "EVAL_INFRA_ERROR",
+  "failure_reason": "reset/reseed differs from frozen Phase-1 business world",
+  "replacement": "RFQ-01-3-a2",
+  "replacement_status": "PASS",
+  "fact_changes": [
+    {
+      "path": "/facts/items/0/idx",
+      "failed_reset": 1,
+      "successful_reset": 0
+    }
+  ],
+  "failed_hash": "2512351621fe89f7355b8ba7de234973436dcd79b344b5987255af068b17c452",
+  "successful_hash": "53bac40d9d29f26e1648877efd43f0b063bc3f0304910f25265228b1f211157e",
+  "note": "Frozen runner rejected reset before Agent execution. No valid trial was rerun; no grading/environment change."
+}

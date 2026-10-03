@@ -1,0 +1,21 @@
+{
+  "new_canonical_tests": {
+    "command": "python -B -m unittest discover -s evals/procurement-v2.2 -p 'test_*.py' -v",
+    "tests": 13,
+    "passed": 13,
+    "failed": 0
+  },
+  "frozen_grader_tests": {
+    "command": "python -B -m unittest discover -s evals/procurement-v2/graders -p 'test_*.py' -v",
+    "tests": 30,
+    "passed": 30,
+    "failed": 0
+  },
+  "accounting_tests": {
+    "command": "python -B -m unittest discover -s evals/procurement-v2/tests -p 'test_*.py' -v",
+    "tests": 4,
+    "passed": 4,
+    "failed": 0
+  },
+  "development_sequence": "Tests written first; initial import failed before canonical_state implementation; implemented projection, then all 13 passed."
+}
