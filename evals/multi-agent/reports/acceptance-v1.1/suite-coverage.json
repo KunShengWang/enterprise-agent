@@ -1,0 +1,132 @@
+{
+  "status": "PASS",
+  "meaning": "Contract coverage by verified deterministic tests and separately identified historical targeted trials; does not imply complete model Smoke acceptance",
+  "contracts": [
+    {
+      "contract": "Canonical ID binding",
+      "deterministic": "PASS",
+      "test_class": "ChildContractBoundaryTests",
+      "test_names": [
+        "wrongAndMissingCanonicalDepartmentFailSafely",
+        "correctCanonicalDepartmentAccepted",
+        "packetBindsScopeAndWrongQueryNeverReachesExecutor"
+      ],
+      "xml": "target/surefire-reports/TEST-com.agent.platform.procurement.ChildContractBoundaryTests-phase6-scope.xml",
+      "xml_sha256": "fbd7ccbef3ee6f27fa00ff814c662d623fda405fbd9b96f9fd21b42d41a62811",
+      "targeted_model": "HISTORICAL_PASS",
+      "targeted_model_evidence": "evals/multi-agent/reports/contract-fix/req03-contract-audit.json",
+      "coverage": "PASS",
+      "note": "Historical targeted model is separately attributed and not counted as a fresh Smoke trial; deterministic tests verified under current production source."
+    },
+    {
+      "contract": "Evidence Ledger",
+      "deterministic": "PASS",
+      "test_class": "ChildContractBoundaryTests",
+      "test_names": [
+        "successLedgerCarriesCanonicalFactsAndSourceReceipt",
+        "fakeAndFailedReferencesCannotValidateOutput",
+        "crossChildEvidenceRequiresExplicitServerGrant"
+      ],
+      "xml": "target/surefire-reports/TEST-com.agent.platform.procurement.ChildContractBoundaryTests-phase6-scope.xml",
+      "xml_sha256": "fbd7ccbef3ee6f27fa00ff814c662d623fda405fbd9b96f9fd21b42d41a62811",
+      "targeted_model": "HISTORICAL_PASS",
+      "targeted_model_evidence": "evals/multi-agent/reports/contract-fix/req03-contract-audit.json",
+      "coverage": "PASS",
+      "note": "Historical targeted model is separately attributed and not counted as a fresh Smoke trial; deterministic tests verified under current production source."
+    },
+    {
+      "contract": "Constrained enum",
+      "deterministic": "PASS",
+      "test_class": "ChildContractBoundaryTests",
+      "test_names": [
+        "schemaAndRuntimeRejectUnknownStatusAndDeferredEnum"
+      ],
+      "xml": "target/surefire-reports/TEST-com.agent.platform.procurement.ChildContractBoundaryTests-phase6-scope.xml",
+      "xml_sha256": "fbd7ccbef3ee6f27fa00ff814c662d623fda405fbd9b96f9fd21b42d41a62811",
+      "targeted_model": "HISTORICAL_PASS",
+      "targeted_model_evidence": "evals/multi-agent/reports/contract-fix/req03-contract-audit.json",
+      "coverage": "PASS",
+      "note": "Historical targeted model is separately attributed and not counted as a fresh Smoke trial; deterministic tests verified under current production source."
+    },
+    {
+      "contract": "Duplicate/blocker boundary",
+      "deterministic": "PASS",
+      "test_class": "RequisitionAssessmentTests",
+      "test_names": [
+        "supplierUnknownsCannotBeRequisitionBlockers",
+        "differentQuantityAndSelfAreNotConfirmedDuplicate",
+        "sameDepartmentItemAndQuantitySupportDuplicateBlock"
+      ],
+      "xml": "target/surefire-reports/TEST-com.agent.platform.procurement.RequisitionAssessmentTests-phase6-scope.xml",
+      "xml_sha256": "e4153bc418cce38f86bda670ca684d244eb4685afe8710710beb6024175f2958",
+      "targeted_model": "HISTORICAL_PASS",
+      "targeted_model_evidence": "evals/multi-agent/reports/post-fix/gate-A-passed.json",
+      "coverage": "PASS",
+      "note": "Historical targeted model is separately attributed and not counted as a fresh Smoke trial; deterministic tests verified under current production source."
+    },
+    {
+      "contract": "Proposal vs committed fact",
+      "deterministic": "PASS",
+      "test_class": "RootExecutionSummaryTests",
+      "test_names": [
+        "proposalIsNotRfqAndCommittedFactsSurviveReloadResume",
+        "childProseAndSeededCaseCannotClaimThisRootMutated"
+      ],
+      "xml": "target/surefire-reports/TEST-com.agent.platform.procurement.RootExecutionSummaryTests-phase6-scope.xml",
+      "xml_sha256": "cb1fce8d9da9a80318f6e34bcdecb97428f30dd7a272847c6d3f95ded72018e0",
+      "targeted_model": "HISTORICAL_PASS",
+      "targeted_model_evidence": "evals/multi-agent/reports/execution-scope/req01-scope-audit.json",
+      "coverage": "PASS",
+      "note": "Historical targeted model is separately attributed and not counted as a fresh Smoke trial; deterministic tests verified under current production source."
+    },
+    {
+      "contract": "Root/Child execution scope",
+      "deterministic": "PASS",
+      "test_class": "RootExecutionSummaryTests",
+      "test_names": [
+        "truePlusFalseStaysTrue",
+        "falsePlusTrueIsTrue",
+        "truePlusTrueCountsTwo",
+        "currentVersionComesFromStoreNotChildReceiptMaximum"
+      ],
+      "xml": "target/surefire-reports/TEST-com.agent.platform.procurement.RootExecutionSummaryTests-phase6-scope.xml",
+      "xml_sha256": "cb1fce8d9da9a80318f6e34bcdecb97428f30dd7a272847c6d3f95ded72018e0",
+      "targeted_model": "HISTORICAL_PASS",
+      "targeted_model_evidence": "evals/multi-agent/reports/execution-scope/final-state-consistency.json",
+      "coverage": "PASS",
+      "note": "Historical targeted model is separately attributed and not counted as a fresh Smoke trial; deterministic tests verified under current production source."
+    },
+    {
+      "contract": "Nested HITL",
+      "deterministic": "PASS",
+      "test_class": "ProcurementMultiAgentTests",
+      "test_names": [
+        "approvedNestedRfqResumesSameChildAndExactRequestOnce",
+        "rejectedNestedRfqWritesNothing",
+        "staleCaseAndPayloadTamperingAreRejected",
+        "nestedApprovalSurvivesSerializedRunReloadAndRuntimeRecreation"
+      ],
+      "xml": "target/surefire-reports/TEST-com.agent.platform.procurement.ProcurementMultiAgentTests-phase6-scope.xml",
+      "xml_sha256": "42dce116b8ce017cefbc4141892dbb39bac182a35922203710178c66766ac579",
+      "targeted_model": "NOT_YET_VERIFIED",
+      "targeted_model_evidence": null,
+      "coverage": "PASS",
+      "note": "Historical targeted model is separately attributed and not counted as a fresh Smoke trial; deterministic tests verified under current production source."
+    },
+    {
+      "contract": "Child output validation",
+      "deterministic": "PASS",
+      "test_class": "ChildContractBoundaryTests",
+      "test_names": [
+        "schemaAndRuntimeRejectUnknownStatusAndDeferredEnum",
+        "fakeAndFailedReferencesCannotValidateOutput"
+      ],
+      "xml": "target/surefire-reports/TEST-com.agent.platform.procurement.ChildContractBoundaryTests-phase6-scope.xml",
+      "xml_sha256": "fbd7ccbef3ee6f27fa00ff814c662d623fda405fbd9b96f9fd21b42d41a62811",
+      "targeted_model": "HISTORICAL_PASS",
+      "targeted_model_evidence": "evals/multi-agent/reports/contract-fix/req03-contract-audit.json",
+      "coverage": "PASS",
+      "note": "Historical targeted model is separately attributed and not counted as a fresh Smoke trial; deterministic tests verified under current production source."
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "root_prompt": "8b51ae4a9e958eba25d46b61e7c046511b5bf0808e2e285e7f5f6e46c4c243ad",
+  "model_options": {
+    "maxTokens": 4096,
+    "model": "deepseek-chat",
+    "temperature": 0.2
+  },
+  "roles": {
+    "procurement-supervisor-v1": {
+      "prompts": [
+        "8b51ae4a9e958eba25d46b61e7c046511b5bf0808e2e285e7f5f6e46c4c243ad"
+      ],
+      "tools": {
+        "analyze_requisition": "417139baf587a646c2569f46a322befec5bdedcb853f66a56e32f756c9a26b09",
+        "inspect_procurement_case": "67f027319f1d61c0db93f61108a93e8a37a13cb0dc4257c4fc156f54b01a11ef",
+        "source_suppliers": "a1598dc7e37979ec19a54b715cd53726fa434ab3665b270e24a6013a395687ec",
+        "prepare_rfq": "80c708f43cbc72260e6f9efa6e8e8a5e2a90c1cbcbee20103ca5e5b8f19292a2"
+      }
+    },
+    "procurement-requisition-agent-v1": {
+      "prompts": [
+        "9a589bd8d1ee167970c43adf6c6c4c85805c497bab1bdfc68fc2c2ad43db79a7"
+      ],
+      "tools": {
+        "procurement_case_patch": "aeb0f31c90192e6ce61d4d4312c02f2f4d8d307672b1dbd3b0d121090c7afddd",
+        "mcp.erpnext.procurement_get_requisition": "4f88c924c0a466a7b0b631223550e688b30b2d1dc7b045d476033072fc30f3e1",
+        "mcp.erpnext.procurement_list_requisitions": "1921a49f758bd3291ecd4eb22b253456de5738e6e7193edc5babd34858c1a9d8",
+        "mcp.erpnext.procurement_get_item": "207e308c0ccddc995ecd8c78c82dfefb7799a5e1408d18ca1adef3bb51fb392e",
+        "mcp.erpnext.procurement_list_items": "828eb62618b1ce6b549bf47c42f2fc97a5dc5a46679fdfc09ae37922c7bb8c8e",
+        "mcp.erpnext.procurement_get_budget_status": "0ec98fa11dd1342c8bcb56812a91a941e495087b651a79bd13f539d8682bd48b",
+        "mcp.erpnext.procurement_get_purchase_history": "d9f37dfb75e1e272ed907e5603fc715c0ec87c49894f0204e11fff9e9b3bd92c"
+      }
+    },
+    "procurement-sourcing-agent-v1": {
+      "prompts": [
+        "793c080f719c6b259cf19967f3b32887dead529a91d6a5513a7ac28a78ede5fc"
+      ],
+      "tools": {
+        "procurement_supplier_search": "1a05c8c0ce81a24412fb9022589722a0c43d6263ab361f288b84fd4a9e9718dd",
+        "procurement_recommendation_finalize": "6dcd704aff9e17445396d1746ed2760c7832a6fcfd330d0b5b7f1b65d62a041b",
+        "mcp.erpnext.procurement_get_requisition": "4f88c924c0a466a7b0b631223550e688b30b2d1dc7b045d476033072fc30f3e1",
+        "mcp.erpnext.procurement_get_item": "207e308c0ccddc995ecd8c78c82dfefb7799a5e1408d18ca1adef3bb51fb392e",
+        "mcp.erpnext.procurement_get_budget_status": "0ec98fa11dd1342c8bcb56812a91a941e495087b651a79bd13f539d8682bd48b",
+        "mcp.erpnext.procurement_list_suppliers": "19211ddd8f5ab112e85e3690bdf8752309965ec7fbd1e079cdc75c03a0d7f828",
+        "mcp.erpnext.procurement_get_supplier": "f0abef1380daa33b56584212774bc24726cf4606a41dc04d56b092efd305ecd9",
+        "mcp.erpnext.procurement_list_item_suppliers": "cddc6ec4a515948ca01b84b4e17ef2f8be16e2c5ee826a52e4cdeaf558e10227",
+        "mcp.erpnext.procurement_get_purchase_history": "d9f37dfb75e1e272ed907e5603fc715c0ec87c49894f0204e11fff9e9b3bd92c",
+        "mcp.erpnext.procurement_get_supplier_performance": "26861e65702e1c6791c7c2790a9beb0e77f09537ed292a56c895d9d2bb067b6b"
+      }
+    }
+  }
+}

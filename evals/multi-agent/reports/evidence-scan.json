@@ -1,0 +1,6 @@
+{
+  "known_secret_values_checked": 10,
+  "matching_files": [],
+  "status": "PASS",
+  "limitation": "Known-value and common secret-pattern scan, not a universal secret detector."
+}

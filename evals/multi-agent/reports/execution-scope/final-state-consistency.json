@@ -1,0 +1,149 @@
+{
+  "contract": "SupervisorFinalStateConsistency",
+  "structured_status": "PASS",
+  "errors": [],
+  "expected_root_summary": {
+    "scope": "ROOT_GLOBAL",
+    "rootRunId": "9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+    "summaryRef": "root-execution-summary:9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+    "caseMutated": true,
+    "caseMutationCount": 1,
+    "currentCaseVersion": 1,
+    "rfqCreated": false,
+    "rfqCreationCount": 0
+  },
+  "actual_root_summary": {
+    "caseMutated": true,
+    "caseMutationCount": 1,
+    "currentCaseVersion": 1,
+    "omittedReceiptRefs": 0,
+    "receiptRefs": [
+      "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+    ],
+    "rfqCreated": false,
+    "rfqCreationCount": 0,
+    "rootRunId": "9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+    "scope": "ROOT_GLOBAL",
+    "summaryRef": "root-execution-summary:9a89ee8f-ba8f-4796-9de2-1c3348069b26"
+  },
+  "child_facts": [
+    {
+      "tool": "source_suppliers",
+      "childExecutionSummary": {
+        "scope": "CHILD_LOCAL",
+        "childRunId": "99596c02-0059-3ba4-9fb2-674d7029ce4d",
+        "agentId": "procurement-sourcing-agent-v1",
+        "caseMutated": false,
+        "caseMutationCount": 0,
+        "resultingCaseVersion": -1,
+        "rfqCreated": false,
+        "rfqCreationCount": 0,
+        "receiptRefs": [],
+        "omittedReceiptRefs": 0
+      },
+      "rootExecutionSummary": {
+        "scope": "ROOT_GLOBAL",
+        "rootRunId": "9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+        "summaryRef": "root-execution-summary:9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+        "caseMutated": true,
+        "caseMutationCount": 1,
+        "currentCaseVersion": 1,
+        "rfqCreated": false,
+        "rfqCreationCount": 0,
+        "receiptRefs": [
+          "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+        ],
+        "omittedReceiptRefs": 0
+      }
+    },
+    {
+      "tool": "analyze_requisition",
+      "childExecutionSummary": {
+        "scope": "CHILD_LOCAL",
+        "childRunId": "32d0bc1d-3de5-37a2-9ce8-70cc5198cfb2",
+        "agentId": "procurement-requisition-agent-v1",
+        "caseMutated": true,
+        "caseMutationCount": 1,
+        "resultingCaseVersion": 1,
+        "rfqCreated": false,
+        "rfqCreationCount": 0,
+        "receiptRefs": [
+          "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+        ],
+        "omittedReceiptRefs": 0
+      },
+      "rootExecutionSummary": {
+        "scope": "ROOT_GLOBAL",
+        "rootRunId": "9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+        "summaryRef": "root-execution-summary:9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+        "caseMutated": true,
+        "caseMutationCount": 1,
+        "currentCaseVersion": 1,
+        "rfqCreated": false,
+        "rfqCreationCount": 0,
+        "receiptRefs": [
+          "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+        ],
+        "omittedReceiptRefs": 0
+      }
+    }
+  ],
+  "prose_review": {
+    "verdict": "PASS",
+    "reason": "Reviewed complete Supervisor answer against canonical Case and Root summary. It states Case version 1 / SOURCING and no RFQ; it does not deny the successful Requisition Case patch or apply Sourcing-local false to the Root. The prose does not enumerate the mutation count; server-owned envelope supplies true/count=1/version=1 separately."
+  },
+  "status": "PASS",
+  "supervisor_final_response": "寻源已完成，推荐已通过 Java Finalize 验证。用户明确要求仅推荐、不创建 RFQ，因此不调用 prepare_rfq。\n\n## 寻源推荐结果（申购单 V2-REQ-001）\n\n**Case 状态**：f1dac4d2-1387-4933-958b-d4c7e6226d55，version 1，SOURCING；本次仅完成需求分析与寻源推荐，**未创建 RFQ**。\n\n### 需求确认（Requisition 分析，无阻断）\n- 申购单 V2-REQ-001 有效：部门 V2-ALG，商品 V2-WS-001（AI Workstation），数量 20，状态 Draft。\n- 商品 GPU 显存 24GB，满足 ≥24GB 硬约束。\n- 预算：部门可用 420,000 CNY，用户上限 300,000 CNY，Case 取较小值 300,000 CNY，**预算充足**。\n- 重复检查：同部门 V2-REQ-004（同商品，数量 8）为相似需求而非确认重复，无 DUPLICATE_REQUEST 阻断。\n\n### 推荐方案（经 Java Finalize 验证）\n**V2-SUP-001 — Nebula Forge Fictional**\n- 单价 12,800 CNY，总价 **256,000 CNY**（预算内，占 85.3%）\n- 交期 **12 天**（优于 21 天要求）\n- 质保 36 个月；onTimeRate 0.98、qualityScore 96、capacity HIGH、approved=true\n- 在「优先历史交付稳定性」软偏好下，其交付稳定性与产能表现最优，是价格与交付的平衡点。\n\n### 合格备选（均满足硬约束）\n| 供应商 | 总价 | 交期 | onTimeRate | 产能 | 说明 |\n|---|---|---|---|---|---|\n| V2-SUP-003 Amber Circuit | 274,000 | 10 天 | 0.96 | HIGH | 交期最快，但价格最高（贵 18,000） |\n| V2-SUP-005 Violet Harbor | 250,000 | 16 天 | 0.88 | MEDIUM | 价格居中，稳定性/产能弱于推荐 |\n| V2-SUP-002 Cobalt Finch | 218,000 | 20 天 | 0.65 | MEDIUM | 最低价，但交期仅余 1 天且稳定性最差，与交付优先偏好冲突 |\n\n### 待注意事项\n1. 所有价格为 **ERP 参考价**，非供应商正式报价，最终成交价需以 RFQ/报价为准。\n2. V2-SUP-002 交期距 21 天硬约束仅 1 天余量，且 onTimeRate 0.65，存在延误风险。\n3. 同部门 V2-REQ-004（同商品，数量 8）建议业务确认是否与本次 20 台存在合并/重叠意图。\n\n如需推进，请明确指示创建 RFQ，届时将进入人工审批流程。",
+  "canonical_case": {
+    "appliedInputIds": [
+      "488339ef-8716-462a-8b45-cfde0036956d"
+    ],
+    "caseId": "f1dac4d2-1387-4933-958b-d4c7e6226d55",
+    "conversationId": "eval-v2-95d6ed6a-96af-470c-851f-ae6b44a8fc46",
+    "createdAt": "2026-10-03T15:14:14.349154600Z",
+    "lastAppliedInputId": "488339ef-8716-462a-8b45-cfde0036956d",
+    "state": {
+      "budget": 300000,
+      "currency": "CNY",
+      "currentPhase": "SOURCING",
+      "excludedSuppliers": [],
+      "hardConstraints": {
+        "gpuMemoryMinGb": "24"
+      },
+      "missingFields": [],
+      "preferences": {
+        "deliveryPriority": "HIGH"
+      },
+      "productCategory": "AI Workstation",
+      "productDescription": "V2-WS-001",
+      "quantity": 20,
+      "requiredDeliveryDays": 21
+    },
+    "status": "SOURCING",
+    "tenantId": "tenant-1",
+    "updatedAt": "2026-10-03T15:14:14.350152500Z",
+    "userId": "buyer-1",
+    "version": 1
+  },
+  "server_facts": {
+    "businessResult": {
+      "caseId": "f1dac4d2-1387-4933-958b-d4c7e6226d55",
+      "caseStatus": "SOURCING",
+      "caseVersion": 1
+    },
+    "rootExecutionSummary": {
+      "caseMutated": true,
+      "caseMutationCount": 1,
+      "currentCaseVersion": 1,
+      "omittedReceiptRefs": 0,
+      "receiptRefs": [
+        "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+      ],
+      "rfqCreated": false,
+      "rfqCreationCount": 0,
+      "rootRunId": "9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+      "scope": "ROOT_GLOBAL",
+      "summaryRef": "root-execution-summary:9a89ee8f-ba8f-4796-9de2-1c3348069b26"
+    }
+  }
+}

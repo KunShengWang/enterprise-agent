@@ -1,0 +1,20 @@
+{
+  "accounting.json": "f0d642034ccb13196f5dbc1a23b1f1199a5ca9a9611b2e30748f703b571313d5",
+  "deterministic-evidence.zip": "85aefd8710161d141d8b08a789e70ececb031dcb70be0b07527a31aeed6501c6",
+  "deterministic-evidence.zip.provenance.json": "fa208845aba5c36f5955faf49fe880033ac7bbd69e1538cd797e5ef261daf64c",
+  "deterministic-results.json": "696d20fd16f6754850cd12c2765bf32aa6b0074cba47e61630b6a47e6550e4d8",
+  "freeze.json": "2316c289c478b7ef8f1f8a4932cb6e320e4783d7d965f03a5415d3463883b8ed",
+  "gate-A-passed.json": "d4b53f6d0327161984dd90690f442bec2667a3fb8e570b0fa1f043981c890bd2",
+  "gate-A-selection.json": "9c6c75f8b36379ca09772dc3e17a125667bc8f336db99e9dcf20eb536210adec",
+  "gate-B-selection.json": "5b183854565cd29d98841019f2fdf198a7e866bdc89c3bba0c497faaea1b55ae",
+  "git-status.txt": "5328f4bee246e2aa7bd5c80e6afab80d407b41ee8040aaf262311057a23c1e54",
+  "pre-fix-preserved.json": "3a84ec3188de53be6df1b3a33a97122355a7b936e18255102be5e0dbc2e9e3d0",
+  "req03-failure-audit.json": "c6e288f13c9d0579fe7c083c5aef888d5dda72f27c983ca07af0ceb91138814c",
+  "scope.json": "0a9f2ef621586d5d3fa98a4e15edd9240c816f8b717524a993cfa04b181ea7ec",
+  "secret-scan.json": "b23e78ffcd5ee6112f770e1f97cf8a52db396c959d36fb522960db8cbf15e16b",
+  "smoke-evidence.zip": "9b289511e054311a2fb1607a62967554dc7154d736e66fddf549cac6f9b82319",
+  "smoke-evidence.zip.provenance.json": "af362c97d12dcea379f3c70192a369c3a9a97aec858ba3ecb350a0afe15b2959",
+  "smoke-results.json": "74e2becc84613619baab32cbce6bfcd2c30819e49092a44ef60ad13c652ccdc0",
+  "validation-source.zip": "da72df4c2bac42455a1a3537feb71dfa2c5bd6e2e1eb42a2c3abb6bf0d51f2af",
+  "validation-source.zip.provenance.json": "63740baabb6d42009838af7d3f5b671b4d3bb767934468b24dadf6ca320ee238"
+}

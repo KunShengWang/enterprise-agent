@@ -1,0 +1,85 @@
+{
+  "tests": 88,
+  "failures": 0,
+  "errors": 0,
+  "skip": 0,
+  "suites": [
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.agent.platform.EnterpriseAgentApplicationTests(phase6-l0-final)",
+      "time": "5.337",
+      "tests": "2",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    },
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.agent.platform.procurement.erp.ErpNextRfqGatewayTests(phase6-l0-final)",
+      "time": "1.109",
+      "tests": "4",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    },
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.agent.platform.procurement.ProcurementMultiAgentTests(phase6-l0-final)",
+      "time": "0.872",
+      "tests": "12",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    },
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.agent.platform.procurement.ProcurementRfqHitlTests(phase6-l0-final)",
+      "time": "0.717",
+      "tests": "22",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    },
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.agent.platform.runtime.ContextEngineeringTests(phase6-l0-final)",
+      "time": "0.326",
+      "tests": "10",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    },
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.agent.platform.runtime.DefaultAgentRuntimeStateTests(phase6-l0-final)",
+      "time": "0.234",
+      "tests": "23",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    },
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.agent.platform.runtime.HarnessCoreTests(phase6-l0-final)",
+      "time": "0.212",
+      "tests": "15",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    }
+  ]
+}

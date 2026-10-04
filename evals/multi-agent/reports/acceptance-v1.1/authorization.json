@@ -1,0 +1,20 @@
+{
+  "reused_smoke": [
+    "REQ-01",
+    "REQ-03"
+  ],
+  "new_smoke": [
+    "ANOM-01",
+    "SRC-01",
+    "RFQ-01",
+    "RFQ-02",
+    "GOV-01",
+    "ROB-01",
+    "E2E-01"
+  ],
+  "max_new_smoke": 7,
+  "max_new_dev": 28,
+  "no_retry": true,
+  "business_grader_unchanged": true,
+  "acceptance_version": "phase6-acceptance-v1.1"
+}

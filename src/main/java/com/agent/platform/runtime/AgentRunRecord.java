@@ -67,6 +67,9 @@ public record AgentRunRecord(
         };
         java.util.Map<String, Object> view = new java.util.LinkedHashMap<>();
         view.put("runId", runId);
+        view.put("rootRunId", request == null ? runId : request.metadata().getOrDefault(ChildRunLaunch.ROOT, runId));
+        view.put("parentRunId", request == null ? "" : request.metadata().getOrDefault(ChildRunLaunch.PARENT, ""));
+        view.put("callDepth", request != null && request.metadata().containsKey(ChildRunLaunch.PARENT) ? 1 : 0);
         view.put("agentId", executionProfile == null ? "default" : executionProfile.name());
         view.put("status", RunStatus.from(state, reason).name());
         view.put("startedAt", createdAt.toString());

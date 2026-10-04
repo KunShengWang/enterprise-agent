@@ -1,0 +1,22 @@
+{
+  "production_fingerprint": "78b514a2b14db593e519556965210641d56fc7c1e83ca28f7eb273f411b2be4d",
+  "src_unchanged": true,
+  "existing_evaluators_routing_grader_task_seed_unchanged": true,
+  "evaluator_changed_after_new_trial": false,
+  "prior_artifacts_verified": 245,
+  "handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "handler_bytes_unchanged": true,
+  "index_empty": true,
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "branch": "feat/multi-agent",
+  "frozen_fixtures_unchanged": 5,
+  "new_model_trials": 1,
+  "new_infra_trials": 0,
+  "reused_final_source_trials": 2,
+  "historical_debug_valid": 6,
+  "total_phase6_valid": 9,
+  "remaining_smoke_not_run": 6,
+  "dev": 0,
+  "holdout": 0,
+  "no_commit_push_tag": true
+}

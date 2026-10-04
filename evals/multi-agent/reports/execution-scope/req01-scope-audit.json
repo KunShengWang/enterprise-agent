@@ -1,0 +1,681 @@
+{
+  "children": [
+    {
+      "tool": "source_suppliers",
+      "childRunId": "99596c02-0059-3ba4-9fb2-674d7029ce4d",
+      "childExecutionSummary": {
+        "scope": "CHILD_LOCAL",
+        "childRunId": "99596c02-0059-3ba4-9fb2-674d7029ce4d",
+        "agentId": "procurement-sourcing-agent-v1",
+        "caseMutated": false,
+        "caseMutationCount": 0,
+        "resultingCaseVersion": -1,
+        "rfqCreated": false,
+        "rfqCreationCount": 0,
+        "receiptRefs": [],
+        "omittedReceiptRefs": 0
+      },
+      "rootExecutionSummary": {
+        "scope": "ROOT_GLOBAL",
+        "rootRunId": "9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+        "summaryRef": "root-execution-summary:9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+        "caseMutated": true,
+        "caseMutationCount": 1,
+        "currentCaseVersion": 1,
+        "rfqCreated": false,
+        "rfqCreationCount": 0,
+        "receiptRefs": [
+          "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+        ],
+        "omittedReceiptRefs": 0
+      },
+      "assessment": null,
+      "evidence_refs": [
+        "evidence-5f0da94e368f9e7f0d80cd50",
+        "evidence-c839b68a864e6fb30aed757e",
+        "evidence-efd06d952e1d454eebf95626",
+        "evidence-e929f42335d7579c012d16cb",
+        "evidence-62c95394e9b1266d09bbd6b1",
+        "evidence-5bae7611f62b592245ee0538",
+        "evidence-982920da048136c6722d434d",
+        "evidence-d6a1173325c1143f451e2323"
+      ],
+      "evidence_ledger": [
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier_performance",
+          "sourceToolCallId": "3d8ff598-e08f-40e2-9ab4-1ed6a54cb450",
+          "version": "2026-10-03T15:13:54.645933Z",
+          "entity": "V2-SUP-002",
+          "evidenceRef": "tool-execution:3d8ff598-e08f-40e2-9ab4-1ed6a54cb450"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier_performance",
+          "sourceToolCallId": "3d8ff598-e08f-40e2-9ab4-1ed6a54cb450",
+          "version": "2026-10-03T15:13:54.645933Z",
+          "entity": "V2-SUP-002",
+          "evidenceRef": "Procurement Supplier Performance:V2-SUP-002:2026-10-03T15:13:54.645933Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_supplier_search",
+          "sourceToolCallId": "d1799d9d-a901-436c-8f9a-560a3b3a7e3e",
+          "version": "1",
+          "entity": "",
+          "evidenceRef": "tool-execution:d1799d9d-a901-436c-8f9a-560a3b3a7e3e"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_supplier_search",
+          "sourceToolCallId": "d1799d9d-a901-436c-8f9a-560a3b3a7e3e",
+          "version": "1",
+          "entity": "",
+          "evidenceRef": "evidence-5f0da94e368f9e7f0d80cd50"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_supplier_search",
+          "sourceToolCallId": "d1799d9d-a901-436c-8f9a-560a3b3a7e3e",
+          "version": "1",
+          "entity": "",
+          "evidenceRef": "evidence-c839b68a864e6fb30aed757e"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_supplier_search",
+          "sourceToolCallId": "d1799d9d-a901-436c-8f9a-560a3b3a7e3e",
+          "version": "1",
+          "entity": "",
+          "evidenceRef": "evidence-982920da048136c6722d434d"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_supplier_search",
+          "sourceToolCallId": "d1799d9d-a901-436c-8f9a-560a3b3a7e3e",
+          "version": "1",
+          "entity": "",
+          "evidenceRef": "evidence-d6a1173325c1143f451e2323"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_supplier_search",
+          "sourceToolCallId": "d1799d9d-a901-436c-8f9a-560a3b3a7e3e",
+          "version": "1",
+          "entity": "",
+          "evidenceRef": "evidence-efd06d952e1d454eebf95626"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_supplier_search",
+          "sourceToolCallId": "d1799d9d-a901-436c-8f9a-560a3b3a7e3e",
+          "version": "1",
+          "entity": "",
+          "evidenceRef": "evidence-e929f42335d7579c012d16cb"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_supplier_search",
+          "sourceToolCallId": "d1799d9d-a901-436c-8f9a-560a3b3a7e3e",
+          "version": "1",
+          "entity": "",
+          "evidenceRef": "evidence-62c95394e9b1266d09bbd6b1"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_supplier_search",
+          "sourceToolCallId": "d1799d9d-a901-436c-8f9a-560a3b3a7e3e",
+          "version": "1",
+          "entity": "",
+          "evidenceRef": "evidence-5bae7611f62b592245ee0538"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier_performance",
+          "sourceToolCallId": "e681507e-4bd9-4980-a96c-e71b70727f05",
+          "version": "2026-10-03T15:13:54.638257Z",
+          "entity": "V2-SUP-001",
+          "evidenceRef": "tool-execution:e681507e-4bd9-4980-a96c-e71b70727f05"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier_performance",
+          "sourceToolCallId": "e681507e-4bd9-4980-a96c-e71b70727f05",
+          "version": "2026-10-03T15:13:54.638257Z",
+          "entity": "V2-SUP-001",
+          "evidenceRef": "Procurement Supplier Performance:V2-SUP-001:2026-10-03T15:13:54.638257Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier_performance",
+          "sourceToolCallId": "48911791-1723-4c6f-939d-0f77d0ea5ec4",
+          "version": "2026-10-03T15:13:54.648001Z",
+          "entity": "V2-SUP-003",
+          "evidenceRef": "tool-execution:48911791-1723-4c6f-939d-0f77d0ea5ec4"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier_performance",
+          "sourceToolCallId": "48911791-1723-4c6f-939d-0f77d0ea5ec4",
+          "version": "2026-10-03T15:13:54.648001Z",
+          "entity": "V2-SUP-003",
+          "evidenceRef": "Procurement Supplier Performance:V2-SUP-003:2026-10-03T15:13:54.648001Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier",
+          "sourceToolCallId": "84368a21-70b3-43d4-b411-206ab3f0f560",
+          "version": "2026-10-03T15:13:54.322080Z",
+          "entity": "V2-SUP-002",
+          "evidenceRef": "tool-execution:84368a21-70b3-43d4-b411-206ab3f0f560"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier",
+          "sourceToolCallId": "84368a21-70b3-43d4-b411-206ab3f0f560",
+          "version": "2026-10-03T15:13:54.322080Z",
+          "entity": "V2-SUP-002",
+          "evidenceRef": "Supplier:V2-SUP-002:2026-10-03T15:13:54.322080Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier",
+          "sourceToolCallId": "4ec22cb1-bf9c-49d1-9a19-538eb77c7dea",
+          "version": "2026-10-03T15:13:54.326990Z",
+          "entity": "V2-SUP-003",
+          "evidenceRef": "tool-execution:4ec22cb1-bf9c-49d1-9a19-538eb77c7dea"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier",
+          "sourceToolCallId": "4ec22cb1-bf9c-49d1-9a19-538eb77c7dea",
+          "version": "2026-10-03T15:13:54.326990Z",
+          "entity": "V2-SUP-003",
+          "evidenceRef": "Supplier:V2-SUP-003:2026-10-03T15:13:54.326990Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier",
+          "sourceToolCallId": "daa4c239-aea5-4cee-9f9e-795b9c91c522",
+          "version": "2026-10-03T15:13:54.334787Z",
+          "entity": "V2-SUP-005",
+          "evidenceRef": "tool-execution:daa4c239-aea5-4cee-9f9e-795b9c91c522"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier",
+          "sourceToolCallId": "daa4c239-aea5-4cee-9f9e-795b9c91c522",
+          "version": "2026-10-03T15:13:54.334787Z",
+          "entity": "V2-SUP-005",
+          "evidenceRef": "Supplier:V2-SUP-005:2026-10-03T15:13:54.334787Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_recommendation_finalize",
+          "sourceToolCallId": "3f2ad967-b950-4143-8592-228069490158",
+          "version": "1",
+          "entity": "f1dac4d2-1387-4933-958b-d4c7e6226d55",
+          "evidenceRef": "tool-execution:3f2ad967-b950-4143-8592-228069490158"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_recommendation_finalize",
+          "sourceToolCallId": "3f2ad967-b950-4143-8592-228069490158",
+          "version": "1",
+          "entity": "f1dac4d2-1387-4933-958b-d4c7e6226d55",
+          "evidenceRef": "evidence-5f0da94e368f9e7f0d80cd50"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_recommendation_finalize",
+          "sourceToolCallId": "3f2ad967-b950-4143-8592-228069490158",
+          "version": "1",
+          "entity": "f1dac4d2-1387-4933-958b-d4c7e6226d55",
+          "evidenceRef": "evidence-c839b68a864e6fb30aed757e"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_recommendation_finalize",
+          "sourceToolCallId": "3f2ad967-b950-4143-8592-228069490158",
+          "version": "1",
+          "entity": "f1dac4d2-1387-4933-958b-d4c7e6226d55",
+          "evidenceRef": "evidence-982920da048136c6722d434d"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_recommendation_finalize",
+          "sourceToolCallId": "3f2ad967-b950-4143-8592-228069490158",
+          "version": "1",
+          "entity": "f1dac4d2-1387-4933-958b-d4c7e6226d55",
+          "evidenceRef": "evidence-d6a1173325c1143f451e2323"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_recommendation_finalize",
+          "sourceToolCallId": "3f2ad967-b950-4143-8592-228069490158",
+          "version": "1",
+          "entity": "f1dac4d2-1387-4933-958b-d4c7e6226d55",
+          "evidenceRef": "evidence-efd06d952e1d454eebf95626"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_recommendation_finalize",
+          "sourceToolCallId": "3f2ad967-b950-4143-8592-228069490158",
+          "version": "1",
+          "entity": "f1dac4d2-1387-4933-958b-d4c7e6226d55",
+          "evidenceRef": "evidence-e929f42335d7579c012d16cb"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_recommendation_finalize",
+          "sourceToolCallId": "3f2ad967-b950-4143-8592-228069490158",
+          "version": "1",
+          "entity": "f1dac4d2-1387-4933-958b-d4c7e6226d55",
+          "evidenceRef": "evidence-62c95394e9b1266d09bbd6b1"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_recommendation_finalize",
+          "sourceToolCallId": "3f2ad967-b950-4143-8592-228069490158",
+          "version": "1",
+          "entity": "f1dac4d2-1387-4933-958b-d4c7e6226d55",
+          "evidenceRef": "evidence-5bae7611f62b592245ee0538"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier",
+          "sourceToolCallId": "3fcdf161-f496-4ecd-ba1c-b495cd22089b",
+          "version": "2026-10-03T15:13:54.271943Z",
+          "entity": "V2-SUP-001",
+          "evidenceRef": "tool-execution:3fcdf161-f496-4ecd-ba1c-b495cd22089b"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier",
+          "sourceToolCallId": "3fcdf161-f496-4ecd-ba1c-b495cd22089b",
+          "version": "2026-10-03T15:13:54.271943Z",
+          "entity": "V2-SUP-001",
+          "evidenceRef": "Supplier:V2-SUP-001:2026-10-03T15:13:54.271943Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier_performance",
+          "sourceToolCallId": "cd89f69d-30a5-4906-a971-77638d0522c9",
+          "version": "2026-10-03T15:13:54.651026Z",
+          "entity": "V2-SUP-005",
+          "evidenceRef": "tool-execution:cd89f69d-30a5-4906-a971-77638d0522c9"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_supplier_performance",
+          "sourceToolCallId": "cd89f69d-30a5-4906-a971-77638d0522c9",
+          "version": "2026-10-03T15:13:54.651026Z",
+          "entity": "V2-SUP-005",
+          "evidenceRef": "Procurement Supplier Performance:V2-SUP-005:2026-10-03T15:13:54.651026Z"
+        }
+      ]
+    },
+    {
+      "tool": "analyze_requisition",
+      "childRunId": "32d0bc1d-3de5-37a2-9ce8-70cc5198cfb2",
+      "childExecutionSummary": {
+        "scope": "CHILD_LOCAL",
+        "childRunId": "32d0bc1d-3de5-37a2-9ce8-70cc5198cfb2",
+        "agentId": "procurement-requisition-agent-v1",
+        "caseMutated": true,
+        "caseMutationCount": 1,
+        "resultingCaseVersion": 1,
+        "rfqCreated": false,
+        "rfqCreationCount": 0,
+        "receiptRefs": [
+          "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+        ],
+        "omittedReceiptRefs": 0
+      },
+      "rootExecutionSummary": {
+        "scope": "ROOT_GLOBAL",
+        "rootRunId": "9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+        "summaryRef": "root-execution-summary:9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+        "caseMutated": true,
+        "caseMutationCount": 1,
+        "currentCaseVersion": 1,
+        "rfqCreated": false,
+        "rfqCreationCount": 0,
+        "receiptRefs": [
+          "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+        ],
+        "omittedReceiptRefs": 0
+      },
+      "assessment": {
+        "blockingReasons": [],
+        "deferredChecks": [
+          "DELIVERY_FEASIBILITY",
+          "SUPPLIER_PERFORMANCE",
+          "SUPPLIER_PRICING"
+        ],
+        "subjectRequisitionId": "V2-REQ-001",
+        "departmentId": "V2-ALG",
+        "caseComplete": true,
+        "itemStatus": "ACTIVE",
+        "budgetStatus": "AVAILABLE_CEILING_OBSERVED",
+        "duplicateStatus": "NO_EXACT_MATCH_OBSERVED"
+      },
+      "evidence_refs": [
+        "tool-execution:038cc32e-90e9-4e37-9653-d839618b997f",
+        "tool-execution:c899820c-e008-4919-9054-50ebdaa3d8ba",
+        "tool-execution:9b0837b9-ec98-41f3-91ee-0da9e31ce6d3",
+        "tool-execution:dc4e6f24-7b94-41be-978f-ec956f67e79d",
+        "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+      ],
+      "evidence_ledger": [
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_item",
+          "sourceToolCallId": "9b0837b9-ec98-41f3-91ee-0da9e31ce6d3",
+          "version": "2026-10-03T15:13:54.413221Z",
+          "entity": "V2-WS-001",
+          "evidenceRef": "tool-execution:9b0837b9-ec98-41f3-91ee-0da9e31ce6d3"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_item",
+          "sourceToolCallId": "9b0837b9-ec98-41f3-91ee-0da9e31ce6d3",
+          "version": "2026-10-03T15:13:54.413221Z",
+          "entity": "V2-WS-001",
+          "evidenceRef": "Item:V2-WS-001:2026-10-03T15:13:54.413221Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "procurement_case_patch",
+          "sourceToolCallId": "488339ef-8716-462a-8b45-cfde0036956d",
+          "version": "1",
+          "entity": "f1dac4d2-1387-4933-958b-d4c7e6226d55",
+          "evidenceRef": "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_list_requisitions",
+          "sourceToolCallId": "dc4e6f24-7b94-41be-978f-ec956f67e79d",
+          "version": "",
+          "entity": "",
+          "evidenceRef": "tool-execution:dc4e6f24-7b94-41be-978f-ec956f67e79d"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_list_requisitions",
+          "sourceToolCallId": "dc4e6f24-7b94-41be-978f-ec956f67e79d",
+          "version": "",
+          "entity": "",
+          "evidenceRef": "Material Request:V2-REQ-001:2026-10-03T15:13:54.745363Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_list_requisitions",
+          "sourceToolCallId": "dc4e6f24-7b94-41be-978f-ec956f67e79d",
+          "version": "",
+          "entity": "",
+          "evidenceRef": "Material Request:V2-REQ-002:2026-10-03T15:13:54.845889Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_list_requisitions",
+          "sourceToolCallId": "dc4e6f24-7b94-41be-978f-ec956f67e79d",
+          "version": "",
+          "entity": "",
+          "evidenceRef": "Material Request:V2-REQ-003:2026-10-03T15:13:54.863311Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_list_requisitions",
+          "sourceToolCallId": "dc4e6f24-7b94-41be-978f-ec956f67e79d",
+          "version": "",
+          "entity": "",
+          "evidenceRef": "Material Request:V2-REQ-004:2026-10-03T15:13:54.879865Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_list_requisitions",
+          "sourceToolCallId": "dc4e6f24-7b94-41be-978f-ec956f67e79d",
+          "version": "",
+          "entity": "",
+          "evidenceRef": "Material Request:V2-REQ-005:2026-10-03T15:13:54.894199Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_list_requisitions",
+          "sourceToolCallId": "dc4e6f24-7b94-41be-978f-ec956f67e79d",
+          "version": "",
+          "entity": "",
+          "evidenceRef": "Material Request:V2-REQ-006:2026-10-03T15:13:54.907436Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_budget_status",
+          "sourceToolCallId": "c899820c-e008-4919-9054-50ebdaa3d8ba",
+          "version": "2026-10-03T15:13:54.673651Z",
+          "entity": "V2-BUD-001",
+          "evidenceRef": "tool-execution:c899820c-e008-4919-9054-50ebdaa3d8ba"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_budget_status",
+          "sourceToolCallId": "c899820c-e008-4919-9054-50ebdaa3d8ba",
+          "version": "2026-10-03T15:13:54.673651Z",
+          "entity": "V2-BUD-001",
+          "evidenceRef": "Budget:V2-BUD-001:2026-10-03T15:13:54.673651Z"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_requisition",
+          "sourceToolCallId": "038cc32e-90e9-4e37-9653-d839618b997f",
+          "version": "2026-10-03T15:13:54.745363Z",
+          "entity": "V2-REQ-001",
+          "evidenceRef": "tool-execution:038cc32e-90e9-4e37-9653-d839618b997f"
+        },
+        {
+          "outcome": "SUCCESS",
+          "toolName": "mcp.erpnext.procurement_get_requisition",
+          "sourceToolCallId": "038cc32e-90e9-4e37-9653-d839618b997f",
+          "version": "2026-10-03T15:13:54.745363Z",
+          "entity": "V2-REQ-001",
+          "evidenceRef": "Material Request:V2-REQ-001:2026-10-03T15:13:54.745363Z"
+        }
+      ]
+    }
+  ],
+  "supervisor_final_state_consistency": {
+    "contract": "SupervisorFinalStateConsistency",
+    "structured_status": "PASS",
+    "errors": [],
+    "expected_root_summary": {
+      "scope": "ROOT_GLOBAL",
+      "rootRunId": "9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+      "summaryRef": "root-execution-summary:9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+      "caseMutated": true,
+      "caseMutationCount": 1,
+      "currentCaseVersion": 1,
+      "rfqCreated": false,
+      "rfqCreationCount": 0
+    },
+    "actual_root_summary": {
+      "caseMutated": true,
+      "caseMutationCount": 1,
+      "currentCaseVersion": 1,
+      "omittedReceiptRefs": 0,
+      "receiptRefs": [
+        "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+      ],
+      "rfqCreated": false,
+      "rfqCreationCount": 0,
+      "rootRunId": "9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+      "scope": "ROOT_GLOBAL",
+      "summaryRef": "root-execution-summary:9a89ee8f-ba8f-4796-9de2-1c3348069b26"
+    },
+    "child_facts": [
+      {
+        "tool": "source_suppliers",
+        "childExecutionSummary": {
+          "scope": "CHILD_LOCAL",
+          "childRunId": "99596c02-0059-3ba4-9fb2-674d7029ce4d",
+          "agentId": "procurement-sourcing-agent-v1",
+          "caseMutated": false,
+          "caseMutationCount": 0,
+          "resultingCaseVersion": -1,
+          "rfqCreated": false,
+          "rfqCreationCount": 0,
+          "receiptRefs": [],
+          "omittedReceiptRefs": 0
+        },
+        "rootExecutionSummary": {
+          "scope": "ROOT_GLOBAL",
+          "rootRunId": "9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+          "summaryRef": "root-execution-summary:9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+          "caseMutated": true,
+          "caseMutationCount": 1,
+          "currentCaseVersion": 1,
+          "rfqCreated": false,
+          "rfqCreationCount": 0,
+          "receiptRefs": [
+            "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+          ],
+          "omittedReceiptRefs": 0
+        }
+      },
+      {
+        "tool": "analyze_requisition",
+        "childExecutionSummary": {
+          "scope": "CHILD_LOCAL",
+          "childRunId": "32d0bc1d-3de5-37a2-9ce8-70cc5198cfb2",
+          "agentId": "procurement-requisition-agent-v1",
+          "caseMutated": true,
+          "caseMutationCount": 1,
+          "resultingCaseVersion": 1,
+          "rfqCreated": false,
+          "rfqCreationCount": 0,
+          "receiptRefs": [
+            "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+          ],
+          "omittedReceiptRefs": 0
+        },
+        "rootExecutionSummary": {
+          "scope": "ROOT_GLOBAL",
+          "rootRunId": "9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+          "summaryRef": "root-execution-summary:9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+          "caseMutated": true,
+          "caseMutationCount": 1,
+          "currentCaseVersion": 1,
+          "rfqCreated": false,
+          "rfqCreationCount": 0,
+          "receiptRefs": [
+            "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+          ],
+          "omittedReceiptRefs": 0
+        }
+      }
+    ],
+    "prose_review": {
+      "verdict": "PASS",
+      "reason": "Reviewed complete Supervisor answer against canonical Case and Root summary. It states Case version 1 / SOURCING and no RFQ; it does not deny the successful Requisition Case patch or apply Sourcing-local false to the Root. The prose does not enumerate the mutation count; server-owned envelope supplies true/count=1/version=1 separately."
+    },
+    "status": "PASS",
+    "supervisor_final_response": "寻源已完成，推荐已通过 Java Finalize 验证。用户明确要求仅推荐、不创建 RFQ，因此不调用 prepare_rfq。\n\n## 寻源推荐结果（申购单 V2-REQ-001）\n\n**Case 状态**：f1dac4d2-1387-4933-958b-d4c7e6226d55，version 1，SOURCING；本次仅完成需求分析与寻源推荐，**未创建 RFQ**。\n\n### 需求确认（Requisition 分析，无阻断）\n- 申购单 V2-REQ-001 有效：部门 V2-ALG，商品 V2-WS-001（AI Workstation），数量 20，状态 Draft。\n- 商品 GPU 显存 24GB，满足 ≥24GB 硬约束。\n- 预算：部门可用 420,000 CNY，用户上限 300,000 CNY，Case 取较小值 300,000 CNY，**预算充足**。\n- 重复检查：同部门 V2-REQ-004（同商品，数量 8）为相似需求而非确认重复，无 DUPLICATE_REQUEST 阻断。\n\n### 推荐方案（经 Java Finalize 验证）\n**V2-SUP-001 — Nebula Forge Fictional**\n- 单价 12,800 CNY，总价 **256,000 CNY**（预算内，占 85.3%）\n- 交期 **12 天**（优于 21 天要求）\n- 质保 36 个月；onTimeRate 0.98、qualityScore 96、capacity HIGH、approved=true\n- 在「优先历史交付稳定性」软偏好下，其交付稳定性与产能表现最优，是价格与交付的平衡点。\n\n### 合格备选（均满足硬约束）\n| 供应商 | 总价 | 交期 | onTimeRate | 产能 | 说明 |\n|---|---|---|---|---|---|\n| V2-SUP-003 Amber Circuit | 274,000 | 10 天 | 0.96 | HIGH | 交期最快，但价格最高（贵 18,000） |\n| V2-SUP-005 Violet Harbor | 250,000 | 16 天 | 0.88 | MEDIUM | 价格居中，稳定性/产能弱于推荐 |\n| V2-SUP-002 Cobalt Finch | 218,000 | 20 天 | 0.65 | MEDIUM | 最低价，但交期仅余 1 天且稳定性最差，与交付优先偏好冲突 |\n\n### 待注意事项\n1. 所有价格为 **ERP 参考价**，非供应商正式报价，最终成交价需以 RFQ/报价为准。\n2. V2-SUP-002 交期距 21 天硬约束仅 1 天余量，且 onTimeRate 0.65，存在延误风险。\n3. 同部门 V2-REQ-004（同商品，数量 8）建议业务确认是否与本次 20 台存在合并/重叠意图。\n\n如需推进，请明确指示创建 RFQ，届时将进入人工审批流程。",
+    "canonical_case": {
+      "appliedInputIds": [
+        "488339ef-8716-462a-8b45-cfde0036956d"
+      ],
+      "caseId": "f1dac4d2-1387-4933-958b-d4c7e6226d55",
+      "conversationId": "eval-v2-95d6ed6a-96af-470c-851f-ae6b44a8fc46",
+      "createdAt": "2026-10-03T15:14:14.349154600Z",
+      "lastAppliedInputId": "488339ef-8716-462a-8b45-cfde0036956d",
+      "state": {
+        "budget": 300000,
+        "currency": "CNY",
+        "currentPhase": "SOURCING",
+        "excludedSuppliers": [],
+        "hardConstraints": {
+          "gpuMemoryMinGb": "24"
+        },
+        "missingFields": [],
+        "preferences": {
+          "deliveryPriority": "HIGH"
+        },
+        "productCategory": "AI Workstation",
+        "productDescription": "V2-WS-001",
+        "quantity": 20,
+        "requiredDeliveryDays": 21
+      },
+      "status": "SOURCING",
+      "tenantId": "tenant-1",
+      "updatedAt": "2026-10-03T15:14:14.350152500Z",
+      "userId": "buyer-1",
+      "version": 1
+    },
+    "server_facts": {
+      "businessResult": {
+        "caseId": "f1dac4d2-1387-4933-958b-d4c7e6226d55",
+        "caseStatus": "SOURCING",
+        "caseVersion": 1
+      },
+      "rootExecutionSummary": {
+        "caseMutated": true,
+        "caseMutationCount": 1,
+        "currentCaseVersion": 1,
+        "omittedReceiptRefs": 0,
+        "receiptRefs": [
+          "tool-execution:488339ef-8716-462a-8b45-cfde0036956d"
+        ],
+        "rfqCreated": false,
+        "rfqCreationCount": 0,
+        "rootRunId": "9a89ee8f-ba8f-4796-9de2-1c3348069b26",
+        "scope": "ROOT_GLOBAL",
+        "summaryRef": "root-execution-summary:9a89ee8f-ba8f-4796-9de2-1c3348069b26"
+      }
+    }
+  },
+  "case_patch_receipts": [
+    {
+      "attempt": 1,
+      "createdAt": "2026-10-03T15:14:14.339154700Z",
+      "errorMessage": "",
+      "request": {
+        "arguments": {
+          "budget": 300000,
+          "currency": "CNY",
+          "hardConstraintsUpsert": {
+            "gpuMemoryMinGb": "24"
+          },
+          "preferencesUpsert": {
+            "deliveryPriority": "HIGH"
+          },
+          "productCategory": "AI Workstation",
+          "productDescription": "V2-WS-001",
+          "quantity": 20,
+          "requiredDeliveryDays": 21
+        },
+        "requestId": "488339ef-8716-462a-8b45-cfde0036956d",
+        "toolName": "procurement_case_patch"
+      },
+      "result": {
+        "content": "{\"caseId\":\"f1dac4d2-1387-4933-958b-d4c7e6226d55\",\"caseVersion\":1,\"status\":\"SOURCING\",\"state\":{\"productCategory\":\"AI Workstation\",\"productDescription\":\"V2-WS-001\",\"quantity\":20,\"budget\":300000,\"currency\":\"CNY\",\"requiredDeliveryDays\":21,\"hardConstraints\":{\"gpuMemoryMinGb\":\"24\"},\"preferences\":{\"deliveryPriority\":\"HIGH\"},\"excludedSuppliers\":[],\"missingFields\":[],\"currentPhase\":\"SOURCING\"},\"missingFields\":[],\"currentPhase\":\"SOURCING\",\"source\":\"authoritative-procurement-case-store\"}",
+        "errorMessage": "",
+        "metadata": {
+          "_harnessDurationMs": 14.9347,
+          "_harnessOutcome": "SUCCESS",
+          "_harnessSource": "LOCAL",
+          "attempts": 1,
+          "provider": "procurement",
+          "readOnly": false,
+          "sideEffect": true
+        },
+        "success": true,
+        "toolName": "procurement_case_patch"
+      },
+      "runId": "32d0bc1d-3de5-37a2-9ce8-70cc5198cfb2",
+      "state": "SUCCEEDED",
+      "toolCallId": "488339ef-8716-462a-8b45-cfde0036956d",
+      "toolName": "procurement_case_patch",
+      "updatedAt": "2026-10-03T15:14:14.354304900Z"
+    }
+  ],
+  "prose_omission": "Mutation count is explicit in serverFacts; not individually restated in prose. No contradictory write statement observed."
+}

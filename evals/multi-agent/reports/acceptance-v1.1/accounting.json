@@ -1,0 +1,14 @@
+{
+  "prior_debug_valid": 6,
+  "reused_final_source_trials": 2,
+  "new_valid": 1,
+  "new_infra": 0,
+  "max_new_valid": 35,
+  "smoke_new": 1,
+  "dev_new": 0,
+  "stopped": true,
+  "new_provider_input_tokens": 16523,
+  "new_provider_output_tokens": 1225,
+  "new_provider_total_tokens": 17748,
+  "composed_smoke_provider_tokens": 125015
+}

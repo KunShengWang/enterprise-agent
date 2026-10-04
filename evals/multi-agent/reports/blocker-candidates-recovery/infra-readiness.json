@@ -1,0 +1,77 @@
+{
+  "status": "PASS",
+  "docker_version": "29.6.1",
+  "services": {
+    "backend": {
+      "State": "running",
+      "Health": "",
+      "ExitCode": 0
+    },
+    "configurator": {
+      "State": "exited",
+      "Health": "",
+      "ExitCode": 0
+    },
+    "create-site": {
+      "State": "exited",
+      "Health": "",
+      "ExitCode": 0
+    },
+    "db": {
+      "State": "running",
+      "Health": "healthy",
+      "ExitCode": 0
+    },
+    "frontend": {
+      "State": "running",
+      "Health": "",
+      "ExitCode": 0
+    },
+    "queue-long": {
+      "State": "running",
+      "Health": "",
+      "ExitCode": 0
+    },
+    "queue-short": {
+      "State": "running",
+      "Health": "",
+      "ExitCode": 0
+    },
+    "redis-cache": {
+      "State": "running",
+      "Health": "",
+      "ExitCode": 0
+    },
+    "redis-queue": {
+      "State": "running",
+      "Health": "",
+      "ExitCode": 0
+    },
+    "scheduler": {
+      "State": "running",
+      "Health": "",
+      "ExitCode": 0
+    },
+    "websocket": {
+      "State": "running",
+      "Health": "",
+      "ExitCode": 0
+    }
+  },
+  "required_environment_present": {
+    "DEEPSEEK_API_KEY": true,
+    "ERPNEXT_URL": true,
+    "ERPNEXT_API_KEY": true,
+    "ERPNEXT_API_SECRET": true,
+    "ERPNEXT_COMPANY": true,
+    "ERPNEXT_RFQ_SIGNING_SECRET": true
+  },
+  "erp_ping": "pong",
+  "authenticated_db_resource_read": "PASS",
+  "backend": "erpnext",
+  "fallback": false,
+  "recovery_commands": [
+    "docker desktop start",
+    "docker compose --env-file infra/erpnext/.env -f infra/erpnext/compose.yaml start db redis-cache redis-queue backend"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "production_fingerprint": "e7565be4e5e4301c03c6a6ca33ef4afe5020754e7098cc6b1bfdfc38f488d712",
+  "final_source_equals_model_gate": true,
+  "src_changes": [
+    {
+      "path": "src/main/java/com/agent/platform/procurement/agent/AgentRegistry.java",
+      "before": "bfa6083af58817880162c1cb58e194dee3972fa55e11da6a4d115cff5f2193ef",
+      "after": "ac50146a58226c760f0765bc8bdd9e2c5de841006ae8cb1e566f5284664f42df"
+    },
+    {
+      "path": "src/main/java/com/agent/platform/procurement/agent/RequisitionAssessment.java",
+      "before": "e92f21bec3d0c069276faf190bdfde5c53b179b7d141ddd290d2f77cad6ce7bc",
+      "after": "f9a20b39a525c75b9ca53ec1be5ff0f9018837a721a22232d90550d8c10c6e56"
+    },
+    {
+      "path": "src/main/java/com/agent/platform/procurement/agent/SubAgentExecutor.java",
+      "before": "a80864c0e1f436ff30eabb6bc4565e165b2f25e3a12ed28123d3c0c9146ef41d",
+      "after": "7fb5908a4f48bd7f062ff5d41b9e65c28595d0e599084ca5745e08fee389f435"
+    },
+    {
+      "path": "src/test/java/com/agent/platform/procurement/RequisitionAssessmentTests.java",
+      "before": "76421e8b85d32957a6f74684f841b8d1bd72b437ce88b382b205e8de7d529c20",
+      "after": "4f4efdfd2b8ee922b2ca66b5aeef5875a7d11876bd4c03e7c48fd6144d5ce2dc"
+    }
+  ],
+  "historical_files_unchanged": 300,
+  "frozen_v22_tasks_seed_routing_unchanged": true,
+  "fixtures_unchanged": 5,
+  "handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "handler_unchanged": true,
+  "index_empty": true,
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "branch": "feat/multi-agent",
+  "new_attempts": 1,
+  "new_valid_trials": 0,
+  "new_infra_attempts": 1,
+  "provider_calls": 0,
+  "total_phase6_valid_trials": 9,
+  "other_smoke_dev_holdout_run": false,
+  "commit_push_tag": false
+}

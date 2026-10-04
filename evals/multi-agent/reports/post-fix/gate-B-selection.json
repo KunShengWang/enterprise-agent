@@ -1,0 +1,17 @@
+{
+  "gate": "B",
+  "tasks": [
+    "REQ-03",
+    "ANOM-01",
+    "SRC-01",
+    "RFQ-01",
+    "RFQ-02",
+    "GOV-01",
+    "ROB-01",
+    "E2E-01"
+  ],
+  "trials_per_task": 1,
+  "cohort": "post-fix",
+  "pre_fix_valid_trials": 1,
+  "max_post_fix_valid_trials": 37
+}

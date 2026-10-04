@@ -4,6 +4,8 @@ enterprise-agent:
   max-tool-result-chars-for-model: 24000
   procurement:
     backend: erpnext
+    multi-agent:
+      enabled: true
     provider: mcp
     mcp-tool-prefix: mcp.erpnext.
     erpnext:

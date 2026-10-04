@@ -1,0 +1,61 @@
+{
+  "contract": "SupervisorFinalStateConsistency",
+  "structured_status": "PASS",
+  "errors": [],
+  "expected_root_summary": {
+    "scope": "ROOT_GLOBAL",
+    "rootRunId": "9c022bd5-00bd-4c0e-a95f-73eb7dec4071",
+    "summaryRef": "root-execution-summary:9c022bd5-00bd-4c0e-a95f-73eb7dec4071",
+    "caseMutated": false,
+    "caseMutationCount": 0,
+    "currentCaseVersion": -1,
+    "rfqCreated": false,
+    "rfqCreationCount": 0
+  },
+  "actual_root_summary": {
+    "caseMutated": false,
+    "caseMutationCount": 0,
+    "currentCaseVersion": -1,
+    "omittedReceiptRefs": 0,
+    "receiptRefs": [],
+    "rfqCreated": false,
+    "rfqCreationCount": 0,
+    "rootRunId": "9c022bd5-00bd-4c0e-a95f-73eb7dec4071",
+    "scope": "ROOT_GLOBAL",
+    "summaryRef": "root-execution-summary:9c022bd5-00bd-4c0e-a95f-73eb7dec4071"
+  },
+  "child_facts": [
+    {
+      "tool": "analyze_requisition",
+      "childExecutionSummary": {
+        "scope": "CHILD_LOCAL",
+        "childRunId": "78863ee5-5511-38c2-8019-d50ec90ef29a",
+        "agentId": "procurement-requisition-agent-v1",
+        "caseMutated": false,
+        "caseMutationCount": 0,
+        "resultingCaseVersion": -1,
+        "rfqCreated": false,
+        "rfqCreationCount": 0,
+        "receiptRefs": [],
+        "omittedReceiptRefs": 0
+      },
+      "rootExecutionSummary": {
+        "scope": "ROOT_GLOBAL",
+        "rootRunId": "9c022bd5-00bd-4c0e-a95f-73eb7dec4071",
+        "summaryRef": "root-execution-summary:9c022bd5-00bd-4c0e-a95f-73eb7dec4071",
+        "caseMutated": false,
+        "caseMutationCount": 0,
+        "currentCaseVersion": -1,
+        "rfqCreated": false,
+        "rfqCreationCount": 0,
+        "receiptRefs": [],
+        "omittedReceiptRefs": 0
+      }
+    }
+  ],
+  "prose_review": {
+    "verdict": "FAIL",
+    "reason": "FAIL: Runtime authoritative assessment has validatedBlockers=[], requiredAmountKnown=false and NEEDS_CLARIFICATION; available budget is 5000 CNY, and 300000 CNY is a user ceiling, not required cost. Supervisor final prose nonetheless states 预算缺口是硬阻断 and 因预算阻断尚未进入该阶段, and treats 295000 CNY ceiling difference as a procurement funding gap. Its no-Case/no-RFQ claims are correct, but its authoritative budget-blocker assertion contradicts the validated domain result. Optional Sourcing omission is not itself a routing violation."
+  },
+  "status": "FAIL"
+}

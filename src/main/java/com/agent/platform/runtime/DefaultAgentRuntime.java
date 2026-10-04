@@ -76,6 +76,18 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
     private final LlmCostCalculator costCalculator;
     private final ToolResultProjector toolResultProjector;
     private final ContextAssembler contextAssembler;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private List<AgentResultMetadataProvider> resultMetadataProviders = List.of();
+    public void setResultMetadataProviders(List<AgentResultMetadataProvider> providers){this.resultMetadataProviders=List.copyOf(providers);}
+    private Map<String,Object> serverFacts(String runId){
+        var facts=new LinkedHashMap<String,Object>();
+        resultMetadataProviders.forEach(provider->facts.putAll(provider.provide(runId)));
+        return Map.copyOf(facts);
+    }
+    private AgentRuntimeResult runtimeResult(String runId,String sessionId,AgentRunState state,AgentStopReason reason,
+                                             String answer,String approvalId,AgentRunBudgetSnapshot budget,List<AgentEvent> events){
+        return new AgentRuntimeResult(runId,sessionId,state,reason,answer,approvalId,budget,events,serverFacts(runId));
+    }
 
     /** 仅保存本实例中正在执行的取消句柄，持久取消事实仍写入 AgentRunControlStore。 */
     private final ConcurrentMap<String, AgentRunBudget> activeBudgets = new ConcurrentHashMap<>();
@@ -142,6 +154,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         if (originalRequest == null || originalRequest.question() == null || originalRequest.question().isBlank()) {
             throw new IllegalArgumentException("agent request question must not be blank");
         }
+        originalRequest = ChildRunLaunch.bind(originalRequest);
         // Runtime 内部可信的执行配置
         AgentExecutionProfile profile = executionProfile == null
                 ? defaultExecutionProfile()
@@ -157,11 +170,19 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         // 用户身份标识——用于画像、权限、限流
         String userId = normalize(originalRequest.userId(), DEFAULT_USER_ID);
         // 	本次 Agent 执行的唯一标识——串联整条执行链路
-        String runId = UUID.randomUUID().toString();
+        String runId = ChildRunLaunch.current() == null ? UUID.randomUUID().toString() : ChildRunLaunch.current().runId();
         // 并发租约锁的持有者 ID——防止同一 session 被多个 run 并发执行
         String leaseOwnerId = newLeaseOwnerId(runId);
         // agent 运行预算
         AgentRunBudget budget = new AgentRunBudget(profile.limits());
+        if (ChildRunLaunch.current() != null) {
+            String parentId = ChildRunLaunch.current().parentRunId();
+            var parent = runStore.find(parentId).orElseThrow();
+            if (parent.request().metadata().containsKey(ChildRunLaunch.PARENT)
+                    || !com.agent.platform.procurement.agent.AgentRegistry.SUPERVISOR.equals(parent.executionProfile().name())
+                    || !activeBudgets.containsKey(parentId)) throw new IllegalStateException("invalid child launch");
+            budget.withParent(activeBudgets.get(parentId));
+        }
         // 获取 session 租约，这样就能把请求的结果打印在当前的窗口上
         acquireRun(sessionId, runId, leaseOwnerId, budget);
         boolean runCreated = false;
@@ -254,6 +275,9 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         AgentRunRecord stored = runStore.find(runId)
                 .orElseThrow(() -> new IllegalArgumentException("agent run not found: " + runId));
         requireActiveBusiness(stored);
+        var domainParent = new AgentRunLinks(runStore).parent(runId);
+        if (domainParent.isPresent() && domainParent.get().state() == AgentRunState.WAITING_APPROVAL)
+            return resume(domainParent.get().runId(), effectiveListener);
         // 接管崩溃后遗留的 stale Run
         if (stored.state() == AgentRunState.RUNNING) {
             return recoverRunning(stored, effectiveListener);
@@ -279,6 +303,11 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 ? defaultExecutionProfile()
                 : stored.executionProfile();
         AgentRunBudget budget = new AgentRunBudget(profile.limits(), stored.budgetSnapshot());
+        domainParent.ifPresent(parent -> {
+            var aggregate = activeBudgets.get(parent.runId());
+            if (aggregate == null) throw new IllegalStateException("child continuation requires active root");
+            budget.withParent(aggregate);
+        });
         boolean acquired = false;
         boolean claimedForResume = false;
         AgentRunRecord claimed = stored;
@@ -311,8 +340,24 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             }
 
             ToolCallResult result;
+            boolean nested = claimed.pendingToolCall() != null
+                    && com.agent.platform.procurement.agent.AgentRegistry.AGENT_TOOLS.contains(claimed.pendingToolCall().toolName());
+            ToolCallRequest completedRequest = nested ? claimed.pendingToolCall() : approval.toolCallRequest();
             // ④ 审批结果判断，如果是审批拒绝或者是审批过期
-            if (approval.status() == ApprovalStatus.REJECTED || approval.status() == ApprovalStatus.EXPIRED) {
+            if (nested) {
+                ToolDefinition definition = capabilityRegistry.findCapability(completedRequest.toolName()).orElseThrow();
+                var execution = toolRuntime.resumeChild(completedRequest,
+                        ToolPolicyContext.from(runId, sessionId, userId, claimed.request().metadata()), boundedToolDefinition(definition, budget));
+                result = execution.result();
+                budget.recordToolCall(); usedTools.add(completedRequest.toolName());
+                if (execution.status() == AgentToolExecutionStatus.WAITING_APPROVAL) {
+                    budget.pauseExecution();
+                    runStore.update(runId, r -> r.waitingForApproval(execution.approvalId(), completedRequest,
+                            toolResults, usedTools, r.usedRag(), budget.snapshot()));
+                    return resultFromStored(runStore.find(runId).orElseThrow(), AgentStopReason.WAITING_APPROVAL);
+                }
+            }
+            else if (approval.status() == ApprovalStatus.REJECTED || approval.status() == ApprovalStatus.EXPIRED) {
                 String approvalError = approval.status() == ApprovalStatus.EXPIRED
                         ? "human approval expired"
                         : "human approval rejected: " + approval.decisionReason();
@@ -361,13 +406,13 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                 usedTools.add(execution.request().toolName());
             }
             ToolCallResult projectedResult = appendToolResult(
-                    sessionId, userId, runId, approval.toolCallRequest().requestId(), result,
+                    sessionId, userId, runId, completedRequest.requestId(), result,
                     approval.status() == ApprovalStatus.APPROVED
             );
             toolResults.add(projectedResult);
             if (result.outcome() == com.agent.platform.tool.ToolExecutionOutcome.FATAL_ERROR) {
                 publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
-                        "approved tool failed fatally", toolResultPayload(approval.toolCallRequest().requestId(), result), effectiveListener);
+                        "approved tool failed fatally", toolResultPayload(completedRequest.requestId(), result), effectiveListener);
                 return finish(runId, sessionId, userId, AgentRunState.FAILED, AgentStopReason.TOOL_ERROR,
                         "工具发生不可恢复错误，运行已停止。", "", toolResults, usedTools, claimed.usedRag(), false, budget, effectiveListener);
             }
@@ -377,7 +422,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             // 往前端发送事件——工具调用已完成
             publish(sessionId, userId, runId, AgentEventType.TOOL_COMPLETED,
                     result.success() ? "approved tool completed" : "approved tool returned failure",
-                    toolResultPayload(approval.toolCallRequest().requestId(), result), effectiveListener);
+                    toolResultPayload(completedRequest.requestId(), result), effectiveListener);
             AgentRequest request = claimed.request();
             // ⑤ 把结果接回 executeLoop，继续跑
             return executeLoop(request, runId, leaseOwnerId, sessionId, userId, budget, toolResults, usedTools,
@@ -701,7 +746,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         int contextOverflowRetries = 0;
         while (true) {
             // 更新 session 租约（续约），避免 agent 执行时间过长导致租约丢失，然后其他的请求会把当前的 session 写脏
-            if (!runControlStore.renewSessionLease(sessionId, leaseOwnerId, sessionLeaseDuration())) {
+            if (!runControlStore.renewSessionLease(sessionId, leaseOwnerId, sessionLeaseDuration(budget))) {
                 return finish(
                         runId, sessionId, userId, AgentRunState.FAILED, AgentStopReason.INTERNAL_ERROR,
                         "会话执行租约已丢失，Runtime 已停止以避免并发写入同一时间线。", "",
@@ -1139,7 +1184,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                             ),
                             listener);
                     // ④ 返回 → 释放租约 → 线程释放
-                    return new AgentRuntimeResult(
+                    return runtimeResult(
                             runId,
                             sessionId,
                             AgentRunState.WAITING_APPROVAL,
@@ -1372,7 +1417,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                             "toolName", waiting.call().toolName(),
                             "parallelBatch", true),
                     listener);
-            return new AgentRuntimeResult(
+            return runtimeResult(
                     runId, sessionId, AgentRunState.WAITING_APPROVAL,
                     AgentStopReason.WAITING_APPROVAL, "等待人工审批", execution.approvalId(),
                     budget.snapshot(), timelineStore.loadEvents(runId, MAX_RETURNED_EVENTS));
@@ -1565,6 +1610,16 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         ToolExecutionRecord execution = pending == null
                 ? null
                 : toolExecutionStore.findToolExecution(pending.requestId()).orElse(null);
+        if (execution != null && execution.state() == ToolExecutionState.WAITING_APPROVAL
+                && execution.runId().equals(claimed.runId()) && execution.request().equals(pending)
+                && com.agent.platform.procurement.agent.AgentRegistry.AGENT_TOOLS.contains(pending.toolName())) {
+            String approvalId = String.valueOf(execution.result().metadata().get("childApprovalId"));
+            approvalService.find(approvalId).orElseThrow();
+            budget.pauseExecution();
+            runStore.update(claimed.runId(), r -> r.waitingForApproval(approvalId, pending,
+                    r.toolResults(), r.usedTools(), r.usedRag(), budget.snapshot()));
+            return resultFromStored(runStore.find(claimed.runId()).orElseThrow(), AgentStopReason.WAITING_APPROVAL);
+        }
         if (!hasCertainPersistedResult(claimed.runId(), pending, execution)) {
             execution = toolRuntime.reconcileUncertain(execution);
         }
@@ -1717,7 +1772,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                                 : paused.pendingToolCall().requestId(),
                         "budget", budgetPayload(pausedBudget)
                 ), listener);
-        return new AgentRuntimeResult(
+        return runtimeResult(
                 runId,
                 sessionId,
                 AgentRunState.PAUSED,
@@ -1780,7 +1835,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     )
             );
             dispatch(transition.event(), listener);
-            return new AgentRuntimeResult(
+            return runtimeResult(
                     runId,
                     sessionId,
                     AgentRunState.WAITING_INPUT,// 状态 = 等待输入
@@ -1864,7 +1919,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         publish(sessionId, userId, runId, eventType, answer,
                 Map.of("state", state.name(), "stopReason", stopReason.name(), "budget", budgetPayload(budget.snapshot())),
                 listener);
-        return new AgentRuntimeResult(
+        return runtimeResult(
                 runId,
                 sessionId,
                 state,
@@ -2193,7 +2248,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                             String leaseOwnerId,
                             AgentRunBudget budget) {
         // 获取 session 租赁，防止同一 session 被多个 run 并发执行
-        runControlStore.acquireSessionLease(sessionId, runId, leaseOwnerId, sessionLeaseDuration());
+        runControlStore.acquireSessionLease(sessionId, runId, leaseOwnerId, sessionLeaseDuration(budget));
         activeBudgets.put(runId, budget);
     }
 
@@ -2217,6 +2272,9 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
      * 查看是否有 agent 的取消请求
      */
     private void synchronizeCancellation(String runId, AgentRunBudget budget) {
+        new AgentRunLinks(runStore).parent(runId).ifPresent(parent -> {
+            if (runControlStore.cancellationRequested(parent.runId())) budget.cancel();
+        });
         // 查看是否有 agent 的取消请求
         if (runControlStore.cancellationRequested(runId)) {
             budget.cancel();
@@ -2234,8 +2292,9 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
     /**
      * 会话租赁期限
      */
-    private Duration sessionLeaseDuration() {
-        return Duration.ofMillis(Math.max(60_000, properties.getMaxRunDurationMillis() + 60_000));
+    private Duration sessionLeaseDuration(AgentRunBudget budget) {
+        // Keep the root lease valid while a synchronous child uses the root's remaining budget.
+        return Duration.ofMillis(Math.max(60_000, budget.snapshot().remainingExecutionMillis() + 60_000));
     }
 
     private boolean isTerminal(AgentRunState state) {
@@ -2293,11 +2352,17 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         enriched.put("runId", runId);
         if (record != null) {
             enriched.put("agent", record.executionProfile() == null ? "default" : record.executionProfile().name());
+            enriched.put("rootRunId", record.runtimeState().get("rootRunId"));
+            enriched.put("parentRunId", record.runtimeState().get("parentRunId"));
+            enriched.put("callDepth", record.runtimeState().get("callDepth"));
             enriched.putIfAbsent("turn", record.budgetSnapshot() == null ? 0 : record.budgetSnapshot().turns());
             if (type == AgentEventType.RUN_COMPLETED || type == AgentEventType.RUN_FAILED
                     || type == AgentEventType.RUN_CANCELLED || type == AgentEventType.APPROVAL_REQUIRED
                     || type == AgentEventType.RUN_PAUSED || type == AgentEventType.RUN_WAITING_INPUT) {
                 enriched.put("runtimeState", record.runtimeState());
+                enriched.put("serverFacts", serverFacts(runId));
+                if (record.executionProfile() != null && com.agent.platform.procurement.agent.AgentRegistry.SUPERVISOR.equals(record.executionProfile().name()))
+                    enriched.put("multiAgentMetrics", DomainRunMetrics.snapshot(record, runStore, toolExecutionStore));
             }
         }
         if (type == AgentEventType.APPROVAL_REQUIRED) enriched.put("outcome", "APPROVAL_REQUIRED");
@@ -2316,6 +2381,15 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         );
         // 把事件推送前端
         dispatch(event, listener);
+        if (record != null && record.request() != null && record.request().metadata().containsKey(ChildRunLaunch.PARENT)
+                && (type == AgentEventType.RUN_STARTED || type == AgentEventType.RUN_COMPLETED || type == AgentEventType.RUN_FAILED || type == AgentEventType.APPROVAL_REQUIRED)) {
+            var parent = new AgentRunLinks(runStore).parent(runId).orElseThrow();
+            timelineStore.appendEvent(parent.conversationId(), parent.userId(), parent.runId(), new AgentEventDraft(
+                    type == AgentEventType.RUN_STARTED ? AgentEventType.SUB_AGENT_STARTED
+                            : type == AgentEventType.APPROVAL_REQUIRED ? AgentEventType.APPROVAL_REQUIRED : AgentEventType.SUB_AGENT_COMPLETED,
+                    "domain child " + type.name(), Map.of("childRunId",runId,"agentId",record.executionProfile().name(),
+                    "childState",record.state().name(),"parentRunId",parent.runId(),"callDepth",1)));
+        }
         return event;
     }
 
@@ -2541,7 +2615,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         AgentRunBudgetSnapshot budget = stored.budgetSnapshot() == null
                 ? new AgentRunBudget(AgentRunLimits.from(properties)).snapshot()
                 : stored.budgetSnapshot();
-        return new AgentRuntimeResult(
+        return runtimeResult(
                 stored.runId(),
                 stored.conversationId(),
                 stored.state(),

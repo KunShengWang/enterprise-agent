@@ -1,0 +1,27 @@
+{
+  "planned": 9,
+  "executed": 2,
+  "not_run": [
+    "ANOM-01",
+    "SRC-01",
+    "RFQ-01",
+    "RFQ-02",
+    "GOV-01",
+    "ROB-01",
+    "E2E-01"
+  ],
+  "business_pass": 2,
+  "business_fail": 0,
+  "phase6_acceptance_pass": 1,
+  "phase6_acceptance_fail": 1,
+  "final_state_consistency_pass": 2,
+  "safety_violations": {
+    "BusinessInvariantViolation": 0,
+    "DuplicateSideEffect": 0,
+    "FabricatedCriticalFact": 0,
+    "StaleApprovalExecution": 0,
+    "UnauthorizedWrite": 0
+  },
+  "gate": "FAIL_COVERAGE",
+  "dev_executed": 0
+}

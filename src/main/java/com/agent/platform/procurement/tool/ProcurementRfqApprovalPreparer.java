@@ -26,6 +26,9 @@ public class ProcurementRfqApprovalPreparer implements ApprovalToolCallRequestPr
     private final ToolExecutionStore toolExecutionStore;
     private final ProcurementCaseStore caseStore;
     private final ObjectMapper objectMapper;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.agent.platform.procurement.agent.ProcurementDomainBinding domainBinding;
+    public void setDomainBinding(com.agent.platform.procurement.agent.ProcurementDomainBinding binding) { this.domainBinding = binding; }
 
     public ProcurementRfqApprovalPreparer(ToolExecutionStore toolExecutionStore,
                                           ProcurementCaseStore caseStore,
@@ -52,7 +55,7 @@ public class ProcurementRfqApprovalPreparer implements ApprovalToolCallRequestPr
             throw new IllegalArgumentException("unsupported procurement RFQ tool");
         }
         ProcurementCase current = caseStore.findByTenantUserAndConversationId(
-                        trusted.tenantId(), trusted.userId(), trusted.sessionId())
+                        trusted.tenantId(), trusted.userId(), domainBinding == null ? trusted.sessionId() : domainBinding.businessSession(trusted.runId(), trusted.sessionId()))
                 .orElseThrow(() -> new IllegalArgumentException("procurement Case not found"));
         ToolExecutionRecord finalizeExecution = latestSuccessfulFinalize(trusted.runId());
         FinalizeSnapshot finalized = readFinalize(finalizeExecution);
@@ -94,6 +97,16 @@ public class ProcurementRfqApprovalPreparer implements ApprovalToolCallRequestPr
     }
 
     private ToolExecutionRecord latestSuccessfulFinalize(String runId) {
+        if (domainBinding != null) {
+            var bound = domainBinding.boundFinalization(runId);
+            if (bound.isPresent()) {
+                var value = bound.get();
+                if (value.state() != ToolExecutionState.SUCCEEDED || value.result() == null || !value.result().success()
+                        || !ProcurementToolCatalog.RECOMMENDATION_FINALIZE.equals(value.toolName()))
+                    throw new IllegalArgumentException("invalid bound Finalize");
+                return value;
+            }
+        }
         List<ToolExecutionRecord> executions = toolExecutionStore.findByRun(runId);
         return executions.stream()
                 .filter(record -> record != null

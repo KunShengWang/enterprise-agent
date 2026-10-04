@@ -1,0 +1,23 @@
+{
+  "accounting.json": "2d611c29f54698231b6c3115b2ee78d279b58d907f16f79dcbce29f2f137de6e",
+  "ANOM01-infra-attempt.zip": "f92bbec0c21403df79af72c10caee63791fa27899a3a02925a01eb156846f1f1",
+  "authorization.json": "9767f91f0c5cc496bb6541b0087eb5b0f90d9ffdde8dce2890fc579fdb0088d3",
+  "candidate-contract-source.zip": "85c21a0b91710389ff9e15714e36168ae985dbf7805dc9cd28c19df9ef082b5c",
+  "deterministic-evidence.zip": "8208576531016663e4135f13ad329fd8572e30c73212cceda450bc9cc51e3621",
+  "freeze.json": "b709edd2edac47af6679bb7a596012c544adfbcd15d549bf332f039e667aca93",
+  "git-diff-check.txt": "4b57801d4255335f9104c30efa38ccd84c8065135d01cc3dc310c944bf2ebf69",
+  "git-diff-stat.txt": "c9ba8f9a3b56a81529c724ae3a5cb7b0d91899c766bccaf2bf1d3b9128195215",
+  "git-status.txt": "5bd7fd2b63eda3d06e9bdee2f8fae11582dad8cb14926c7f711f7f9fc41b4ff7",
+  "historical-ANOM01-failure.zip": "f0fc3997519af3429e358cd1be6252b8d4d0d54af9b69f7652908623f53dbaf1",
+  "historical-preserved.json": "589a4b14c4c3c928bcc551a68131a8d14377069ebdd1868ac2e954676ddf2440",
+  "model-command.log": "0dabfc9e547cd4c2c68743e4d13b16a42908415beaee8e7c6a61b91016798b27",
+  "model-gate.json": "c75d1b1fee5836e63197a97019abd55686e1261e52d765ade15762335a3a5f20",
+  "model-outcome.json": "bb3f8eb4e36188eed708784e381abf9c27ad53528e6a65ed4010d9b83955acbb",
+  "pre-freeze.json": "089bc00c32d1e9caf178b1bf3b45b81eb49e706669fd11dc43036c29feaeeefa",
+  "pre-source.json": "df556ad0942b2c7d30f8a20ab4aab864b854559e0150ba2ef272743e62d92bca",
+  "scope-verification.json": "1b96c8e0d09eab15f91cb01c67f8f87deb54a01f6b55bb25f026600f81850393",
+  "secret-scan.json": "80f174895a28469c5c954b536b8aba0cc7aa77529cc04d4703a86af2fb58472c",
+  "skip-details.json": "c9ba69b1ca3e560437e53f05b4e7e704b37564bfb39405d813e3184d2c34733a",
+  "source-changes.json": "7fc2c6de7baf432d685f3d5f49867ca541f92110a0a73a49d15fec826c52b2fe",
+  "source-unchanged.json": "1ae748d5796cc995906ddf0fba5e5626f9c1c6ac79cec8fb465106e92254a77b"
+}

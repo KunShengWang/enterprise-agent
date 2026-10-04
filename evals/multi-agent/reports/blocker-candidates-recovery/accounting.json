@@ -1,0 +1,17 @@
+{
+  "attempts": 1,
+  "valid_trials": 1,
+  "infra_attempts": 0,
+  "prior_infra_attempts_preserved": 1,
+  "provider_calls_observed": 8,
+  "agent_model_calls": 6,
+  "input_guardrail_calls": 2,
+  "provider_input_tokens": 22106,
+  "provider_output_tokens": 2203,
+  "provider_total_tokens": 24309,
+  "usage_source": "provider",
+  "provider_internal_retry_count": null,
+  "total_phase6_valid_trials": 10,
+  "stopped": true,
+  "no_retry": true
+}

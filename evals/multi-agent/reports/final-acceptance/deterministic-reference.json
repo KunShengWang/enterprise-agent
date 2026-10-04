@@ -1,0 +1,27 @@
+{
+  "source_fingerprint": "aeaf76ea3e9e3da50ee5a4a370fa0f9c4772f918586f86553758651f6bcd6f35",
+  "prior_report": "docs/harness/phase6-contract-fix-acceptance.md",
+  "focused_java": {
+    "passed": 67,
+    "failures": 0
+  },
+  "prior_python": {
+    "passed": 6,
+    "failures": 0
+  },
+  "current_python": {
+    "passed": 9,
+    "failures": 0
+  },
+  "full_java": {
+    "passed": 1252,
+    "skipped": 9,
+    "failures": 0
+  },
+  "replay": {
+    "passed": 380,
+    "failures": 0
+  },
+  "fixtures_unchanged": 5,
+  "full_java_rerun_this_task": false
+}

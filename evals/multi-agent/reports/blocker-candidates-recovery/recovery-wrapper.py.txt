@@ -1,0 +1,23 @@
+"""New user-authorized infrastructure recovery attempt; unchanged candidate runner."""
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'evals/multi-agent'))
+import candidate_fix as c
+
+if __name__ == '__main__':
+    if len(sys.argv) != 1:
+        raise RuntimeError('No overrides or retries')
+    report = ROOT / 'evals/multi-agent/reports/blocker-candidates-recovery'
+    for gate in ('infra-readiness.json', 'reset-reseed-gate.json'):
+        if c.runner.legacy.read(report / gate)['status'] != 'PASS':
+            raise RuntimeError('Infrastructure gate failed')
+    if c.verify() != c.runner.legacy.read(report / 'freeze.json'):
+        raise RuntimeError('Source changed')
+    for path, digest in c.runner.legacy.read(report / 'historical-preserved.json').items():
+        if c.runner.legacy.digest(ROOT / path) != digest:
+            raise RuntimeError('Historical evidence changed: ' + path)
+    # Only destination changes. Reuse the frozen trial, model controls, task and graders.
+    c.CAMPAIGN = ROOT / 'target/multi-agent/multi-candidates-recovery-20261004-r1'
+    c.main()

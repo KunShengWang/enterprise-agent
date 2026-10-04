@@ -14,6 +14,8 @@ public class ProcurementSourcingExecutionProfileFactory implements AgentScenario
 
     @org.springframework.beans.factory.annotation.Value("${enterprise-agent.procurement.erpnext.enabled:false}")
     private boolean erpNextEnabled;
+    @org.springframework.beans.factory.annotation.Value("${enterprise-agent.procurement.multi-agent.enabled:false}")
+    private boolean multiAgentEnabled;
 
     @org.springframework.beans.factory.annotation.Autowired
     private com.agent.platform.config.AgentProperties contextProperties = new com.agent.platform.config.AgentProperties();
@@ -23,6 +25,8 @@ public class ProcurementSourcingExecutionProfileFactory implements AgentScenario
 
     @Override
     public AgentExecutionProfile createProfile() {
+        if (erpNextEnabled && multiAgentEnabled)
+            return new com.agent.platform.procurement.agent.AgentRegistry(contextProperties).supervisor();
         AgentExecutionProfile legacy = new AgentExecutionProfile(PROFILE_NAME, """
                 你是企业采购寻源与供应商决策 Agent。采购调查、Search、Specialist 和 Recommendation 是只读分析；procurement_case_patch 只写入本 Agent 的内部 Case 状态。procurement_create_rfq 是唯一外部 side effect，且一定经过人工审批。
                 先理解采购目标，区分 hard constraints 和 preferences；信息不足时主动澄清，不要猜测。

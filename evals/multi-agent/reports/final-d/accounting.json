@@ -1,0 +1,15 @@
+{
+  "debug_history_valid": 6,
+  "new_valid": 2,
+  "new_infra": 0,
+  "smoke_attempts": 2,
+  "dev_attempts": 0,
+  "stopped": true,
+  "stop_task": "REQ-03",
+  "max_new_smoke": 9,
+  "max_new_dev": 28,
+  "new_provider_input_tokens": 102428,
+  "new_provider_output_tokens": 4839,
+  "new_provider_total_tokens": 107267,
+  "historical_debug_trials_excluded": true
+}

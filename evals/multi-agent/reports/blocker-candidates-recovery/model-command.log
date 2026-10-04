@@ -1,0 +1,17 @@
+warning: in the working copy of 'src/main/java/com/agent/platform/procurement/config/ProcurementSourcingExecutionProfileFactory.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/procurement/erp/ProcurementMcpService.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/procurement/tool/ProcurementRfqApprovalPreparer.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/procurement/tool/ProcurementRfqToolHandler.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/runtime/AgentRunBudget.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/runtime/AgentRunRecord.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/runtime/AgentRuntimeResult.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/runtime/AgentToolRuntime.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/runtime/DefaultAgentToolRuntime.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/runtime/JdbcAgentRuntimeStore.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/runtime/ToolExecutionState.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/runtime/ToolExecutionStore.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/resources/application-erpnext.yaml', LF will be replaced by CRLF the next time Git touches it
+START ANOM-01 sole authorized attempt
+{"task_id": "ANOM-01", "status": "PASS", "failure_reason": [], "acceptance_status": "PENDING_OFFLINE_REVIEW", "acceptance_failures": [], "SupervisorFinalStateConsistency": "PENDING_PROSE_REVIEW", "tool_calls": 7, "tool_errors": 0, "total_tokens": 24309}
+STOP. PASS or FAIL does not authorize further trials.

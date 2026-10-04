@@ -1,0 +1,9 @@
+{
+  "task": "ANOM-01",
+  "gate": "D1",
+  "business": "FAIL",
+  "acceptance_v1_1": "FAIL",
+  "final_state_consistency": "PASS",
+  "reason": "CHILD_OUTPUT_INVALID; blocked/clarification task did not complete",
+  "no_more_trials": true
+}

@@ -1,0 +1,19 @@
+{
+  "task_id": "REQ-03",
+  "trial_status": "FAIL",
+  "valid_trial": true,
+  "infra_error": false,
+  "root_state": "FAILED",
+  "stop_reason": "TOOL_ERROR",
+  "unsupported_success_evidence_refs": [
+    "tool-execution:ca2b8936-6b98-4ac1-afb8-5723b4bf3e2d"
+  ],
+  "undefined_deferred_checks": [
+    "BUDGET_AVAILABILITY_VERIFICATION"
+  ],
+  "case_patch_executions": 0,
+  "case_is_null": true,
+  "first_rejection": "SubAgentExecutor.validate rejects reference to failed budget lookup before RequisitionAssessment enum validation",
+  "source_modified_after_failure": false,
+  "reruns": 0
+}

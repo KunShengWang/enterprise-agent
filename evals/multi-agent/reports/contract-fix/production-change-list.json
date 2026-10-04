@@ -1,0 +1,12 @@
+{
+  "changed": [
+    "src/main/java/com/agent/platform/procurement/agent/AgentDefinition.java",
+    "src/main/java/com/agent/platform/procurement/agent/AgentRegistry.java",
+    "src/main/java/com/agent/platform/procurement/agent/ChildBusinessScope.java",
+    "src/main/java/com/agent/platform/procurement/agent/ChildEvidenceLedger.java",
+    "src/main/java/com/agent/platform/procurement/agent/SubAgentExecutor.java",
+    "src/main/java/com/agent/platform/procurement/erp/ProcurementMcpService.java",
+    "src/main/java/com/agent/platform/runtime/DefaultAgentToolRuntime.java"
+  ],
+  "removed": []
+}

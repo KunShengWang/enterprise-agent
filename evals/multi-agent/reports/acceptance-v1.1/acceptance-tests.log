@@ -1,0 +1,30 @@
+test_child_ready_without_evidence_fails (test_acceptance_v11.ApplicabilityTests.test_child_ready_without_evidence_fails) ... ok
+test_correct_metadata_cannot_hide_prose_failure (test_acceptance_v11.ApplicabilityTests.test_correct_metadata_cannot_hide_prose_failure) ... ok
+test_executed_canonical_mismatch_fails (test_acceptance_v11.ApplicabilityTests.test_executed_canonical_mismatch_fails) ... ok
+test_executed_invalid_enum_fails (test_acceptance_v11.ApplicabilityTests.test_executed_invalid_enum_fails) ... ok
+test_failed_tool_as_positive_evidence_fails (test_acceptance_v11.ApplicabilityTests.test_failed_tool_as_positive_evidence_fails) ... ok
+test_forbidden_child_called_still_fails (test_acceptance_v11.ApplicabilityTests.test_forbidden_child_called_still_fails) ... ok
+test_no_child_cannot_disable_root_scope_check (test_acceptance_v11.ApplicabilityTests.test_no_child_cannot_disable_root_scope_check) ... ok
+test_old_per_task_coverage_failure_is_not_carried_forward (test_acceptance_v11.ApplicabilityTests.test_old_per_task_coverage_failure_is_not_carried_forward) ... ok
+test_optional_child_not_called_is_na_and_pass (test_acceptance_v11.ApplicabilityTests.test_optional_child_not_called_is_na_and_pass) ... ok
+test_required_child_missing_still_fails (test_acceptance_v11.ApplicabilityTests.test_required_child_missing_still_fails) ... ok
+test_unresolved_evidence_ref_fails (test_acceptance_v11.ApplicabilityTests.test_unresolved_evidence_ref_fails) ... ok
+test_valid_executed_contract_passes (test_acceptance_v11.ApplicabilityTests.test_valid_executed_contract_passes) ... ok
+test_existing_attempt_always_blocks_even_without_result (test_contract_fix.ContractFixGateTests.test_existing_attempt_always_blocks_even_without_result) ... ok
+test_focused_gate_requires_all_five_successful_suites (test_contract_fix.ContractFixGateTests.test_focused_gate_requires_all_five_successful_suites) ... ok
+test_gate_requires_exact_complete_successful_set (test_final_acceptance.FinalAcceptanceTests.test_gate_requires_exact_complete_successful_set) ... ok
+test_role_input_tokens_do_not_double_count_aggregate_budget (test_final_acceptance.FinalAcceptanceTests.test_role_input_tokens_do_not_double_count_aggregate_budget) ... ok
+test_successful_grader_cannot_hide_contract_error (test_final_acceptance.FinalAcceptanceTests.test_successful_grader_cannot_hide_contract_error) ... ok
+test_child_tokens_are_not_double_counted_from_root_budget (test_metrics.MetricsTests.test_child_tokens_are_not_double_counted_from_root_budget) ... ok
+test_routing_requires_capability_not_sequence (test_metrics.MetricsTests.test_routing_requires_capability_not_sequence) ... ok
+test_infra_attempts_remain_separate_from_single_valid_trial (test_postfix.PostfixGateTests.test_infra_attempts_remain_separate_from_single_valid_trial) ... ok
+test_only_exact_passed_task_set_opens_next_gate (test_postfix.PostfixGateTests.test_only_exact_passed_task_set_opens_next_gate) ... ok
+test_explicit_consistent_review_passes (test_scope_consistency.ScopeConsistencyTests.test_explicit_consistent_review_passes) ... ok
+test_missing_server_summary_is_rejected (test_scope_consistency.ScopeConsistencyTests.test_missing_server_summary_is_rejected) ... ok
+test_server_facts_alone_cannot_approve_prose (test_scope_consistency.ScopeConsistencyTests.test_server_facts_alone_cannot_approve_prose) ... ok
+test_structured_mismatch_cannot_be_hidden_by_prose (test_scope_consistency.ScopeConsistencyTests.test_structured_mismatch_cannot_be_hidden_by_prose) ... ok
+
+----------------------------------------------------------------------
+Ran 25 tests in 0.050s
+
+OK

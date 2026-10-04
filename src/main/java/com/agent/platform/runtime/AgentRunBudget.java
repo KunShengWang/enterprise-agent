@@ -26,6 +26,13 @@ public final class AgentRunBudget {
     private long inputTokens;
     private long outputTokens;
     private double estimatedCost;
+    private AgentRunBudget parent;
+
+    public AgentRunBudget withParent(AgentRunBudget parent) {
+        if (parent == this) throw new IllegalArgumentException("recursive budget");
+        this.parent = parent;
+        return this;
+    }
 
     public AgentRunBudget(AgentRunLimits limits) {
         this(limits, null);
@@ -73,6 +80,7 @@ public final class AgentRunBudget {
      * 在 agent 的执行轮次之前判断是否取消 agent
      */
     public synchronized Optional<AgentStopReason> beforeTurn() {
+        if (parent != null && parent.beforeTurn().isPresent()) return parent.beforeTurn();
         // 判断是否应该设置取消原因
         Optional<AgentStopReason> common = commonStopReason();
         if (common.isPresent()) {
@@ -85,12 +93,14 @@ public final class AgentRunBudget {
 
     public synchronized void recordTurnStarted() {
         turns++;
+        if (parent != null) parent.recordTurnStarted();
     }
 
     /**
      * 在模型调用之前判断是否取消 agent
      */
     public synchronized Optional<AgentStopReason> beforeModelCall() {
+        if (parent != null && parent.beforeModelCall().isPresent()) return parent.beforeModelCall();
         Optional<AgentStopReason> common = commonStopReason();
         if (common.isPresent()) {
             return common;
@@ -105,6 +115,7 @@ public final class AgentRunBudget {
     }
 
     public synchronized void recordModelCall(LlmUsage usage, double cost) {
+        if (parent != null) parent.recordModelCall(usage, cost);
         modelCalls++;
         if (usage != null) {
             inputTokens += Math.max(0, usage.promptTokens());
@@ -118,6 +129,7 @@ public final class AgentRunBudget {
     }
 
     public synchronized Optional<AgentStopReason> beforeToolCalls(int requestedCalls) {
+        if (parent != null && parent.beforeToolCalls(requestedCalls).isPresent()) return parent.beforeToolCalls(requestedCalls);
         Optional<AgentStopReason> common = commonStopReason();
         if (common.isPresent()) {
             return common;
@@ -130,6 +142,7 @@ public final class AgentRunBudget {
 
     public synchronized void recordToolCall() {
         toolCalls++;
+        if (parent != null) parent.recordToolCall();
     }
 
     public void cancel() {
@@ -176,6 +189,12 @@ public final class AgentRunBudget {
         long remaining = executionPaused
                 ? remainingExecutionMillis   // 暂停中：用冻结时的剩余值
                 : remainingUntil(deadline, clock.instant());  // 运行中：用 deadline - now 实时算
+        Instant effectiveDeadline = deadline;
+        if (parent != null) {
+            var aggregate = parent.snapshot();
+            remaining = Math.min(remaining, aggregate.remainingExecutionMillis());
+            if (aggregate.deadline().isBefore(effectiveDeadline)) effectiveDeadline = aggregate.deadline();
+        }
         return new AgentRunBudgetSnapshot(
                 turns,
                 modelCalls,
@@ -184,7 +203,7 @@ public final class AgentRunBudget {
                 outputTokens,
                 estimatedCost,
                 startedAt,
-                deadline,
+                effectiveDeadline,
                 cancelled.get(),
                 remaining,
                 executionPaused
@@ -195,6 +214,7 @@ public final class AgentRunBudget {
      * 判断是否应该设置取消原因
      */
     private Optional<AgentStopReason> commonStopReason() {
+        if (parent != null && parent.currentStopReason().isPresent()) return parent.currentStopReason();
         if (cancelled.get()) {
             return Optional.of(AgentStopReason.CANCELLED);
         }

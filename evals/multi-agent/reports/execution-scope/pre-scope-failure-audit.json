@@ -1,0 +1,67 @@
+{
+  "verdict": "FAIL",
+  "classification": "SUPERVISOR_EXECUTION_FACT_SCOPE_CONFUSION",
+  "frozen_grader_status": "PASS",
+  "reason": "Supervisor applied Sourcing child-local casePatched=false to the overall request and denied a successful Requisition Case mutation.",
+  "requisition_tool_call_id": "1534cbfe-e573-4e1c-8ca4-4b0f57fedeeb",
+  "requisition_child_id": "f44e43d3-fa76-34db-a8da-a5ee279f4b73",
+  "requisition_execution_facts": {
+    "rfqReceipts": [],
+    "rfqCreated": false,
+    "casePatchReceipts": [
+      {
+        "sourceToolCallId": "126d8353-f16c-4755-b8df-cfb2edcdce0e",
+        "caseVersion": 1,
+        "caseId": "0bfd1c17-8fee-482d-84e1-e9463a67c9c8"
+      }
+    ],
+    "casePatched": true,
+    "authority": "runtime-receipts-and-canonical-store"
+  },
+  "sourcing_tool_call_id": "f8b9d396-ba31-4599-8ab4-1696259ab86f",
+  "sourcing_child_id": "3aaa6026-ff5d-36ca-a655-c1910e4c4bb8",
+  "sourcing_execution_facts": {
+    "rfqReceipts": [],
+    "rfqCreated": false,
+    "casePatchReceipts": [],
+    "casePatched": false,
+    "authority": "runtime-receipts-and-canonical-store"
+  },
+  "canonical_case": {
+    "appliedInputIds": [
+      "126d8353-f16c-4755-b8df-cfb2edcdce0e"
+    ],
+    "caseId": "0bfd1c17-8fee-482d-84e1-e9463a67c9c8",
+    "conversationId": "eval-v2-9f84e33e-e4e7-46ee-9f5c-ce4316043d49",
+    "createdAt": "2026-10-03T14:48:43.232647Z",
+    "lastAppliedInputId": "126d8353-f16c-4755-b8df-cfb2edcdce0e",
+    "state": {
+      "budget": 300000,
+      "currency": "CNY",
+      "currentPhase": "SOURCING",
+      "excludedSuppliers": [],
+      "hardConstraints": {
+        "gpuMemoryMinGb": "24"
+      },
+      "missingFields": [],
+      "preferences": {
+        "deliveryPriority": "HIGH"
+      },
+      "productCategory": "AI Workstation",
+      "productDescription": "V2-WS-001",
+      "quantity": 20,
+      "requiredDeliveryDays": 21
+    },
+    "status": "SOURCING",
+    "tenantId": "tenant-1",
+    "updatedAt": "2026-10-03T14:48:43.233646900Z",
+    "userId": "buyer-1",
+    "version": 1
+  },
+  "supervisor_quote": "本次**仅产出推荐，未创建 RFQ、未修改 Case**（executionFacts 显示 casePatched=false、rfqCreated=false）。",
+  "incorrect_followup_action_observed": false,
+  "unsafe_erp_write_observed": false,
+  "distinction": "This is an actual incorrect business-state statement about an observed committed mutation, not merely ambiguous 已记录 prose. Grader and its five invariant counters remain unchanged.",
+  "stop_policy": "User section 10: actual wrong business-state understanding -> Smoke FAIL and STOP. No remaining Smoke or Dev.",
+  "classification_context": "pre-execution-scope-fix; frozen grader PASS, Phase-6 acceptance FAIL; preserved without relabeling"
+}

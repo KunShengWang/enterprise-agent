@@ -1,0 +1,21 @@
+{
+  "accounting.json": "eb40a307ade4842887034ee9e5d957b30c804d0d589eb652c4774a14703a570a",
+  "authorization.json": "4c4f3c805f32c2327377d4395b1d1c9f23df3c34669d17d49eb965e0bb75a7b9",
+  "contract-validation-source.zip": "92028d4fe6e7edfc4582cdb5aa84e048de7beda8a6263ded5b45bb716a29b88e",
+  "deterministic-evidence.zip": "4719b901c0352e3b18a55fc5851e076287b2807e2fa02796a20f5e719a9a3f15",
+  "freeze.json": "1abbe74b2b69256dda94597ac8613ee52ec6658873bd32718a8f3673ff552ce2",
+  "git-status.txt": "37404303cea35a6eda6079f0fbf05d93f6cf46a85604bfc2712fc9434f351ced",
+  "model-gate.json": "2334bc8a618f92c846b34e6649a98be01f08c5e2951a08a0f08fa1ec676b9c18",
+  "pre-contract-failure-audit.json": "54c0cfb7b7bdf5da2e1d2d039b06ec45d651a06e10e950f0ff42ac2585e90cf3",
+  "pre-contract-preserved.json": "2f0f7347b8ce60f1c49c1990bc430a38c773ad802c10b5d3b3f41481714b2d4e",
+  "pre-contract-REQ03.zip": "8631140c1b3bd24ac9b20a5907bee28435695df9310f5c787cf201c0f4538b9d",
+  "pre-contract-source.json": "e0b547ebf3f86af412f867363fbe02e5a19bccdec6e64d66e710f8c9031f3757",
+  "production-change-list.json": "0ba1316f4f89d3b8cd4ef6ca81e2fab790e3f9b69884394944a82aa057297dbe",
+  "req03-contract-audit.json": "731783f4fabc652401a9dec0b1be0147ac1d4f6db20b1087e80a65bdcae4ef0a",
+  "req03-evidence.zip": "4e5f8e9ab3682d3dd979ded560fb73c027ff88158e85b46c4d4ad3cee7689501",
+  "req03-result.json": "6e76b60b0483bbed5b1d2f2d509be9c56de76a5ac6ba393e085bba99c1437bb4",
+  "scope.json": "347edfa3fa2184030a3594c4a299edddee116d11c077ff30da3ef01af20f4e88",
+  "secret-scan.json": "d9f3b889678dd02219e41da24a4254f9ec3c55d53439592e7c770694f2fc2992",
+  "skip-details.json": "b1d0a399ed6c2239f00fdece70bca7ab1149ed1a1f6f62fad616e4a3bd3c3747",
+  "source-unchanged.json": "f750152e45dc306510411df12c3a41943775140f9788649c4810b85ab9d9ba32"
+}

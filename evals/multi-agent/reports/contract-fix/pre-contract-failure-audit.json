@@ -1,0 +1,249 @@
+{
+  "classification": "Phase 6 pre-contract-fix artifact",
+  "task_id": "REQ-03",
+  "trial_id": "REQ-03-1",
+  "status": "FAIL",
+  "production_source_fingerprint": "fc6df7aaafc01f9f92ec40b0279fcf33cb98e223c536ebc8a247db1a4f14d2e4",
+  "root_run_id": "0c2d8ea5-3e47-440b-b6b2-2e2124ef1080",
+  "children": [
+    {
+      "run_id": "2b382f21-ec7e-3e74-941b-6918c6bb87f6",
+      "structured_output": "{\"status\":\"NEEDS_CLARIFICATION\",\"findings\":[\"商品 V2-WS-001（AI Workstation 01，类别 AI Workstation）在 ERP 中处于 active 状态，GPU 显存 24GB，满足“至少 24GB”硬约束。\",\"数量缺失：用户明确未确定采购数量，本任务不代为设定，需用户澄清。\",\"预算：用户给出 30万元上限；但按部门 ID 算法部门V2-ALG 查询部门预算返回 ERP_NOT_FOUND，无法取得该部门 available 预算，因此 Case budget 暂按用户上限 30万元记录，部门预算可用性为 UNKNOWN。\",\"历史背景：算法部门（V2-ALG）已有两张 V2-WS-001 的 Draft 申购单 V2-REQ-001（数量 20）与 V2-REQ-004（数量 8），均为草稿状态；因本次数量未定，无法判定是否构成确认重复，仅作为相似需求提示。\",\"交付期 21 天已记录为 requiredDeliveryDays；交付可行性属于 Sourcing 验证范围，不作为本环节阻断。\",\"已明确字段（商品、类别、预算、币种、交付期、GPU 显存硬约束）已写入 Case；数量保持缺失。\",\"待澄清问题：1) 本次 V2-WS-001 的采购数量是多少？2) 是否与已有草稿申购 V2-REQ-001（20 台）或 V2-REQ-004（8 台）为同一需求（若是，请给出原申购 ID）？3) 30万元是否为本次采购的预算上限（币种 CNY）？4) 交付期 21 天是否为硬性要求？\"],\"warnings\":[\"部门预算查询失败（ERP_NOT_FOUND），算法部门V2-ALG 的可用预算未验证，Case budget 采用用户上限 30万元。\",\"数量缺失导致无法完成重复申购判定与预算单价校验。\"],\"blockingReasons\":[],\"deferredChecks\":[\"DELIVERY_FEASIBILITY\",\"SUPPLIER_PERFORMANCE\",\"BUDGET_AVAILABILITY_VERIFICATION\"],\"subjectRequisitionId\":\"\",\"departmentId\":\"算法部门V2-ALG\",\"evidenceRefs\":[\"tool-execution:72d52835-038a-47d7-8741-d8bb3949d654\",\"tool-execution:47e287ed-bf5b-4fab-b549-67191d97a801\",\"tool-execution:ca2b8936-6b98-4ac1-afb8-5723b4bf3e2d\"]}"
+    }
+  ],
+  "tool_calls": [
+    {
+      "attempt": 1,
+      "createdAt": "2026-10-03T14:03:19.612437700Z",
+      "errorMessage": "CHILD_OUTPUT_INVALID",
+      "request": {
+        "arguments": {
+          "objective": "分析并补全采购需求：申请部门 算法部门V2-ALG；商品 V2-WS-001；预算 30万元；交付期 21天；硬约束 GPU 显存至少 24GB。数量尚未确定，请识别缺失项并给出澄清问题，不要替用户设定数量，不要发起 RFQ。"
+        },
+        "requestId": "6161e589-6abe-43a0-aca7-38dbcaa4b97c",
+        "toolName": "analyze_requisition"
+      },
+      "result": {
+        "content": "",
+        "errorMessage": "CHILD_OUTPUT_INVALID",
+        "metadata": {
+          "_harnessDurationMs": 5538.7202,
+          "_harnessOutcome": "FATAL_ERROR",
+          "_harnessSource": "LOCAL",
+          "attempts": 1,
+          "errorType": "CHILD_OUTPUT_INVALID",
+          "retryable": false
+        },
+        "success": false,
+        "toolName": "analyze_requisition"
+      },
+      "runId": "0c2d8ea5-3e47-440b-b6b2-2e2124ef1080",
+      "state": "FAILED",
+      "toolCallId": "6161e589-6abe-43a0-aca7-38dbcaa4b97c",
+      "toolName": "analyze_requisition",
+      "updatedAt": "2026-10-03T14:03:25.153301900Z"
+    },
+    {
+      "attempt": 1,
+      "createdAt": "2026-10-03T14:03:21.285585900Z",
+      "errorMessage": "",
+      "request": {
+        "arguments": {
+          "id": "V2-WS-001"
+        },
+        "requestId": "72d52835-038a-47d7-8741-d8bb3949d654",
+        "toolName": "mcp.erpnext.procurement_get_item"
+      },
+      "result": {
+        "content": "{\"record\":{\"id\":\"V2-WS-001\",\"name\":\"AI Workstation 01\",\"category\":\"AI Workstation\",\"uom\":\"Nos\",\"gpuMemoryGb\":24,\"warranty\":\"36 months\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Item\",\"entityId\":\"V2-WS-001\",\"retrievedAt\":\"2026-10-03T14:03:21.563762600Z\",\"version\":\"2026-10-03T14:03:05.106197Z\"},\"active\":true}}",
+        "errorMessage": "",
+        "metadata": {
+          "_harnessDurationMs": 298.5267,
+          "_harnessOutcome": "SUCCESS",
+          "_harnessSource": "MCP",
+          "attempts": 1,
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_item",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_item"
+      },
+      "runId": "2b382f21-ec7e-3e74-941b-6918c6bb87f6",
+      "state": "SUCCEEDED",
+      "toolCallId": "72d52835-038a-47d7-8741-d8bb3949d654",
+      "toolName": "mcp.erpnext.procurement_get_item",
+      "updatedAt": "2026-10-03T14:03:21.582106900Z"
+    },
+    {
+      "attempt": 1,
+      "createdAt": "2026-10-03T14:03:21.582106900Z",
+      "errorMessage": "{\"error\":{\"code\":\"ERP_NOT_FOUND\"}}",
+      "request": {
+        "arguments": {
+          "departmentId": "算法部门V2-ALG"
+        },
+        "requestId": "ca2b8936-6b98-4ac1-afb8-5723b4bf3e2d",
+        "toolName": "mcp.erpnext.procurement_get_budget_status"
+      },
+      "result": {
+        "content": "{\"error\":{\"code\":\"ERP_NOT_FOUND\"}}",
+        "errorMessage": "{\"error\":{\"code\":\"ERP_NOT_FOUND\"}}",
+        "metadata": {
+          "_harnessDurationMs": 29.8113,
+          "_harnessErrorCode": "ERP_NOT_FOUND",
+          "_harnessOutcome": "BUSINESS_ERROR",
+          "_harnessSource": "MCP",
+          "attempts": 1,
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_budget_status",
+          "provider": "mcp"
+        },
+        "success": false,
+        "toolName": "mcp.erpnext.procurement_get_budget_status"
+      },
+      "runId": "2b382f21-ec7e-3e74-941b-6918c6bb87f6",
+      "state": "FAILED",
+      "toolCallId": "ca2b8936-6b98-4ac1-afb8-5723b4bf3e2d",
+      "toolName": "mcp.erpnext.procurement_get_budget_status",
+      "updatedAt": "2026-10-03T14:03:21.615191Z"
+    },
+    {
+      "attempt": 1,
+      "createdAt": "2026-10-03T14:03:22.063386Z",
+      "errorMessage": "",
+      "request": {
+        "arguments": {
+          "limit": 50
+        },
+        "requestId": "47e287ed-bf5b-4fab-b549-67191d97a801",
+        "toolName": "mcp.erpnext.procurement_list_requisitions"
+      },
+      "result": {
+        "content": "{\"records\":[{\"id\":\"V2-REQ-001\",\"departmentId\":\"V2-ALG\",\"itemId\":\"V2-WS-001\",\"quantity\":20,\"requiredBy\":\"2026-12-15\",\"status\":\"Draft\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Material Request\",\"entityId\":\"V2-REQ-001\",\"retrievedAt\":\"2026-10-03T14:03:22.097829900Z\",\"version\":\"2026-10-03T14:03:05.467204Z\"}},{\"id\":\"V2-REQ-002\",\"departmentId\":\"V2-SIM\",\"itemId\":\"V2-WS-002\",\"quantity\":6,\"requiredBy\":\"2026-12-15\",\"status\":\"Draft\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Material Request\",\"entityId\":\"V2-REQ-002\",\"retrievedAt\":\"2026-10-03T14:03:22.109284800Z\",\"version\":\"2026-10-03T14:03:05.562269Z\"}},{\"id\":\"V2-REQ-003\",\"departmentId\":\"V2-ENG\",\"itemId\":\"V2-WS-003\",\"quantity\":7,\"requiredBy\":\"2026-12-15\",\"status\":\"Draft\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Material Request\",\"entityId\":\"V2-REQ-003\",\"retrievedAt\":\"2026-10-03T14:03:22.119348700Z\",\"version\":\"2026-10-03T14:03:05.583398Z\"}},{\"id\":\"V2-REQ-004\",\"departmentId\":\"V2-ALG\",\"itemId\":\"V2-WS-001\",\"quantity\":8,\"requiredBy\":\"2026-12-15\",\"status\":\"Draft\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Material Request\",\"entityId\":\"V2-REQ-004\",\"retrievedAt\":\"2026-10-03T14:03:22.130735Z\",\"version\":\"2026-10-03T14:03:05.600630Z\"}},{\"id\":\"V2-REQ-005\",\"departmentId\":\"V2-SIM\",\"itemId\":\"V2-WS-002\",\"quantity\":9,\"requiredBy\":\"2026-12-15\",\"status\":\"Draft\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Material Request\",\"entityId\":\"V2-REQ-005\",\"retrievedAt\":\"2026-10-03T14:03:22.143017200Z\",\"version\":\"2026-10-03T14:03:05.618947Z\"}},{\"id\":\"V2-REQ-006\",\"departmentId\":\"V2-ENG\",\"itemId\":\"V2-WS-003\",\"quantity\":10,\"requiredBy\":\"2026-12-15\",\"status\":\"Draft\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Material Request\",\"entityId\":\"V2-REQ-006\",\"retrievedAt\":\"2026-10-03T14:03:22.153944300Z\",\"version\":\"2026-10-03T14:03:05.636823Z\"}}],\"nextOffset\":null}",
+        "errorMessage": "",
+        "metadata": {
+          "_harnessDurationMs": 96.5649,
+          "_harnessOutcome": "SUCCESS",
+          "_harnessSource": "MCP",
+          "attempts": 1,
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_list_requisitions",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_list_requisitions"
+      },
+      "runId": "2b382f21-ec7e-3e74-941b-6918c6bb87f6",
+      "state": "SUCCEEDED",
+      "toolCallId": "47e287ed-bf5b-4fab-b549-67191d97a801",
+      "toolName": "mcp.erpnext.procurement_list_requisitions",
+      "updatedAt": "2026-10-03T14:03:22.160472500Z"
+    },
+    {
+      "attempt": 1,
+      "createdAt": "2026-10-03T14:03:18.597918200Z",
+      "errorMessage": "",
+      "request": {
+        "arguments": {},
+        "requestId": "4b6cf267-039d-4036-8281-e5e493a5346d",
+        "toolName": "inspect_procurement_case"
+      },
+      "result": {
+        "content": "{\"case\":{\"status\":\"UNCREATED\"},\"approvalId\":\"\"}",
+        "errorMessage": "",
+        "metadata": {
+          "_harnessDurationMs": 13.8606,
+          "_harnessOutcome": "SUCCESS",
+          "_harnessSource": "LOCAL",
+          "attempts": 1,
+          "readOnly": true
+        },
+        "success": true,
+        "toolName": "inspect_procurement_case"
+      },
+      "runId": "0c2d8ea5-3e47-440b-b6b2-2e2124ef1080",
+      "state": "SUCCEEDED",
+      "toolCallId": "4b6cf267-039d-4036-8281-e5e493a5346d",
+      "toolName": "inspect_procurement_case",
+      "updatedAt": "2026-10-03T14:03:18.612649300Z"
+    }
+  ],
+  "failed_budget_tool_call": {
+    "attempt": 1,
+    "createdAt": "2026-10-03T14:03:21.582106900Z",
+    "errorMessage": "{\"error\":{\"code\":\"ERP_NOT_FOUND\"}}",
+    "request": {
+      "arguments": {
+        "departmentId": "算法部门V2-ALG"
+      },
+      "requestId": "ca2b8936-6b98-4ac1-afb8-5723b4bf3e2d",
+      "toolName": "mcp.erpnext.procurement_get_budget_status"
+    },
+    "result": {
+      "content": "{\"error\":{\"code\":\"ERP_NOT_FOUND\"}}",
+      "errorMessage": "{\"error\":{\"code\":\"ERP_NOT_FOUND\"}}",
+      "metadata": {
+        "_harnessDurationMs": 29.8113,
+        "_harnessErrorCode": "ERP_NOT_FOUND",
+        "_harnessOutcome": "BUSINESS_ERROR",
+        "_harnessSource": "MCP",
+        "attempts": 1,
+        "mcpServerId": "erpnext",
+        "mcpServerName": "erpnext",
+        "mcpSessionGeneration": 1,
+        "mcpToolName": "procurement_get_budget_status",
+        "provider": "mcp"
+      },
+      "success": false,
+      "toolName": "mcp.erpnext.procurement_get_budget_status"
+    },
+    "runId": "2b382f21-ec7e-3e74-941b-6918c6bb87f6",
+    "state": "FAILED",
+    "toolCallId": "ca2b8936-6b98-4ac1-afb8-5723b4bf3e2d",
+    "toolName": "mcp.erpnext.procurement_get_budget_status",
+    "updatedAt": "2026-10-03T14:03:21.615191Z"
+  },
+  "invalid_output_evidence": [
+    {
+      "attempt": 1,
+      "createdAt": "2026-10-03T14:03:19.612437700Z",
+      "errorMessage": "CHILD_OUTPUT_INVALID",
+      "request": {
+        "arguments": {
+          "objective": "分析并补全采购需求：申请部门 算法部门V2-ALG；商品 V2-WS-001；预算 30万元；交付期 21天；硬约束 GPU 显存至少 24GB。数量尚未确定，请识别缺失项并给出澄清问题，不要替用户设定数量，不要发起 RFQ。"
+        },
+        "requestId": "6161e589-6abe-43a0-aca7-38dbcaa4b97c",
+        "toolName": "analyze_requisition"
+      },
+      "result": {
+        "content": "",
+        "errorMessage": "CHILD_OUTPUT_INVALID",
+        "metadata": {
+          "_harnessDurationMs": 5538.7202,
+          "_harnessOutcome": "FATAL_ERROR",
+          "_harnessSource": "LOCAL",
+          "attempts": 1,
+          "errorType": "CHILD_OUTPUT_INVALID",
+          "retryable": false
+        },
+        "success": false,
+        "toolName": "analyze_requisition"
+      },
+      "runId": "0c2d8ea5-3e47-440b-b6b2-2e2124ef1080",
+      "state": "FAILED",
+      "toolCallId": "6161e589-6abe-43a0-aca7-38dbcaa4b97c",
+      "toolName": "analyze_requisition",
+      "updatedAt": "2026-10-03T14:03:25.153301900Z"
+    }
+  ],
+  "archive_sha256": "8631140c1b3bd24ac9b20a5907bee28435695df9310f5c787cf201c0f4538b9d",
+  "old_case_patch_count": 0,
+  "old_case": null
+}

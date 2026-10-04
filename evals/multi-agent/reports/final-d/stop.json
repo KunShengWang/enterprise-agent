@@ -1,0 +1,6 @@
+{
+  "gate": "D1",
+  "task": "REQ-03",
+  "reason": "ACCEPTANCE_COVERAGE_MISSING: REQ-03 only inspected Case then clarified quantity; no Requisition Child and no successful budget receipt. Required canonical department binding, budget/evidence/enum Child-contract path not exercised in this fresh trial. Frozen routing permits optional analyze_requisition; this is not a routing violation or proven recurrence of the prior defect.",
+  "no_more_trials": true
+}

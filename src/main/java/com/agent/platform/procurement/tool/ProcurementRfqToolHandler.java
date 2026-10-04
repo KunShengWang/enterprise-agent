@@ -33,6 +33,9 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
     private final ProcurementCaseStore caseStore;
     private final ToolExecutionStore toolExecutionStore;
     private final ObjectMapper objectMapper;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.agent.platform.procurement.agent.ProcurementDomainBinding domainBinding;
+    public void setDomainBinding(com.agent.platform.procurement.agent.ProcurementDomainBinding binding) { this.domainBinding = binding; }
 
     public ProcurementRfqToolHandler(ProcurementRfqGateway gateway,
                                      ProcurementCaseStore caseStore,
@@ -124,7 +127,8 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
                 .findToolExecution(parsed.sourceRecommendationToolCallId())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "prepared RFQ request does not reference a known Finalize execution"));
-        if (!trusted.runId().equals(finalizeExecution.runId())
+        if ((!trusted.runId().equals(finalizeExecution.runId())
+                && (domainBinding == null || !domainBinding.allowsFinalization(trusted.runId(), finalizeExecution.toolCallId())))
                 || finalizeExecution.state() != ToolExecutionState.SUCCEEDED
                 || finalizeExecution.result() == null
                 || !finalizeExecution.result().success()

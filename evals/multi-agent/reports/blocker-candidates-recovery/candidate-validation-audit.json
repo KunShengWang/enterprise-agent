@@ -1,0 +1,175 @@
+[
+  {
+    "toolCallId": "9f86057d-ed47-4caa-b2bc-21db8ccc8b6b",
+    "childRunId": "78863ee5-5511-38c2-8019-d50ec90ef29a",
+    "audit": {
+      "authoritativeStatus": "NEEDS_CLARIFICATION",
+      "blockerCandidates": [
+        {
+          "evidenceRefs": [
+            "tool-execution:7bc3fa28-1f8f-4afc-8adc-a32d8dc44c3a"
+          ],
+          "type": "BUDGET_INSUFFICIENT"
+        },
+        {
+          "evidenceRefs": [
+            "tool-execution:56795bc9-1a02-4ab9-9dde-9640460646b1",
+            "tool-execution:2427e83c-8dc6-4adf-984b-7b74b1e64e5e"
+          ],
+          "type": "DUPLICATE_REQUEST"
+        }
+      ],
+      "canonicalWitness": {
+        "budgetAbsence": [],
+        "budgetRecords": [
+          {
+            "allocated": 600000.0,
+            "available": 5000.0,
+            "committed": 595000.0,
+            "currency": "CNY",
+            "departmentId": "V2-ALG",
+            "fiscalYear": "2026",
+            "id": "V2-BUD-001",
+            "source": {
+              "backend": "ERPNext",
+              "entityId": "V2-BUD-001",
+              "entityType": "Budget",
+              "retrievedAt": "2026-10-04T02:51:13.337084Z",
+              "version": "2026-10-04T02:50:58.112943Z"
+            }
+          }
+        ],
+        "casePresent": false,
+        "duplicateIdentityKnown": true,
+        "duplicateWitnesses": [],
+        "itemFacts": [
+          {
+            "active": true,
+            "category": "AI Workstation",
+            "gpuMemoryGb": 24,
+            "id": "V2-WS-001",
+            "name": "AI Workstation 01",
+            "source": {
+              "backend": "ERPNext",
+              "entityId": "V2-WS-001",
+              "entityType": "Item",
+              "retrievedAt": "2026-10-04T02:51:13.281179400Z",
+              "version": "2026-10-04T02:50:56.494255Z"
+            },
+            "uom": "Nos",
+            "warranty": "36 months"
+          }
+        ],
+        "requiredAmountKnown": false,
+        "subjectRequisitionId": "V2-REQ-001"
+      },
+      "llmProposedStatus": "BLOCKED",
+      "rejectedCandidates": [
+        {
+          "canonicalWitness": {
+            "budgetAbsence": [],
+            "budgetRecords": [
+              {
+                "allocated": 600000.0,
+                "available": 5000.0,
+                "committed": 595000.0,
+                "currency": "CNY",
+                "departmentId": "V2-ALG",
+                "fiscalYear": "2026",
+                "id": "V2-BUD-001",
+                "source": {
+                  "backend": "ERPNext",
+                  "entityId": "V2-BUD-001",
+                  "entityType": "Budget",
+                  "retrievedAt": "2026-10-04T02:51:13.337084Z",
+                  "version": "2026-10-04T02:50:58.112943Z"
+                }
+              }
+            ],
+            "casePresent": false,
+            "duplicateIdentityKnown": true,
+            "duplicateWitnesses": [],
+            "itemFacts": [
+              {
+                "active": true,
+                "category": "AI Workstation",
+                "gpuMemoryGb": 24,
+                "id": "V2-WS-001",
+                "name": "AI Workstation 01",
+                "source": {
+                  "backend": "ERPNext",
+                  "entityId": "V2-WS-001",
+                  "entityType": "Item",
+                  "retrievedAt": "2026-10-04T02:51:13.281179400Z",
+                  "version": "2026-10-04T02:50:56.494255Z"
+                },
+                "uom": "Nos",
+                "warranty": "36 months"
+              }
+            ],
+            "requiredAmountKnown": false,
+            "subjectRequisitionId": "V2-REQ-001"
+          },
+          "evidenceRefs": [
+            "tool-execution:7bc3fa28-1f8f-4afc-8adc-a32d8dc44c3a"
+          ],
+          "reason": "CANONICAL_FACTS_DO_NOT_SUPPORT_CANDIDATE",
+          "type": "BUDGET_INSUFFICIENT"
+        },
+        {
+          "canonicalWitness": {
+            "budgetAbsence": [],
+            "budgetRecords": [
+              {
+                "allocated": 600000.0,
+                "available": 5000.0,
+                "committed": 595000.0,
+                "currency": "CNY",
+                "departmentId": "V2-ALG",
+                "fiscalYear": "2026",
+                "id": "V2-BUD-001",
+                "source": {
+                  "backend": "ERPNext",
+                  "entityId": "V2-BUD-001",
+                  "entityType": "Budget",
+                  "retrievedAt": "2026-10-04T02:51:13.337084Z",
+                  "version": "2026-10-04T02:50:58.112943Z"
+                }
+              }
+            ],
+            "casePresent": false,
+            "duplicateIdentityKnown": true,
+            "duplicateWitnesses": [],
+            "itemFacts": [
+              {
+                "active": true,
+                "category": "AI Workstation",
+                "gpuMemoryGb": 24,
+                "id": "V2-WS-001",
+                "name": "AI Workstation 01",
+                "source": {
+                  "backend": "ERPNext",
+                  "entityId": "V2-WS-001",
+                  "entityType": "Item",
+                  "retrievedAt": "2026-10-04T02:51:13.281179400Z",
+                  "version": "2026-10-04T02:50:56.494255Z"
+                },
+                "uom": "Nos",
+                "warranty": "36 months"
+              }
+            ],
+            "requiredAmountKnown": false,
+            "subjectRequisitionId": "V2-REQ-001"
+          },
+          "evidenceRefs": [
+            "tool-execution:56795bc9-1a02-4ab9-9dde-9640460646b1",
+            "tool-execution:2427e83c-8dc6-4adf-984b-7b74b1e64e5e"
+          ],
+          "reason": "CANONICAL_FACTS_DO_NOT_SUPPORT_CANDIDATE",
+          "type": "DUPLICATE_REQUEST"
+        }
+      ],
+      "validatedBlockers": []
+    }
+  }
+]

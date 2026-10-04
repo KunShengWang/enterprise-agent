@@ -418,6 +418,10 @@ public class JdbcAgentRuntimeStore implements AgentRunStore, ToolExecutionStore,
         updateTool(toolCallId, current -> current.withResult(ToolExecutionState.SUCCEEDED, result, ""));
     }
 
+    @Override public void markWaitingApproval(String toolCallId, ToolCallResult result) {
+        updateTool(toolCallId, current -> current.withResult(ToolExecutionState.WAITING_APPROVAL, result, ""));
+    }
+
     @Override
     public void markFailed(String toolCallId, ToolCallResult result) {
         String error = result == null ? "tool failed" : result.errorMessage();

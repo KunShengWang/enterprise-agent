@@ -1,0 +1,8 @@
+{
+  "tasks": [
+    "ANOM-01"
+  ],
+  "max_new_attempts": 1,
+  "prior_valid_trials": 9,
+  "no_retry": true
+}

@@ -27,7 +27,11 @@ public final class ProcurementMcpService {
         tools.add(tool("procurement_list_requisitions","Find saved enterprise requisitions; use nextOffset to read subsequent pages.",paging(),List.of(),Requisition.class,true));
         tools.add(tool("procurement_get_item","Read an exact SKU and GPU specification before sourcing. Use its id as Case productDescription.",Map.of("id",string()),List.of("id"),Item.class,false));
         tools.add(tool("procurement_list_items","Discover AI workstation SKUs before selecting a concrete item. Never invent an item code.",paging(),List.of(),Item.class,true));
-        tools.add(tool("procurement_get_budget_status","Read ERP departmental budget available for procurement; this is not an Agent estimate or a reservation.",Map.of("departmentId",string()),List.of("departmentId"),BudgetStatus.class,false));
+        var budgetTool=new LinkedHashMap<>(tool("procurement_get_budget_status","Read ERP departmental budget available for procurement; this is not an Agent estimate or a reservation.",Map.of("departmentId",string()),List.of("departmentId"),BudgetStatus.class,false));
+        // Server deployment mapping, not an identifier inferred from user/model prose.
+        var budgetSchema=new LinkedHashMap<>(object(Map.of("departmentId",string()),List.of("departmentId")));
+        budgetSchema.put("x-businessRefs",department==null || department.isBlank()?Map.of():Map.of("departmentId",department));
+        budgetTool.put("inputSchema",budgetSchema);tools.add(budgetTool);
         tools.add(tool("procurement_list_suppliers","Discover approved/inactive suppliers. Inactive suppliers must not be recommended.",paging(),List.of(),Supplier.class,true));
         tools.add(tool("procurement_get_supplier","Read supplier approval and capacity before interpreting an item-supplier relationship.",Map.of("id",string()),List.of("id"),Supplier.class,false));
         tools.add(tool("procurement_list_item_suppliers","Read supported suppliers, reference prices, delivery days and unit capacity for a known SKU. Reference prices are synthetic ERP facts, not binding quotations.",with(paging(),"itemId",string()),List.of("itemId"),ItemSupplier.class,true));

@@ -1,0 +1,20 @@
+{
+  "production_fingerprint": "78b514a2b14db593e519556965210641d56fc7c1e83ca28f7eb273f411b2be4d",
+  "all_src_bytes_unchanged": true,
+  "source_matches_last_REQ01_pass": true,
+  "prior_runner_prompt_grader_schema_task_seed_unchanged": true,
+  "historical_files_verified": 193,
+  "frozen_fixtures_unchanged": 5,
+  "handler_hash": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "handler_unchanged": true,
+  "index_empty": true,
+  "branch": "feat/multi-agent",
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "no_commit_push_tag": true,
+  "new_trials": 2,
+  "total_valid_phase6_trials": 8,
+  "remaining_smoke_not_run": 7,
+  "dev_trials": 0,
+  "holdout_trials": 0,
+  "stopped": true
+}

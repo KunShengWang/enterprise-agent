@@ -1,0 +1,24 @@
+ M src/main/java/com/agent/platform/procurement/config/ProcurementSourcingExecutionProfileFactory.java
+ M src/main/java/com/agent/platform/procurement/tool/ProcurementRfqApprovalPreparer.java
+ M src/main/java/com/agent/platform/procurement/tool/ProcurementRfqToolHandler.java
+ M src/main/java/com/agent/platform/procurement/tool/ProcurementToolHandler.java
+ M src/main/java/com/agent/platform/runtime/AgentRunBudget.java
+ M src/main/java/com/agent/platform/runtime/AgentRunRecord.java
+ M src/main/java/com/agent/platform/runtime/AgentToolRuntime.java
+ M src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java
+ M src/main/java/com/agent/platform/runtime/DefaultAgentToolRuntime.java
+ M src/main/java/com/agent/platform/runtime/JdbcAgentRuntimeStore.java
+ M src/main/java/com/agent/platform/runtime/ToolExecutionState.java
+ M src/main/java/com/agent/platform/runtime/ToolExecutionStore.java
+ M src/main/resources/application-erpnext.yaml
+?? docs/harness/multi-agent.md
+?? docs/harness/phase6-postfix-acceptance.md
+?? docs/harness/phase6-report.md
+?? evals/multi-agent/
+?? src/main/java/com/agent/platform/procurement/agent/
+?? src/main/java/com/agent/platform/runtime/AgentRunLinks.java
+?? src/main/java/com/agent/platform/runtime/ChildRunLaunch.java
+?? src/main/java/com/agent/platform/runtime/DomainRunMetrics.java
+?? src/test/java/com/agent/platform/procurement/ProcurementMultiAgentTests.java
+?? src/test/java/com/agent/platform/procurement/ProcurementMultiAgentTrialDriver.java
+?? src/test/java/com/agent/platform/procurement/RequisitionAssessmentTests.java

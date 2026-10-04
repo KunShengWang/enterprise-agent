@@ -1,0 +1,8 @@
+{
+  "original_result": "target/multi-agent/multi-final-d-20261003-r1/smoke/REQ-03-1-a1/result.json",
+  "acceptance_v1_0": "FAIL",
+  "classification": "OVER_CONSTRAINED_COVERAGE",
+  "agent_capability_regression": false,
+  "acceptance_v1_1": "PASS",
+  "model_calls_added": 0
+}

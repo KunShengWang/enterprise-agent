@@ -1,0 +1,23 @@
+{
+  "status": "FAIL",
+  "planned": 9,
+  "executed": 1,
+  "grader_passed": 1,
+  "grader_failed": 0,
+  "acceptance_passed": 0,
+  "acceptance_failed": 1,
+  "not_run": [
+    "REQ-03",
+    "ANOM-01",
+    "SRC-01",
+    "RFQ-01",
+    "RFQ-02",
+    "GOV-01",
+    "ROB-01",
+    "E2E-01"
+  ],
+  "dev_executed": 0,
+  "reason": "SUPERVISOR_EXECUTION_FACT_SCOPE_CONFUSION",
+  "production_modified": false,
+  "reruns": 0
+}

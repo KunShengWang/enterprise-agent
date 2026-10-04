@@ -1,0 +1,31 @@
+[
+  {
+    "task_id": "REQ-01",
+    "root_run_id": "afe75335-7764-478b-b7f7-5a426b09641e",
+    "child_run_ids": [
+      "318a2104-da09-39b4-a87c-15d8852b7160",
+      "b9b6a50c-9498-3319-94dc-69989a250ed2"
+    ],
+    "root_tool_history": [
+      "analyze_requisition",
+      "inspect_procurement_case",
+      "source_suppliers"
+    ],
+    "child_agent_tool_schema_exposure": false,
+    "cross_run_raw_messages": false,
+    "observed_child_count": 2,
+    "source_packet_audit": "separate domain conversation and task packet, validated summaries allowed, no full root history"
+  },
+  {
+    "task_id": "REQ-03",
+    "root_run_id": "1d0bcb47-027b-43d4-a729-267d78b4f002",
+    "child_run_ids": [],
+    "root_tool_history": [
+      "inspect_procurement_case"
+    ],
+    "child_agent_tool_schema_exposure": false,
+    "cross_run_raw_messages": false,
+    "observed_child_count": 0,
+    "source_packet_audit": "separate domain conversation and task packet, validated summaries allowed, no full root history"
+  }
+]

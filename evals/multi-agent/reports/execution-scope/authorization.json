@@ -1,0 +1,9 @@
+{
+  "tasks": [
+    "REQ-01"
+  ],
+  "max_new_attempts": 1,
+  "max_new_valid": 1,
+  "prior_phase6_valid": 5,
+  "no_retry": true
+}

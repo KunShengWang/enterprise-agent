@@ -1,0 +1,53 @@
+{
+  "tests": 55,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "python_tests": 4,
+  "suites": [
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.agent.platform.procurement.ProcurementCasePatchTests(phase6-postfix-contract)",
+      "time": "0.423",
+      "tests": "13",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    },
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.agent.platform.procurement.ProcurementMultiAgentTests(phase6-postfix-contract)",
+      "time": "2.626",
+      "tests": "13",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    },
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.agent.platform.procurement.ProcurementRfqHitlTests(phase6-postfix-contract)",
+      "time": "0.57",
+      "tests": "22",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    },
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.agent.platform.procurement.RequisitionAssessmentTests(phase6-postfix-contract)",
+      "time": "0.055",
+      "tests": "7",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    }
+  ]
+}

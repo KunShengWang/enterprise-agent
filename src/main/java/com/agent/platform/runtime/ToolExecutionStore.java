@@ -15,6 +15,10 @@ public interface ToolExecutionStore {
 
     void markSucceeded(String toolCallId, ToolCallResult result);
 
+    default void markWaitingApproval(String toolCallId, ToolCallResult result) {
+        throw new UnsupportedOperationException("store does not support nested approval checkpoints");
+    }
+
     void markFailed(String toolCallId, ToolCallResult result);
 
     void markManualReview(String toolCallId, String reason);

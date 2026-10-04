@@ -1,0 +1,3 @@
+START smoke ANOM-01
+{"task_id": "ANOM-01", "status": "FAIL", "failure_reason": ["blocked/clarification task did not complete"], "acceptance_status": "FAIL", "acceptance_failures": ["business_grader: FAIL", "runtime_contract: CHILD_OUTPUT_INVALID: 03356570-7a59-4491-83c6-b3abccfb239d", "runtime_contract: frozen grader FAIL"], "SupervisorFinalStateConsistency": "PENDING_PROSE_REVIEW", "tool_calls": 7, "total_tokens": 17748}
+STOP until explicit offline review; no retry.

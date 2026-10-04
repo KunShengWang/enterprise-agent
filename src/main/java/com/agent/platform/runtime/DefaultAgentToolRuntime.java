@@ -37,6 +37,45 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
     private final AgentProperties properties;
     private final List<ApprovalToolCallRequestPreparer> approvalRequestPreparers;
     private final List<UncertainToolExecutionResolver> uncertainExecutionResolvers;
+    @Autowired(required = false)
+    private AgentRunLinks runLinks;
+    @Autowired(required = false)
+    private com.agent.platform.procurement.agent.ChildBusinessScope childBusinessScope;
+
+    public void setChildBusinessScope(com.agent.platform.procurement.agent.ChildBusinessScope scope) { this.childBusinessScope=scope; }
+
+    public void setRunLinks(AgentRunLinks links) { this.runLinks = links; }
+
+    private ToolPolicyContext scoped(ToolPolicyContext context) {
+        return runLinks == null ? context : new ToolPolicyContext(context.runId(),
+                runLinks.businessSession(context.runId(), context.sessionId()), context.userId(),
+                context.tenantId(), context.roles(), context.attributes());
+    }
+
+    private AgentToolRuntimeResult childPause(ToolCallRequest request, ToolCallResult result) {
+        if (!com.agent.platform.procurement.agent.AgentRegistry.AGENT_TOOLS.contains(request.toolName())
+                || result == null || result.outcome() != com.agent.platform.tool.ToolExecutionOutcome.APPROVAL_REQUIRED)
+            return null;
+        String approvalId = String.valueOf(result.metadata().getOrDefault("childApprovalId", ""));
+        if (approvalId.isBlank()) throw new IllegalStateException("child approval reference missing");
+        return new AgentToolRuntimeResult(AgentToolExecutionStatus.WAITING_APPROVAL, request, result,
+                GuardrailAction.ALLOW, "child interrupted for approval", approvalId, false);
+    }
+
+    @Override public AgentToolRuntimeResult resumeChild(ToolCallRequest pending, ToolPolicyContext context, ToolDefinition definition) {
+        if (!com.agent.platform.procurement.agent.AgentRegistry.AGENT_TOOLS.contains(pending.toolName()))
+            throw new IllegalArgumentException("not a child delegation");
+        var stored = toolExecutionStore.findToolExecution(pending.requestId()).orElseThrow();
+        if (!stored.runId().equals(context.runId()) || !stored.request().equals(pending)
+                || childPause(pending, stored.result()) == null) throw new IllegalStateException("child continuation binding mismatch");
+        ToolCallResult result = executeWithRetry(pending, executionContext(context), definition);
+        var waiting = childPause(pending, result);
+        // The AgentTool checkpoint is durable; the Child owns the actual Approval and RFQ claim.
+        if (waiting != null) toolExecutionStore.markWaitingApproval(pending.requestId(), result);
+        else if (result.success()) toolExecutionStore.markSucceeded(pending.requestId(), result);
+        else toolExecutionStore.markFailed(pending.requestId(), result);
+        return waiting != null ? waiting : completed(pending, result, GuardrailAction.ALLOW, "child resumed", false);
+    }
 
     @Autowired
     public DefaultAgentToolRuntime(GuardrailService guardrailService,
@@ -87,9 +126,11 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         ToolCallRequest request = new ToolCallRequest(toolCall.toolName(), toolCall.toolCallId(), toolCall.arguments());
         // 把当前 Agent Run、会话、用户、租户、角色和请求属性封装成统一的工具策略上下文，供后续 Guardrail 权限判断和审批请求绑定使用
         ToolPolicyContext policyContext = ToolPolicyContext.from(runId, sessionId, userId, attributes);
+        if (runLinks != null && !runLinks.permits(runId, toolCall.toolName()))
+            return denied(request, GuardrailDecision.block(com.agent.platform.guardrail.GuardrailStage.TOOL, "agent responsibility policy denied capability"));
 
         // 工具调用审查
-        GuardrailDecision policy = guardrailService.checkToolCall(definition, request, policyContext);
+        GuardrailDecision policy = guardrailService.checkToolCall(definition, request, scoped(policyContext));
 
         // 工具不能执行被阻塞
         if (policy.action() == GuardrailAction.BLOCK) {
@@ -103,7 +144,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
             ToolCallRequest approvalBoundRequest = prepareApprovalRequest(
                     approvalId,
                     request,
-                    policyContext
+                    scoped(policyContext)
             );
             // TODO 不能像 codex 一样在执行的过程中让用户批准吗？
             // 审批请求入库
@@ -127,7 +168,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         }
 
         // 工具执行
-        return executeClaimed(runId, request, policy.action(), policy.reason(), executionContext(policyContext), definition);
+        return executeClaimed(runId, request, policy.action(), policy.reason(), executionContext(scoped(policyContext)), definition);
     }
 
     /**
@@ -174,6 +215,8 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         }
         // 工具调用的参数
         ToolCallRequest request = approval.toolCallRequest();
+        if (runLinks != null && !runLinks.permits(approval.runId(), request.toolName()))
+            return denied(request, GuardrailDecision.block(com.agent.platform.guardrail.GuardrailStage.TOOL, "agent responsibility policy denied capability"));
         if (request != null) BusinessRetirementPolicy.requireTool(request.toolName());
         if (request == null || definition == null || !definition.name().equals(request.toolName())) {
             throw new IllegalArgumentException("approval tool does not match capability definition");
@@ -187,7 +230,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                 request,
                 GuardrailAction.ALLOW,
                 "human approval satisfied: " + approval.approvalId(),
-                executionContext(context), definition
+                executionContext(scoped(context)), definition
         );
     }
 
@@ -200,8 +243,14 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         ToolExecutionClaim claim = toolExecutionStore.claim(runId, request);
         // 没拿到执行权
         if (!claim.claimed()) {
+            if (claim.state() == ToolExecutionState.WAITING_APPROVAL && claim.cachedResult() != null) {
+                var interrupted = childPause(request, claim.cachedResult());
+                if (interrupted != null) return interrupted;
+            }
             // 没拿到执行权，但是之前执行成功过，直接拿缓存结果
             if (claim.state() == ToolExecutionState.SUCCEEDED && claim.cachedResult() != null) {
+                var interrupted = childPause(request, claim.cachedResult());
+                if (interrupted != null) return interrupted;
                 return new AgentToolRuntimeResult(
                         AgentToolExecutionStatus.COMPLETED,
                         request,
@@ -226,6 +275,11 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         // 拿到执行权 → 真正执行
         ToolCallResult result = executeWithRetry(request, executionContext, definition);// 有最大重试次数的执行工具
         try {
+            var interrupted = childPause(request, result);
+            if (interrupted != null) {
+                toolExecutionStore.markWaitingApproval(request.requestId(), result);
+                return interrupted;
+            }
             if (result.success()) {
                 toolExecutionStore.markSucceeded(request.requestId(), result);
                 return completed(request, result, policyAction, policyReason, false);
@@ -299,6 +353,10 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
 
     private ToolCallResult executeWithRetry(ToolCallRequest request,
                                             ToolExecutionContext executionContext, ToolDefinition definition) {
+        if(childBusinessScope!=null){
+            var invalid=childBusinessScope.validate(executionContext.runId(),request);
+            if(invalid!=null)return invalid;
+        }
         long started = System.nanoTime();
         // 工具的执行有最大重试次数
         int maxAttempts = Math.max(1, properties.getMaxToolExecutionAttempts());

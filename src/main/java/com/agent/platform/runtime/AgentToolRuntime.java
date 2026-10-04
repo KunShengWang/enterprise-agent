@@ -17,6 +17,11 @@ public interface AgentToolRuntime {
                                            ToolDefinition definition,
                                            ToolPolicyContext context);
 
+    default AgentToolRuntimeResult resumeChild(com.agent.platform.tool.ToolCallRequest pending,
+                                               ToolPolicyContext context, ToolDefinition definition) {
+        throw new IllegalStateException("nested child continuation unsupported");
+    }
+
     /**
      * 进程在副作用完成与结果落库之间崩溃时，尝试使用领域权威事实修复工具结果。
      * 默认不处理，保持现有 Runtime 行为。

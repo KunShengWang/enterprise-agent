@@ -1,0 +1,16 @@
+ ...ProcurementSourcingExecutionProfileFactory.java |   4 +
+ .../procurement/erp/ProcurementMcpService.java     |   6 +-
+ .../tool/ProcurementRfqApprovalPreparer.java       |  15 ++-
+ .../tool/ProcurementRfqToolHandler.java            |   6 +-
+ .../procurement/tool/ProcurementToolHandler.java   |  12 +++
+ .../com/agent/platform/runtime/AgentRunBudget.java |  22 ++++-
+ .../com/agent/platform/runtime/AgentRunRecord.java |   3 +
+ .../agent/platform/runtime/AgentRuntimeResult.java |   9 +-
+ .../agent/platform/runtime/AgentToolRuntime.java   |   5 +
+ .../platform/runtime/DefaultAgentRuntime.java      | 104 ++++++++++++++++++---
+ .../platform/runtime/DefaultAgentToolRuntime.java  |  66 ++++++++++++-
+ .../platform/runtime/JdbcAgentRuntimeStore.java    |   4 +
+ .../agent/platform/runtime/ToolExecutionState.java |   1 +
+ .../agent/platform/runtime/ToolExecutionStore.java |   4 +
+ src/main/resources/application-erpnext.yaml        |   2 +
+ 15 files changed, 239 insertions(+), 24 deletions(-)

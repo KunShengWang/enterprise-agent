@@ -1,0 +1,12 @@
+{
+  "changed": [
+    "src/main/java/com/agent/platform/procurement/agent/AgentRegistry.java",
+    "src/main/java/com/agent/platform/procurement/agent/AgentToolAdapter.java",
+    "src/main/java/com/agent/platform/procurement/agent/ProcurementExecutionSummaries.java",
+    "src/main/java/com/agent/platform/procurement/agent/SubAgentExecutor.java",
+    "src/main/java/com/agent/platform/runtime/AgentResultMetadataProvider.java",
+    "src/main/java/com/agent/platform/runtime/AgentRuntimeResult.java",
+    "src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java"
+  ],
+  "deleted": []
+}

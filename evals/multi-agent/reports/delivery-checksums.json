@@ -1,0 +1,23 @@
+{
+  "deterministic-evidence.zip": "a1f5a05fb5421867d5a8bb7e902e9d5f66cbab75c56550dceecd2fc282c2a49b",
+  "deterministic-provenance.json": "907994a0c74466d9833b23a4279946d65a2a889e548d1f1b739fca7a02a2e6bd",
+  "evidence-scan.json": "c840d605884c47083664b68f2ba8fe6649f452957058ef7468aef444e3e03608",
+  "final-source-freeze.json": "64bbfa5b040f691577ff4f63d7f0864d89553d2dfd7d7aa9809ae3abd4341739",
+  "focused-tests.json": "a7c7e4f717e5ffb8aee8e73f70926130aa5b278c5bbe4ea930e9edb3df02db23",
+  "git-status.txt": "8feca03afec213da2483b5421987e3d4ad0264d4980c2ad71e92734dc69bd464",
+  "legacy-results.json": "d9512420842ee0113749a4ce17f66107612ad61dc761620ceb53f673bae4b612",
+  "pre-smoke-deterministic-evidence.zip": "be223dc8d0857518094533132c8ebc49ebb904714968922fae44e4bb0b7279f0",
+  "pre-smoke-focused-tests.json": "b09805427bdcdb2d016c39224138f4ddd00e6f3a09560db086f6a4aec611c10b",
+  "pre-smoke-legacy-results.json": "ec5c3d1b54a911bb587a9266c577ae41991f9634998ba27950ed50989d099734",
+  "scope-verification.json": "680ca57f5f15bb27f0a353cf743f0759fc39adea5c39a73e16bbdf2cc4298b4f",
+  "smoke-comparison.json": "97d500d522eea218b8bfc75fb64279f4d613343b922e8fe8ffcc2d60513bb607",
+  "smoke-evidence.zip": "2b15cbcf73d1b1c9123f5047da15fb3a2207f3b3bd4951b750b03aee1623b0f8",
+  "smoke-provenance.json": "c45f9b500470b7bef6fc02571679771542140bf616fc7fac193518cf4835a854",
+  "smoke-results.json": "bd42b521d746a1b7c434c9c6189065a921bf9638da0817659edad14f8bc7761d",
+  "smoke-source-evidence.zip": "0defd7598f134b267072bf9b14f18d774de3cf6abe26bd37385618171b008614",
+  "smoke-source-provenance.json": "b44d4de6df3993ea3aa6dc96077bf76699d7a0eb3896e661595e1f702aec46df",
+  "smoke-source-state.json": "3b73c9fc0bab655fc9748b48299d3294ebaf9d3d267a176c95dac4bc8a4fa1a6",
+  "source-evidence.zip": "317b75efdd6b067f0d15bcbb69fb2f9d7080984bfb7072f87f9d278dfb88acba",
+  "source-provenance.json": "b650e10acb3e943a36a0dc4e5a7cad52797c37cd06b786808c84d6ab2d00a872",
+  "source-state.json": "cd1a5429e0d5981aebc6864a6429d7e4294fb9c2cc25e101a84c7354b6711a6b"
+}
