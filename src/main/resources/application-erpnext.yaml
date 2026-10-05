@@ -15,6 +15,8 @@ enterprise-agent:
     servers:
       - enabled: true
         server-name: erpnext
+        # Only this operator-controlled first-party connection may supply read-only hints.
+        trusted-procurement: true
         tool-name-prefix: mcp.erpnext.
         protocol-version: "2025-11-25"
         command: ${ERPNEXT_MCP_COMMAND:pwsh}

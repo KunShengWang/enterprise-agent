@@ -112,6 +112,17 @@ public class McpProperties {
 
     public static class Server {
 
+        // Local operator attestation for the controlled Procurement connection; never supplied by tools/list.
+        private boolean trustedProcurement = false;
+
+        public boolean isTrustedProcurement() {
+            return trustedProcurement;
+        }
+
+        public void setTrustedProcurement(boolean trustedProcurement) {
+            this.trustedProcurement = trustedProcurement;
+        }
+
         private boolean enabled = true;
 
         private String serverName = "";

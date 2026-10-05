@@ -1,0 +1,19 @@
+M src/main/java/com/agent/platform/config/McpProperties.java
+ M src/main/java/com/agent/platform/mcp/StdioMcpToolGateway.java
+ M src/main/java/com/agent/platform/procurement/tool/ProcurementToolHandler.java
+ M src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java
+ M src/main/java/com/agent/platform/runtime/DefaultAgentToolRuntime.java
+ M src/main/java/com/agent/platform/runtime/ToolExecutionDeadline.java
+ M src/main/resources/application-erpnext.yaml
+ M src/test/java/com/agent/platform/procurement/ProcurementV2TrialDriver.java
+ M src/test/java/com/agent/platform/runtime/HarnessCoreTests.java
+?? docs/harness/harness-reliability-report.md
+?? docs/harness/harness-reliability.md
+?? evals/harness-core/__pycache__/
+?? evals/harness-reliability/
+?? evals/procurement-v2.2/__pycache__/
+?? evals/procurement-workflow/
+?? src/main/java/com/agent/platform/runtime/ToolRetryPolicy.java
+?? src/test/java/com/agent/platform/mcp/McpAnnotationTestServer.java
+?? src/test/java/com/agent/platform/runtime/McpToolEffectContractTests.java
+?? src/test/java/com/agent/platform/runtime/ToolRetryPolicyTests.java

@@ -42,6 +42,6 @@ final class ToolExecutionDeadline {
     private static ToolCallResult failure(ToolCallRequest request, boolean uncertain, String message, String outcome) {
         return new ToolCallResult(request.toolName(), false, "", message,
                 Map.of("_harnessOutcome", uncertain ? "FATAL_ERROR" : outcome,
-                        "retryable", false, "manualReview", uncertain));
+                        "retryable", !uncertain && "RETRYABLE_ERROR".equals(outcome), "manualReview", uncertain));
     }
 }

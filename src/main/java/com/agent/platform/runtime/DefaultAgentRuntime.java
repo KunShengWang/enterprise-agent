@@ -2435,6 +2435,11 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         payload.put("durationMs", result.metadata().getOrDefault("_harnessDurationMs", 0));
         Object attempts = result.metadata().getOrDefault("attempts", 1);
         payload.put("retryCount", attempts instanceof Number n ? Math.max(0, n.intValue() - 1) : 0);
+        payload.put("toolAttempts", attempts);
+        payload.put("toolErrors", result.metadata().getOrDefault("_harnessToolErrors", result.success() ? 0 : 1));
+        payload.put("recoveredRetryableErrors", result.metadata().getOrDefault("_harnessRecoveredRetryableErrors", 0));
+        payload.put("retryExhaustions", result.metadata().getOrDefault("_harnessRetryExhaustions", 0));
+        payload.put("attemptHistory", result.metadata().getOrDefault("_harnessAttempts", List.of()));
         payload.put("error", result.errorMessage() == null ? "" : result.errorMessage());
         payload.put("metadata", result.metadata());
         return Map.copyOf(payload);

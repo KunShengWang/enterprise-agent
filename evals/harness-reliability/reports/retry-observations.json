@@ -1,0 +1,688 @@
+{
+  "histories": [
+    {
+      "attempt": 1,
+      "backoffMillis": 150,
+      "effect": "READ_ONLY",
+      "outcome": "RETRYABLE_ERROR",
+      "retryDecision": true,
+      "retryReason": "TRANSIENT_REPLAY_SAFE_WITHIN_BUDGET",
+      "retryable": true,
+      "toolCallId": "ef0daeaa-93e9-4382-82ee-5dace4e765f3",
+      "toolName": "mcp.erpnext.procurement_get_item"
+    },
+    {
+      "attempt": 2,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "ef0daeaa-93e9-4382-82ee-5dace4e765f3",
+      "toolName": "mcp.erpnext.procurement_get_item"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "ea98660b-f07b-4c48-99f3-8fbe99345e34",
+      "toolName": "mcp.erpnext.procurement_get_budget_status"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "c4bfc30b-ae02-45e8-90e1-f168cbe08fba",
+      "toolName": "mcp.erpnext.procurement_list_item_suppliers"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "f314f018-e9dd-4d5e-8bd2-7b87a98d8a8e",
+      "toolName": "mcp.erpnext.procurement_get_supplier"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "5c7f3656-3831-48c3-85cc-b540d1cf3090",
+      "toolName": "mcp.erpnext.procurement_get_supplier"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "0f4171e5-bcde-43b8-bc6e-4c671258cdf5",
+      "toolName": "mcp.erpnext.procurement_get_supplier"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "7bf6d916-0d28-4fb9-9453-feab27880b94",
+      "toolName": "mcp.erpnext.procurement_get_supplier"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "548321b3-05e0-4bf8-9adf-13406cc39b11",
+      "toolName": "mcp.erpnext.procurement_get_supplier"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "60a44afd-d1e1-4720-a360-821254219aee",
+      "toolName": "mcp.erpnext.procurement_get_supplier"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "3e8fee5d-15c1-4e75-acd1-9d3e3f9f9b3d",
+      "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "c11f2597-d289-4663-8e9c-3059a448d8f9",
+      "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "c4f2f551-687b-4a89-a175-104b6f2c86b6",
+      "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "614e0f60-72c7-463b-ac7f-328a0f747a37",
+      "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "9a4f482d-bbb5-499c-a6e7-9c7b00ba2abc",
+      "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "00335474-37f6-4157-b5a8-a17a30b65e0e",
+      "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "EXTERNAL_SIDE_EFFECT",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "facd67c5-cc07-4798-bef4-a4c789c2bc98",
+      "toolName": "procurement_case_patch"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "b4a8fbd6-91c7-4c14-a104-93f50e3325ee",
+      "toolName": "procurement_supplier_search"
+    },
+    {
+      "attempt": 1,
+      "backoffMillis": 0,
+      "effect": "READ_ONLY",
+      "outcome": "SUCCESS",
+      "retryDecision": false,
+      "retryReason": "OUTCOME_NOT_RETRYABLE",
+      "retryable": false,
+      "toolCallId": "f1557813-d291-4115-ac40-f767ea4a4148",
+      "toolName": "procurement_recommendation_finalize"
+    }
+  ],
+  "physical_attempts": [
+    {
+      "actor": "agent",
+      "latencyMs": 4.375699,
+      "request": {
+        "arguments": {
+          "id": "V2-WS-001"
+        },
+        "requestId": "ef0daeaa-93e9-4382-82ee-5dace4e765f3",
+        "toolName": "mcp.erpnext.procurement_get_item"
+      },
+      "result": {
+        "content": "{\"error\":{\"code\":\"ERP_UNAVAILABLE\"}}",
+        "errorMessage": "injected MCP 503",
+        "metadata": {
+          "errorType": "ERP_UNAVAILABLE"
+        },
+        "success": false,
+        "toolName": "mcp.erpnext.procurement_get_item"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 366.1132,
+      "request": {
+        "arguments": {
+          "id": "V2-WS-001"
+        },
+        "requestId": "ef0daeaa-93e9-4382-82ee-5dace4e765f3",
+        "toolName": "mcp.erpnext.procurement_get_item"
+      },
+      "result": {
+        "content": "{\"record\":{\"id\":\"V2-WS-001\",\"name\":\"AI Workstation 01\",\"category\":\"AI Workstation\",\"uom\":\"Nos\",\"gpuMemoryGb\":24,\"warranty\":\"36 months\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Item\",\"entityId\":\"V2-WS-001\",\"retrievedAt\":\"2026-10-05T05:53:22.843977800Z\",\"version\":\"2026-10-05T05:53:09.247496Z\"},\"active\":true}}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_item",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_item"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 119.7258,
+      "request": {
+        "arguments": {
+          "departmentId": "V2-ALG"
+        },
+        "requestId": "ea98660b-f07b-4c48-99f3-8fbe99345e34",
+        "toolName": "mcp.erpnext.procurement_get_budget_status"
+      },
+      "result": {
+        "content": "{\"record\":{\"id\":\"V2-BUD-001\",\"departmentId\":\"V2-ALG\",\"allocated\":600000.0,\"committed\":180000.0,\"available\":420000.0,\"currency\":\"CNY\",\"fiscalYear\":\"2026\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Budget\",\"entityId\":\"V2-BUD-001\",\"retrievedAt\":\"2026-10-05T05:53:22.985773100Z\",\"version\":\"2026-10-05T05:53:09.507252Z\"}}}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_budget_status",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_budget_status"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 31.4393,
+      "request": {
+        "arguments": {
+          "itemId": "V2-WS-001"
+        },
+        "requestId": "c4bfc30b-ae02-45e8-90e1-f168cbe08fba",
+        "toolName": "mcp.erpnext.procurement_list_item_suppliers"
+      },
+      "result": {
+        "content": "{\"records\":[{\"id\":\"V2-REL-01-01\",\"itemId\":\"V2-WS-001\",\"supplierId\":\"V2-SUP-001\",\"referencePrice\":12800.0,\"currency\":\"CNY\",\"leadTimeDays\":12,\"capacityUnits\":80,\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Procurement Item Supplier\",\"entityId\":\"V2-REL-01-01\",\"retrievedAt\":\"2026-10-05T05:53:23.018993600Z\",\"version\":\"2026-10-05T05:53:09.373607Z\"}},{\"id\":\"V2-REL-02-01\",\"itemId\":\"V2-WS-001\",\"supplierId\":\"V2-SUP-002\",\"referencePrice\":10900.0,\"currency\":\"CNY\",\"leadTimeDays\":20,\"capacityUnits\":35,\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Procurement Item Supplier\",\"entityId\":\"V2-REL-02-01\",\"retrievedAt\":\"2026-10-05T05:53:23.018993600Z\",\"version\":\"2026-10-05T05:53:09.386805Z\"}},{\"id\":\"V2-REL-03-01\",\"itemId\":\"V2-WS-001\",\"supplierId\":\"V2-SUP-003\",\"referencePrice\":13700.0,\"currency\":\"CNY\",\"leadTimeDays\":10,\"capacityUnits\":100,\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Procurement Item Supplier\",\"entityId\":\"V2-REL-03-01\",\"retrievedAt\":\"2026-10-05T05:53:23.018993600Z\",\"version\":\"2026-10-05T05:53:09.392272Z\"}},{\"id\":\"V2-REL-04-01\",\"itemId\":\"V2-WS-001\",\"supplierId\":\"V2-SUP-004\",\"referencePrice\":11900.0,\"currency\":\"CNY\",\"leadTimeDays\":25,\"capacityUnits\":12,\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Procurement Item Supplier\",\"entityId\":\"V2-REL-04-01\",\"retrievedAt\":\"2026-10-05T05:53:23.018993600Z\",\"version\":\"2026-10-05T05:53:09.397522Z\"}},{\"id\":\"V2-REL-05-01\",\"itemId\":\"V2-WS-001\",\"supplierId\":\"V2-SUP-005\",\"referencePrice\":12500.0,\"currency\":\"CNY\",\"leadTimeDays\":16,\"capacityUnits\":45,\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Procurement Item Supplier\",\"entityId\":\"V2-REL-05-01\",\"retrievedAt\":\"2026-10-05T05:53:23.019535300Z\",\"version\":\"2026-10-05T05:53:09.402401Z\"}},{\"id\":\"V2-REL-06-01\",\"itemId\":\"V2-WS-001\",\"supplierId\":\"V2-SUP-006\",\"referencePrice\":9800.0,\"currency\":\"CNY\",\"leadTimeDays\":8,\"capacityUnits\":10,\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Procurement Item Supplier\",\"entityId\":\"V2-REL-06-01\",\"retrievedAt\":\"2026-10-05T05:53:23.019535300Z\",\"version\":\"2026-10-05T05:53:09.407251Z\"}}],\"nextOffset\":null}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_list_item_suppliers",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_list_item_suppliers"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 24.9292,
+      "request": {
+        "arguments": {
+          "id": "V2-SUP-001"
+        },
+        "requestId": "f314f018-e9dd-4d5e-8bd2-7b87a98d8a8e",
+        "toolName": "mcp.erpnext.procurement_get_supplier"
+      },
+      "result": {
+        "content": "{\"record\":{\"id\":\"V2-SUP-001\",\"name\":\"Nebula Forge Fictional\",\"approved\":true,\"capacity\":\"HIGH\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Supplier\",\"entityId\":\"V2-SUP-001\",\"retrievedAt\":\"2026-10-05T05:53:25.548153900Z\",\"version\":\"2026-10-05T05:53:09.113385Z\"}}}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_supplier",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_supplier"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 16.141101,
+      "request": {
+        "arguments": {
+          "id": "V2-SUP-002"
+        },
+        "requestId": "5c7f3656-3831-48c3-85cc-b540d1cf3090",
+        "toolName": "mcp.erpnext.procurement_get_supplier"
+      },
+      "result": {
+        "content": "{\"record\":{\"id\":\"V2-SUP-002\",\"name\":\"Cobalt Finch Fictional\",\"approved\":true,\"capacity\":\"MEDIUM\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Supplier\",\"entityId\":\"V2-SUP-002\",\"retrievedAt\":\"2026-10-05T05:53:25.569802400Z\",\"version\":\"2026-10-05T05:53:09.165144Z\"}}}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_supplier",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_supplier"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 17.8487,
+      "request": {
+        "arguments": {
+          "id": "V2-SUP-003"
+        },
+        "requestId": "0f4171e5-bcde-43b8-bc6e-4c671258cdf5",
+        "toolName": "mcp.erpnext.procurement_get_supplier"
+      },
+      "result": {
+        "content": "{\"record\":{\"id\":\"V2-SUP-003\",\"name\":\"Amber Circuit Fictional\",\"approved\":true,\"capacity\":\"HIGH\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Supplier\",\"entityId\":\"V2-SUP-003\",\"retrievedAt\":\"2026-10-05T05:53:25.590751800Z\",\"version\":\"2026-10-05T05:53:09.168348Z\"}}}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_supplier",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_supplier"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 27.0453,
+      "request": {
+        "arguments": {
+          "id": "V2-SUP-004"
+        },
+        "requestId": "7bf6d916-0d28-4fb9-9453-feab27880b94",
+        "toolName": "mcp.erpnext.procurement_get_supplier"
+      },
+      "result": {
+        "content": "{\"record\":{\"id\":\"V2-SUP-004\",\"name\":\"Silver Moss Fictional\",\"approved\":true,\"capacity\":\"LOW\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Supplier\",\"entityId\":\"V2-SUP-004\",\"retrievedAt\":\"2026-10-05T05:53:25.622103300Z\",\"version\":\"2026-10-05T05:53:09.171512Z\"}}}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_supplier",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_supplier"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 15.4292,
+      "request": {
+        "arguments": {
+          "id": "V2-SUP-005"
+        },
+        "requestId": "548321b3-05e0-4bf8-9adf-13406cc39b11",
+        "toolName": "mcp.erpnext.procurement_get_supplier"
+      },
+      "result": {
+        "content": "{\"record\":{\"id\":\"V2-SUP-005\",\"name\":\"Violet Harbor Fictional\",\"approved\":true,\"capacity\":\"MEDIUM\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Supplier\",\"entityId\":\"V2-SUP-005\",\"retrievedAt\":\"2026-10-05T05:53:25.641662700Z\",\"version\":\"2026-10-05T05:53:09.174526Z\"}}}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_supplier",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_supplier"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 14.750001,
+      "request": {
+        "arguments": {
+          "id": "V2-SUP-006"
+        },
+        "requestId": "60a44afd-d1e1-4720-a360-821254219aee",
+        "toolName": "mcp.erpnext.procurement_get_supplier"
+      },
+      "result": {
+        "content": "{\"record\":{\"id\":\"V2-SUP-006\",\"name\":\"Copper Kite Fictional\",\"approved\":false,\"capacity\":\"LOW\",\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Supplier\",\"entityId\":\"V2-SUP-006\",\"retrievedAt\":\"2026-10-05T05:53:25.660488900Z\",\"version\":\"2026-10-05T05:53:09.177680Z\"}}}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_supplier",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_supplier"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 23.7587,
+      "request": {
+        "arguments": {
+          "supplierId": "V2-SUP-001"
+        },
+        "requestId": "3e8fee5d-15c1-4e75-acd1-9d3e3f9f9b3d",
+        "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+      },
+      "result": {
+        "content": "{\"record\":{\"supplierId\":\"V2-SUP-001\",\"transactionCount\":6,\"onTimeRate\":0.98,\"qualityScore\":96.0,\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Procurement Supplier Performance\",\"entityId\":\"V2-SUP-001\",\"retrievedAt\":\"2026-10-05T05:53:25.687103Z\",\"version\":\"2026-10-05T05:53:09.472622Z\"}}}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_supplier_performance",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 15.4443,
+      "request": {
+        "arguments": {
+          "supplierId": "V2-SUP-002"
+        },
+        "requestId": "c11f2597-d289-4663-8e9c-3059a448d8f9",
+        "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+      },
+      "result": {
+        "content": "{\"record\":{\"supplierId\":\"V2-SUP-002\",\"transactionCount\":5,\"onTimeRate\":0.65,\"qualityScore\":97.0,\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Procurement Supplier Performance\",\"entityId\":\"V2-SUP-002\",\"retrievedAt\":\"2026-10-05T05:53:25.707188800Z\",\"version\":\"2026-10-05T05:53:09.480105Z\"}}}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_supplier_performance",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 12.6285,
+      "request": {
+        "arguments": {
+          "supplierId": "V2-SUP-003"
+        },
+        "requestId": "c4f2f551-687b-4a89-a175-104b6f2c86b6",
+        "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+      },
+      "result": {
+        "content": "{\"record\":{\"supplierId\":\"V2-SUP-003\",\"transactionCount\":4,\"onTimeRate\":0.96,\"qualityScore\":95.0,\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Procurement Supplier Performance\",\"entityId\":\"V2-SUP-003\",\"retrievedAt\":\"2026-10-05T05:53:25.724517600Z\",\"version\":\"2026-10-05T05:53:09.481690Z\"}}}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_supplier_performance",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 12.9652,
+      "request": {
+        "arguments": {
+          "supplierId": "V2-SUP-004"
+        },
+        "requestId": "614e0f60-72c7-463b-ac7f-328a0f747a37",
+        "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+      },
+      "result": {
+        "content": "{\"record\":{\"supplierId\":\"V2-SUP-004\",\"transactionCount\":3,\"onTimeRate\":0.72,\"qualityScore\":82.0,\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Procurement Supplier Performance\",\"entityId\":\"V2-SUP-004\",\"retrievedAt\":\"2026-10-05T05:53:25.741193Z\",\"version\":\"2026-10-05T05:53:09.483061Z\"}}}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_supplier_performance",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 13.402499,
+      "request": {
+        "arguments": {
+          "supplierId": "V2-SUP-005"
+        },
+        "requestId": "9a4f482d-bbb5-499c-a6e7-9c7b00ba2abc",
+        "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+      },
+      "result": {
+        "content": "{\"record\":{\"supplierId\":\"V2-SUP-005\",\"transactionCount\":4,\"onTimeRate\":0.88,\"qualityScore\":90.0,\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Procurement Supplier Performance\",\"entityId\":\"V2-SUP-005\",\"retrievedAt\":\"2026-10-05T05:53:25.758103400Z\",\"version\":\"2026-10-05T05:53:09.484475Z\"}}}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_supplier_performance",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 13.382399,
+      "request": {
+        "arguments": {
+          "supplierId": "V2-SUP-006"
+        },
+        "requestId": "00335474-37f6-4157-b5a8-a17a30b65e0e",
+        "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+      },
+      "result": {
+        "content": "{\"record\":{\"supplierId\":\"V2-SUP-006\",\"transactionCount\":2,\"onTimeRate\":0.55,\"qualityScore\":76.0,\"source\":{\"backend\":\"ERPNext\",\"entityType\":\"Procurement Supplier Performance\",\"entityId\":\"V2-SUP-006\",\"retrievedAt\":\"2026-10-05T05:53:25.775095700Z\",\"version\":\"2026-10-05T05:53:09.485711Z\"}}}",
+        "errorMessage": "",
+        "metadata": {
+          "mcpServerId": "erpnext",
+          "mcpServerName": "erpnext",
+          "mcpSessionGeneration": 1,
+          "mcpToolName": "procurement_get_supplier_performance",
+          "provider": "mcp"
+        },
+        "success": true,
+        "toolName": "mcp.erpnext.procurement_get_supplier_performance"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 14.9432,
+      "request": {
+        "arguments": {
+          "budget": 300000,
+          "currency": "CNY",
+          "hardConstraintsUpsert": {
+            "gpuMemoryMinGb": "24"
+          },
+          "preferencesUpsert": {
+            "deliveryPriority": "HIGH"
+          },
+          "productCategory": "AI Workstation",
+          "productDescription": "V2-WS-001",
+          "quantity": 20,
+          "requiredDeliveryDays": 21
+        },
+        "requestId": "facd67c5-cc07-4798-bef4-a4c789c2bc98",
+        "toolName": "procurement_case_patch"
+      },
+      "result": {
+        "content": "{\"caseId\":\"2640c923-aedd-4a78-8cd0-6959bfc1216b\",\"caseVersion\":1,\"status\":\"SOURCING\",\"state\":{\"productCategory\":\"AI Workstation\",\"productDescription\":\"V2-WS-001\",\"quantity\":20,\"budget\":300000,\"currency\":\"CNY\",\"requiredDeliveryDays\":21,\"hardConstraints\":{\"gpuMemoryMinGb\":\"24\"},\"preferences\":{\"deliveryPriority\":\"HIGH\"},\"excludedSuppliers\":[],\"missingFields\":[],\"currentPhase\":\"SOURCING\"},\"missingFields\":[],\"currentPhase\":\"SOURCING\",\"source\":\"authoritative-procurement-case-store\"}",
+        "errorMessage": "",
+        "metadata": {
+          "provider": "procurement",
+          "readOnly": false,
+          "sideEffect": true
+        },
+        "success": true,
+        "toolName": "procurement_case_patch"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 1037.8762,
+      "request": {
+        "arguments": {},
+        "requestId": "b4a8fbd6-91c7-4c14-a104-93f50e3325ee",
+        "toolName": "procurement_supplier_search"
+      },
+      "result": {
+        "content": "{\"caseVersion\":1,\"candidates\":[{\"supplierId\":\"V2-SUP-001\",\"supplierName\":\"Nebula Forge Fictional\",\"source\":\"mcp:erpnext\"},{\"supplierId\":\"V2-SUP-002\",\"supplierName\":\"Cobalt Finch Fictional\",\"source\":\"mcp:erpnext\"},{\"supplierId\":\"V2-SUP-003\",\"supplierName\":\"Amber Circuit Fictional\",\"source\":\"mcp:erpnext\"},{\"supplierId\":\"V2-SUP-004\",\"supplierName\":\"Silver Moss Fictional\",\"source\":\"mcp:erpnext\"},{\"supplierId\":\"V2-SUP-005\",\"supplierName\":\"Violet Harbor Fictional\",\"source\":\"mcp:erpnext\"}],\"offers\":[{\"supplierId\":\"V2-SUP-001\",\"productId\":\"V2-WS-001\",\"productName\":\"AI Workstation 01\",\"unitPrice\":12800.0,\"currency\":\"CNY\",\"quantity\":20,\"totalPrice\":256000.0,\"leadTimeDays\":12,\"warranty\":\"36 months\",\"specifications\":{\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":96.0,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-05T05:53:09.247496Z\"},\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-001\",\"budgetAvailable\":420000.0,\"departmentId\":\"V2-ALG\",\"performanceVersion\":\"2026-10-05T05:53:09.472622Z\",\"transactionCount\":6,\"budgetVersion\":\"2026-10-05T05:53:09.507252Z\",\"itemActive\":true,\"onTimeRate\":0.98,\"capacityUnits\":80,\"supplierVersion\":\"2026-10-05T05:53:09.113385Z\",\"budgetId\":\"V2-BUD-001\",\"gpuMemoryGb\":24},\"source\":\"mcp:erpnext\",\"fetchedAt\":\"2026-10-05T05:53:28.667837100Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-01-01:2026-10-05T05:53:09.373607Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"cc74ba22a72e5414c6588a8c4458e0a59605a44c58376402fbbd1ce2899cc0cd\"},{\"supplierId\":\"V2-SUP-002\",\"productId\":\"V2-WS-001\",\"productName\":\"AI Workstation 01\",\"unitPrice\":10900.0,\"currency\":\"CNY\",\"quantity\":20,\"totalPrice\":218000.0,\"leadTimeDays\":20,\"warranty\":\"36 months\",\"specifications\":{\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":97.0,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-05T05:53:09.247496Z\"},\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-002\",\"budgetAvailable\":420000.0,\"departmentId\":\"V2-ALG\",\"performanceVersion\":\"2026-10-05T05:53:09.480105Z\",\"transactionCount\":5,\"budgetVersion\":\"2026-10-05T05:53:09.507252Z\",\"itemActive\":true,\"onTimeRate\":0.65,\"capacityUnits\":35,\"supplierVersion\":\"2026-10-05T05:53:09.165144Z\",\"budgetId\":\"V2-BUD-001\",\"gpuMemoryGb\":24},\"source\":\"mcp:erpnext\",\"fetchedAt\":\"2026-10-05T05:53:28.668349300Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-02-01:2026-10-05T05:53:09.386805Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"6678fa1cc69f0fca1ec125c2777828663efc604c792c2ad824cc196fcc970655\"},{\"supplierId\":\"V2-SUP-003\",\"productId\":\"V2-WS-001\",\"productName\":\"AI Workstation 01\",\"unitPrice\":13700.0,\"currency\":\"CNY\",\"quantity\":20,\"totalPrice\":274000.0,\"leadTimeDays\":10,\"warranty\":\"36 months\",\"specifications\":{\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":95.0,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-05T05:53:09.247496Z\"},\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-003\",\"budgetAvailable\":420000.0,\"departmentId\":\"V2-ALG\",\"performanceVersion\":\"2026-10-05T05:53:09.481690Z\",\"transactionCount\":4,\"budgetVersion\":\"2026-10-05T05:53:09.507252Z\",\"itemActive\":true,\"onTimeRate\":0.96,\"capacityUnits\":100,\"supplierVersion\":\"2026-10-05T05:53:09.168348Z\",\"budgetId\":\"V2-BUD-001\",\"gpuMemoryGb\":24},\"source\":\"mcp:erpnext\",\"fetchedAt\":\"2026-10-05T05:53:28.668362700Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-03-01:2026-10-05T05:53:09.392272Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"52496898bb0c81bdfc925c8256cb68161fb6a57afb41d84bd2fb89ef5e7d00fa\"},{\"supplierId\":\"V2-SUP-005\",\"productId\":\"V2-WS-001\",\"productName\":\"AI Workstation 01\",\"unitPrice\":12500.0,\"currency\":\"CNY\",\"quantity\":20,\"totalPrice\":250000.0,\"leadTimeDays\":16,\"warranty\":\"36 months\",\"specifications\":{\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":90.0,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-05T05:53:09.247496Z\"},\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-005\",\"budgetAvailable\":420000.0,\"departmentId\":\"V2-ALG\",\"performanceVersion\":\"2026-10-05T05:53:09.484475Z\",\"transactionCount\":4,\"budgetVersion\":\"2026-10-05T05:53:09.507252Z\",\"itemActive\":true,\"onTimeRate\":0.88,\"capacityUnits\":45,\"supplierVersion\":\"2026-10-05T05:53:09.174526Z\",\"budgetId\":\"V2-BUD-001\",\"gpuMemoryGb\":24},\"source\":\"mcp:erpnext\",\"fetchedAt\":\"2026-10-05T05:53:28.668362700Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-05-01:2026-10-05T05:53:09.402401Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"23ff9b0a463b0ad44b3976a6b2d250654a63599164ebc320969f1a714687d784\"}],\"evaluations\":[{\"candidate\":{\"supplierId\":\"V2-SUP-001\",\"supplierName\":\"Nebula Forge Fictional\",\"source\":\"mcp:erpnext\"},\"offer\":{\"supplierId\":\"V2-SUP-001\",\"productId\":\"V2-WS-001\",\"productName\":\"AI Workstation 01\",\"unitPrice\":12800.0,\"currency\":\"CNY\",\"quantity\":20,\"totalPrice\":256000.0,\"leadTimeDays\":12,\"warranty\":\"36 months\",\"specifications\":{\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":96.0,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-05T05:53:09.247496Z\"},\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-001\",\"budgetAvailable\":420000.0,\"departmentId\":\"V2-ALG\",\"performanceVersion\":\"2026-10-05T05:53:09.472622Z\",\"transactionCount\":6,\"budgetVersion\":\"2026-10-05T05:53:09.507252Z\",\"itemActive\":true,\"onTimeRate\":0.98,\"capacityUnits\":80,\"supplierVersion\":\"2026-10-05T05:53:09.113385Z\",\"budgetId\":\"V2-BUD-001\",\"gpuMemoryGb\":24},\"source\":\"mcp:erpnext\",\"fetchedAt\":\"2026-10-05T05:53:28.667837100Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-01-01:2026-10-05T05:53:09.373607Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"cc74ba22a72e5414c6588a8c4458e0a59605a44c58376402fbbd1ce2899cc0cd\"},\"eligible\":true,\"failures\":[]},{\"candidate\":{\"supplierId\":\"V2-SUP-002\",\"supplierName\":\"Cobalt Finch Fictional\",\"source\":\"mcp:erpnext\"},\"offer\":{\"supplierId\":\"V2-SUP-002\",\"productId\":\"V2-WS-001\",\"productName\":\"AI Workstation 01\",\"unitPrice\":10900.0,\"currency\":\"CNY\",\"quantity\":20,\"totalPrice\":218000.0,\"leadTimeDays\":20,\"warranty\":\"36 months\",\"specifications\":{\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":97.0,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-05T05:53:09.247496Z\"},\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-002\",\"budgetAvailable\":420000.0,\"departmentId\":\"V2-ALG\",\"performanceVersion\":\"2026-10-05T05:53:09.480105Z\",\"transactionCount\":5,\"budgetVersion\":\"2026-10-05T05:53:09.507252Z\",\"itemActive\":true,\"onTimeRate\":0.65,\"capacityUnits\":35,\"supplierVersion\":\"2026-10-05T05:53:09.165144Z\",\"budgetId\":\"V2-BUD-001\",\"gpuMemoryGb\":24},\"source\":\"mcp:erpnext\",\"fetchedAt\":\"2026-10-05T05:53:28.668349300Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-02-01:2026-10-05T05:53:09.386805Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"6678fa1cc69f0fca1ec125c2777828663efc604c792c2ad824cc196fcc970655\"},\"eligible\":true,\"failures\":[]},{\"candidate\":{\"supplierId\":\"V2-SUP-003\",\"supplierName\":\"Amber Circuit Fictional\",\"source\":\"mcp:erpnext\"},\"offer\":{\"supplierId\":\"V2-SUP-003\",\"productId\":\"V2-WS-001\",\"productName\":\"AI Workstation 01\",\"unitPrice\":13700.0,\"currency\":\"CNY\",\"quantity\":20,\"totalPrice\":274000.0,\"leadTimeDays\":10,\"warranty\":\"36 months\",\"specifications\":{\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":95.0,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-05T05:53:09.247496Z\"},\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-003\",\"budgetAvailable\":420000.0,\"departmentId\":\"V2-ALG\",\"performanceVersion\":\"2026-10-05T05:53:09.481690Z\",\"transactionCount\":4,\"budgetVersion\":\"2026-10-05T05:53:09.507252Z\",\"itemActive\":true,\"onTimeRate\":0.96,\"capacityUnits\":100,\"supplierVersion\":\"2026-10-05T05:53:09.168348Z\",\"budgetId\":\"V2-BUD-001\",\"gpuMemoryGb\":24},\"source\":\"mcp:erpnext\",\"fetchedAt\":\"2026-10-05T05:53:28.668362700Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-03-01:2026-10-05T05:53:09.392272Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"52496898bb0c81bdfc925c8256cb68161fb6a57afb41d84bd2fb89ef5e7d00fa\"},\"eligible\":true,\"failures\":[]},{\"candidate\":{\"supplierId\":\"V2-SUP-005\",\"supplierName\":\"Violet Harbor Fictional\",\"source\":\"mcp:erpnext\"},\"offer\":{\"supplierId\":\"V2-SUP-005\",\"productId\":\"V2-WS-001\",\"productName\":\"AI Workstation 01\",\"unitPrice\":12500.0,\"currency\":\"CNY\",\"quantity\":20,\"totalPrice\":250000.0,\"leadTimeDays\":16,\"warranty\":\"36 months\",\"specifications\":{\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":90.0,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-05T05:53:09.247496Z\"},\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-005\",\"budgetAvailable\":420000.0,\"departmentId\":\"V2-ALG\",\"performanceVersion\":\"2026-10-05T05:53:09.484475Z\",\"transactionCount\":4,\"budgetVersion\":\"2026-10-05T05:53:09.507252Z\",\"itemActive\":true,\"onTimeRate\":0.88,\"capacityUnits\":45,\"supplierVersion\":\"2026-10-05T05:53:09.174526Z\",\"budgetId\":\"V2-BUD-001\",\"gpuMemoryGb\":24},\"source\":\"mcp:erpnext\",\"fetchedAt\":\"2026-10-05T05:53:28.668362700Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-05-01:2026-10-05T05:53:09.402401Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"23ff9b0a463b0ad44b3976a6b2d250654a63599164ebc320969f1a714687d784\"},\"eligible\":true,\"failures\":[]}],\"eligibleSuppliers\":[{\"supplierId\":\"V2-SUP-001\",\"supplierName\":\"Nebula Forge Fictional\",\"source\":\"mcp:erpnext\"},{\"supplierId\":\"V2-SUP-002\",\"supplierName\":\"Cobalt Finch Fictional\",\"source\":\"mcp:erpnext\"},{\"supplierId\":\"V2-SUP-003\",\"supplierName\":\"Amber Circuit Fictional\",\"source\":\"mcp:erpnext\"},{\"supplierId\":\"V2-SUP-005\",\"supplierName\":\"Violet Harbor Fictional\",\"source\":\"mcp:erpnext\"}],\"evidence\":[{\"evidenceId\":\"evidence-eca9cdcc1ce5037d81dfc92f\",\"supplierId\":\"V2-SUP-001\",\"evidenceType\":\"OFFER\",\"source\":\"mcp:erpnext\",\"fact\":\"商品 AI Workstation 01 单价 12800.0 CNY，总价 256000.0，交期 12 天，规格 {\\\"budgetAvailable\\\":420000.0,\\\"budgetId\\\":\\\"V2-BUD-001\\\",\\\"budgetVersion\\\":\\\"2026-10-05T05:53:09.507252Z\\\",\\\"capacityUnits\\\":80,\\\"departmentId\\\":\\\"V2-ALG\\\",\\\"gpuMemoryGb\\\":24,\\\"itemActive\\\":true,\\\"itemSource\\\":{\\\"backend\\\":\\\"ERPNext\\\",\\\"entityId\\\":\\\"V2-WS-001\\\",\\\"entityType\\\":\\\"Item\\\",\\\"version\\\":\\\"2026-10-05T05:53:09.247496Z\\\"},\\\"onTimeRate\\\":0.98,\\\"performanceEntity\\\":\\\"Procurement Supplier Performance:V2-SUP-001\\\",\\\"performanceVersion\\\":\\\"2026-10-05T05:53:09.472622Z\\\",\\\"priceBasis\\\":\\\"ERP_REFERENCE_PRICE\\\",\\\"qualityScore\\\":96.0,\\\"supplierVersion\\\":\\\"2026-10-05T05:53:09.113385Z\\\",\\\"transactionCount\\\":6}\",\"collectedAt\":\"2026-10-05T05:53:28.816027100Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-01-01:2026-10-05T05:53:09.373607Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"cc74ba22a72e5414c6588a8c4458e0a59605a44c58376402fbbd1ce2899cc0cd\"},{\"evidenceId\":\"evidence-33cafc23fe855a2d38a2c718\",\"supplierId\":\"V2-SUP-001\",\"evidenceType\":\"WARRANTY\",\"source\":\"mcp:erpnext\",\"fact\":\"质保：36 months\",\"collectedAt\":\"2026-10-05T05:53:28.816027100Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-01-01:2026-10-05T05:53:09.373607Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"cc74ba22a72e5414c6588a8c4458e0a59605a44c58376402fbbd1ce2899cc0cd\"},{\"evidenceId\":\"evidence-7ab555c40a4dbd7780d4976f\",\"supplierId\":\"V2-SUP-002\",\"evidenceType\":\"OFFER\",\"source\":\"mcp:erpnext\",\"fact\":\"商品 AI Workstation 01 单价 10900.0 CNY，总价 218000.0，交期 20 天，规格 {\\\"budgetAvailable\\\":420000.0,\\\"budgetId\\\":\\\"V2-BUD-001\\\",\\\"budgetVersion\\\":\\\"2026-10-05T05:53:09.507252Z\\\",\\\"capacityUnits\\\":35,\\\"departmentId\\\":\\\"V2-ALG\\\",\\\"gpuMemoryGb\\\":24,\\\"itemActive\\\":true,\\\"itemSource\\\":{\\\"backend\\\":\\\"ERPNext\\\",\\\"entityId\\\":\\\"V2-WS-001\\\",\\\"entityType\\\":\\\"Item\\\",\\\"version\\\":\\\"2026-10-05T05:53:09.247496Z\\\"},\\\"onTimeRate\\\":0.65,\\\"performanceEntity\\\":\\\"Procurement Supplier Performance:V2-SUP-002\\\",\\\"performanceVersion\\\":\\\"2026-10-05T05:53:09.480105Z\\\",\\\"priceBasis\\\":\\\"ERP_REFERENCE_PRICE\\\",\\\"qualityScore\\\":97.0,\\\"supplierVersion\\\":\\\"2026-10-05T05:53:09.165144Z\\\",\\\"transactionCount\\\":5}\",\"collectedAt\":\"2026-10-05T05:53:29.019941700Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-02-01:2026-10-05T05:53:09.386805Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"6678fa1cc69f0fca1ec125c2777828663efc604c792c2ad824cc196fcc970655\"},{\"evidenceId\":\"evidence-cdab855240b9d274354da184\",\"supplierId\":\"V2-SUP-002\",\"evidenceType\":\"WARRANTY\",\"source\":\"mcp:erpnext\",\"fact\":\"质保：36 months\",\"collectedAt\":\"2026-10-05T05:53:29.019941700Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-02-01:2026-10-05T05:53:09.386805Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"6678fa1cc69f0fca1ec125c2777828663efc604c792c2ad824cc196fcc970655\"},{\"evidenceId\":\"evidence-4e65d662473cfd5b40bbeacf\",\"supplierId\":\"V2-SUP-003\",\"evidenceType\":\"OFFER\",\"source\":\"mcp:erpnext\",\"fact\":\"商品 AI Workstation 01 单价 13700.0 CNY，总价 274000.0，交期 10 天，规格 {\\\"budgetAvailable\\\":420000.0,\\\"budgetId\\\":\\\"V2-BUD-001\\\",\\\"budgetVersion\\\":\\\"2026-10-05T05:53:09.507252Z\\\",\\\"capacityUnits\\\":100,\\\"departmentId\\\":\\\"V2-ALG\\\",\\\"gpuMemoryGb\\\":24,\\\"itemActive\\\":true,\\\"itemSource\\\":{\\\"backend\\\":\\\"ERPNext\\\",\\\"entityId\\\":\\\"V2-WS-001\\\",\\\"entityType\\\":\\\"Item\\\",\\\"version\\\":\\\"2026-10-05T05:53:09.247496Z\\\"},\\\"onTimeRate\\\":0.96,\\\"performanceEntity\\\":\\\"Procurement Supplier Performance:V2-SUP-003\\\",\\\"performanceVersion\\\":\\\"2026-10-05T05:53:09.481690Z\\\",\\\"priceBasis\\\":\\\"ERP_REFERENCE_PRICE\\\",\\\"qualityScore\\\":95.0,\\\"supplierVersion\\\":\\\"2026-10-05T05:53:09.168348Z\\\",\\\"transactionCount\\\":4}\",\"collectedAt\":\"2026-10-05T05:53:29.170806200Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-03-01:2026-10-05T05:53:09.392272Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"52496898bb0c81bdfc925c8256cb68161fb6a57afb41d84bd2fb89ef5e7d00fa\"},{\"evidenceId\":\"evidence-bf7ac6c2cf892c8827694fa0\",\"supplierId\":\"V2-SUP-003\",\"evidenceType\":\"WARRANTY\",\"source\":\"mcp:erpnext\",\"fact\":\"质保：36 months\",\"collectedAt\":\"2026-10-05T05:53:29.170806200Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-03-01:2026-10-05T05:53:09.392272Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"52496898bb0c81bdfc925c8256cb68161fb6a57afb41d84bd2fb89ef5e7d00fa\"},{\"evidenceId\":\"evidence-c752c243617d58073d740d08\",\"supplierId\":\"V2-SUP-005\",\"evidenceType\":\"OFFER\",\"source\":\"mcp:erpnext\",\"fact\":\"商品 AI Workstation 01 单价 12500.0 CNY，总价 250000.0，交期 16 天，规格 {\\\"budgetAvailable\\\":420000.0,\\\"budgetId\\\":\\\"V2-BUD-001\\\",\\\"budgetVersion\\\":\\\"2026-10-05T05:53:09.507252Z\\\",\\\"capacityUnits\\\":45,\\\"departmentId\\\":\\\"V2-ALG\\\",\\\"gpuMemoryGb\\\":24,\\\"itemActive\\\":true,\\\"itemSource\\\":{\\\"backend\\\":\\\"ERPNext\\\",\\\"entityId\\\":\\\"V2-WS-001\\\",\\\"entityType\\\":\\\"Item\\\",\\\"version\\\":\\\"2026-10-05T05:53:09.247496Z\\\"},\\\"onTimeRate\\\":0.88,\\\"performanceEntity\\\":\\\"Procurement Supplier Performance:V2-SUP-005\\\",\\\"performanceVersion\\\":\\\"2026-10-05T05:53:09.484475Z\\\",\\\"priceBasis\\\":\\\"ERP_REFERENCE_PRICE\\\",\\\"qualityScore\\\":90.0,\\\"supplierVersion\\\":\\\"2026-10-05T05:53:09.174526Z\\\",\\\"transactionCount\\\":4}\",\"collectedAt\":\"2026-10-05T05:53:29.443911200Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-05-01:2026-10-05T05:53:09.402401Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"23ff9b0a463b0ad44b3976a6b2d250654a63599164ebc320969f1a714687d784\"},{\"evidenceId\":\"evidence-9e0b85b8b72e8f1d47735294\",\"supplierId\":\"V2-SUP-005\",\"evidenceType\":\"WARRANTY\",\"source\":\"mcp:erpnext\",\"fact\":\"质保：36 months\",\"collectedAt\":\"2026-10-05T05:53:29.443911200Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-05-01:2026-10-05T05:53:09.402401Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"23ff9b0a463b0ad44b3976a6b2d250654a63599164ebc320969f1a714687d784\"}],\"recommendationAvailable\":false,\"source\":\"provider-canonical-model\"}",
+        "errorMessage": "",
+        "metadata": {
+          "provider": "procurement",
+          "readOnly": true,
+          "sideEffect": false
+        },
+        "success": true,
+        "toolName": "procurement_supplier_search"
+      }
+    },
+    {
+      "actor": "agent",
+      "latencyMs": 787.6613,
+      "request": {
+        "arguments": {
+          "confidence": 0.82,
+          "evaluatedCaseVersion": 1,
+          "evidenceRefs": [
+            "evidence-eca9cdcc1ce5037d81dfc92f",
+            "evidence-33cafc23fe855a2d38a2c718",
+            "evidence-7ab555c40a4dbd7780d4976f",
+            "evidence-cdab855240b9d274354da184",
+            "evidence-4e65d662473cfd5b40bbeacf",
+            "evidence-bf7ac6c2cf892c8827694fa0",
+            "evidence-c752c243617d58073d740d08",
+            "evidence-9e0b85b8b72e8f1d47735294"
+          ],
+          "selectedSupplierId": "V2-SUP-001",
+          "tradeoffDimensions": [
+            "PRICE",
+            "DELIVERY",
+            "WARRANTY",
+            "SPECIFICATION"
+          ]
+        },
+        "requestId": "f1557813-d291-4115-ac40-f767ea4a4148",
+        "toolName": "procurement_recommendation_finalize"
+      },
+      "result": {
+        "content": "{\"caseId\":\"2640c923-aedd-4a78-8cd0-6959bfc1216b\",\"source\":\"verified-provider-snapshot\",\"evidence\":[{\"evidenceId\":\"evidence-eca9cdcc1ce5037d81dfc92f\",\"supplierId\":\"V2-SUP-001\",\"evidenceType\":\"OFFER\",\"source\":\"mcp:erpnext\",\"fact\":\"商品 AI Workstation 01 单价 12800.0 CNY，总价 256000.0，交期 12 天，规格 {\\\"budgetAvailable\\\":420000.0,\\\"budgetId\\\":\\\"V2-BUD-001\\\",\\\"budgetVersion\\\":\\\"2026-10-05T05:53:09.507252Z\\\",\\\"capacityUnits\\\":80,\\\"departmentId\\\":\\\"V2-ALG\\\",\\\"gpuMemoryGb\\\":24,\\\"itemActive\\\":true,\\\"itemSource\\\":{\\\"backend\\\":\\\"ERPNext\\\",\\\"entityId\\\":\\\"V2-WS-001\\\",\\\"entityType\\\":\\\"Item\\\",\\\"version\\\":\\\"2026-10-05T05:53:09.247496Z\\\"},\\\"onTimeRate\\\":0.98,\\\"performanceEntity\\\":\\\"Procurement Supplier Performance:V2-SUP-001\\\",\\\"performanceVersion\\\":\\\"2026-10-05T05:53:09.472622Z\\\",\\\"priceBasis\\\":\\\"ERP_REFERENCE_PRICE\\\",\\\"qualityScore\\\":96.0,\\\"supplierVersion\\\":\\\"2026-10-05T05:53:09.113385Z\\\",\\\"transactionCount\\\":6}\",\"collectedAt\":\"2026-10-05T05:53:31.107400200Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-01-01:2026-10-05T05:53:09.373607Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"cc74ba22a72e5414c6588a8c4458e0a59605a44c58376402fbbd1ce2899cc0cd\"},{\"evidenceId\":\"evidence-33cafc23fe855a2d38a2c718\",\"supplierId\":\"V2-SUP-001\",\"evidenceType\":\"WARRANTY\",\"source\":\"mcp:erpnext\",\"fact\":\"质保：36 months\",\"collectedAt\":\"2026-10-05T05:53:31.107400200Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-01-01:2026-10-05T05:53:09.373607Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"cc74ba22a72e5414c6588a8c4458e0a59605a44c58376402fbbd1ce2899cc0cd\"},{\"evidenceId\":\"evidence-7ab555c40a4dbd7780d4976f\",\"supplierId\":\"V2-SUP-002\",\"evidenceType\":\"OFFER\",\"source\":\"mcp:erpnext\",\"fact\":\"商品 AI Workstation 01 单价 10900.0 CNY，总价 218000.0，交期 20 天，规格 {\\\"budgetAvailable\\\":420000.0,\\\"budgetId\\\":\\\"V2-BUD-001\\\",\\\"budgetVersion\\\":\\\"2026-10-05T05:53:09.507252Z\\\",\\\"capacityUnits\\\":35,\\\"departmentId\\\":\\\"V2-ALG\\\",\\\"gpuMemoryGb\\\":24,\\\"itemActive\\\":true,\\\"itemSource\\\":{\\\"backend\\\":\\\"ERPNext\\\",\\\"entityId\\\":\\\"V2-WS-001\\\",\\\"entityType\\\":\\\"Item\\\",\\\"version\\\":\\\"2026-10-05T05:53:09.247496Z\\\"},\\\"onTimeRate\\\":0.65,\\\"performanceEntity\\\":\\\"Procurement Supplier Performance:V2-SUP-002\\\",\\\"performanceVersion\\\":\\\"2026-10-05T05:53:09.480105Z\\\",\\\"priceBasis\\\":\\\"ERP_REFERENCE_PRICE\\\",\\\"qualityScore\\\":97.0,\\\"supplierVersion\\\":\\\"2026-10-05T05:53:09.165144Z\\\",\\\"transactionCount\\\":5}\",\"collectedAt\":\"2026-10-05T05:53:31.239058500Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-02-01:2026-10-05T05:53:09.386805Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"6678fa1cc69f0fca1ec125c2777828663efc604c792c2ad824cc196fcc970655\"},{\"evidenceId\":\"evidence-cdab855240b9d274354da184\",\"supplierId\":\"V2-SUP-002\",\"evidenceType\":\"WARRANTY\",\"source\":\"mcp:erpnext\",\"fact\":\"质保：36 months\",\"collectedAt\":\"2026-10-05T05:53:31.239058500Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-02-01:2026-10-05T05:53:09.386805Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"6678fa1cc69f0fca1ec125c2777828663efc604c792c2ad824cc196fcc970655\"},{\"evidenceId\":\"evidence-4e65d662473cfd5b40bbeacf\",\"supplierId\":\"V2-SUP-003\",\"evidenceType\":\"OFFER\",\"source\":\"mcp:erpnext\",\"fact\":\"商品 AI Workstation 01 单价 13700.0 CNY，总价 274000.0，交期 10 天，规格 {\\\"budgetAvailable\\\":420000.0,\\\"budgetId\\\":\\\"V2-BUD-001\\\",\\\"budgetVersion\\\":\\\"2026-10-05T05:53:09.507252Z\\\",\\\"capacityUnits\\\":100,\\\"departmentId\\\":\\\"V2-ALG\\\",\\\"gpuMemoryGb\\\":24,\\\"itemActive\\\":true,\\\"itemSource\\\":{\\\"backend\\\":\\\"ERPNext\\\",\\\"entityId\\\":\\\"V2-WS-001\\\",\\\"entityType\\\":\\\"Item\\\",\\\"version\\\":\\\"2026-10-05T05:53:09.247496Z\\\"},\\\"onTimeRate\\\":0.96,\\\"performanceEntity\\\":\\\"Procurement Supplier Performance:V2-SUP-003\\\",\\\"performanceVersion\\\":\\\"2026-10-05T05:53:09.481690Z\\\",\\\"priceBasis\\\":\\\"ERP_REFERENCE_PRICE\\\",\\\"qualityScore\\\":95.0,\\\"supplierVersion\\\":\\\"2026-10-05T05:53:09.168348Z\\\",\\\"transactionCount\\\":4}\",\"collectedAt\":\"2026-10-05T05:53:31.391540300Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-03-01:2026-10-05T05:53:09.392272Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"52496898bb0c81bdfc925c8256cb68161fb6a57afb41d84bd2fb89ef5e7d00fa\"},{\"evidenceId\":\"evidence-bf7ac6c2cf892c8827694fa0\",\"supplierId\":\"V2-SUP-003\",\"evidenceType\":\"WARRANTY\",\"source\":\"mcp:erpnext\",\"fact\":\"质保：36 months\",\"collectedAt\":\"2026-10-05T05:53:31.391540300Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-03-01:2026-10-05T05:53:09.392272Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"52496898bb0c81bdfc925c8256cb68161fb6a57afb41d84bd2fb89ef5e7d00fa\"},{\"evidenceId\":\"evidence-c752c243617d58073d740d08\",\"supplierId\":\"V2-SUP-005\",\"evidenceType\":\"OFFER\",\"source\":\"mcp:erpnext\",\"fact\":\"商品 AI Workstation 01 单价 12500.0 CNY，总价 250000.0，交期 16 天，规格 {\\\"budgetAvailable\\\":420000.0,\\\"budgetId\\\":\\\"V2-BUD-001\\\",\\\"budgetVersion\\\":\\\"2026-10-05T05:53:09.507252Z\\\",\\\"capacityUnits\\\":45,\\\"departmentId\\\":\\\"V2-ALG\\\",\\\"gpuMemoryGb\\\":24,\\\"itemActive\\\":true,\\\"itemSource\\\":{\\\"backend\\\":\\\"ERPNext\\\",\\\"entityId\\\":\\\"V2-WS-001\\\",\\\"entityType\\\":\\\"Item\\\",\\\"version\\\":\\\"2026-10-05T05:53:09.247496Z\\\"},\\\"onTimeRate\\\":0.88,\\\"performanceEntity\\\":\\\"Procurement Supplier Performance:V2-SUP-005\\\",\\\"performanceVersion\\\":\\\"2026-10-05T05:53:09.484475Z\\\",\\\"priceBasis\\\":\\\"ERP_REFERENCE_PRICE\\\",\\\"qualityScore\\\":90.0,\\\"supplierVersion\\\":\\\"2026-10-05T05:53:09.174526Z\\\",\\\"transactionCount\\\":4}\",\"collectedAt\":\"2026-10-05T05:53:31.519980400Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-05-01:2026-10-05T05:53:09.402401Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"23ff9b0a463b0ad44b3976a6b2d250654a63599164ebc320969f1a714687d784\"},{\"evidenceId\":\"evidence-9e0b85b8b72e8f1d47735294\",\"supplierId\":\"V2-SUP-005\",\"evidenceType\":\"WARRANTY\",\"source\":\"mcp:erpnext\",\"fact\":\"质保：36 months\",\"collectedAt\":\"2026-10-05T05:53:31.519980400Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-05-01:2026-10-05T05:53:09.402401Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"23ff9b0a463b0ad44b3976a6b2d250654a63599164ebc320969f1a714687d784\"}],\"caseVersion\":1,\"recommendation\":{\"recommendedSupplier\":{\"supplierId\":\"V2-SUP-001\",\"supplierName\":\"Nebula Forge Fictional\",\"source\":\"mcp:erpnext\"},\"selectedOffer\":{\"supplierId\":\"V2-SUP-001\",\"productId\":\"V2-WS-001\",\"productName\":\"AI Workstation 01\",\"unitPrice\":12800.0,\"currency\":\"CNY\",\"quantity\":20,\"totalPrice\":256000.0,\"leadTimeDays\":12,\"warranty\":\"36 months\",\"specifications\":{\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":96.0,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-05T05:53:09.247496Z\"},\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-001\",\"budgetAvailable\":420000.0,\"departmentId\":\"V2-ALG\",\"performanceVersion\":\"2026-10-05T05:53:09.472622Z\",\"transactionCount\":6,\"budgetVersion\":\"2026-10-05T05:53:09.507252Z\",\"itemActive\":true,\"onTimeRate\":0.98,\"capacityUnits\":80,\"supplierVersion\":\"2026-10-05T05:53:09.113385Z\",\"budgetId\":\"V2-BUD-001\",\"gpuMemoryGb\":24},\"source\":\"mcp:erpnext\",\"fetchedAt\":\"2026-10-05T05:53:30.968375400Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-01-01:2026-10-05T05:53:09.373607Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"cc74ba22a72e5414c6588a8c4458e0a59605a44c58376402fbbd1ce2899cc0cd\"},\"eligibleAlternatives\":[{\"supplierId\":\"V2-SUP-002\",\"supplierName\":\"Cobalt Finch Fictional\",\"source\":\"mcp:erpnext\"},{\"supplierId\":\"V2-SUP-003\",\"supplierName\":\"Amber Circuit Fictional\",\"source\":\"mcp:erpnext\"},{\"supplierId\":\"V2-SUP-005\",\"supplierName\":\"Violet Harbor Fictional\",\"source\":\"mcp:erpnext\"}],\"alternativeOffers\":[{\"supplierId\":\"V2-SUP-002\",\"productId\":\"V2-WS-001\",\"productName\":\"AI Workstation 01\",\"unitPrice\":10900.0,\"currency\":\"CNY\",\"quantity\":20,\"totalPrice\":218000.0,\"leadTimeDays\":20,\"warranty\":\"36 months\",\"specifications\":{\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":97.0,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-05T05:53:09.247496Z\"},\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-002\",\"budgetAvailable\":420000.0,\"departmentId\":\"V2-ALG\",\"performanceVersion\":\"2026-10-05T05:53:09.480105Z\",\"transactionCount\":5,\"budgetVersion\":\"2026-10-05T05:53:09.507252Z\",\"itemActive\":true,\"onTimeRate\":0.65,\"capacityUnits\":35,\"supplierVersion\":\"2026-10-05T05:53:09.165144Z\",\"budgetId\":\"V2-BUD-001\",\"gpuMemoryGb\":24},\"source\":\"mcp:erpnext\",\"fetchedAt\":\"2026-10-05T05:53:30.968881500Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-02-01:2026-10-05T05:53:09.386805Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"6678fa1cc69f0fca1ec125c2777828663efc604c792c2ad824cc196fcc970655\"},{\"supplierId\":\"V2-SUP-003\",\"productId\":\"V2-WS-001\",\"productName\":\"AI Workstation 01\",\"unitPrice\":13700.0,\"currency\":\"CNY\",\"quantity\":20,\"totalPrice\":274000.0,\"leadTimeDays\":10,\"warranty\":\"36 months\",\"specifications\":{\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":95.0,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-05T05:53:09.247496Z\"},\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-003\",\"budgetAvailable\":420000.0,\"departmentId\":\"V2-ALG\",\"performanceVersion\":\"2026-10-05T05:53:09.481690Z\",\"transactionCount\":4,\"budgetVersion\":\"2026-10-05T05:53:09.507252Z\",\"itemActive\":true,\"onTimeRate\":0.96,\"capacityUnits\":100,\"supplierVersion\":\"2026-10-05T05:53:09.168348Z\",\"budgetId\":\"V2-BUD-001\",\"gpuMemoryGb\":24},\"source\":\"mcp:erpnext\",\"fetchedAt\":\"2026-10-05T05:53:30.969019400Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-03-01:2026-10-05T05:53:09.392272Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"52496898bb0c81bdfc925c8256cb68161fb6a57afb41d84bd2fb89ef5e7d00fa\"},{\"supplierId\":\"V2-SUP-005\",\"productId\":\"V2-WS-001\",\"productName\":\"AI Workstation 01\",\"unitPrice\":12500.0,\"currency\":\"CNY\",\"quantity\":20,\"totalPrice\":250000.0,\"leadTimeDays\":16,\"warranty\":\"36 months\",\"specifications\":{\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":90.0,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-05T05:53:09.247496Z\"},\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-005\",\"budgetAvailable\":420000.0,\"departmentId\":\"V2-ALG\",\"performanceVersion\":\"2026-10-05T05:53:09.484475Z\",\"transactionCount\":4,\"budgetVersion\":\"2026-10-05T05:53:09.507252Z\",\"itemActive\":true,\"onTimeRate\":0.88,\"capacityUnits\":45,\"supplierVersion\":\"2026-10-05T05:53:09.174526Z\",\"budgetId\":\"V2-BUD-001\",\"gpuMemoryGb\":24},\"source\":\"mcp:erpnext\",\"fetchedAt\":\"2026-10-05T05:53:30.969019400Z\",\"sourceRecordId\":\"ERPNext:Procurement Item Supplier:V2-REL-05-01:2026-10-05T05:53:09.402401Z\",\"sourceSnapshot\":\"ERPNext:Item:V2-WS-001:2026-10-05T05:53:09.247496Z\",\"sourceAsOf\":\"2026-10-05T05:53:09.247496Z\",\"sourceDigest\":\"23ff9b0a463b0ad44b3976a6b2d250654a63599164ebc320969f1a714687d784\"}],\"matchedConstraints\":[\"BUDGET\",\"DELIVERY\",\"gpuMemoryMinGb\"],\"rejectedCandidates\":[],\"evidenceRefs\":[\"evidence-eca9cdcc1ce5037d81dfc92f\",\"evidence-33cafc23fe855a2d38a2c718\",\"evidence-7ab555c40a4dbd7780d4976f\",\"evidence-cdab855240b9d274354da184\",\"evidence-4e65d662473cfd5b40bbeacf\",\"evidence-bf7ac6c2cf892c8827694fa0\",\"evidence-c752c243617d58073d740d08\",\"evidence-9e0b85b8b72e8f1d47735294\"],\"tradeoffDimensions\":[\"PRICE\",\"DELIVERY\",\"WARRANTY\",\"SPECIFICATION\"],\"confidence\":0.82}}",
+        "errorMessage": "",
+        "metadata": {
+          "provider": "procurement",
+          "readOnly": true,
+          "sideEffect": false
+        },
+        "success": true,
+        "toolName": "procurement_recommendation_finalize"
+      }
+    }
+  ]
+}

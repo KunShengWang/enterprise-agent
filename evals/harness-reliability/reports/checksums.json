@@ -1,0 +1,13 @@
+{
+  "deterministic.json": "4f65abb24d1e77f3838f23ce7491f77de760ed8f86065ff1d2beef363f3aa1ee",
+  "evidence-scan.json": "14e61ce9b07692e98d36a73d1a6d37f5f82bdead22a5a404ca956608ce8626ce",
+  "evidence.zip": "1f712c7cbd66345c469f8ea86c44e37637369dea15851cfaf760d52b39b4fac7",
+  "git-status.txt": "01ec37cfcddc3e55feb057483796e6f5b2df4ab400ead32ff53531eac532fdb2",
+  "remote-verification.json": "074c01dc7d9b677630648a92e6d9e23db364397445e502a405345d582b7e4079",
+  "retry-observations.json": "bdd99287083b68fb7baaacff8be7af6d5c8c11e648c1fd690034b16106b8e8aa",
+  "rob01-result.json": "4f86beca9679a2de478fa417879539b769a4d991674baac470510c260ca9a2cd",
+  "rob01-summary.json": "e0d1497c4dc3b8082af096f69a7876fefacaacd2191c260ee46c52ccd8c13f0d",
+  "scope.json": "cca601da9174fb5a6fcaea524f7123043c1216bd8655b6f0d33836bb075c4255",
+  "source.patch": "c0b1e93a3d729a1791a3324ef357a273fc82e5558b90ac844ed02104cf56e57d",
+  "workflow-archive.json": "ee79b7218a0d7852706b043cfba190319f8938eb16bf5f5b3002933e1f0eaabd"
+}

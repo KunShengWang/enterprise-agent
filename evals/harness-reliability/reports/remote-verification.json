@@ -1,0 +1,9 @@
+{
+  "refs": {
+    "refs/heads/feat/procurement-workflow": "f29ad0419314340b5a1b54aed10b84e89a8fe7e1",
+    "refs/tags/procurement-context-v1": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+    "refs/tags/procurement-workflow-experimental-v1": "3817f03e610f3bace71b0dccb1a6a6b067c77c16",
+    "refs/tags/procurement-workflow-experimental-v1^{}": "f29ad0419314340b5a1b54aed10b84e89a8fe7e1"
+  },
+  "all_prior_local_tags_unchanged": true
+}

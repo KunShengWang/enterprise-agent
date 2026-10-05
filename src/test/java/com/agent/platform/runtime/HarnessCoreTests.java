@@ -79,7 +79,7 @@ class HarnessCoreTests {
         assertTimeoutPreemptively(Duration.ofSeconds(2), () -> {
             var result = ToolExecutionDeadline.call(request(),definition(true),()->{new CountDownLatch(1).await();return null;});
             assertEquals(ToolExecutionOutcome.RETRYABLE_ERROR,result.outcome());
-            assertEquals(false,result.metadata().get("retryable")); // Classification does not introduce retry.
+            assertEquals(true,result.metadata().get("retryable")); // Safe read; policy still enforces effect and budget.
         });
     }
     @Test void timedOutWriteRemainsUncertainAndIsNotRetried() {

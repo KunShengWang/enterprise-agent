@@ -65,6 +65,10 @@ public final class ProcurementV2TrialDriver {
             driver.controls.put("effectiveModelOptions",Map.of("model",modelOptions.getModel(),"temperature",modelOptions.getTemperature(),"maxTokens",modelOptions.getMaxTokens()));
             driver.controls.put("reasoningSetting","not explicitly configured by Phase-1");
             var server=new McpProperties.Server(); server.setServerName("erpnext"); server.setToolNamePrefix("mcp.erpnext.");
+            // The eval transport inherits operator trust from the same first-party production connection.
+            server.setTrustedProcurement(context.getBean(McpProperties.class).getServers().stream()
+                    .anyMatch(s -> "erpnext".equals(s.getServerName()) && "mcp.erpnext.".equals(s.getToolNamePrefix())
+                            && s.isEnabled() && s.isTrustedProcurement()));
             server.setCommand(Path.of(System.getProperty("java.home"),"bin",System.getProperty("os.name").startsWith("Windows")?"java.exe":"java").toString());
             server.setArgs(List.of("-cp",System.getProperty("java.class.path"),ProcurementMcpServer.class.getName()));
             var mcpProperties=new McpProperties(); mcpProperties.setServers(List.of(server));

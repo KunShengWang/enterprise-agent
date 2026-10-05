@@ -1,0 +1,30 @@
+{
+  "branch": "feat/harness-reliability",
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "workflow_archive": "f29ad0419314340b5a1b54aed10b84e89a8fe7e1",
+  "index_empty": true,
+  "handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "handler_unchanged": true,
+  "production_unchanged_since_model": true,
+  "phase4_procurement_unchanged": true,
+  "phase4_context_unchanged": true,
+  "workflow_source_absent": true,
+  "new_branch_committed": false,
+  "new_branch_pushed": false,
+  "model_trials": 1,
+  "dev_run": false,
+  "files": [
+    "src/main/java/com/agent/platform/config/McpProperties.java",
+    "src/main/java/com/agent/platform/mcp/StdioMcpToolGateway.java",
+    "src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java",
+    "src/main/java/com/agent/platform/runtime/DefaultAgentToolRuntime.java",
+    "src/main/java/com/agent/platform/runtime/ToolExecutionDeadline.java",
+    "src/main/java/com/agent/platform/runtime/ToolRetryPolicy.java",
+    "src/main/resources/application-erpnext.yaml",
+    "src/test/java/com/agent/platform/mcp/McpAnnotationTestServer.java",
+    "src/test/java/com/agent/platform/procurement/ProcurementV2TrialDriver.java",
+    "src/test/java/com/agent/platform/runtime/HarnessCoreTests.java",
+    "src/test/java/com/agent/platform/runtime/McpToolEffectContractTests.java",
+    "src/test/java/com/agent/platform/runtime/ToolRetryPolicyTests.java"
+  ]
+}
