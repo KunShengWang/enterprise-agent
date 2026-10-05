@@ -1,0 +1,27 @@
+{
+  "valid_new_trials": 3,
+  "infra_attempts": 0,
+  "reused_trials": 1,
+  "cost": {
+    "new_trials": {
+      "input_tokens": 110084,
+      "output_tokens": 5312,
+      "total_tokens": 115396,
+      "tool_calls": 34,
+      "tool_errors": 2,
+      "turns": 19,
+      "task_latency_ms": 50837.9692,
+      "wall_clock_seconds": 124.84399999999732
+    },
+    "including_reused": {
+      "input_tokens": 151383,
+      "output_tokens": 7741,
+      "total_tokens": 159124,
+      "tool_calls": 45,
+      "tool_errors": 2,
+      "turns": 27,
+      "task_latency_ms": 73648.0494,
+      "wall_clock_seconds": 176.64099999999598
+    }
+  }
+}

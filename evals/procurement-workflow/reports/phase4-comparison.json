@@ -1,0 +1,33 @@
+{
+  "gate": "DESCRIPTIVE_ONLY_INCOMPLETE_FAILED_SMOKE",
+  "matched_task": "REQ-01",
+  "same_model_options": true,
+  "phase4": {
+    "task_id": "REQ-01",
+    "status": "PASS",
+    "input_tokens": 50620,
+    "output_tokens": 1696,
+    "total_tokens": 52316,
+    "peak_context_tokens": 16410,
+    "tool_calls": 7,
+    "model_calls": 6,
+    "turns": 6,
+    "task_latency_ms": 18449.7667,
+    "resolved_model": "deepseek-flash"
+  },
+  "workflow": {
+    "task_id": "REQ-01",
+    "status": "FAIL",
+    "input_tokens": 94785,
+    "output_tokens": 2666,
+    "total_tokens": 97451,
+    "peak_context_tokens": 13852,
+    "tool_calls": 20,
+    "model_calls": 11,
+    "turns": 11,
+    "task_latency_ms": 24549.196,
+    "resolved_model": "deepseek-flash"
+  },
+  "dev_comparison": "NOT_RUN",
+  "caveat": "One failed Workflow task versus one passed historical task; different completion boundary. Not an efficiency result; immutable provider build unavailable."
+}

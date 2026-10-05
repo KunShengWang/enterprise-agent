@@ -4,6 +4,7 @@ package com.agent.platform.runtime;
  * Runtime 对外发布且先落库的统一事件类型。
  */
 public enum AgentEventType {
+    WORKFLOW_EVIDENCE_CARRIED,
     RUN_STARTED,// 运行已启动
     RUN_PAUSE_REQUESTED,// 已请求在安全检查点暂停
     RUN_PAUSED,// 已在安全检查点暂停
@@ -13,6 +14,8 @@ public enum AgentEventType {
     MODEL_STARTED,// 模型已启动
     MODEL_DELTA,// 模型增量
     MODEL_COMPLETED,// 模型已完成
+    STRUCTURED_OUTPUT_VALIDATED,
+    STRUCTURED_OUTPUT_REJECTED,
     MODEL_FAILED,// 模型失败
     TOOL_REQUESTED,// 工具请求
     POLICY_DECIDED,// 政策已决定

@@ -1,0 +1,573 @@
+[
+  {
+    "task": "RFQ-02",
+    "stage": "REQUISITION",
+    "metrics": {
+      "run_id": "4faa5583-a22d-4ca5-9482-ed9a7303774a",
+      "model_calls": 3,
+      "input_tokens": 12484,
+      "output_tokens": 522,
+      "total_tokens": 13006,
+      "peak_context_tokens": 4846,
+      "tool_calls": 4,
+      "model_latency_ms": 3962.1222,
+      "carried_context_estimated_tokens": 12.0,
+      "state": "COMPLETED",
+      "stop_reason": null,
+      "budget": {
+        "cancelled": false,
+        "deadline": "2026-10-04T10:35:57.535944Z",
+        "estimatedCost": 0.0,
+        "executionPaused": false,
+        "inputTokens": 12484,
+        "modelCalls": 3,
+        "outputTokens": 522,
+        "remainingExecutionMillis": 231053,
+        "startedAt": "2026-10-04T10:31:57.535944Z",
+        "toolCalls": 4,
+        "turns": 3
+      }
+    },
+    "structured_output": {
+      "typed_result_valid": true,
+      "output_type": "com.agent.platform.procurement.workflow.RequisitionStageResult",
+      "structured_output_initial_success": true,
+      "structured_output_repair_count": 0,
+      "structured_output_failure_count": 0,
+      "repair_tokens": 0,
+      "repair_latency_ms": 0,
+      "json_mode_requested": true,
+      "events": [
+        {
+          "content": "typed output validated",
+          "createdAt": "2026-10-04T10:32:06.476216600Z",
+          "eventId": "a626e8a1-e69b-4c77-ae3e-aa6e4e0b1e1d",
+          "payload": {
+            "agent": "PROCUREMENT",
+            "repair_latency_ms": 0.0,
+            "repair_tokens": 0,
+            "runId": "4faa5583-a22d-4ca5-9482-ed9a7303774a",
+            "structured_output_failure_count": 0,
+            "structured_output_initial_success": true,
+            "structured_output_repair_count": 0,
+            "turn": 3
+          },
+          "runId": "4faa5583-a22d-4ca5-9482-ed9a7303774a",
+          "sequence": 24,
+          "sessionId": "eval-workflow-71b06872-0a91-4e18-9ef4-84de404bc743",
+          "type": "STRUCTURED_OUTPUT_VALIDATED"
+        }
+      ]
+    },
+    "evidence": {
+      "current_stage_available": 12,
+      "current_stage_evidence_count": 4,
+      "workflow_carried_available": 0,
+      "workflow_carried_evidence_count": 0,
+      "rejected_carried_evidence_count": 0,
+      "avoidable_upstream_requery_count": 0
+    }
+  },
+  {
+    "task": "RFQ-02",
+    "stage": "SOURCING",
+    "metrics": {
+      "run_id": "67fc7e15-0722-495a-9fea-f6cfb8ce31ff",
+      "model_calls": 3,
+      "input_tokens": 21194,
+      "output_tokens": 1280,
+      "total_tokens": 22474,
+      "peak_context_tokens": 9711,
+      "tool_calls": 7,
+      "model_latency_ms": 6243.143599999999,
+      "carried_context_estimated_tokens": 340.0,
+      "state": "COMPLETED",
+      "stop_reason": null,
+      "budget": {
+        "cancelled": false,
+        "deadline": "2026-10-04T10:36:06.537031800Z",
+        "estimatedCost": 0.0,
+        "executionPaused": false,
+        "inputTokens": 21194,
+        "modelCalls": 3,
+        "outputTokens": 1280,
+        "remainingExecutionMillis": 231151,
+        "startedAt": "2026-10-04T10:32:06.537031800Z",
+        "toolCalls": 7,
+        "turns": 3
+      }
+    },
+    "structured_output": {
+      "typed_result_valid": true,
+      "output_type": "com.agent.platform.procurement.workflow.SourcingStageResult",
+      "structured_output_initial_success": true,
+      "structured_output_repair_count": 0,
+      "structured_output_failure_count": 0,
+      "repair_tokens": 0,
+      "repair_latency_ms": 0,
+      "json_mode_requested": true,
+      "events": [
+        {
+          "content": "typed output validated",
+          "createdAt": "2026-10-04T10:32:15.381378400Z",
+          "eventId": "ecfab89d-4dfb-4025-b807-15896da8ee84",
+          "payload": {
+            "agent": "PROCUREMENT",
+            "repair_latency_ms": 0.0,
+            "repair_tokens": 0,
+            "runId": "67fc7e15-0722-495a-9fea-f6cfb8ce31ff",
+            "structured_output_failure_count": 0,
+            "structured_output_initial_success": true,
+            "structured_output_repair_count": 0,
+            "turn": 3
+          },
+          "runId": "67fc7e15-0722-495a-9fea-f6cfb8ce31ff",
+          "sequence": 59,
+          "sessionId": "eval-workflow-71b06872-0a91-4e18-9ef4-84de404bc743",
+          "type": "STRUCTURED_OUTPUT_VALIDATED"
+        }
+      ]
+    },
+    "evidence": {
+      "current_stage_available": 23,
+      "current_stage_evidence_count": 8,
+      "workflow_carried_available": 0,
+      "workflow_carried_evidence_count": 0,
+      "rejected_carried_evidence_count": 0,
+      "avoidable_upstream_requery_count": 0
+    }
+  },
+  {
+    "task": "RFQ-02",
+    "stage": "RFQ",
+    "metrics": {
+      "run_id": "5eb8f679-feed-4458-8e0d-26a5f1104e8f",
+      "model_calls": 2,
+      "input_tokens": 5426,
+      "output_tokens": 514,
+      "total_tokens": 5940,
+      "peak_context_tokens": 2855,
+      "tool_calls": 0,
+      "model_latency_ms": 2624.4082,
+      "carried_context_estimated_tokens": 718.5,
+      "state": "COMPLETED",
+      "stop_reason": null,
+      "budget": {
+        "cancelled": false,
+        "deadline": "2026-10-04T10:36:16.525018600Z",
+        "estimatedCost": 0.0,
+        "executionPaused": false,
+        "inputTokens": 5426,
+        "modelCalls": 2,
+        "outputTokens": 514,
+        "remainingExecutionMillis": 236228,
+        "startedAt": "2026-10-04T10:32:16.520757900Z",
+        "toolCalls": 1,
+        "turns": 2
+      }
+    },
+    "structured_output": {
+      "typed_result_valid": true,
+      "output_type": "com.agent.platform.procurement.workflow.RfqStageResult",
+      "structured_output_initial_success": true,
+      "structured_output_repair_count": 0,
+      "structured_output_failure_count": 0,
+      "repair_tokens": 0,
+      "repair_latency_ms": 0,
+      "json_mode_requested": true,
+      "events": [
+        {
+          "content": "typed output validated",
+          "createdAt": "2026-10-04T10:32:18.686265800Z",
+          "eventId": "8b92fc0f-5542-4786-8c58-9e3f8824f7bd",
+          "payload": {
+            "agent": "PROCUREMENT",
+            "repair_latency_ms": 0.0,
+            "repair_tokens": 0,
+            "runId": "5eb8f679-feed-4458-8e0d-26a5f1104e8f",
+            "structured_output_failure_count": 0,
+            "structured_output_initial_success": true,
+            "structured_output_repair_count": 0,
+            "turn": 1
+          },
+          "runId": "5eb8f679-feed-4458-8e0d-26a5f1104e8f",
+          "sequence": 67,
+          "sessionId": "eval-workflow-71b06872-0a91-4e18-9ef4-84de404bc743",
+          "type": "STRUCTURED_OUTPUT_VALIDATED"
+        },
+        {
+          "content": "typed output validated",
+          "createdAt": "2026-10-04T10:32:20.292020300Z",
+          "eventId": "a0a662bf-4e5a-4153-a735-b44354d4de5a",
+          "payload": {
+            "agent": "PROCUREMENT",
+            "repair_latency_ms": 0.0,
+            "repair_tokens": 0,
+            "runId": "5eb8f679-feed-4458-8e0d-26a5f1104e8f",
+            "structured_output_failure_count": 0,
+            "structured_output_initial_success": true,
+            "structured_output_repair_count": 0,
+            "turn": 2
+          },
+          "runId": "5eb8f679-feed-4458-8e0d-26a5f1104e8f",
+          "sequence": 77,
+          "sessionId": "eval-workflow-71b06872-0a91-4e18-9ef4-84de404bc743",
+          "type": "STRUCTURED_OUTPUT_VALIDATED"
+        }
+      ]
+    },
+    "evidence": {
+      "current_stage_available": 1,
+      "current_stage_evidence_count": 0,
+      "workflow_carried_available": 12,
+      "workflow_carried_evidence_count": 8,
+      "rejected_carried_evidence_count": 0,
+      "avoidable_upstream_requery_count": 0
+    }
+  },
+  {
+    "task": "REQ-01",
+    "stage": "REQUISITION",
+    "metrics": {
+      "run_id": "b30d12ee-ffed-4eb5-9cf5-5596211f8946",
+      "model_calls": 3,
+      "input_tokens": 14403,
+      "output_tokens": 620,
+      "total_tokens": 15023,
+      "peak_context_tokens": 5810,
+      "tool_calls": 5,
+      "model_latency_ms": 3996.6088,
+      "carried_context_estimated_tokens": 12.0,
+      "state": "COMPLETED",
+      "stop_reason": null,
+      "budget": {
+        "cancelled": false,
+        "deadline": "2026-10-04T13:23:15.430291200Z",
+        "estimatedCost": 0.0,
+        "executionPaused": false,
+        "inputTokens": 14403,
+        "modelCalls": 3,
+        "outputTokens": 620,
+        "remainingExecutionMillis": 231139,
+        "startedAt": "2026-10-04T13:19:15.430291200Z",
+        "toolCalls": 5,
+        "turns": 3
+      }
+    },
+    "structured_output": {
+      "typed_result_valid": true,
+      "output_type": "com.agent.platform.procurement.workflow.RequisitionStageResult",
+      "structured_output_initial_success": true,
+      "structured_output_repair_count": 0,
+      "structured_output_failure_count": 0,
+      "repair_tokens": 0,
+      "repair_latency_ms": 0,
+      "json_mode_requested": true,
+      "events": [
+        {
+          "content": "typed output validated",
+          "createdAt": "2026-10-04T13:19:24.283079900Z",
+          "eventId": "04b6d77f-0ae0-42da-8e66-3912c9aedbb2",
+          "payload": {
+            "agent": "PROCUREMENT",
+            "repair_latency_ms": 0.0,
+            "repair_tokens": 0,
+            "runId": "b30d12ee-ffed-4eb5-9cf5-5596211f8946",
+            "structured_output_failure_count": 0,
+            "structured_output_initial_success": true,
+            "structured_output_repair_count": 0,
+            "turn": 3
+          },
+          "runId": "b30d12ee-ffed-4eb5-9cf5-5596211f8946",
+          "sequence": 27,
+          "sessionId": "eval-workflow-1a79198f-e8e0-4967-a838-82bda0ad6655",
+          "type": "STRUCTURED_OUTPUT_VALIDATED"
+        }
+      ]
+    },
+    "evidence": {
+      "current_stage_available": 22,
+      "current_stage_evidence_count": 5,
+      "workflow_carried_available": 0,
+      "workflow_carried_evidence_count": 0,
+      "rejected_carried_evidence_count": 0,
+      "avoidable_upstream_requery_count": 0
+    }
+  },
+  {
+    "task": "REQ-01",
+    "stage": "SOURCING",
+    "metrics": {
+      "run_id": "c2933938-c298-4e50-92a3-787f167a05d1",
+      "model_calls": 3,
+      "input_tokens": 21198,
+      "output_tokens": 1189,
+      "total_tokens": 22387,
+      "peak_context_tokens": 9697,
+      "tool_calls": 7,
+      "model_latency_ms": 5791.559300000001,
+      "carried_context_estimated_tokens": 353.75,
+      "state": "COMPLETED",
+      "stop_reason": null,
+      "budget": {
+        "cancelled": false,
+        "deadline": "2026-10-04T13:23:24.349652100Z",
+        "estimatedCost": 0.0,
+        "executionPaused": false,
+        "inputTokens": 21198,
+        "modelCalls": 3,
+        "outputTokens": 1189,
+        "remainingExecutionMillis": 232204,
+        "startedAt": "2026-10-04T13:19:24.349652100Z",
+        "toolCalls": 7,
+        "turns": 3
+      }
+    },
+    "structured_output": {
+      "typed_result_valid": true,
+      "output_type": "com.agent.platform.procurement.workflow.SourcingStageResult",
+      "structured_output_initial_success": true,
+      "structured_output_repair_count": 0,
+      "structured_output_failure_count": 0,
+      "repair_tokens": 0,
+      "repair_latency_ms": 0,
+      "json_mode_requested": true,
+      "events": [
+        {
+          "content": "typed output validated",
+          "createdAt": "2026-10-04T13:19:32.140832200Z",
+          "eventId": "93d18610-52d0-4b57-95c6-4b264521c04a",
+          "payload": {
+            "agent": "PROCUREMENT",
+            "repair_latency_ms": 0.0,
+            "repair_tokens": 0,
+            "runId": "c2933938-c298-4e50-92a3-787f167a05d1",
+            "structured_output_failure_count": 0,
+            "structured_output_initial_success": true,
+            "structured_output_repair_count": 0,
+            "turn": 3
+          },
+          "runId": "c2933938-c298-4e50-92a3-787f167a05d1",
+          "sequence": 62,
+          "sessionId": "eval-workflow-1a79198f-e8e0-4967-a838-82bda0ad6655",
+          "type": "STRUCTURED_OUTPUT_VALIDATED"
+        }
+      ]
+    },
+    "evidence": {
+      "current_stage_available": 22,
+      "current_stage_evidence_count": 8,
+      "workflow_carried_available": 0,
+      "workflow_carried_evidence_count": 0,
+      "rejected_carried_evidence_count": 0,
+      "avoidable_upstream_requery_count": 0
+    }
+  },
+  {
+    "task": "REQ-03",
+    "stage": "REQUISITION",
+    "metrics": {
+      "run_id": "3c2e688f-d89e-4d8c-a9a6-8916a2f5f835",
+      "model_calls": 2,
+      "input_tokens": 7632,
+      "output_tokens": 457,
+      "total_tokens": 8089,
+      "peak_context_tokens": 4519,
+      "tool_calls": 3,
+      "model_latency_ms": 3048.5542,
+      "carried_context_estimated_tokens": 12.0,
+      "state": "COMPLETED",
+      "stop_reason": null,
+      "budget": {
+        "cancelled": false,
+        "deadline": "2026-10-04T13:23:57.788752Z",
+        "estimatedCost": 0.0,
+        "executionPaused": false,
+        "inputTokens": 7632,
+        "modelCalls": 2,
+        "outputTokens": 457,
+        "remainingExecutionMillis": 232292,
+        "startedAt": "2026-10-04T13:19:57.788752Z",
+        "toolCalls": 3,
+        "turns": 2
+      }
+    },
+    "structured_output": {
+      "typed_result_valid": true,
+      "output_type": "com.agent.platform.procurement.workflow.RequisitionStageResult",
+      "structured_output_initial_success": true,
+      "structured_output_repair_count": 0,
+      "structured_output_failure_count": 0,
+      "repair_tokens": 0,
+      "repair_latency_ms": 0,
+      "json_mode_requested": true,
+      "events": [
+        {
+          "content": "typed output validated",
+          "createdAt": "2026-10-04T13:20:05.489106600Z",
+          "eventId": "103441f0-f453-4d7e-9382-124f79675de5",
+          "payload": {
+            "agent": "PROCUREMENT",
+            "repair_latency_ms": 0.0,
+            "repair_tokens": 0,
+            "runId": "3c2e688f-d89e-4d8c-a9a6-8916a2f5f835",
+            "structured_output_failure_count": 0,
+            "structured_output_initial_success": true,
+            "structured_output_repair_count": 0,
+            "turn": 2
+          },
+          "runId": "3c2e688f-d89e-4d8c-a9a6-8916a2f5f835",
+          "sequence": 18,
+          "sessionId": "eval-workflow-f5a6c823-3a55-47e9-a31f-fff62dc28250",
+          "type": "STRUCTURED_OUTPUT_VALIDATED"
+        }
+      ]
+    },
+    "evidence": {
+      "current_stage_available": 11,
+      "current_stage_evidence_count": 3,
+      "workflow_carried_available": 0,
+      "workflow_carried_evidence_count": 0,
+      "rejected_carried_evidence_count": 0,
+      "avoidable_upstream_requery_count": 0
+    }
+  },
+  {
+    "task": "ANOM-01",
+    "stage": "REQUISITION",
+    "metrics": {
+      "run_id": "14ccd7c1-dd55-4f93-80de-01e044097ae6",
+      "model_calls": 2,
+      "input_tokens": 7707,
+      "output_tokens": 534,
+      "total_tokens": 8241,
+      "peak_context_tokens": 4563,
+      "tool_calls": 3,
+      "model_latency_ms": 2805.2387,
+      "carried_context_estimated_tokens": 12.0,
+      "state": "COMPLETED",
+      "stop_reason": null,
+      "budget": {
+        "cancelled": false,
+        "deadline": "2026-10-04T13:24:30.261006900Z",
+        "estimatedCost": 0.0,
+        "executionPaused": false,
+        "inputTokens": 7707,
+        "modelCalls": 2,
+        "outputTokens": 534,
+        "remainingExecutionMillis": 232302,
+        "startedAt": "2026-10-04T13:20:30.261006900Z",
+        "toolCalls": 3,
+        "turns": 2
+      }
+    },
+    "structured_output": {
+      "typed_result_valid": true,
+      "output_type": "com.agent.platform.procurement.workflow.RequisitionStageResult",
+      "structured_output_initial_success": true,
+      "structured_output_repair_count": 0,
+      "structured_output_failure_count": 0,
+      "repair_tokens": 0,
+      "repair_latency_ms": 0,
+      "json_mode_requested": true,
+      "events": [
+        {
+          "content": "typed output validated",
+          "createdAt": "2026-10-04T13:20:37.951929900Z",
+          "eventId": "ac087cf5-94b7-46fd-ae76-5a34d74f35d1",
+          "payload": {
+            "agent": "PROCUREMENT",
+            "repair_latency_ms": 0.0,
+            "repair_tokens": 0,
+            "runId": "14ccd7c1-dd55-4f93-80de-01e044097ae6",
+            "structured_output_failure_count": 0,
+            "structured_output_initial_success": true,
+            "structured_output_repair_count": 0,
+            "turn": 2
+          },
+          "runId": "14ccd7c1-dd55-4f93-80de-01e044097ae6",
+          "sequence": 18,
+          "sessionId": "eval-workflow-743e16f8-c161-40cd-be6c-210af56c3290",
+          "type": "STRUCTURED_OUTPUT_VALIDATED"
+        }
+      ]
+    },
+    "evidence": {
+      "current_stage_available": 11,
+      "current_stage_evidence_count": 3,
+      "workflow_carried_available": 0,
+      "workflow_carried_evidence_count": 0,
+      "rejected_carried_evidence_count": 0,
+      "avoidable_upstream_requery_count": 0
+    }
+  },
+  {
+    "task": "ANOM-01",
+    "stage": "SOURCING",
+    "metrics": {
+      "run_id": "d89185ea-a64c-4019-a86f-da028725a312",
+      "model_calls": 9,
+      "input_tokens": 57113,
+      "output_tokens": 2331,
+      "total_tokens": 59444,
+      "peak_context_tokens": 9532,
+      "tool_calls": 16,
+      "model_latency_ms": 14718.0672,
+      "carried_context_estimated_tokens": 326.25,
+      "state": "FAILED",
+      "stop_reason": null,
+      "budget": {
+        "cancelled": false,
+        "deadline": "2026-10-04T13:24:38.002975700Z",
+        "estimatedCost": 0.0,
+        "executionPaused": false,
+        "inputTokens": 57113,
+        "modelCalls": 9,
+        "outputTokens": 2331,
+        "remainingExecutionMillis": 222594,
+        "startedAt": "2026-10-04T13:20:38.002975700Z",
+        "toolCalls": 16,
+        "turns": 9
+      }
+    },
+    "structured_output": {
+      "typed_result_valid": true,
+      "output_type": "com.agent.platform.procurement.workflow.SourcingStageResult",
+      "structured_output_initial_success": true,
+      "structured_output_repair_count": 0,
+      "structured_output_failure_count": 0,
+      "repair_tokens": 0,
+      "repair_latency_ms": 0,
+      "json_mode_requested": true,
+      "events": [
+        {
+          "content": "typed output validated",
+          "createdAt": "2026-10-04T13:20:55.404274500Z",
+          "eventId": "a2ce4795-7f10-4a22-b3b1-280b6cfa71c8",
+          "payload": {
+            "agent": "PROCUREMENT",
+            "repair_latency_ms": 0.0,
+            "repair_tokens": 0,
+            "runId": "d89185ea-a64c-4019-a86f-da028725a312",
+            "structured_output_failure_count": 0,
+            "structured_output_initial_success": true,
+            "structured_output_repair_count": 0,
+            "turn": 9
+          },
+          "runId": "d89185ea-a64c-4019-a86f-da028725a312",
+          "sequence": 98,
+          "sessionId": "eval-workflow-743e16f8-c161-40cd-be6c-210af56c3290",
+          "type": "STRUCTURED_OUTPUT_VALIDATED"
+        }
+      ]
+    },
+    "evidence": {
+      "current_stage_available": 46,
+      "current_stage_evidence_count": 14,
+      "workflow_carried_available": 0,
+      "workflow_carried_evidence_count": 0,
+      "rejected_carried_evidence_count": 0,
+      "avoidable_upstream_requery_count": 0
+    }
+  }
+]

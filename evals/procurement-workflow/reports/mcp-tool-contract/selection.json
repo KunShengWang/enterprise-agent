@@ -1,0 +1,9 @@
+{
+  "tasks": [
+    "ROB-01"
+  ],
+  "trials": 1,
+  "retry": false,
+  "stop_after": "PASS_OR_FAIL",
+  "prior_failed_model_run": "workflow-retry-rob01-20261005-r2"
+}

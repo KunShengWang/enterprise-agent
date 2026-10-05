@@ -1,0 +1,20 @@
+{
+  "reused": [
+    "ROB-01"
+  ],
+  "new": [
+    "REQ-01",
+    "REQ-03",
+    "ANOM-01",
+    "SRC-01",
+    "RFQ-01",
+    "RFQ-02",
+    "GOV-01",
+    "E2E-01"
+  ],
+  "expected": 9,
+  "trials_per_task": 1,
+  "retry": false,
+  "dev": false,
+  "holdout": false
+}

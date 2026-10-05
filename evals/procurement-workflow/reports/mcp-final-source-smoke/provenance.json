@@ -1,0 +1,83 @@
+[
+  {
+    "task": "ROB-01",
+    "reused": true,
+    "path": "target/procurement-workflow/workflow-mcp-contract-rob01-20261005-r1/ROB-01-1-a1",
+    "production_fingerprint": "b5f91b46ac4c2e394f77652e4a7bacfae191a19e24bf763afbde577e4b8aa668",
+    "artifact_sha256": "49968223cd4af5cd3a4336fc68195388b9cdfdaa4a809d994eff8c4a5e737a8f",
+    "raw_sha256": "c0fe4500a3b8fa25dbfcb055e6016cd3d3c128c8b588a995a08b8d283f5f9685",
+    "status": "PASS"
+  },
+  {
+    "task": "REQ-01",
+    "reused": false,
+    "path": "target/procurement-workflow/workflow-mcp-final-source-smoke-20261005-r1/REQ-01-1-a1",
+    "production_fingerprint": "b5f91b46ac4c2e394f77652e4a7bacfae191a19e24bf763afbde577e4b8aa668",
+    "artifact_sha256": "29be9d0fd785fd2b695b8d8d158376d1ca2a2c763b97f90f7258829e061cb546",
+    "raw_sha256": "9aa5f5426801e10f6d96eb32b39150eadf88fcae53955d36f516737d705f7e87",
+    "status": "PASS"
+  },
+  {
+    "task": "REQ-03",
+    "reused": false,
+    "path": "target/procurement-workflow/workflow-mcp-final-source-smoke-20261005-r1/REQ-03-1-a1",
+    "production_fingerprint": "b5f91b46ac4c2e394f77652e4a7bacfae191a19e24bf763afbde577e4b8aa668",
+    "artifact_sha256": "704202bbc52ffde7029348076fa0bc517583a529a8edc7e9554d645c18468ba1",
+    "raw_sha256": "7dae5812d8c6fd2ee21f83ddb5b4b5aad7c3c745a99fd5c9ae898251e470cae1",
+    "status": "PASS"
+  },
+  {
+    "task": "ANOM-01",
+    "reused": false,
+    "path": "target/procurement-workflow/workflow-mcp-final-source-smoke-20261005-r1/ANOM-01-1-a1",
+    "production_fingerprint": "b5f91b46ac4c2e394f77652e4a7bacfae191a19e24bf763afbde577e4b8aa668",
+    "artifact_sha256": "97a2243abda51aae8226d7a5ac440c7d788bec8f32e099b65a1e1464fe719c34",
+    "raw_sha256": "0fb35fd20d8d3872807606183c9fb94981e7e7e47b6e372d589a0f2d48d9fcc0",
+    "status": "PASS"
+  },
+  {
+    "task": "SRC-01",
+    "reused": false,
+    "path": "target/procurement-workflow/workflow-mcp-final-source-smoke-20261005-r1/SRC-01-1-a1",
+    "production_fingerprint": "b5f91b46ac4c2e394f77652e4a7bacfae191a19e24bf763afbde577e4b8aa668",
+    "artifact_sha256": "ccf52c31e140f9a50cc593f3f2fababc59bdb88d2731ac37d12093f3a5f1ea21",
+    "raw_sha256": "e74072731659a98a1ba921364305c4162039bf74190828d7e77d43ec5b05a857",
+    "status": "PASS"
+  },
+  {
+    "task": "RFQ-01",
+    "reused": false,
+    "path": "target/procurement-workflow/workflow-mcp-final-source-smoke-20261005-r1/RFQ-01-1-a1",
+    "production_fingerprint": "b5f91b46ac4c2e394f77652e4a7bacfae191a19e24bf763afbde577e4b8aa668",
+    "artifact_sha256": "abadaa56e2388cfac2262a01afaf3bca7d87bcb4bf8a5c62fbf2327559d0c9d1",
+    "raw_sha256": "19b630aaf8d335cedd7b5c298ea848e36ed729acbce3fc02c497ee24179d8899",
+    "status": "PASS"
+  },
+  {
+    "task": "RFQ-02",
+    "reused": false,
+    "path": "target/procurement-workflow/workflow-mcp-final-source-smoke-20261005-r1/RFQ-02-1-a1",
+    "production_fingerprint": "b5f91b46ac4c2e394f77652e4a7bacfae191a19e24bf763afbde577e4b8aa668",
+    "artifact_sha256": "f328990b041366c4ecd6e739ecdb6493516e389ee65d552db9df14b2eae7c511",
+    "raw_sha256": "87080ed68612c9756defb6e074641aef1ecd4c4cf9cff40aa5e7cc7ab3751646",
+    "status": "PASS"
+  },
+  {
+    "task": "GOV-01",
+    "reused": false,
+    "path": "target/procurement-workflow/workflow-mcp-final-source-smoke-20261005-r1/GOV-01-1-a1",
+    "production_fingerprint": "b5f91b46ac4c2e394f77652e4a7bacfae191a19e24bf763afbde577e4b8aa668",
+    "artifact_sha256": "56cdf1497d21b008dae0e8afdad8254172934e941ec6c79522f82b14634b2a51",
+    "raw_sha256": "4d255c160148144a2d64283b02e23cfa299cc1cf3f6aab999cee2dd5c7f5a55d",
+    "status": "PASS"
+  },
+  {
+    "task": "E2E-01",
+    "reused": false,
+    "path": "target/procurement-workflow/workflow-mcp-final-source-smoke-20261005-r1/E2E-01-1-a1",
+    "production_fingerprint": "b5f91b46ac4c2e394f77652e4a7bacfae191a19e24bf763afbde577e4b8aa668",
+    "artifact_sha256": "8eaac007efd72f796f0505985d4c70a1e5d56a2a28d426dca67de2a0b4aab8df",
+    "raw_sha256": "0e7940445d12ee7ff85723079bc6aa29b806cd91543c5eeda92b77f6d5b3a8d8",
+    "status": "FAIL"
+  }
+]

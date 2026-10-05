@@ -1,0 +1,1009 @@
+[
+  {
+    "phase": "procurement",
+    "command": "mvn '-B' '-Devaluation.codeRevision=2f649d6cbc56cea1803ffa6e5a3561d48a53d776' '-Dsurefire.reportNameSuffix=v0-20261004-142323-68e8afec-procurement' '-Dtest=*Procurement*Tests,JdbcProcurementCaseStorePostgresIT' 'test'",
+    "exitCode": 0,
+    "startedAt": "2026-10-04T14:23:24.3334909+08:00",
+    "finishedAt": "2026-10-04T14:24:15.4793446+08:00",
+    "tests": 864,
+    "pass": 853,
+    "failures": 0,
+    "errors": 0,
+    "skip": 11,
+    "suites": [
+      {
+        "name": "com.agent.platform.procurement.erp.ProcurementBackendBoundaryTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.erp.ProcurementErpMcpTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.erp.ProcurementItemContractTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.JdbcProcurementCaseStorePostgresIT(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      },
+      {
+        "name": "com.agent.platform.procurement.McpProcurementDataProviderTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAdaptiveMultiAgentTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAgentRuntimeE2ETests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerAggregationTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 68,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerCompletenessTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 66,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerCoverageTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 37,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerEvaluationV3Tests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 87,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerGraderTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 79,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerPolicyTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 63,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerRelationTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 82,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerReplayTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerV3ReplayTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 28,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementArtifactReplayTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementBenchmarkContractTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementCaseContextRendererTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementCasePatchTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementComparisonInputsTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 44,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementComparisonMetricsTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 25,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementComparisonReportsTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 46,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementDeterministicGraderTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 43,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementEvidenceTrustTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementRecommendationFinalizeTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementRfqHitlTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 22,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementSourcingMvpTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementStructuredOutputTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 27,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementWorkflowTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 30,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.web.PublicProcurementRunTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 27,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.application.ProcurementOnlyWorkbenchRoutingTests(v0-20261004-142323-68e8afec-procurement)",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  {
+    "phase": "replay",
+    "command": "mvn '-B' '-Devaluation.codeRevision=2f649d6cbc56cea1803ffa6e5a3561d48a53d776' '-Dsurefire.reportNameSuffix=v0-20261004-142323-68e8afec-replay' '-Dtest=ProcurementArtifactReplayTests,ProcurementAnswerReplayTests,ProcurementAnswerPolicyTests,ProcurementAnswerRelationTests,ProcurementAnswerCompletenessTests,ProcurementAnswerAggregationTests,ProcurementAnswerV3ReplayTests,ProcurementComparisonMetricsTests,ProcurementComparisonReportsTests' '-Devaluation.artifact=target/procurement-evaluation/runtime-artifact.json' '-Danswer.artifact=target/procurement-evaluation/runtime-artifact.json' '-Danswer.v2.artifact=target/procurement-evaluation/runtime-artifact.json' '-Drelation.artifact=target/procurement-evaluation/runtime-artifact.json' '-Dcompleteness.artifact=target/procurement-evaluation/runtime-artifact.json' '-Danswer.v3.artifact=target/procurement-evaluation/runtime-artifact.json' 'test'",
+    "exitCode": 0,
+    "startedAt": "2026-10-04T14:24:15.5247690+08:00",
+    "finishedAt": "2026-10-04T14:24:49.4846417+08:00",
+    "tests": 380,
+    "pass": 380,
+    "failures": 0,
+    "errors": 0,
+    "skip": 0,
+    "suites": [
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerAggregationTests(v0-20261004-142323-68e8afec-replay)",
+        "tests": 68,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerCompletenessTests(v0-20261004-142323-68e8afec-replay)",
+        "tests": 66,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerPolicyTests(v0-20261004-142323-68e8afec-replay)",
+        "tests": 63,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerRelationTests(v0-20261004-142323-68e8afec-replay)",
+        "tests": 82,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerReplayTests(v0-20261004-142323-68e8afec-replay)",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerV3ReplayTests(v0-20261004-142323-68e8afec-replay)",
+        "tests": 28,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementArtifactReplayTests(v0-20261004-142323-68e8afec-replay)",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementComparisonMetricsTests(v0-20261004-142323-68e8afec-replay)",
+        "tests": 25,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementComparisonReportsTests(v0-20261004-142323-68e8afec-replay)",
+        "tests": 46,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  {
+    "phase": "full",
+    "command": "mvn '-B' '-Devaluation.codeRevision=2f649d6cbc56cea1803ffa6e5a3561d48a53d776' '-Dsurefire.reportNameSuffix=v0-20261004-142323-68e8afec-full' 'test'",
+    "exitCode": 0,
+    "startedAt": "2026-10-04T14:24:49.5067090+08:00",
+    "finishedAt": "2026-10-04T14:26:13.2799601+08:00",
+    "tests": 1288,
+    "pass": 1279,
+    "failures": 0,
+    "errors": 0,
+    "skip": 9,
+    "suites": [
+      {
+        "name": "com.agent.platform.agent.RuntimeAgentExecutorScenarioTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.approval.JdbcApprovalStoreTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.approval.LocalApprovalServiceTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.common.BusinessRetirementBoundaryTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.config.AgentScenarioProfileResolverTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.config.HttpLoggingConfigTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.EnterpriseAgentApplicationTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.eval.DefaultAgentEvalRunnerRuntimeEvidenceTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.eval.LlmAsJudgeAnswerJudgeTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.guardrail.DeterministicPromptInjectionSignalDetectorTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.guardrail.RegexSensitiveDataFilterTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.llm.SpringAiLlmServiceStreamingTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.mcp.StdioMcpToolGatewayTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.memory.JdbcMemoryServiceTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.memory.LlmMemoryExtractorTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.erp.CanonicalRequisitionBindingTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.erp.ErpNextAdapterTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.erp.ErpNextRfqGatewayTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.erp.ProcurementBackendBoundaryTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.erp.ProcurementErpMcpTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.erp.ProcurementItemContractTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.McpProcurementDataProviderTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAdaptiveMultiAgentTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAgentRuntimeE2ETests(v0-20261004-142323-68e8afec-full)",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerAggregationTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 68,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerCompletenessTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 66,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerCoverageTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 37,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerEvaluationV3Tests(v0-20261004-142323-68e8afec-full)",
+        "tests": 87,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerGraderTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 79,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerPolicyTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 63,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerRelationTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 82,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerReplayTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementAnswerV3ReplayTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 28,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementArtifactReplayTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementBenchmarkContractTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementCaseContextRendererTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementCasePatchTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementComparisonInputsTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 44,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementComparisonMetricsTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 25,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementComparisonReportsTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 46,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementDeterministicGraderTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 43,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementEvidenceTrustTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementRecommendationFinalizeTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementRfqHitlTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 22,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementSourcingMvpTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementStructuredOutputTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 27,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementV2EvalStoresTest(v0-20261004-142323-68e8afec-full)",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementWorkflowTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 30,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.rag.CurrentKnowledgeCorpusTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.runtime.AgentCapabilityVisibilityPolicyTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.runtime.AgentModelGatewayConfigurationTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.runtime.AgentRunBudgetTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.runtime.ContextEngineeringTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.runtime.DefaultAgentCapabilityRegistryTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.runtime.DefaultAgentContextManagerTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.runtime.DefaultAgentRuntimeStateTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 23,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.runtime.DefaultAgentToolRuntimeApprovalBindingTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.runtime.DefaultAgentToolRuntimeReconciliationTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.runtime.HarnessCoreTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.runtime.NativeToolCallingAgentModelGatewayTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.runtime.ToolResultBoundaryTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.stream.DefaultStreamingAgentExecutorTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.tool.LocalToolExecutorTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.tool.LocalToolRegistryTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.web.AgentControllerConversationTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.web.ConversationIsolationHttpTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.web.EvalControllerTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.web.GuardrailControllerTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.web.PublicProcurementRunTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 27,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.application.AgentRunWorkCommandAdapterTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.application.ExecutionTargetCandidateResolverTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.application.M1BRoutingUnitTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.application.ProcurementOnlyWorkbenchRoutingTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.application.RouteConfirmationScopeBindingTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.application.RoutingCoordinatorCandidatePolicyTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.application.RunProjectionIsolationTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.application.RunWorkExecutionTreeTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.application.UnifiedWorkEventProjectorTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.application.UnifiedWorkExecutionTreeServiceTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.application.WorkbenchModelAndServiceTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.application.WorkbenchSchemaInitializerTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.budget.BudgetAdmissionCoordinatorTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.budget.WorkbenchBudgetEvalSuiteTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.budget.WorkbenchBudgetPolicyTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.dispatch.ExecutionAdapterUnitTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.eval.WorkbenchM3DPolicyEvalTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 61,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.eval.WorkbenchRoutingEvalSuiteTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.eval.WorkbenchRoutingSafetyGateTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.persistence.RetiredProjectionWriteBoundaryTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.presentation.PublicPresentationServiceTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.presentation.PublicPresentationStreamServiceTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.security.JdbcConversationOwnershipStoreTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.target.ExecutionCommandCapabilityRegistryTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.web.UnifiedWorkControllerTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.agent.platform.workbench.web.UnifiedWorkEventStreamServiceTests(v0-20261004-142323-68e8afec-full)",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  {
+    "phase": "build",
+    "command": "mvn '-B' '-Devaluation.codeRevision=2f649d6cbc56cea1803ffa6e5a3561d48a53d776' '-Dsurefire.reportNameSuffix=v0-20261004-142323-68e8afec-build' '-DskipTests' 'package'",
+    "exitCode": 0,
+    "startedAt": "2026-10-04T14:26:13.3045595+08:00",
+    "finishedAt": "2026-10-04T14:26:18.6989598+08:00",
+    "tests": 0,
+    "pass": 0,
+    "failures": 0,
+    "errors": 0,
+    "skip": 0,
+    "suites": []
+  }
+]

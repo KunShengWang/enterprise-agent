@@ -1,0 +1,14 @@
+{
+  "source_unchanged": true,
+  "exact_snapshot_files": 672,
+  "source_matches_current_rfq01": true,
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "branch": "feat/procurement-workflow",
+  "handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "handler_unchanged": true,
+  "staged": false,
+  "no_production_changes": true,
+  "old_smoke_results_reused": false,
+  "new_trials": 5,
+  "dev_run": false
+}

@@ -1,0 +1,17 @@
+{
+  "deterministic-evidence.zip": "bd559335d4d221438e209e9de0102804171f5a4f8a641a84e4f4efb2c92e104d",
+  "deterministic-provenance.json": "f9f92f12cb9b6bafef48abdcf705997728d5aed42cfc15481b0b906e986923d7",
+  "evidence-scan.json": "803fd9f5d7c4b16ce6bb03e201f9678b88b2f7019cc1c21ca4f0cb569846716b",
+  "failure-audit.json": "4eaf37f8456d673b1ad7da24f8ade40b6f92f9e5bed98ae1f3f23c31f8c12335",
+  "git-diff-stat.txt": "13a4f8ad2387663a3f7d00eb8c052b0cc48200985331590a2ccfad6f983efa15",
+  "git-status.txt": "f53053301e46e1ecd785098cc4c671cf57f40295fda9551a9a635bb75553996d",
+  "legacy-results.json": "bb574df631bf631298a63515b1ee48101c1971f80ec6afd488e851f53d023e72",
+  "phase4-comparison.json": "67d0dfc93688ae1ab9b5964a8b53d6d2433aaceeef921c60bf37b1fb1cbf70eb",
+  "scope-verification.json": "0d0bcd89544c8ba227ac374bd078b0ba0b08cc593ede702465f00450d24155ca",
+  "skipped-tests.json": "b71414e15305c4b1ded356e9698d8554a0fd5e2043284877ab5c2df530032bd2",
+  "smoke-evidence.zip": "920b36fd2f26dc2f32632ffbf154de2dc8386977ffa7f5af3d46b0432bcf6df0",
+  "smoke-provenance.json": "7f5d4da55e7a310a2f702eccf14fb88e458183b1a4a9027a7f428c0d872ee309",
+  "smoke-results.json": "cfb1e17f987e2d57c03e13e00162a86b1dc6a848abb03b4168921e262f2941b2",
+  "source-evidence.zip": "ce837a06c90c9e9dca322d68bf8fb19fa5efccd90ce5d019cfb51b6cbf2ed62d",
+  "source-state.json": "33309160d4d758d401564c90f0202fc521d8e762e87929423df661be8ea4a2d7"
+}

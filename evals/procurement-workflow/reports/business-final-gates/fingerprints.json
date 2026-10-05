@@ -1,0 +1,35 @@
+{
+  "production": "ad710e3f035a691c592544a26c04dc9cef192e6a4abb28e21c63764876fefba2",
+  "prompts": {
+    "REQUISITION": "a88b6e6a97bc2c640d735f3cd025a305ce2ad29bb53ce3c66f8e008f5b2d84c2",
+    "SOURCING": "99e54579337e618a83903122f5a9f643ab69c57c365d58ed19ecf1f403621e8e",
+    "RFQ": "3b790150cea34d5fe27492db244c1c50fc054a2c74ebcbe823912a739e22e70f"
+  },
+  "stage_profiles": {
+    "REQUISITION": "e92f85cb65b4a2d354f0ed09c569a3ae50a69587e45724ac0f268705eecee3be",
+    "SOURCING": "9bb1d0205b76190f53e2452ccbe7a174f83c019a13749c6faf4aa2a99a14c41f",
+    "RFQ": "8c53154991e11e5311ddb0a3d7ac29f6e16e890015bf73b10f41fa49da1fb99d"
+  },
+  "stage_schemas": {
+    "REQUISITION": "c4ebaead032a518b2ee18f718d9e41edaddb1228fe04d8ef13d216d28d2ba4b2",
+    "SOURCING": "4dd82f63deb97c72d3a199a0aa4063b392a42c009c25c3452fed621d13573ac6",
+    "RFQ": "f50f26d0eee74ac7764486d747e3663ebd3ae1a2ce2a63e9dfd647dee4df38ed"
+  },
+  "tool_schemas": {
+    "REQUISITION": "9f1f821c057974685f8308e1117ea5d637884b9d6777a293ffb3eaf35a61a909",
+    "SOURCING": "447997d62f9797612dd67d6c046a284ff79353837691b2b6183a7c59b092ee55",
+    "RFQ": "38955f51231b8effb5b8ed448e6d5ced62ebbc033d0ef050883bffcdae40401c"
+  },
+  "graders": "e707ed34c9f34aab0c4030901b548fd3852bd07c001b96bbfbefc0e750c0da57",
+  "seed": "172cee7d8000d2e3462ca487e13a98dc269bc3a39e973bb81902d0d9098acc79",
+  "model_configuration": {
+    "temperature": 0.2,
+    "model": "deepseek-chat",
+    "maxTokens": 4096
+  },
+  "agent_properties_sha256": "190319d4b0c800ad11c47dd72e39e8123f37c50fa7f7a4adf1e0209763024e54",
+  "stage_profile_source": "a5a8aca552c2878c3b14397b8dd5de45650b67dcee6461b6b85991a4ba759aaf",
+  "workflow_contract": "7f2b95f035d19e1c80b4bc62d5f281b91cca1816556497d95f6ab0e8676ed43b",
+  "business_outcome_mapping": "a98f19d2821b9ece5067ead1c772f6f7917708e79002a46147621996da0be412",
+  "tool_schema_sources": "fb359a1d14c3098e229d39ce1ad75ff300de694a707ed0584e23a00948de054c"
+}

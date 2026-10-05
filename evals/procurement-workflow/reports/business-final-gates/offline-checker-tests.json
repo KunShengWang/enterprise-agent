@@ -1,0 +1,11 @@
+{
+  "checks": 5,
+  "passed": 5,
+  "checks_described": [
+    "current ANOM four layers",
+    "business error misclassification detected",
+    "model config drift detected",
+    "forged evidence detected",
+    "missing approval detected"
+  ]
+}

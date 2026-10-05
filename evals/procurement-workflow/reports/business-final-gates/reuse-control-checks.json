@@ -1,0 +1,16 @@
+{
+  "checks": {
+    "passed": true,
+    "checks": {
+      "model_configuration": true,
+      "runtime_configuration": true,
+      "stage_profiles": true,
+      "REQUISITION_prompt": true,
+      "REQUISITION_tools": true,
+      "SOURCING_prompt": true,
+      "SOURCING_tools": true
+    }
+  },
+  "source_groups_match": true,
+  "rfq_tool_schema_evidence": "ANOM did not execute RFQ; equality established by identical frozen schema producer source, full StageProfiles, and current discovery/config. Not claimed as an RFQ model call."
+}

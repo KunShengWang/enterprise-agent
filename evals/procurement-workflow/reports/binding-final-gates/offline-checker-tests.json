@@ -1,0 +1,7 @@
+{
+  "reused_rfq02_pass": true,
+  "known_unsupported_exact_read_observed": true,
+  "negation_excluded": true,
+  "intent_excluded": true,
+  "positive_detected": true
+}

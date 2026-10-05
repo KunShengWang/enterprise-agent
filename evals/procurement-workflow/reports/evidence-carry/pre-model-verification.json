@@ -1,0 +1,17 @@
+{
+  "protected_files": 146,
+  "protected_unchanged": true,
+  "frozen_checks": {
+    "version": true,
+    "code_sha": true,
+    "tasks": true,
+    "seed": true,
+    "world_contract": true,
+    "model_reference": true,
+    "graders": true,
+    "runner": true,
+    "v22": true
+  },
+  "legacy_fixtures": 5,
+  "handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d"
+}

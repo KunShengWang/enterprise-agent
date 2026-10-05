@@ -1,0 +1,40 @@
+[
+  {
+    "task": "ROB-01",
+    "classification": {
+      "normal_business_terminal_count": 0,
+      "business_rejection_count": 0,
+      "canonical_finalize_rejection_count": 0,
+      "validation_rejection": 0,
+      "policy_denial": 0,
+      "stale_version_conflict": 0,
+      "runtime_infrastructure_error": 1,
+      "unclassified_error": 0,
+      "normal_business_outcome_misclassified": 0,
+      "finalize_consistent": true,
+      "outcome": "WORKFLOW_ERROR",
+      "state": "FAILED",
+      "stop_reason": "TOOL_ERROR",
+      "failures": [
+        {
+          "id": "e2f0d3ca-95f0-4442-a99c-5989b00f3c40",
+          "source": "tool ledger",
+          "text": "",
+          "category": "RETRYABLE_ERROR",
+          "diagnostic_bucket": "runtime_infrastructure_error"
+        }
+      ],
+      "denominator": "Unique failed tool-call IDs; terminal-only failure when no failed tool receipt. Error-message bucket is offline diagnosis, not a new runtime taxonomy; unclassified retained."
+    },
+    "invalid": {
+      "InvalidRecommendationProposal": 0,
+      "proposals": [],
+      "scope": "Java typed business rejections; observation only, not frozen grading",
+      "proposal_count": 0
+    },
+    "terminal_tokens": {
+      "applicable": false,
+      "reason": "No timestamped canonical empty-eligibility receipt; do not infer earlier terminal knowledge from model narrative."
+    }
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "model_options": true,
+  "agent_properties": true,
+  "REQUISITION_instructions": true,
+  "REQUISITION_stage_schema": true,
+  "REQUISITION_limits": true,
+  "REQUISITION_context": true,
+  "REQUISITION_tools": true,
+  "SOURCING_instructions": true,
+  "SOURCING_stage_schema": true,
+  "SOURCING_limits": true,
+  "SOURCING_context": true,
+  "SOURCING_tools": true,
+  "RFQ_instructions": true,
+  "RFQ_stage_schema": true,
+  "RFQ_limits": true,
+  "RFQ_context": true,
+  "RFQ_tools": true,
+  "REQUISITION_tool_schema": true,
+  "SOURCING_tool_schema": true,
+  "prior_trial_pass": true
+}

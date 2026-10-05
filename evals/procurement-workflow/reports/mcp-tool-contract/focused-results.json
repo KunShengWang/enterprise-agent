@@ -1,0 +1,138 @@
+[
+  {
+    "run": "mcp-contract-focused-r1",
+    "classes": [
+      {
+        "name": "com.agent.platform.mcp.StdioMcpToolGatewayTests(mcp-contract-focused-r1)",
+        "tests": "19",
+        "failures": "0",
+        "errors": "3",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.procurement.erp.ProcurementErpMcpTests(mcp-contract-focused-r1)",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementWorkflowBusinessOutcomeTests(mcp-contract-focused-r1)",
+        "tests": "15",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementWorkflowEvidenceCarryTests(mcp-contract-focused-r1)",
+        "tests": "23",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementWorkflowRequisitionBindingTests(mcp-contract-focused-r1)",
+        "tests": "10",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementWorkflowRetryTests(mcp-contract-focused-r1)",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.runtime.HarnessCoreTests(mcp-contract-focused-r1)",
+        "tests": "15",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.runtime.McpToolEffectContractTests(mcp-contract-focused-r1)",
+        "tests": "9",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.runtime.ToolRetryPolicyTests(mcp-contract-focused-r1)",
+        "tests": "9",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ]
+  },
+  {
+    "run": "mcp-contract-focused-r2",
+    "classes": [
+      {
+        "name": "com.agent.platform.mcp.StdioMcpToolGatewayTests(mcp-contract-focused-r2)",
+        "tests": "19",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.procurement.erp.ProcurementErpMcpTests(mcp-contract-focused-r2)",
+        "tests": "7",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementWorkflowBusinessOutcomeTests(mcp-contract-focused-r2)",
+        "tests": "15",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementWorkflowEvidenceCarryTests(mcp-contract-focused-r2)",
+        "tests": "23",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementWorkflowRequisitionBindingTests(mcp-contract-focused-r2)",
+        "tests": "10",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.procurement.ProcurementWorkflowRetryTests(mcp-contract-focused-r2)",
+        "tests": "6",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.runtime.HarnessCoreTests(mcp-contract-focused-r2)",
+        "tests": "15",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.runtime.McpToolEffectContractTests(mcp-contract-focused-r2)",
+        "tests": "9",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      },
+      {
+        "name": "com.agent.platform.runtime.ToolRetryPolicyTests(mcp-contract-focused-r2)",
+        "tests": "9",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0"
+      }
+    ]
+  }
+]

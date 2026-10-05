@@ -1,0 +1,8 @@
+ .../application/ProcurementCaseContextRenderer.java          |  3 ++-
+ .../procurement/application/ProcurementCaseService.java      |  9 +++++++++
+ .../procurement/tool/ProcurementRfqApprovalPreparer.java     |  5 +++++
+ .../platform/procurement/tool/ProcurementRfqToolHandler.java |  7 ++++++-
+ .../platform/procurement/tool/ProcurementToolHandler.java    | 12 ++++++++++++
+ src/main/java/com/agent/platform/runtime/ContextPolicy.java  |  5 ++++-
+ .../agent/platform/runtime/DefaultAgentContextManager.java   | 12 ++++++++++--
+ 7 files changed, 48 insertions(+), 5 deletions(-)

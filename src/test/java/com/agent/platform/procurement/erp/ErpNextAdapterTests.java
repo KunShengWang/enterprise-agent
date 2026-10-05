@@ -118,9 +118,9 @@ class ErpNextAdapterTests {
             posts.incrementAndGet();Map<String,Object> doc=new LinkedHashMap<>(i.getArgument(1));doc.put("name","ID-1");doc.put("modified","2026-10-01 00:00:00");
             stored.set(json.valueToTree(doc));throw new ProcurementErpException(ERP_CONFLICT);
         });
-        org.mockito.Mockito.when(transport.get("Material Request","MR-A")).thenReturn(Optional.of(json.valueToTree(row("name","MR-A","company","Synthetic AI Labs","custom_department_id","V2-ALG","status","Draft","items",List.of(Map.of("item_code","SKU","qty",20,"schedule_date","2026-10-31"))))));
+        org.mockito.Mockito.when(transport.get("Material Request","MR-A")).thenReturn(Optional.of(json.valueToTree(row("name","MR-A","company","Synthetic AI Labs","custom_department_id","V2-ALG","status","Draft","items",List.of(Map.of("name","MR-A-ITEM","item_code","SKU","qty",20,"schedule_date","2026-10-31"))))));
         var request=new ProcurementErpAdapter.RfqRequest("rfq:1","SUP","SKU",20,21,"CNY","MR-A");
-        var first=erp.createRfq(request);assertEquals(first.id(),erp.createRfq(request).id());assertEquals(1,posts.get());assertEquals("MR-A",stored.get().path("items").get(0).path("material_request").asText());
+        var first=erp.createRfq(request);assertEquals(first.id(),erp.createRfq(request).id());assertEquals(1,posts.get());assertEquals("MR-A",stored.get().path("items").get(0).path("material_request").asText());assertEquals("MR-A-ITEM",stored.get().path("items").get(0).path("material_request_item").asText());
         assertCode(ERP_CONFLICT,()->erp.createRfq(new ProcurementErpAdapter.RfqRequest("rfq:1","SUP","SKU",20,21,"CNY","MR-B")));
         assertCode(ERP_CONFLICT,()->erp.createRfq(new ProcurementErpAdapter.RfqRequest("rfq:1","SUP","SKU",21,21,"CNY")));
         assertEquals(1,posts.get());

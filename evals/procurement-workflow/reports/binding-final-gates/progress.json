@@ -1,0 +1,8 @@
+{
+  "expected": 9,
+  "completed": 4,
+  "business_pass": 3,
+  "accepted": 3,
+  "new_trials": 3,
+  "stopped": true
+}

@@ -1,0 +1,17 @@
+{
+  "legacy_directory": "target/procurement-v0/v0-20261004-133149-62cf1529",
+  "java_workflow_tests": 30,
+  "python_acceptance_tests": 9,
+  "full": {
+    "total": 1259,
+    "passed": 1250,
+    "failed": 0,
+    "skipped": 9
+  },
+  "replay": {
+    "passed": 380,
+    "failed": 0
+  },
+  "frozen_fixtures_unchanged": 5,
+  "archive_sha256": "bd559335d4d221438e209e9de0102804171f5a4f8a641a84e4f4efb2c92e104d"
+}

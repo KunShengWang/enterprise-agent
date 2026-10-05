@@ -1,0 +1,383 @@
+[
+  {
+    "task": "ROB-01",
+    "classification": {
+      "normal_business_terminal_count": 1,
+      "business_rejection_count": 0,
+      "canonical_finalize_rejection_count": 0,
+      "validation_rejection": 4,
+      "policy_denial": 0,
+      "stale_version_conflict": 0,
+      "runtime_infrastructure_error": 0,
+      "unclassified_error": 0,
+      "normal_business_outcome_misclassified": 0,
+      "finalize_consistent": true,
+      "outcome": "COMPLETE",
+      "state": "COMPLETED",
+      "stop_reason": "COMPLETED",
+      "failures": [
+        {
+          "id": "d3168be9-5d9d-44f4-bf9e-1df9a4502477",
+          "source": "tool ledger",
+          "text": "",
+          "category": "VALIDATION_ERROR",
+          "diagnostic_bucket": "validation_rejection"
+        },
+        {
+          "id": "a49cf888-ef9a-4faf-be5b-5c9ec1923f3b",
+          "source": "tool ledger",
+          "text": "",
+          "category": "VALIDATION_ERROR",
+          "diagnostic_bucket": "validation_rejection"
+        },
+        {
+          "id": "938534c9-1c3a-4c07-ba2e-7d80f14be9e6",
+          "source": "tool ledger",
+          "text": "",
+          "category": "VALIDATION_ERROR",
+          "diagnostic_bucket": "validation_rejection"
+        },
+        {
+          "id": "16d87ce0-b2e6-4d4f-a221-d7feb03eea25",
+          "source": "tool ledger",
+          "text": "",
+          "category": "VALIDATION_ERROR",
+          "diagnostic_bucket": "validation_rejection"
+        }
+      ],
+      "denominator": "Unique failed tool-call IDs; terminal-only failure when no failed tool receipt. Error-message bucket is offline diagnosis, not a new runtime taxonomy; unclassified retained."
+    },
+    "invalid": {
+      "InvalidRecommendationProposal": 0,
+      "proposals": [],
+      "scope": "Java typed business rejections; observation only, not frozen grading",
+      "proposal_count": 1
+    },
+    "terminal_tokens": {
+      "applicable": false,
+      "reason": "No timestamped canonical empty-eligibility receipt; do not infer earlier terminal knowledge from model narrative."
+    }
+  },
+  {
+    "task": "REQ-01",
+    "classification": {
+      "normal_business_terminal_count": 1,
+      "business_rejection_count": 0,
+      "canonical_finalize_rejection_count": 0,
+      "validation_rejection": 2,
+      "policy_denial": 0,
+      "stale_version_conflict": 0,
+      "runtime_infrastructure_error": 0,
+      "unclassified_error": 0,
+      "normal_business_outcome_misclassified": 0,
+      "finalize_consistent": true,
+      "outcome": "COMPLETE",
+      "state": "COMPLETED",
+      "stop_reason": "COMPLETED",
+      "failures": [
+        {
+          "id": "12fe14de-13d5-4077-a1a2-1fd22fac113f",
+          "source": "tool ledger",
+          "text": "",
+          "category": "VALIDATION_ERROR",
+          "diagnostic_bucket": "validation_rejection"
+        },
+        {
+          "id": "d8f2652b-1d98-4bc8-affe-e65187c6185d",
+          "source": "tool ledger",
+          "text": "",
+          "category": "VALIDATION_ERROR",
+          "diagnostic_bucket": "validation_rejection"
+        }
+      ],
+      "denominator": "Unique failed tool-call IDs; terminal-only failure when no failed tool receipt. Error-message bucket is offline diagnosis, not a new runtime taxonomy; unclassified retained."
+    },
+    "invalid": {
+      "InvalidRecommendationProposal": 0,
+      "proposals": [],
+      "scope": "Java typed business rejections; observation only, not frozen grading",
+      "proposal_count": 1
+    },
+    "terminal_tokens": {
+      "applicable": false,
+      "reason": "No timestamped canonical empty-eligibility receipt; do not infer earlier terminal knowledge from model narrative."
+    }
+  },
+  {
+    "task": "REQ-03",
+    "classification": {
+      "normal_business_terminal_count": 1,
+      "business_rejection_count": 1,
+      "canonical_finalize_rejection_count": 0,
+      "validation_rejection": 0,
+      "policy_denial": 0,
+      "stale_version_conflict": 0,
+      "runtime_infrastructure_error": 0,
+      "unclassified_error": 0,
+      "normal_business_outcome_misclassified": 0,
+      "finalize_consistent": true,
+      "outcome": "NEEDS_USER_INPUT",
+      "state": "COMPLETED",
+      "stop_reason": "COMPLETED",
+      "failures": [],
+      "denominator": "Unique failed tool-call IDs; terminal-only failure when no failed tool receipt. Error-message bucket is offline diagnosis, not a new runtime taxonomy; unclassified retained."
+    },
+    "invalid": {
+      "InvalidRecommendationProposal": 0,
+      "proposals": [],
+      "scope": "Java typed business rejections; observation only, not frozen grading",
+      "proposal_count": 0
+    },
+    "terminal_tokens": {
+      "applicable": false,
+      "reason": "No timestamped canonical empty-eligibility receipt; do not infer earlier terminal knowledge from model narrative."
+    }
+  },
+  {
+    "task": "ANOM-01",
+    "classification": {
+      "normal_business_terminal_count": 1,
+      "business_rejection_count": 1,
+      "canonical_finalize_rejection_count": 1,
+      "validation_rejection": 0,
+      "policy_denial": 0,
+      "stale_version_conflict": 0,
+      "runtime_infrastructure_error": 0,
+      "unclassified_error": 0,
+      "normal_business_outcome_misclassified": 0,
+      "finalize_consistent": true,
+      "outcome": "NO_ELIGIBLE_SUPPLIER",
+      "state": "COMPLETED",
+      "stop_reason": "COMPLETED",
+      "failures": [],
+      "denominator": "Unique failed tool-call IDs; terminal-only failure when no failed tool receipt. Error-message bucket is offline diagnosis, not a new runtime taxonomy; unclassified retained."
+    },
+    "invalid": {
+      "InvalidRecommendationProposal": 1,
+      "proposals": [
+        {
+          "task": "ANOM-01",
+          "supplier": "V2-SUP-001",
+          "reason": "NO_ELIGIBLE_SUPPLIER",
+          "stage": "SOURCING",
+          "run_id": "533a609a-d68e-4ff2-84ad-b7d2e41041f5"
+        }
+      ],
+      "scope": "Java typed business rejections; observation only, not frozen grading",
+      "proposal_count": 1
+    },
+    "terminal_tokens": {
+      "applicable": true,
+      "known_at": "2026-10-05T03:38:48.031862600Z",
+      "evidence_ref": "32101e36-14cb-4409-8ff5-53fa6e938035",
+      "before": {
+        "input_tokens": 10681,
+        "output_tokens": 554,
+        "total_tokens": 11235,
+        "model_calls": 3
+      },
+      "after": {
+        "input_tokens": 49865,
+        "output_tokens": 1973,
+        "total_tokens": 51838,
+        "model_calls": 7
+      },
+      "guardrail_tokens_unallocated": 977,
+      "scope": "Provider agent-model usage bucketed by MODEL_STARTED before/after canonical Search receipt. Includes repeated context tokens. No inference about inaccessible model thought; guardrail usage has no comparable timestamp."
+    }
+  },
+  {
+    "task": "SRC-01",
+    "classification": {
+      "normal_business_terminal_count": 1,
+      "business_rejection_count": 0,
+      "canonical_finalize_rejection_count": 0,
+      "validation_rejection": 0,
+      "policy_denial": 0,
+      "stale_version_conflict": 0,
+      "runtime_infrastructure_error": 0,
+      "unclassified_error": 0,
+      "normal_business_outcome_misclassified": 0,
+      "finalize_consistent": true,
+      "outcome": "COMPLETE",
+      "state": "COMPLETED",
+      "stop_reason": "COMPLETED",
+      "failures": [],
+      "denominator": "Unique failed tool-call IDs; terminal-only failure when no failed tool receipt. Error-message bucket is offline diagnosis, not a new runtime taxonomy; unclassified retained."
+    },
+    "invalid": {
+      "InvalidRecommendationProposal": 0,
+      "proposals": [],
+      "scope": "Java typed business rejections; observation only, not frozen grading",
+      "proposal_count": 1
+    },
+    "terminal_tokens": {
+      "applicable": false,
+      "reason": "No timestamped canonical empty-eligibility receipt; do not infer earlier terminal knowledge from model narrative."
+    }
+  },
+  {
+    "task": "RFQ-01",
+    "classification": {
+      "normal_business_terminal_count": 0,
+      "business_rejection_count": 0,
+      "canonical_finalize_rejection_count": 0,
+      "validation_rejection": 0,
+      "policy_denial": 0,
+      "stale_version_conflict": 0,
+      "runtime_infrastructure_error": 0,
+      "unclassified_error": 0,
+      "normal_business_outcome_misclassified": 0,
+      "finalize_consistent": true,
+      "outcome": "WAITING_APPROVAL",
+      "state": "WAITING_APPROVAL",
+      "stop_reason": "WAITING_APPROVAL",
+      "failures": [],
+      "denominator": "Unique failed tool-call IDs; terminal-only failure when no failed tool receipt. Error-message bucket is offline diagnosis, not a new runtime taxonomy; unclassified retained."
+    },
+    "invalid": {
+      "InvalidRecommendationProposal": 0,
+      "proposals": [],
+      "scope": "Java typed business rejections; observation only, not frozen grading",
+      "proposal_count": 1
+    },
+    "terminal_tokens": {
+      "applicable": false,
+      "reason": "No timestamped canonical empty-eligibility receipt; do not infer earlier terminal knowledge from model narrative."
+    }
+  },
+  {
+    "task": "RFQ-02",
+    "classification": {
+      "normal_business_terminal_count": 1,
+      "business_rejection_count": 0,
+      "canonical_finalize_rejection_count": 0,
+      "validation_rejection": 0,
+      "policy_denial": 0,
+      "stale_version_conflict": 0,
+      "runtime_infrastructure_error": 0,
+      "unclassified_error": 0,
+      "normal_business_outcome_misclassified": 0,
+      "finalize_consistent": true,
+      "outcome": "COMPLETE",
+      "state": "COMPLETED",
+      "stop_reason": "COMPLETED",
+      "failures": [],
+      "denominator": "Unique failed tool-call IDs; terminal-only failure when no failed tool receipt. Error-message bucket is offline diagnosis, not a new runtime taxonomy; unclassified retained."
+    },
+    "invalid": {
+      "InvalidRecommendationProposal": 0,
+      "proposals": [],
+      "scope": "Java typed business rejections; observation only, not frozen grading",
+      "proposal_count": 1
+    },
+    "terminal_tokens": {
+      "applicable": false,
+      "reason": "No timestamped canonical empty-eligibility receipt; do not infer earlier terminal knowledge from model narrative."
+    }
+  },
+  {
+    "task": "GOV-01",
+    "classification": {
+      "normal_business_terminal_count": 0,
+      "business_rejection_count": 0,
+      "canonical_finalize_rejection_count": 0,
+      "validation_rejection": 4,
+      "policy_denial": 0,
+      "stale_version_conflict": 0,
+      "runtime_infrastructure_error": 0,
+      "unclassified_error": 1,
+      "normal_business_outcome_misclassified": 0,
+      "finalize_consistent": true,
+      "outcome": "WAITING_APPROVAL",
+      "state": "WAITING_APPROVAL",
+      "stop_reason": "WAITING_APPROVAL",
+      "failures": [
+        {
+          "id": "bf046893-b038-48fa-9526-ab39276c3fcd",
+          "source": "tool ledger",
+          "text": "",
+          "category": "VALIDATION_ERROR",
+          "diagnostic_bucket": "validation_rejection"
+        },
+        {
+          "id": "40148bf8-d516-4ffc-917c-ca1e9c841a2b",
+          "source": "tool ledger",
+          "text": "",
+          "category": "VALIDATION_ERROR",
+          "diagnostic_bucket": "validation_rejection"
+        },
+        {
+          "id": "b37ddd01-ce42-4063-ace4-e8acfe0053eb:workflow:procurement_create_rfq",
+          "source": "tool ledger",
+          "text": "",
+          "category": "UNCLASSIFIED",
+          "diagnostic_bucket": "unclassified_error"
+        },
+        {
+          "id": "2b48f1e2-1f57-4277-b282-0759f3f97c33",
+          "source": "tool ledger",
+          "text": "",
+          "category": "VALIDATION_ERROR",
+          "diagnostic_bucket": "validation_rejection"
+        },
+        {
+          "id": "2ef0348b-55c1-4146-b0de-10d671e5535c",
+          "source": "tool ledger",
+          "text": "",
+          "category": "VALIDATION_ERROR",
+          "diagnostic_bucket": "validation_rejection"
+        }
+      ],
+      "denominator": "Unique failed tool-call IDs; terminal-only failure when no failed tool receipt. Error-message bucket is offline diagnosis, not a new runtime taxonomy; unclassified retained."
+    },
+    "invalid": {
+      "InvalidRecommendationProposal": 0,
+      "proposals": [],
+      "scope": "Java typed business rejections; observation only, not frozen grading",
+      "proposal_count": 1
+    },
+    "terminal_tokens": {
+      "applicable": false,
+      "reason": "No timestamped canonical empty-eligibility receipt; do not infer earlier terminal knowledge from model narrative."
+    }
+  },
+  {
+    "task": "E2E-01",
+    "classification": {
+      "normal_business_terminal_count": 0,
+      "business_rejection_count": 0,
+      "canonical_finalize_rejection_count": 0,
+      "validation_rejection": 0,
+      "policy_denial": 0,
+      "stale_version_conflict": 0,
+      "runtime_infrastructure_error": 0,
+      "unclassified_error": 1,
+      "normal_business_outcome_misclassified": 0,
+      "finalize_consistent": true,
+      "outcome": "WORKFLOW_ERROR",
+      "state": "FAILED",
+      "stop_reason": "TOOL_ERROR",
+      "failures": [
+        {
+          "id": "c7b72bb8-9849-4cef-997b-cd1e88c51414",
+          "source": "terminal",
+          "text": "subject must match exact canonical demand",
+          "category": "TOOL_ERROR",
+          "diagnostic_bucket": "unclassified_error"
+        }
+      ],
+      "denominator": "Unique failed tool-call IDs; terminal-only failure when no failed tool receipt. Error-message bucket is offline diagnosis, not a new runtime taxonomy; unclassified retained."
+    },
+    "invalid": {
+      "InvalidRecommendationProposal": 0,
+      "proposals": [],
+      "scope": "Java typed business rejections; observation only, not frozen grading",
+      "proposal_count": 0
+    },
+    "terminal_tokens": {
+      "applicable": false,
+      "reason": "No timestamped canonical empty-eligibility receipt; do not infer earlier terminal knowledge from model narrative."
+    }
+  }
+]

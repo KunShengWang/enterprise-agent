@@ -1,0 +1,60 @@
+{
+  "errors": [
+    {
+      "task": "RFQ-01",
+      "id": "606c7f72-54f3-4794-918a-099795d64d95",
+      "tool": "mcp.erpnext.procurement_get_supplier",
+      "errorMessage": "missing required argument: id",
+      "runtime_outcome": "VALIDATION_ERROR",
+      "reviewed_bucket": "validation_rejection",
+      "actor": "model"
+    },
+    {
+      "task": "RFQ-01",
+      "id": "d11e8ec3-0c9b-44db-8d67-144bb45d900a",
+      "tool": "mcp.erpnext.procurement_get_supplier",
+      "errorMessage": "missing required argument: id",
+      "runtime_outcome": "VALIDATION_ERROR",
+      "reviewed_bucket": "validation_rejection",
+      "actor": "model"
+    },
+    {
+      "task": "RFQ-01",
+      "id": "a49844b3-e291-4060-b130-8b79ac2d90d7",
+      "tool": "mcp.erpnext.procurement_get_supplier",
+      "errorMessage": "missing required argument: id",
+      "runtime_outcome": "VALIDATION_ERROR",
+      "reviewed_bucket": "validation_rejection",
+      "actor": "model"
+    },
+    {
+      "task": "RFQ-01",
+      "id": "6fb9e2da-b33c-417b-ab09-2e3cd3dae40e",
+      "tool": "mcp.erpnext.procurement_get_supplier",
+      "errorMessage": "missing required argument: id",
+      "runtime_outcome": "VALIDATION_ERROR",
+      "reviewed_bucket": "validation_rejection",
+      "actor": "model"
+    },
+    {
+      "task": "GOV-01",
+      "id": "5a87a36c-9aa1-4877-93d8-366f113472a7:workflow:procurement_create_rfq",
+      "tool": "procurement_create_rfq",
+      "errorMessage": "prepared RFQ request is stale for the current procurement Case",
+      "runtime_outcome": "BUSINESS_ERROR",
+      "reviewed_bucket": "stale_version_conflict",
+      "actor": "environment"
+    },
+    {
+      "task": "ROB-01",
+      "id": "6d1ff07e-6e95-4bd1-a665-36bba9a86a37",
+      "tool": "mcp.erpnext.procurement_get_item",
+      "errorMessage": "injected MCP 503",
+      "runtime_outcome": "RETRYABLE_ERROR",
+      "reviewed_bucket": "runtime_infrastructure_error",
+      "actor": "model"
+    }
+  ],
+  "automated_output_preserved": true,
+  "limitation": "Scratch outcome_audit reads error, whereas ToolCallResult exposes errorMessage. GOV environment probe has no MODEL tool event and remains UNCLASSIFIED in original automated output. This separate reviewed mapping does not alter scoring or originals."
+}

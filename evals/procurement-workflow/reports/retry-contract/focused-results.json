@@ -1,0 +1,65 @@
+[
+  {
+    "name": "com.agent.platform.procurement.ProcurementStructuredOutputTests(workflow-retry-focused-r2)",
+    "tests": 27,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "com.agent.platform.procurement.ProcurementWorkflowBusinessOutcomeTests(workflow-retry-focused-r2)",
+    "tests": 15,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "com.agent.platform.procurement.ProcurementWorkflowEvidenceCarryTests(workflow-retry-focused-r2)",
+    "tests": 23,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "com.agent.platform.procurement.ProcurementWorkflowRequisitionBindingTests(workflow-retry-focused-r2)",
+    "tests": 10,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "com.agent.platform.procurement.ProcurementWorkflowRetryTests(workflow-retry-focused-r2)",
+    "tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "com.agent.platform.procurement.ProcurementWorkflowTests(workflow-retry-focused-r2)",
+    "tests": 30,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "com.agent.platform.runtime.DefaultAgentRuntimeStateTests(workflow-retry-focused-r2)",
+    "tests": 23,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "com.agent.platform.runtime.HarnessCoreTests(workflow-retry-focused-r2)",
+    "tests": 15,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "com.agent.platform.runtime.ToolRetryPolicyTests(workflow-retry-focused-r2)",
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+]

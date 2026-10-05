@@ -33,5 +33,6 @@ public enum AgentStopReason {
     /** 上下文溢出：Prompt 拼接后超过模型最大上下文窗口 */
     CONTEXT_OVERFLOW,
     /** 内部错误：Agent 框架自身的未知异常 */
-    INTERNAL_ERROR
+    INTERNAL_ERROR,
+    STRUCTURED_OUTPUT_INVALID
 }

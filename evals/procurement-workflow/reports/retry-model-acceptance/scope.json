@@ -1,0 +1,25 @@
+{
+  "branch": "feat/procurement-workflow",
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "initial_existing_files": 1302,
+  "unchanged_existing_files": 1302,
+  "changed_existing_files": [],
+  "handler_byte_identical": true,
+  "handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "handler_unstaged": true,
+  "index_empty": true,
+  "git_diff_check_pass": true,
+  "full_freeze_equal": true,
+  "production_fingerprint": "052e44be79e63f95dc233ff6881389e336d7df652a152956ad3967ef89f95e65",
+  "production_source_edits": 0,
+  "valid_model_trials": 1,
+  "other_model_trials": 0,
+  "commit_push_tag": false,
+  "previous_deterministic_evidence": "evals/procurement-workflow/reports/retry-contract/deterministic.json",
+  "prior_infra_invalid_run": "target/procurement-workflow/workflow-retry-rob01-20261005-r1",
+  "authored_paths": [
+    "docs/harness/workflow-retry-model-acceptance-report.md",
+    "evals/procurement-workflow/reports/retry-model-acceptance/",
+    "target/workflow-retry-acceptance-20261005/"
+  ]
+}

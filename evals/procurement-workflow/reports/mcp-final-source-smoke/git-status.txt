@@ -1,0 +1,55 @@
+ M src/main/java/com/agent/platform/config/McpProperties.java
+ M src/main/java/com/agent/platform/mcp/StdioMcpToolGateway.java
+ M src/main/java/com/agent/platform/procurement/application/ProcurementCaseContextRenderer.java
+ M src/main/java/com/agent/platform/procurement/application/ProcurementCaseService.java
+ M src/main/java/com/agent/platform/procurement/application/ProcurementRecommendationFinalizer.java
+ M src/main/java/com/agent/platform/procurement/erp/ErpNextProcurementAdapter.java
+ M src/main/java/com/agent/platform/procurement/erp/ErpRfqApprovalGuard.java
+ M src/main/java/com/agent/platform/procurement/tool/ProcurementRfqApprovalPreparer.java
+ M src/main/java/com/agent/platform/procurement/tool/ProcurementRfqToolHandler.java
+ M src/main/java/com/agent/platform/procurement/tool/ProcurementToolHandler.java
+ M src/main/java/com/agent/platform/runtime/AgentEventType.java
+ M src/main/java/com/agent/platform/runtime/AgentExecutionProfile.java
+ M src/main/java/com/agent/platform/runtime/AgentStopReason.java
+ M src/main/java/com/agent/platform/runtime/ContextPolicy.java
+ M src/main/java/com/agent/platform/runtime/DefaultAgentContextManager.java
+ M src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java
+ M src/main/java/com/agent/platform/runtime/DefaultAgentToolRuntime.java
+ M src/main/java/com/agent/platform/runtime/NativeToolCallingAgentModelGateway.java
+ M src/main/java/com/agent/platform/runtime/ToolExecutionDeadline.java
+ M src/main/resources/application-erpnext.yaml
+ M src/test/java/com/agent/platform/procurement/erp/ErpNextAdapterTests.java
+ M src/test/java/com/agent/platform/runtime/HarnessCoreTests.java
+ M src/test/java/com/agent/platform/runtime/NativeToolCallingAgentModelGatewayTests.java
+?? docs/adr/
+?? docs/harness/procurement-workflow.md
+?? docs/harness/workflow-binding-final-source-gates-report.md
+?? docs/harness/workflow-business-final-source-gates-report.md
+?? docs/harness/workflow-business-outcomes-report.md
+?? docs/harness/workflow-evidence-carry-report.md
+?? docs/harness/workflow-final-smoke-report.md
+?? docs/harness/workflow-final-source-gates-report.md
+?? docs/harness/workflow-mcp-final-source-smoke-report.md
+?? docs/harness/workflow-mcp-tool-contract-report.md
+?? docs/harness/workflow-phase-report.md
+?? docs/harness/workflow-requisition-binding-report.md
+?? docs/harness/workflow-retry-contract-report.md
+?? docs/harness/workflow-retry-model-acceptance-report.md
+?? docs/harness/workflow-structured-output-report.md
+?? evals/harness-core/__pycache__/
+?? evals/procurement-v2.2/__pycache__/
+?? evals/procurement-workflow/
+?? src/main/java/com/agent/platform/procurement/workflow/
+?? src/main/java/com/agent/platform/runtime/StructuredOutputSpec.java
+?? src/main/java/com/agent/platform/runtime/ToolRetryPolicy.java
+?? src/test/java/com/agent/platform/mcp/McpAnnotationTestServer.java
+?? src/test/java/com/agent/platform/procurement/ProcurementStructuredOutputTests.java
+?? src/test/java/com/agent/platform/procurement/ProcurementWorkflowBusinessOutcomeTests.java
+?? src/test/java/com/agent/platform/procurement/ProcurementWorkflowEvidenceCarryTests.java
+?? src/test/java/com/agent/platform/procurement/ProcurementWorkflowRequisitionBindingTests.java
+?? src/test/java/com/agent/platform/procurement/ProcurementWorkflowRetryTests.java
+?? src/test/java/com/agent/platform/procurement/ProcurementWorkflowTests.java
+?? src/test/java/com/agent/platform/procurement/ProcurementWorkflowTrialDriver.java
+?? src/test/java/com/agent/platform/procurement/erp/WorkflowErpLinkTestSupport.java
+?? src/test/java/com/agent/platform/runtime/McpToolEffectContractTests.java
+?? src/test/java/com/agent/platform/runtime/ToolRetryPolicyTests.java

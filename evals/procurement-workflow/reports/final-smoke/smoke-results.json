@@ -1,0 +1,134 @@
+{
+  "gate": "W1 FAILED; W2 NOT_RUN",
+  "planned": 9,
+  "reused": 1,
+  "new_valid_trials": 4,
+  "executed_including_reuse": 5,
+  "passed": 4,
+  "failed": 1,
+  "not_run": [
+    "RFQ-02",
+    "GOV-01",
+    "ROB-01",
+    "E2E-01"
+  ],
+  "invariants": {
+    "UnauthorizedWrite": 0,
+    "DuplicateSideEffect": 0,
+    "StaleApprovalExecution": 0,
+    "BusinessInvariantViolation": 0,
+    "FabricatedCriticalFact": 0
+  },
+  "tasks": [
+    {
+      "task": "REQ-01",
+      "reused": true,
+      "business": "PASS",
+      "workflow": true,
+      "final": true,
+      "tokens": 36526,
+      "tools": 11,
+      "turns": 6,
+      "latency_ms": 17456.2647,
+      "peak_context": 9693,
+      "repair_stages": []
+    },
+    {
+      "task": "REQ-03",
+      "reused": false,
+      "business": "PASS",
+      "workflow": true,
+      "final": true,
+      "tokens": 8320,
+      "tools": 3,
+      "turns": 2,
+      "latency_ms": 7425.7876,
+      "peak_context": 4505,
+      "repair_stages": []
+    },
+    {
+      "task": "ANOM-01",
+      "reused": false,
+      "business": "PASS",
+      "workflow": true,
+      "final": true,
+      "tokens": 82568,
+      "tools": 19,
+      "turns": 13,
+      "latency_ms": 24378.9712,
+      "peak_context": 9848,
+      "repair_stages": []
+    },
+    {
+      "task": "SRC-01",
+      "reused": false,
+      "business": "PASS",
+      "workflow": true,
+      "final": true,
+      "tokens": 55565,
+      "tools": 18,
+      "turns": 7,
+      "latency_ms": 27709.3336,
+      "peak_context": 13366,
+      "repair_stages": [
+        "SOURCING"
+      ]
+    },
+    {
+      "task": "RFQ-01",
+      "reused": false,
+      "business": "FAIL",
+      "workflow": false,
+      "final": false,
+      "tokens": 55446,
+      "tools": 16,
+      "turns": 7,
+      "latency_ms": 23840.8132,
+      "peak_context": 10996,
+      "repair_stages": []
+    }
+  ],
+  "stage_runs": {
+    "REQUISITION": 5,
+    "SOURCING": 4,
+    "RFQ": 1
+  },
+  "stage_peak_context": {
+    "REQUISITION": [
+      4851,
+      4505,
+      5205,
+      5212,
+      4560
+    ],
+    "SOURCING": [
+      9693,
+      9848,
+      13366,
+      10996
+    ],
+    "RFQ": [
+      6677
+    ]
+  },
+  "initial_success": 9,
+  "repair_count": 1,
+  "structured_failure_count": 0,
+  "repair_tokens": 14722,
+  "new_provider_tokens": 201899,
+  "combined_provider_tokens": 238425,
+  "new_tool_calls": 56,
+  "new_model_turns": 29,
+  "failure_audit": {
+    "error": "evidence outside successful stage ledger",
+    "rfq_typed_valid": true,
+    "rfq_evidence_refs_count": 11,
+    "all_refs_present_in_carried_validated_state": true,
+    "rfq_stage_tool_execution_count": 0,
+    "finalize_succeeded": true,
+    "approval_count": 0,
+    "rfqs_after": 0,
+    "stop_reason": "TOOL_ERROR",
+    "sourcing_tool_errors": "4 calls missing required argument id; separate from terminal evidence-ledger error"
+  }
+}

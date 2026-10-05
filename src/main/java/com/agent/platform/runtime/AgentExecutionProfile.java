@@ -11,8 +11,14 @@ public record AgentExecutionProfile(
         Set<String> allowedCapabilities,// agent 能使用的工具
         AgentRunLimits limits,// agent 运行时的限制条件
         boolean longTermMemoryEnabled,// 启用长期记忆读写、recall、User Profile 和 memory_context
-        ContextPolicy contextPolicy
+        ContextPolicy contextPolicy,
+        StructuredOutputSpec structuredOutput
 ) {
+
+    public AgentExecutionProfile(String name,String systemPrompt,Set<String> capabilities,AgentRunLimits limits,
+                                 boolean memory,ContextPolicy contextPolicy){
+        this(name,systemPrompt,capabilities,limits,memory,contextPolicy,null);
+    }
 
     public AgentExecutionProfile(String name, String systemPrompt, Set<String> allowedCapabilities,
                                  AgentRunLimits limits, boolean longTermMemoryEnabled) {

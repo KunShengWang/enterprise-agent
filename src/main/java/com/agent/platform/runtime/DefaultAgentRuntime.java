@@ -699,6 +699,15 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                                            AgentExecutionProfile profile,
                                            AgentEventListener listener) {
         int contextOverflowRetries = 0;
+        int structuredRepairs=profile.structuredOutput()==null?0:((Number)runStore.find(runId).orElseThrow().request().metadata()
+                .getOrDefault(StructuredOutputSpec.REPAIRS,0)).intValue();
+        // A paused/crashed correction never receives another model attempt on resume.
+        if(profile.structuredOutput()!=null && Boolean.TRUE.equals(runStore.find(runId).orElseThrow()
+                .request().metadata().get(StructuredOutputSpec.REPAIR_ATTEMPTED))){
+            return finish(runId,sessionId,userId,AgentRunState.FAILED,AgentStopReason.STRUCTURED_OUTPUT_INVALID,
+                    StructuredOutputSpec.Error.STRUCTURED_OUTPUT_REPAIR_EXHAUSTED.name()+": correction already dispatched",
+                    "",toolResults,usedTools,usedRag,false,budget,listener);
+        }
         while (true) {
             // 更新 session 租约（续约），避免 agent 执行时间过长导致租约丢失，然后其他的请求会把当前的 session 写脏
             if (!runControlStore.renewSessionLease(sessionId, leaseOwnerId, sessionLeaseDuration())) {
@@ -787,6 +796,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     toolResults, usedTools, usedRag, budget);
 
             // LLM 调用
+            long structuredCallStart=System.nanoTime();
             AgentModelTurn modelTurn;
             StreamingModelDeltaPublisher modelDeltaPublisher;
             int modelProtocolRetries = 0;
@@ -799,6 +809,15 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                         listener
                 );
                 try {
+                    if(structuredRepairs>0){
+                        runStore.update(runId,r->{
+                            var metadata=new java.util.LinkedHashMap<String,Object>(r.request().metadata());
+                            metadata.put(StructuredOutputSpec.REPAIR_ATTEMPTED,true);
+                            var storedRequest=r.request();
+                            return r.withRequest(new AgentRequest(storedRequest.conversationId(),storedRequest.userId(),
+                                    storedRequest.question(),metadata,storedRequest.scenarioId()));
+                        });
+                    }
                     // 这是真正的 LLM token 级流式推送
                     modelTurn = modelGateway.nextTurn(new AgentModelRequest(
                             runId,
@@ -807,7 +826,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                             context.messages(),
                             // 发给 LLM 前过滤，保存 agent 白名单工具和当前阶段可见工具
                             capabilitiesFor(profile, request.metadata(), usedTools),
-                            request.metadata()
+                            StructuredOutputSpec.modelMetadata(request.metadata(),profile.structuredOutput(),structuredRepairs)
                     ), modelDeltaPublisher::accept);
                     break;
                 }
@@ -818,6 +837,17 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                     boolean contextOverflow = isContextOverflow(modelFailure);
                     String errorType = modelErrorType(modelFailure);
                     boolean protocolFailure = "MODEL_PROTOCOL_ERROR".equals(errorType);
+                    if(structuredRepairs>0){
+                        var repairFailure=new java.util.LinkedHashMap<String,Object>();
+                        repairFailure.put("structured_output_initial_success",false);
+                        repairFailure.put("structured_output_repair_count",structuredRepairs);
+                        repairFailure.put("structured_output_failure_count",1);
+                        repairFailure.put("errorType",StructuredOutputSpec.Error.STRUCTURED_OUTPUT_REPAIR_EXHAUSTED.name());
+                        repairFailure.put("modelErrorType",errorType);
+                        repairFailure.put("repair_tokens","unavailable"); // No provider usage on transport/protocol failure.
+                        repairFailure.put("repair_latency_ms",(System.nanoTime()-structuredCallStart)/1_000_000.0);
+                        publish(sessionId,userId,runId,AgentEventType.STRUCTURED_OUTPUT_REJECTED,"correction model call failed",repairFailure,listener);
+                    }
                     publish(sessionId, userId, runId, AgentEventType.MODEL_FAILED,
                             contextOverflow ? "model rejected context" : "model turn failed",
                             Map.of(
@@ -837,7 +867,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                                     toolResults, usedTools, usedRag, budget, listener);
                         }
                     }
-                    if (protocolFailure
+                    if (protocolFailure && structuredRepairs==0
                             && modelProtocolRetries < Math.max(0, properties.getMaxModelProtocolRetries())) {
                         modelProtocolRetries++;
                         Optional<AgentStopReason> retryStop = budget.beforeModelCall();
@@ -855,7 +885,7 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
                         continue;
                     }
                     // ============ 上下文溢出处理 ============
-                    if (contextOverflow
+                    if (contextOverflow && structuredRepairs==0
                             && contextOverflowRetries < Math.max(0, properties.getMaxContextOverflowRetries())) {
                         contextOverflowRetries++;
                         budget.recordModelCall(new LlmUsage(0, 0, 0, 0, 0, "", "context-overflow"), 0);
@@ -947,6 +977,39 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
             if (asynchronousStop.isPresent()) {
                 return finishBudgetStop(request, runId, sessionId, userId, asynchronousStop.get(),
                         toolResults, usedTools, usedRag, budget, listener);
+            }
+
+            if(profile.structuredOutput()!=null && (!modelTurn.hasToolCalls() || structuredRepairs>0)){
+                var metrics=new java.util.LinkedHashMap<String,Object>();
+                metrics.put("structured_output_repair_count",structuredRepairs);
+                metrics.put("repair_tokens",structuredRepairs>0?effectiveUsage.totalTokens():0);
+                metrics.put("repair_latency_ms",structuredRepairs>0?(System.nanoTime()-structuredCallStart)/1_000_000.0:0);
+                try{
+                    if(modelTurn.hasToolCalls())throw new StructuredOutputSpec.Invalid(StructuredOutputSpec.Error.STRUCTURED_OUTPUT_SCHEMA_ERROR,"correction must end with a typed result, not tools");
+                    Object typed=profile.structuredOutput().parse(modelTurn.assistantText());
+                    persistStructured(runId,typed,profile.structuredOutput().outputType(),structuredRepairs);
+                    metrics.put("structured_output_initial_success",structuredRepairs==0);
+                    metrics.put("structured_output_failure_count",0);
+                    publish(sessionId,userId,runId,AgentEventType.STRUCTURED_OUTPUT_VALIDATED,"typed output validated",metrics,listener);
+                }catch(StructuredOutputSpec.Invalid invalid){
+                    metrics.put("errorType",invalid.code().name());
+                    metrics.put("structured_output_initial_success",false);
+                    metrics.put("structured_output_failure_count",structuredRepairs>=StructuredOutputSpec.MAX_REPEAT_ATTEMPTS?1:0);
+                    metrics.put("repairExhausted",structuredRepairs>=StructuredOutputSpec.MAX_REPEAT_ATTEMPTS);
+                    publish(sessionId,userId,runId,AgentEventType.STRUCTURED_OUTPUT_REJECTED,invalid.getMessage(),metrics,listener);
+                    if(structuredRepairs>=StructuredOutputSpec.MAX_REPEAT_ATTEMPTS){
+                        return finish(runId,sessionId,userId,AgentRunState.FAILED,AgentStopReason.STRUCTURED_OUTPUT_INVALID,
+                                StructuredOutputSpec.Error.STRUCTURED_OUTPUT_REPAIR_EXHAUSTED.name()+": "+invalid.code().name(),"",
+                                toolResults,usedTools,usedRag,false,budget,listener);
+                    }
+                    structuredRepairs++;
+                    persistStructured(runId,null,null,structuredRepairs);
+                    timelineStore.appendMessages(sessionId,userId,runId,List.of(
+                            AgentMessageDraft.assistant(modelTurn.assistantText(),tokenEstimator.estimate(modelTurn.assistantText())),
+                            AgentMessageDraft.user("Structured output validation failed: "+invalid.code().name()+". "+invalid.getMessage()
+                                    +". 唯一修复机会：仅返回符合既定 schema 的 JSON 对象，分析放在字段内，不调用工具。",128)));
+                    continue; // Existing Harness loop accounts for the one correction, budget and trace.
+                }
             }
 
             // ② 正常完成（LLM 不再要调工具）
@@ -1729,6 +1792,16 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         );
     }
 
+    private void persistStructured(String runId,Object result,Class<?> type,int repairs){
+        runStore.update(runId,r->{
+            var metadata=new java.util.LinkedHashMap<String,Object>(r.request().metadata());
+            metadata.put(StructuredOutputSpec.REPAIRS,repairs);
+            if(result!=null){metadata.put(StructuredOutputSpec.RESULT,result);metadata.put(StructuredOutputSpec.TYPE,type.getName());}
+            var request=r.request();
+            return r.withRequest(new AgentRequest(request.conversationId(),request.userId(),request.question(),metadata,request.scenarioId()));
+        });
+    }
+
     private AgentRuntimeResult finishFinalAnswer(AgentRequest request,
                                                  String runId,
                                                  String sessionId,
@@ -2435,6 +2508,10 @@ public class DefaultAgentRuntime implements AgentRuntime, AgentContinuationRunti
         payload.put("durationMs", result.metadata().getOrDefault("_harnessDurationMs", 0));
         Object attempts = result.metadata().getOrDefault("attempts", 1);
         payload.put("retryCount", attempts instanceof Number n ? Math.max(0, n.intValue() - 1) : 0);
+        payload.put("toolAttempts", attempts);
+        payload.put("toolErrors", result.metadata().getOrDefault("_harnessToolErrors", result.success() ? 0 : 1));
+        payload.put("recoveredRetryableErrors", result.metadata().getOrDefault("_harnessRecoveredRetryableErrors", 0));
+        payload.put("attemptHistory", result.metadata().getOrDefault("_harnessAttempts", List.of()));
         payload.put("error", result.errorMessage() == null ? "" : result.errorMessage());
         payload.put("metadata", result.metadata());
         return Map.copyOf(payload);

@@ -19,7 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Instant;
-import java.util.Locale;
+import com.agent.platform.tool.ToolExecutionOutcome;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.UUID;
@@ -303,6 +305,7 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         // 工具的执行有最大重试次数
         int maxAttempts = Math.max(1, properties.getMaxToolExecutionAttempts());
         ToolCallResult lastResult = null;
+        var history = new ArrayList<Map<String, Object>>();
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 // 工具执行
@@ -313,23 +316,28 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
                         "capability returned no result", Map.of("_harnessOutcome", "FATAL_ERROR", "retryable", false));
             }
             catch (RuntimeException exception) {
-                // 失败标记可重试
+                // Classify known transient exceptions; unexpected exceptions are fatal.
                 lastResult = new ToolCallResult(
                         request.toolName(),
                         false,
                         "",
                         "capability execution failed: " + exception.getClass().getSimpleName(),
-                        Map.of("attempt", attempt, "retryable", true, "_harnessOutcome", "RETRYABLE_ERROR")
+                        Map.of("attempt", attempt, "_harnessOutcome", exceptionOutcome(exception).name())
                 );
             }
-            if (lastResult.success() // ① 成功了 → 不用重试
-                    || !retryable(lastResult) // ② 失败了但不可重试（如权限不足）→ 重试也没用
-                    || attempt >= maxAttempts // ③ 重试次数用完了 → 不能再试了
-            ) {
-                // 由于条件 ③（attempt >= maxAttempts）在最后一次循环必然成立，所以理论上这个方法一定会在循环内 return——不会走到循环外
-                return withAttemptMetadata(lastResult, attempt, started, definition);
-            }
-            sleepBackoff(attempt);// 指数退避
+            var decision = ToolRetryPolicy.decide(lastResult, definition, attempt, maxAttempts,
+                    properties.getToolRetryBackoffMillis());
+            var entry = new LinkedHashMap<String, Object>();
+            entry.put("toolCallId", request.requestId()); entry.put("toolName", request.toolName());
+            entry.put("attempt", attempt); entry.put("outcome", lastResult.outcome().name());
+            entry.put("retryable", lastResult.outcome() == ToolExecutionOutcome.RETRYABLE_ERROR);
+            entry.put("effect", definition.runtimeContract().effect().name());
+            entry.put("retryDecision", decision.retry()); entry.put("retryReason", decision.reason());
+            entry.put("backoffMillis", decision.backoffMillis());
+            history.add(Map.copyOf(entry));
+            if (!decision.retry()) return withAttemptMetadata(lastResult, attempt, started, definition, history);
+            sleepBackoff(attempt);
+
         }
         // 理论不可达
         return lastResult == null
@@ -372,9 +380,14 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         );
     }
 
-    private ToolCallResult withAttemptMetadata(ToolCallResult result, int attempt, long started, ToolDefinition definition) {
+    private ToolCallResult withAttemptMetadata(ToolCallResult result, int attempt, long started, ToolDefinition definition, List<Map<String, Object>> history) {
         java.util.LinkedHashMap<String, Object> metadata = new java.util.LinkedHashMap<>(result.metadata());
         metadata.put("attempts", attempt);
+        metadata.put("_harnessAttempts", List.copyOf(history));
+        long errors = history.stream().filter(h -> !"SUCCESS".equals(h.get("outcome"))).count();
+        metadata.put("_harnessToolErrors", errors);
+        metadata.put("_harnessRecoveredRetryableErrors", result.success()
+                ? history.stream().filter(h -> "RETRYABLE_ERROR".equals(h.get("outcome"))).count() : 0L);
         metadata.put("_harnessDurationMs", (System.nanoTime() - started) / 1_000_000.0);
         metadata.put("_harnessSource", definition.runtimeContract().source().name());
         metadata.put("_harnessOutcome", result.outcome().name());
@@ -387,17 +400,16 @@ public class DefaultAgentToolRuntime implements AgentToolRuntime {
         );
     }
 
-    private boolean retryable(ToolCallResult result) {
-        Object explicit = result.metadata().get("retryable");
-        if (explicit instanceof Boolean bool) {
-            return bool;
+    private ToolExecutionOutcome exceptionOutcome(RuntimeException exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof java.net.SocketTimeoutException
+                    || cause instanceof java.net.http.HttpTimeoutException
+                    || cause instanceof java.net.ConnectException
+                    || cause instanceof java.sql.SQLTransientException)
+                return ToolExecutionOutcome.RETRYABLE_ERROR;
         }
-        String error = result.errorMessage() == null ? "" : result.errorMessage().toLowerCase(Locale.ROOT);
-        return error.contains("timeout")
-                || error.contains("temporar")
-                || error.contains("unavailable")
-                || error.contains("connection")
-                || error.contains("ioexception");
+        return exception instanceof IllegalArgumentException
+                ? ToolExecutionOutcome.VALIDATION_ERROR : ToolExecutionOutcome.FATAL_ERROR;
     }
 
     private boolean manualReview(ToolCallResult result) {

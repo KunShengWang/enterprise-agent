@@ -1,0 +1,5 @@
+{
+  "payloads_scanned": 232,
+  "known_credential_hits": [],
+  "scope": "Known local model/ERP credential values; recursive zip/gzip. No universal absence-of-secrets claim."
+}

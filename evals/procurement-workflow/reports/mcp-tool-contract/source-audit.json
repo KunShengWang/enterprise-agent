@@ -1,0 +1,18 @@
+{
+  "spring_ai_version": "2.0.0",
+  "pom_property": "spring-ai.version=2.0.0",
+  "actual_project_mcp_path": "ProcurementMcpService.tools -> ProcurementMcpServer tools/list -> StdioMcpToolGateway Map parsing -> toToolDefinition -> ToolRuntimeContract.from -> ToolRetryPolicy",
+  "spring_mcp_sdk_on_runtime_classpath": false,
+  "spring_callback_finding": "Provider passes full McpSchema.Tool into callback private field; McpToolUtils.createToolDefinition projects name, description, inputSchema only; callback inherits default ToolMetadata (returnDirect). annotations and definition _meta are not exposed in public definition/metadata; call request meta is separate from tool definition metadata.",
+  "official_annotations_url": "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/main/schema/2025-11-25/schema.ts",
+  "source_jars": {
+    "spring-ai-mcp-2.0.0-sources.jar": {
+      "url": "https://repo.maven.apache.org/maven2/org/springframework/ai/spring-ai-mcp/2.0.0/spring-ai-mcp-2.0.0-sources.jar",
+      "sha256": "64f8ca2ecb5751344638c9edceed9814548906d228e7e6029a6000162c4a1ad1"
+    },
+    "spring-ai-model-2.0.0-sources.jar": {
+      "url": "https://repo.maven.apache.org/maven2/org/springframework/ai/spring-ai-model/2.0.0/spring-ai-model-2.0.0-sources.jar",
+      "sha256": "0e518165adf511c8e90509575f5686b3b74c8659195a27ae76ec9d14e01b2430"
+    }
+  }
+}

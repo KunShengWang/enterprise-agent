@@ -1,0 +1,1684 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "tools": [
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "readOnlyHint": true
+        },
+        "outputSchema": {
+          "properties": {
+            "record": {
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "departmentId": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "itemId": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "quantity": {
+                  "maximum": 2147483647,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "requiredBy": {
+                  "format": "date",
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "source": {
+                  "properties": {
+                    "backend": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "entityType": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "entityId": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "retrievedAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "version": {
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "backend",
+                    "entityType",
+                    "entityId",
+                    "retrievedAt",
+                    "version"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "id",
+                "departmentId",
+                "itemId",
+                "quantity",
+                "requiredBy",
+                "status",
+                "source"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "record"
+          ]
+        },
+        "inputSchema": {
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id"
+          ]
+        },
+        "description": "Read a saved requisition before interpreting its item, department and deadline.",
+        "name": "procurement_get_requisition"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "readOnlyHint": true
+        },
+        "outputSchema": {
+          "properties": {
+            "nextOffset": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "records": {
+              "items": {
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "departmentId": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "itemId": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "quantity": {
+                    "maximum": 2147483647,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "requiredBy": {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "source": {
+                    "properties": {
+                      "backend": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "entityType": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "entityId": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "retrievedAt": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "version": {
+                        "format": "date-time",
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "backend",
+                      "entityType",
+                      "entityId",
+                      "retrievedAt",
+                      "version"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "id",
+                  "departmentId",
+                  "itemId",
+                  "quantity",
+                  "requiredBy",
+                  "status",
+                  "source"
+                ]
+              },
+              "type": "array"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "records",
+            "nextOffset"
+          ]
+        },
+        "inputSchema": {
+          "properties": {
+            "limit": {
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "maximum": 10000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": []
+        },
+        "description": "Find saved enterprise requisitions; use nextOffset to read subsequent pages.",
+        "name": "procurement_list_requisitions"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "readOnlyHint": true
+        },
+        "outputSchema": {
+          "properties": {
+            "record": {
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "category": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "uom": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "gpuMemoryGb": {
+                  "maximum": 2147483647,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "warranty": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "source": {
+                  "properties": {
+                    "backend": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "entityType": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "entityId": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "retrievedAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "version": {
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "backend",
+                    "entityType",
+                    "entityId",
+                    "retrievedAt",
+                    "version"
+                  ]
+                },
+                "active": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "category",
+                "uom",
+                "gpuMemoryGb",
+                "warranty",
+                "source",
+                "active"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "record"
+          ]
+        },
+        "inputSchema": {
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id"
+          ]
+        },
+        "description": "Read an exact SKU and GPU specification before sourcing. Use its id as Case productDescription.",
+        "name": "procurement_get_item"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "readOnlyHint": true
+        },
+        "outputSchema": {
+          "properties": {
+            "nextOffset": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "records": {
+              "items": {
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "category": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "uom": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "gpuMemoryGb": {
+                    "maximum": 2147483647,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "warranty": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "source": {
+                    "properties": {
+                      "backend": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "entityType": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "entityId": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "retrievedAt": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "version": {
+                        "format": "date-time",
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "backend",
+                      "entityType",
+                      "entityId",
+                      "retrievedAt",
+                      "version"
+                    ]
+                  },
+                  "active": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "id",
+                  "name",
+                  "category",
+                  "uom",
+                  "gpuMemoryGb",
+                  "warranty",
+                  "source",
+                  "active"
+                ]
+              },
+              "type": "array"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "records",
+            "nextOffset"
+          ]
+        },
+        "inputSchema": {
+          "properties": {
+            "limit": {
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "maximum": 10000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": []
+        },
+        "description": "Discover AI workstation SKUs before selecting a concrete item. Never invent an item code.",
+        "name": "procurement_list_items"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "readOnlyHint": true
+        },
+        "outputSchema": {
+          "properties": {
+            "record": {
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "departmentId": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "allocated": {
+                  "type": "number"
+                },
+                "committed": {
+                  "type": "number"
+                },
+                "available": {
+                  "type": "number"
+                },
+                "currency": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "fiscalYear": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "source": {
+                  "properties": {
+                    "backend": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "entityType": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "entityId": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "retrievedAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "version": {
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "backend",
+                    "entityType",
+                    "entityId",
+                    "retrievedAt",
+                    "version"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "id",
+                "departmentId",
+                "allocated",
+                "committed",
+                "available",
+                "currency",
+                "fiscalYear",
+                "source"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "record"
+          ]
+        },
+        "inputSchema": {
+          "properties": {
+            "departmentId": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "departmentId"
+          ]
+        },
+        "description": "Read ERP departmental budget available for procurement; this is not an Agent estimate or a reservation.",
+        "name": "procurement_get_budget_status"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "readOnlyHint": true
+        },
+        "outputSchema": {
+          "properties": {
+            "nextOffset": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "records": {
+              "items": {
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "approved": {
+                    "type": "boolean"
+                  },
+                  "capacity": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "source": {
+                    "properties": {
+                      "backend": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "entityType": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "entityId": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "retrievedAt": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "version": {
+                        "format": "date-time",
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "backend",
+                      "entityType",
+                      "entityId",
+                      "retrievedAt",
+                      "version"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "id",
+                  "name",
+                  "approved",
+                  "capacity",
+                  "source"
+                ]
+              },
+              "type": "array"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "records",
+            "nextOffset"
+          ]
+        },
+        "inputSchema": {
+          "properties": {
+            "limit": {
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "maximum": 10000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": []
+        },
+        "description": "Discover approved/inactive suppliers. Inactive suppliers must not be recommended.",
+        "name": "procurement_list_suppliers"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "readOnlyHint": true
+        },
+        "outputSchema": {
+          "properties": {
+            "record": {
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "approved": {
+                  "type": "boolean"
+                },
+                "capacity": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "source": {
+                  "properties": {
+                    "backend": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "entityType": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "entityId": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "retrievedAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "version": {
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "backend",
+                    "entityType",
+                    "entityId",
+                    "retrievedAt",
+                    "version"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "approved",
+                "capacity",
+                "source"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "record"
+          ]
+        },
+        "inputSchema": {
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "id"
+          ]
+        },
+        "description": "Read supplier approval and capacity before interpreting an item-supplier relationship.",
+        "name": "procurement_get_supplier"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "readOnlyHint": true
+        },
+        "outputSchema": {
+          "properties": {
+            "nextOffset": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "records": {
+              "items": {
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "itemId": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "supplierId": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "referencePrice": {
+                    "type": "number"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "leadTimeDays": {
+                    "maximum": 2147483647,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "capacityUnits": {
+                    "maximum": 2147483647,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "source": {
+                    "properties": {
+                      "backend": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "entityType": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "entityId": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "retrievedAt": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "version": {
+                        "format": "date-time",
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "backend",
+                      "entityType",
+                      "entityId",
+                      "retrievedAt",
+                      "version"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "id",
+                  "itemId",
+                  "supplierId",
+                  "referencePrice",
+                  "currency",
+                  "leadTimeDays",
+                  "capacityUnits",
+                  "source"
+                ]
+              },
+              "type": "array"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "records",
+            "nextOffset"
+          ]
+        },
+        "inputSchema": {
+          "properties": {
+            "limit": {
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "maximum": 10000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "itemId": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "itemId"
+          ]
+        },
+        "description": "Read supported suppliers, reference prices, delivery days and unit capacity for a known SKU. Reference prices are synthetic ERP facts, not binding quotations.",
+        "name": "procurement_list_item_suppliers"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "readOnlyHint": true
+        },
+        "outputSchema": {
+          "properties": {
+            "nextOffset": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "records": {
+              "items": {
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "supplierId": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "itemId": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "quantity": {
+                    "maximum": 2147483647,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "unitPrice": {
+                    "type": "number"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "orderedOn": {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  "deliveredOn": {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  "source": {
+                    "properties": {
+                      "backend": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "entityType": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "entityId": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "minLength": 1
+                      },
+                      "retrievedAt": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "version": {
+                        "format": "date-time",
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "backend",
+                      "entityType",
+                      "entityId",
+                      "retrievedAt",
+                      "version"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "id",
+                  "supplierId",
+                  "itemId",
+                  "quantity",
+                  "unitPrice",
+                  "currency",
+                  "orderedOn",
+                  "deliveredOn",
+                  "source"
+                ]
+              },
+              "type": "array"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "records",
+            "nextOffset"
+          ]
+        },
+        "inputSchema": {
+          "properties": {
+            "limit": {
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "maximum": 10000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "supplierId": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "supplierId"
+          ]
+        },
+        "description": "Read historical transactions for a supplier when comparing sourcing experience. This does not create purchase orders.",
+        "name": "procurement_get_purchase_history"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "readOnlyHint": true
+        },
+        "outputSchema": {
+          "properties": {
+            "record": {
+              "properties": {
+                "supplierId": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "transactionCount": {
+                  "maximum": 2147483647,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "onTimeRate": {
+                  "type": "number"
+                },
+                "qualityScore": {
+                  "type": "number"
+                },
+                "source": {
+                  "properties": {
+                    "backend": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "entityType": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "entityId": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "retrievedAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "version": {
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "backend",
+                    "entityType",
+                    "entityId",
+                    "retrievedAt",
+                    "version"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "supplierId",
+                "transactionCount",
+                "onTimeRate",
+                "qualityScore",
+                "source"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "record"
+          ]
+        },
+        "inputSchema": {
+          "properties": {
+            "supplierId": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "supplierId"
+          ]
+        },
+        "description": "Read historical delivery and quality observations when evaluating sourcing reliability. Never modify supplier records.",
+        "name": "procurement_get_supplier_performance"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "readOnlyHint": true
+        },
+        "outputSchema": {
+          "properties": {
+            "record": {
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "idempotencyKey": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "supplierId": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "itemId": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "quantity": {
+                  "maximum": 2147483647,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "status": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "requestDigest": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "source": {
+                  "properties": {
+                    "backend": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "entityType": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "entityId": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "retrievedAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "version": {
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "backend",
+                    "entityType",
+                    "entityId",
+                    "retrievedAt",
+                    "version"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "id",
+                "idempotencyKey",
+                "supplierId",
+                "itemId",
+                "quantity",
+                "status",
+                "requestDigest",
+                "source"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "record"
+          ]
+        },
+        "inputSchema": {
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            },
+            "idempotencyKey": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": []
+        },
+        "description": "Read an RFQ by id or reconcile a stored idempotency key; provide exactly one selector. Does not create an RFQ.",
+        "name": "procurement_get_rfq"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "readOnlyHint": false
+        },
+        "outputSchema": {
+          "properties": {
+            "record": {
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "idempotencyKey": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "supplierId": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "itemId": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "quantity": {
+                  "maximum": 2147483647,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "status": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "requestDigest": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "source": {
+                  "properties": {
+                    "backend": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "entityType": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "entityId": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "minLength": 1
+                    },
+                    "retrievedAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "version": {
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "backend",
+                    "entityType",
+                    "entityId",
+                    "retrievedAt",
+                    "version"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "id",
+                "idempotencyKey",
+                "supplierId",
+                "itemId",
+                "quantity",
+                "status",
+                "requestDigest",
+                "source"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "record"
+          ]
+        },
+        "inputSchema": {
+          "properties": {
+            "request": {
+              "properties": {
+                "idempotencyKey": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "supplierId": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "itemId": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "quantity": {
+                  "maximum": 2147483647,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "deliveryDays": {
+                  "maximum": 2147483647,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "currency": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                },
+                "requisitionId": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "idempotencyKey",
+                "supplierId",
+                "itemId",
+                "quantity",
+                "deliveryDays",
+                "currency"
+              ]
+            },
+            "expiresAt": {
+              "type": "integer"
+            },
+            "signature": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "request",
+            "expiresAt",
+            "signature"
+          ]
+        },
+        "description": "Backend-only approved RFQ creation. Requires a short-lived server signature after HITL; never call from the model directly.",
+        "name": "procurement_create_rfq"
+      },
+      {
+        "annotations": {
+          "readOnlyHint": true
+        },
+        "outputSchema": {
+          "properties": {
+            "suppliers": {
+              "items": {
+                "properties": {
+                  "supplierName": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "supplierId": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "supplierId",
+                  "supplierName"
+                ]
+              },
+              "type": "array"
+            },
+            "sourceAsOf": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            },
+            "sourceSnapshot": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "suppliers",
+            "sourceSnapshot",
+            "sourceAsOf"
+          ]
+        },
+        "inputSchema": {
+          "properties": {
+            "productCategory": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            },
+            "productDescription": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "productCategory",
+            "productDescription"
+          ]
+        },
+        "description": "Internal ProcurementDataProvider compatibility: exact SKU supplier discovery.",
+        "name": "search_suppliers"
+      },
+      {
+        "annotations": {
+          "readOnlyHint": true
+        },
+        "outputSchema": {
+          "properties": {
+            "sourceAsOf": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            },
+            "sourceSnapshot": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            },
+            "offers": {
+              "items": {
+                "properties": {
+                  "warranty": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "specifications": {
+                    "type": "object"
+                  },
+                  "supplierId": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "productId": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "unitPrice": {
+                    "type": "number"
+                  },
+                  "leadTimeDays": {
+                    "type": "integer"
+                  },
+                  "productName": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "sourceRecordId": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  },
+                  "currency": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "supplierId",
+                  "productId",
+                  "productName",
+                  "unitPrice",
+                  "currency",
+                  "leadTimeDays",
+                  "warranty",
+                  "specifications",
+                  "sourceRecordId"
+                ]
+              },
+              "type": "array"
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "offers",
+            "sourceSnapshot",
+            "sourceAsOf"
+          ]
+        },
+        "inputSchema": {
+          "properties": {
+            "supplierIds": {
+              "items": {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              "type": "array"
+            },
+            "currency": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            },
+            "quantity": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "productCategory": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            },
+            "productDescription": {
+              "type": "string",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "productCategory",
+            "productDescription",
+            "quantity",
+            "currency",
+            "supplierIds"
+          ]
+        },
+        "description": "Internal ProcurementDataProvider compatibility: ERP reference offers and provenance.",
+        "name": "get_offers"
+      }
+    ]
+  },
+  "id": 1
+}

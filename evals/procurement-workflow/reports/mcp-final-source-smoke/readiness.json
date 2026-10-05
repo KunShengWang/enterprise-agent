@@ -1,0 +1,21 @@
+{
+  "counts": {
+    "budgets": 3,
+    "departments": 3,
+    "item_suppliers": 18,
+    "items": 10,
+    "purchase_history": 24,
+    "sample_requisitions": 6,
+    "supplier_performance": 6,
+    "suppliers": 6
+  },
+  "canonical_seed_hash": "028cf070b54ad26661db050e7a7af1b11f33a0fc64ff8a432096ce59bc76d4a5",
+  "rfq_count": 0,
+  "pending_requested_approvals": 0,
+  "approval_baseline_basis": "Trial driver creates fresh in-memory approval store before workflow; no persistent approval store reused.",
+  "status": "PASS",
+  "provider_calls": 0,
+  "valid_model_trials": 0,
+  "backend": "erpnext",
+  "controls_semantically_unchanged": true
+}

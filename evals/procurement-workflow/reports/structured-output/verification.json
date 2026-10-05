@@ -1,0 +1,17 @@
+{
+  "final_source_unchanged": true,
+  "historic_artifacts_unchanged": true,
+  "handler_unchanged": true,
+  "frozen_fixtures_unchanged": true,
+  "strict_complete_final_json_stages": [
+    "REQUISITION",
+    "SOURCING"
+  ],
+  "rfqs_after": 0,
+  "staged_files": [],
+  "credential_scan_matches": [],
+  "model_trial_count": 1,
+  "remaining_smoke": "NOT_RUN",
+  "dev": "NOT_RUN",
+  "holdout": "NOT_RUN"
+}

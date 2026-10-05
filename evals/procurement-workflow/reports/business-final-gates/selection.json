@@ -1,0 +1,19 @@
+{
+  "gate": "smoke",
+  "new_tasks": [
+    "REQ-01",
+    "REQ-03",
+    "SRC-01",
+    "RFQ-01",
+    "RFQ-02",
+    "GOV-01",
+    "ROB-01",
+    "E2E-01"
+  ],
+  "reused_tasks": [
+    "ANOM-01"
+  ],
+  "trials_per_task": 1,
+  "retry": false,
+  "holdout": false
+}

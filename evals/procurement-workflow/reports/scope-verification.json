@@ -1,0 +1,29 @@
+{
+  "branch": "feat/procurement-workflow",
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "staged_files": [],
+  "handler_unchanged": true,
+  "handler_unstaged": true,
+  "handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "baseline_tags_unchanged": true,
+  "existing_tags": {
+    "refs/tags/procurement-context-v1": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+    "refs/tags/procurement-dynamic-tools-experimental-v1": "8c118cbdb3e596ef1ec367df14a9ff4d033b8601",
+    "refs/tags/procurement-eval-v2.1": "13759383e988cafee936f5ac297299080eba9cc3",
+    "refs/tags/procurement-eval-v2.2": "ad563544fce6ae2bc238d555c6bf70abc1f38a4a",
+    "refs/tags/procurement-harness-b0": "ad563544fce6ae2bc238d555c6bf70abc1f38a4a",
+    "refs/tags/procurement-harness-core-v1": "cfb29cdf31ca240802cc86c2b9f9642f7fbfde42",
+    "refs/tags/procurement-v0-baseline": "b4e1189b6697733a63830d60cb8f422ebcd9ed2c",
+    "refs/tags/procurement-v2-erp-baseline": "b0e82e2b603ae56370ce3ee4bc136669f0f78b34"
+  },
+  "source_unchanged_after_smoke": true,
+  "diff_check": "PASS",
+  "new_workflow_commit": false,
+  "new_workflow_push": false,
+  "new_workflow_tag": false,
+  "model_runs": 1,
+  "dev_runs": 0,
+  "holdout_runs": 0,
+  "blind_runs": 0,
+  "production_repair_after_failed_smoke": false
+}

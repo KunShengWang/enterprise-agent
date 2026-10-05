@@ -1,0 +1,29 @@
+{
+  "task": "REQ-01",
+  "stage": "SOURCING",
+  "failure": "OUTPUT_CONTRACT_VIOLATION",
+  "frozen_grader_category": "TASK_UNDERSTANDING",
+  "reason": "Final model message begins with free-form English analysis before a JSON object; strict JSON parsing rejects the complete message. No tail-JSON salvage or model retry.",
+  "model_final_prefix": "I have sufficient evidence. Analysis:\n\n**Eligible (Java-computed):** V2-SUP-001, 002, 003, 005. V2-S",
+  "case_status": "SOURCING",
+  "finalize_count": 0,
+  "rfq_count": 0,
+  "final_stop_reason": "TOOL_ERROR",
+  "tool_errors": 0,
+  "stage_stop_reasons": [
+    {
+      "stage": "REQUISITION",
+      "state": "COMPLETED",
+      "reason": "COMPLETED",
+      "source": "persisted Run state/failureReason"
+    },
+    {
+      "stage": "SOURCING",
+      "state": "FAILED",
+      "reason": "TOOL_ERROR",
+      "source": "persisted Run state/failureReason"
+    }
+  ],
+  "no_repairs_after_smoke": true,
+  "unverified": "Remaining 8 Smoke and all Dev; live RFQ/HITL stage not reached"
+}

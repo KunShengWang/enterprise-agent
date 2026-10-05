@@ -1,0 +1,44 @@
+{
+  "branch": "feat/procurement-workflow",
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "source_same_after_trial": true,
+  "production_sha256": "430d1605247950f4789e7e0bcdb42e5d419bb3ccfecc960b05e65dd851f28ebf",
+  "handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "handler_bytes_unchanged": true,
+  "staged_paths": [],
+  "frozen_eval_seed_unchanged": true,
+  "historical_report_bytes_unchanged": true,
+  "fixtures": {
+    "data/procurement/aws-synthetic/01_suppliers.json": true,
+    "data/procurement/aws-synthetic/README.md": true,
+    "data/procurement/scenarios/complex_workstation_01.json": true,
+    "src/test/resources/procurement/benchmark/procurement-benchmark-v1.json": true,
+    "src/test/resources/procurement/evaluation/procurement-answer-policy-v1.json": true
+  },
+  "existing_files_changed_this_task": [
+    "src/main/java/com/agent/platform/procurement/erp/ErpNextProcurementAdapter.java",
+    "src/main/java/com/agent/platform/procurement/tool/ProcurementRfqApprovalPreparer.java",
+    "src/main/java/com/agent/platform/procurement/tool/ProcurementRfqToolHandler.java",
+    "src/main/java/com/agent/platform/procurement/workflow/ProcurementWorkflowService.java",
+    "src/main/java/com/agent/platform/procurement/workflow/WorkflowFinalizeBinding.java",
+    "src/test/java/com/agent/platform/procurement/ProcurementWorkflowEvidenceCarryTests.java",
+    "src/test/java/com/agent/platform/procurement/ProcurementWorkflowTests.java",
+    "src/test/java/com/agent/platform/procurement/erp/ErpNextAdapterTests.java",
+    "evals/procurement-workflow/acceptance.py",
+    "evals/procurement-workflow/run.py",
+    "evals/procurement-workflow/test_acceptance.py"
+  ],
+  "model_trials": 1,
+  "other_smoke_dev_holdout": "NOT_RUN",
+  "frozen_manifest_groups_unchanged": {
+    "tasks": true,
+    "seed": true,
+    "world_contract": true,
+    "model_reference": true,
+    "graders": true,
+    "runner": true,
+    "workflow_driver": true,
+    "v22": true
+  },
+  "report_sha256": "910a70f52a6d306b6db45065e58bed99a3d85c56741cd13cc75ed08846e3e398"
+}

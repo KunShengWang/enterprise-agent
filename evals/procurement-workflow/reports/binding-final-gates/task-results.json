@@ -1,0 +1,47 @@
+[
+  {
+    "task_id": "REQ-01",
+    "status": "PASS",
+    "reused": false
+  },
+  {
+    "task_id": "REQ-03",
+    "status": "PASS",
+    "reused": false
+  },
+  {
+    "task_id": "ANOM-01",
+    "status": "FAIL",
+    "reused": false
+  },
+  {
+    "task_id": "SRC-01",
+    "status": "NOT_RUN",
+    "reused": false
+  },
+  {
+    "task_id": "RFQ-01",
+    "status": "NOT_RUN",
+    "reused": false
+  },
+  {
+    "task_id": "RFQ-02",
+    "status": "PASS",
+    "reused": true
+  },
+  {
+    "task_id": "GOV-01",
+    "status": "NOT_RUN",
+    "reused": false
+  },
+  {
+    "task_id": "ROB-01",
+    "status": "NOT_RUN",
+    "reused": false
+  },
+  {
+    "task_id": "E2E-01",
+    "status": "NOT_RUN",
+    "reused": false
+  }
+]

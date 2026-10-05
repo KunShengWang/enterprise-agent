@@ -44,6 +44,10 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
         this.objectMapper = objectMapper;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.agent.platform.procurement.workflow.WorkflowFinalizeBinding workflowBinding;
+    public void setWorkflowBinding(com.agent.platform.procurement.workflow.WorkflowFinalizeBinding binding){this.workflowBinding=binding;}
+
     @Override
     public boolean supports(String toolName) {
         return ProcurementToolCatalog.CREATE_RFQ.equals(toolName);
@@ -124,7 +128,8 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
                 .findToolExecution(parsed.sourceRecommendationToolCallId())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "prepared RFQ request does not reference a known Finalize execution"));
-        if (!trusted.runId().equals(finalizeExecution.runId())
+        if ((!trusted.runId().equals(finalizeExecution.runId())
+                && (workflowBinding==null || !workflowBinding.permits(trusted.runId(),finalizeExecution.toolCallId())))
                 || finalizeExecution.state() != ToolExecutionState.SUCCEEDED
                 || finalizeExecution.result() == null
                 || !finalizeExecution.result().success()
@@ -137,10 +142,12 @@ public class ProcurementRfqToolHandler implements ContextualToolHandler, Uncerta
                 || !parsed.supplierId().equals(finalized.supplierId())) {
             throw new IllegalArgumentException("prepared RFQ supplier is not grounded in the current Finalize");
         }
-        String requisitionId = com.agent.platform.procurement.erp.CanonicalRequisitionBinding.resolve(
-                toolExecutionStore.findByRun(trusted.runId()), current.state(), objectMapper);
+        String requisitionId = workflowBinding!=null && workflowBinding.permits(trusted.runId(),finalizeExecution.toolCallId())
+                ? workflowBinding.requisitionId(trusted.runId())
+                : com.agent.platform.procurement.erp.CanonicalRequisitionBinding.resolve(
+                    toolExecutionStore.findByRun(trusted.runId()), current.state(), objectMapper);
         if (!java.util.Objects.equals(requisitionId, parsed.gatewayRequest().requisitionId())) {
-            throw new IllegalArgumentException("prepared RFQ requisition does not match the current Run facts");
+            throw new IllegalArgumentException("RFQ_REQUISITION_LINK_CONSISTENCY: prepared RFQ requisition does not match canonical identity");
         }
         return parsed;
     }

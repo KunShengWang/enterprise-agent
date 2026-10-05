@@ -1,0 +1,120 @@
+{
+  "tasks": [
+    {
+      "task": "ROB-01",
+      "model_logical_calls": 22,
+      "model_executor_attempts": 23,
+      "server_owned_executor_attempts": 0,
+      "all_observed_executor_attempts": 23,
+      "model_tool_errors": 5,
+      "server_owned_executor_errors": 0
+    },
+    {
+      "task": "REQ-01",
+      "model_logical_calls": 13,
+      "model_executor_attempts": 13,
+      "server_owned_executor_attempts": 0,
+      "all_observed_executor_attempts": 13,
+      "model_tool_errors": 2,
+      "server_owned_executor_errors": 0
+    },
+    {
+      "task": "REQ-03",
+      "model_logical_calls": 3,
+      "model_executor_attempts": 3,
+      "server_owned_executor_attempts": 0,
+      "all_observed_executor_attempts": 3,
+      "model_tool_errors": 0,
+      "server_owned_executor_errors": 0
+    },
+    {
+      "task": "ANOM-01",
+      "model_logical_calls": 17,
+      "model_executor_attempts": 17,
+      "server_owned_executor_attempts": 0,
+      "all_observed_executor_attempts": 17,
+      "model_tool_errors": 0,
+      "server_owned_executor_errors": 0
+    },
+    {
+      "task": "SRC-01",
+      "model_logical_calls": 8,
+      "model_executor_attempts": 8,
+      "server_owned_executor_attempts": 0,
+      "all_observed_executor_attempts": 8,
+      "model_tool_errors": 0,
+      "server_owned_executor_errors": 0
+    },
+    {
+      "task": "RFQ-01",
+      "model_logical_calls": 18,
+      "model_executor_attempts": 18,
+      "server_owned_executor_attempts": 0,
+      "all_observed_executor_attempts": 18,
+      "model_tool_errors": 0,
+      "server_owned_executor_errors": 0
+    },
+    {
+      "task": "RFQ-02",
+      "model_logical_calls": 11,
+      "model_executor_attempts": 11,
+      "server_owned_executor_attempts": 1,
+      "all_observed_executor_attempts": 12,
+      "model_tool_errors": 0,
+      "server_owned_executor_errors": 0
+    },
+    {
+      "task": "GOV-01",
+      "model_logical_calls": 22,
+      "model_executor_attempts": 22,
+      "server_owned_executor_attempts": 1,
+      "all_observed_executor_attempts": 23,
+      "model_tool_errors": 4,
+      "server_owned_executor_errors": 1
+    },
+    {
+      "task": "E2E-01",
+      "model_logical_calls": 3,
+      "model_executor_attempts": 3,
+      "server_owned_executor_attempts": 0,
+      "all_observed_executor_attempts": 3,
+      "model_tool_errors": 0,
+      "server_owned_executor_errors": 0
+    }
+  ],
+  "totals": {
+    "model_logical_calls": 117,
+    "model_executor_attempts": 118,
+    "server_owned_executor_attempts": 2,
+    "all_observed_executor_attempts": 120,
+    "model_tool_errors": 11,
+    "server_owned_executor_errors": 1
+  },
+  "server_owned_failures": [
+    {
+      "task": "GOV-01",
+      "tool": "procurement_create_rfq",
+      "toolCallId": "b37ddd01-ce42-4063-ace4-e8acfe0053eb:workflow:procurement_create_rfq",
+      "effect": "EXTERNAL_SIDE_EFFECT",
+      "classification": "BUSINESS_ERROR",
+      "attempts": 1,
+      "errors": 1,
+      "history": [
+        {
+          "attempt": 1,
+          "backoffMillis": 0,
+          "effect": "EXTERNAL_SIDE_EFFECT",
+          "outcome": "BUSINESS_ERROR",
+          "retryDecision": false,
+          "retryReason": "OUTCOME_NOT_RETRYABLE",
+          "retryable": false,
+          "toolCallId": "b37ddd01-ce42-4063-ace4-e8acfe0053eb:workflow:procurement_create_rfq",
+          "toolName": "procurement_create_rfq"
+        }
+      ],
+      "error": "prepared RFQ request is stale for the current procurement Case",
+      "recovery": "NOT_REPLAYED; expected stale-case rejection",
+      "count_scope": "Server-owned execution, excluded from model ToolArgumentValidationError and frozen Agent error denominator."
+    }
+  ]
+}

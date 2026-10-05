@@ -1,0 +1,27 @@
+{
+  "production": "fc362596cdf60cd86549fc13884ed4ce1fa79239aaaa63267d7eb1ffe47ea4a3",
+  "prompts": {
+    "REQUISITION": "8a1068a3fcf4e554f26b9c392c550e415abe5944634acff0b3102818931e38d6",
+    "SOURCING": "cb341ff6c9600f6db1279397a749b61c50a86f0ffe614ee9a2053917dbd589d8",
+    "RFQ": "06f1cb32eecbc439e29eed5f9d68238da3dc39bd46f753ca7beee65feb8a5721"
+  },
+  "stage_schemas": {
+    "REQUISITION": "c4ebaead032a518b2ee18f718d9e41edaddb1228fe04d8ef13d216d28d2ba4b2",
+    "SOURCING": "4dd82f63deb97c72d3a199a0aa4063b392a42c009c25c3452fed621d13573ac6",
+    "RFQ": "f50f26d0eee74ac7764486d747e3663ebd3ae1a2ce2a63e9dfd647dee4df38ed"
+  },
+  "tool_schemas": {
+    "REQUISITION": "9f1f821c057974685f8308e1117ea5d637884b9d6777a293ffb3eaf35a61a909",
+    "SOURCING": "447997d62f9797612dd67d6c046a284ff79353837691b2b6183a7c59b092ee55",
+    "RFQ": "38955f51231b8effb5b8ed448e6d5ced62ebbc033d0ef050883bffcdae40401c"
+  },
+  "workflow_contract": "ee403c1bda9c9560a7c9eaf2e7276b1cd0a615fb7d54cbb42b1ed8883ea81ae3",
+  "graders": "395bc9e2d27e409f1a496abe89a483c7d9af84741dc0753c00e3f520b145312f",
+  "seed": "172cee7d8000d2e3462ca487e13a98dc269bc3a39e973bb81902d0d9098acc79",
+  "model_config": {
+    "maxTokens": 4096,
+    "temperature": 0.2,
+    "model": "deepseek-chat"
+  },
+  "agent_properties_sha256": "190319d4b0c800ad11c47dd72e39e8123f37c50fa7f7a4adf1e0209763024e54"
+}

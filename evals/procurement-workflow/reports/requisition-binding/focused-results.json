@@ -1,0 +1,78 @@
+{
+  "tests": 145,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "suites": [
+    {
+      "name": "com.agent.platform.procurement.erp.ErpNextAdapterTests(workflow-binding-focused)",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.procurement.erp.ErpNextRfqGatewayTests(workflow-binding-focused)",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.procurement.erp.ProcurementErpMcpTests(workflow-binding-focused)",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementCasePatchTests(workflow-binding-focused)",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementRfqHitlTests(workflow-binding-focused)",
+      "tests": "22",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementStructuredOutputTests(workflow-binding-focused)",
+      "tests": "27",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementWorkflowEvidenceCarryTests(workflow-binding-focused)",
+      "tests": "23",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementWorkflowRequisitionBindingTests(workflow-binding-focused)",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.procurement.ProcurementWorkflowTests(workflow-binding-focused)",
+      "tests": "30",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.agent.platform.runtime.DefaultAgentToolRuntimeApprovalBindingTests(workflow-binding-focused)",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ]
+}

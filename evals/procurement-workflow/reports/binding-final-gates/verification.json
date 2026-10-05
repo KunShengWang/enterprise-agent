@@ -1,0 +1,21 @@
+{
+  "branch": "feat/procurement-workflow",
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "all_preexisting_source_eval_data_infra_bytes_unchanged": true,
+  "verified_file_count": 991,
+  "source_freeze_unchanged": true,
+  "handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "handler_bytes_unchanged": true,
+  "staged_paths": [],
+  "model_execution_stopped": true,
+  "dev": "NOT_RUN",
+  "remaining_smoke": [
+    "SRC-01",
+    "RFQ-01",
+    "GOV-01",
+    "ROB-01",
+    "E2E-01"
+  ],
+  "report_sha256": "02ed08806feafb7e74d6caae391d232de203192992d78ef07987d0f66a3d241c",
+  "final_existing_file_hash_check": "PASS"
+}

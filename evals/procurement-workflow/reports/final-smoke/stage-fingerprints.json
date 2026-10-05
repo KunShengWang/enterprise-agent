@@ -1,0 +1,23 @@
+{
+  "REQUISITION": {
+    "count": 6,
+    "tool_schema_sha256": "9f1f821c057974685f8308e1117ea5d637884b9d6777a293ffb3eaf35a61a909",
+    "prior_tool_schema_sha256": "9f1f821c057974685f8308e1117ea5d637884b9d6777a293ffb3eaf35a61a909",
+    "prompt_instructions_sha256": "8a1068a3fcf4e554f26b9c392c550e415abe5944634acff0b3102818931e38d6",
+    "stage_schema_sha256": "c4ebaead032a518b2ee18f718d9e41edaddb1228fe04d8ef13d216d28d2ba4b2"
+  },
+  "SOURCING": {
+    "count": 8,
+    "tool_schema_sha256": "447997d62f9797612dd67d6c046a284ff79353837691b2b6183a7c59b092ee55",
+    "prior_tool_schema_sha256": "447997d62f9797612dd67d6c046a284ff79353837691b2b6183a7c59b092ee55",
+    "prompt_instructions_sha256": "cb341ff6c9600f6db1279397a749b61c50a86f0ffe614ee9a2053917dbd589d8",
+    "stage_schema_sha256": "4dd82f63deb97c72d3a199a0aa4063b392a42c009c25c3452fed621d13573ac6"
+  },
+  "RFQ": {
+    "count": 2,
+    "tool_schema_sha256": "38955f51231b8effb5b8ed448e6d5ced62ebbc033d0ef050883bffcdae40401c",
+    "prior_tool_schema_sha256": "38955f51231b8effb5b8ed448e6d5ced62ebbc033d0ef050883bffcdae40401c",
+    "prompt_instructions_sha256": "d5a415ed318350085e6fe4fbc158ad9306d8c12b62cb4f0a823b7e5e12ebc8c2",
+    "stage_schema_sha256": "df7d8d84e6eb200a17b27f1980c8fee3827ba58b926b9115d98332a8bfeefec9"
+  }
+}

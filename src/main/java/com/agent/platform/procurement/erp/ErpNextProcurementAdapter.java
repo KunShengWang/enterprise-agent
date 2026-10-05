@@ -70,8 +70,12 @@ public final class ErpNextProcurementAdapter implements ProcurementErpAdapter {
         Supplier supplier=getSupplier(r.supplierId()).orElseThrow(() -> new ProcurementErpException(ERP_NOT_FOUND));
         Item item=getItem(r.itemId()).orElseThrow(() -> new ProcurementErpException(ERP_NOT_FOUND));
         if(!supplier.approved() || !item.active()) throw new ProcurementErpException(ERP_VALIDATION_ERROR);
+        String requisitionItem=null;
         if(r.requisitionId()!=null) {
-            Requisition requisition=getRequisition(r.requisitionId()).orElseThrow(() -> new ProcurementErpException(ERP_NOT_FOUND));
+            JsonNode document=client.get("Material Request",r.requisitionId()).orElseThrow(() -> new ProcurementErpException(ERP_NOT_FOUND));
+            Requisition requisition=requisition(document);
+            requisitionItem=text(single(document,"items"),"name");
+            if(!r.requisitionId().equals(requisition.id()) || requisitionItem.isBlank()) throw new ProcurementErpException(ERP_RESPONSE_INVALID);
             if(!requisition.itemId().equals(item.id()) || requisition.quantity()!=r.quantity()
                     || Set.of("Cancelled","Stopped").contains(requisition.status()))
                 throw new ProcurementErpException(ERP_VALIDATION_ERROR);
@@ -87,7 +91,10 @@ public final class ErpNextProcurementAdapter implements ProcurementErpAdapter {
         doc.put("suppliers",List.of(Map.of("supplier",supplier.id(),"send_email",0)));
         Map<String,Object> line=new LinkedHashMap<>(Map.of("item_code",item.id(),"qty",r.quantity(),"uom",item.uom(),"stock_uom",item.uom(),
                 "conversion_factor",1,"schedule_date",LocalDate.now(ZoneOffset.UTC).plusDays(r.deliveryDays()).toString()));
-        if(r.requisitionId()!=null) line.put("material_request",r.requisitionId());
+        if(r.requisitionId()!=null) {
+            line.put("material_request",r.requisitionId());
+            line.put("material_request_item",requisitionItem);
+        }
         doc.put("items",List.of(line));
         try { return same(rfq(client.create("Request for Quotation",doc)),digest); }
         catch(ProcurementErpException ex) {

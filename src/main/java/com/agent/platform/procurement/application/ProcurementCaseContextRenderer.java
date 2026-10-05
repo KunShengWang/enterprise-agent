@@ -39,7 +39,8 @@ public class ProcurementCaseContextRenderer implements AgentCanonicalContextProv
                                               String conversationId,
                                               AgentExecutionProfile profile) {
         if (profile == null
-                || !ProcurementSourcingExecutionProfileFactory.PROFILE_NAME.equals(profile.name())
+                || !(ProcurementSourcingExecutionProfileFactory.PROFILE_NAME.equals(profile.name())
+                || "PROCUREMENT".equals(profile.name()))
                 || blank(conversationId)) {
             return Optional.empty();
         }

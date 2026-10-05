@@ -1,0 +1,11 @@
+{
+  "spring": {
+    "sha256": "cdac7b9e807acc74353a76252058b47758ce533f7844e452d77ab58f41eca457"
+  },
+  "pi": {
+    "sha256": "4eec9575103d586a013112a402bab813092325cd05ffd741e62719a51b0dfa3d"
+  },
+  "openai": {
+    "sha256": "9bde44c3e836a43f36bf881b26c705492d2fb2e61955a0b2a0378d7ed3c580fe"
+  }
+}

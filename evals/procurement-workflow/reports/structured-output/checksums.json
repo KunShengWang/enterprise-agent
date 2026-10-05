@@ -1,0 +1,15 @@
+{
+  "deterministic-evidence.zip": "c6df99e46ebe81a558dc895e321f49f913622586098bcd2307a130f1c95e6900",
+  "git-status.txt": "6b04e166a2e32e835adaaa36a0aed8b572a5aab35611a2143cf54abe17232e74",
+  "legacy-results.json": "727b21fbc3f30b942d10fe31767c4dd8b47a519748b1ca9add1f1a95f9566cb6",
+  "official-api-evidence.zip": "a5f608b19c715b05f28fac1c58e5ecdca350a92ac4bc700301567ddb3544364a",
+  "provenance.json": "3f904e4d3c66eea402463384e596be97ca323bcf32a88b5664b2188ee14ce4d5",
+  "req01-attempts.json": "25f6a8406b6d20301062824a67f3fbb41e3a4dd1e831d47d77abb6aab83932a3",
+  "req01-evidence.zip": "2c9b8f8c412a56210a925855388bfaf89949680c21b56e762c1db9496557d7ef",
+  "req01-selection.json": "9c4b871139f49b0b53123267ab999839757fd473f91435203cef1f88a0eb03ce",
+  "req01-summary.json": "cd01eb8fbbfed34e0cf9f2db629cb78288468a1860b738dec39f560b9a20ae74",
+  "skipped-tests.json": "6dbad5494153ca641fcf6bb1b31e20291b4d576767b25abba673b2425c087758",
+  "source-evidence.zip": "146ef6e4bb6753cb0c051cfd54a7460e770804db9046fbd4ac8a8956957db520",
+  "source-state.json": "bbeb14c6ff1153fb1380c53940ebe4703712129a38eeb3545c70603b5ce66503",
+  "verification.json": "3659c6a024a57b90f2dfa7ab254556167484a75a4ab2d1583bcd78344347d868"
+}

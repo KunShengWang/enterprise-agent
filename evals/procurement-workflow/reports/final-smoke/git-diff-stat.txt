@@ -1,0 +1,14 @@
+ .../ProcurementCaseContextRenderer.java            |  3 +-
+ .../application/ProcurementCaseService.java        |  9 +++
+ .../tool/ProcurementRfqApprovalPreparer.java       |  5 ++
+ .../tool/ProcurementRfqToolHandler.java            |  7 +-
+ .../procurement/tool/ProcurementToolHandler.java   | 12 ++++
+ .../com/agent/platform/runtime/AgentEventType.java |  2 +
+ .../platform/runtime/AgentExecutionProfile.java    |  8 ++-
+ .../agent/platform/runtime/AgentStopReason.java    |  3 +-
+ .../com/agent/platform/runtime/ContextPolicy.java  |  5 +-
+ .../runtime/DefaultAgentContextManager.java        | 12 +++-
+ .../platform/runtime/DefaultAgentRuntime.java      | 79 +++++++++++++++++++++-
+ .../NativeToolCallingAgentModelGateway.java        | 11 ++-
+ .../NativeToolCallingAgentModelGatewayTests.java   | 36 ++++++++++
+ 13 files changed, 180 insertions(+), 12 deletions(-)

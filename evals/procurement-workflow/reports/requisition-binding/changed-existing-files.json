@@ -1,0 +1,13 @@
+[
+  "src/main/java/com/agent/platform/procurement/erp/ErpNextProcurementAdapter.java",
+  "src/main/java/com/agent/platform/procurement/tool/ProcurementRfqApprovalPreparer.java",
+  "src/main/java/com/agent/platform/procurement/tool/ProcurementRfqToolHandler.java",
+  "src/main/java/com/agent/platform/procurement/workflow/ProcurementWorkflowService.java",
+  "src/main/java/com/agent/platform/procurement/workflow/WorkflowFinalizeBinding.java",
+  "src/test/java/com/agent/platform/procurement/ProcurementWorkflowEvidenceCarryTests.java",
+  "src/test/java/com/agent/platform/procurement/ProcurementWorkflowTests.java",
+  "src/test/java/com/agent/platform/procurement/erp/ErpNextAdapterTests.java",
+  "evals/procurement-workflow/acceptance.py",
+  "evals/procurement-workflow/run.py",
+  "evals/procurement-workflow/test_acceptance.py"
+]

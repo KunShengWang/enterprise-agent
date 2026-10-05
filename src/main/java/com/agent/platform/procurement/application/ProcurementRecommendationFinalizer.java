@@ -35,6 +35,27 @@ public class ProcurementRecommendationFinalizer {
 
     public Finalization finalize(String tenantId, String userId, String conversationId,
                                  ProcurementRecommendationDraft draft) {
+        // Legacy recommendation-only tool contract. Both entrypoints use the same decision below.
+        Finalization result = assess(tenantId, userId, conversationId, draft, Set.of(), true);
+        if (result.status() == Status.REJECTED) {
+            boolean selectedExists = result.evaluation().candidates().stream()
+                    .anyMatch(value -> value.candidate().supplierId().equals(draft.selectedSupplierId()));
+            throw new IllegalArgumentException(selectedExists ? "selected supplier is not eligible: " + draft.selectedSupplierId()
+                    : "selected supplier does not exist in current Provider snapshot");
+        }
+        return result;
+    }
+
+    /** Java orchestration only. observedEvidenceRefs must come from the successful current-stage ledger,
+     * never from model arguments. They can justify a rejection, but cannot authorize a recommendation. */
+    public Finalization assess(String tenantId, String userId, String conversationId,
+                               ProcurementRecommendationDraft draft, Set<String> observedEvidenceRefs) {
+        return assess(tenantId, userId, conversationId, draft, observedEvidenceRefs, false);
+    }
+
+    private Finalization assess(String tenantId, String userId, String conversationId,
+                                ProcurementRecommendationDraft draft, Set<String> observedEvidenceRefs,
+                                boolean legacyRecommendationOnly) {
         if (tenantId == null || tenantId.isBlank() || userId == null || userId.isBlank()
                 || conversationId == null || conversationId.isBlank()) {
             throw new IllegalArgumentException("tenantId, userId and conversationId are required");
@@ -54,14 +75,31 @@ public class ProcurementRecommendationFinalizer {
         }
 
         List<SupplierCandidate> candidates = provider.searchSuppliers(state);
+        if (candidates.stream().noneMatch(candidate -> candidate.supplierId().equals(draft.selectedSupplierId()))) {
+            throw new IllegalArgumentException("selected supplier does not exist in current Provider snapshot");
+        }
         List<com.agent.platform.procurement.model.SupplierOffer> offers = provider.getSupplierOffers(state, candidates);
         ProcurementDecisionEngine.Evaluation evaluation = decisionEngine.evaluate(state, candidates, offers);
+        if (state.hardConstraints().keySet().stream().anyMatch(key -> !ProcurementDecisionEngine.SUPPORTED_HARD_CONSTRAINTS.contains(key))) {
+            throw new IllegalArgumentException("unsupported canonical hard constraint");
+        }
+        if (state.hardConstraints().containsKey("gpuMemoryMinGb")) {
+            if (Integer.parseInt(state.hardConstraints().get("gpuMemoryMinGb")) <= 0)
+                throw new IllegalArgumentException("invalid canonical GPU constraint");
+        }
+        if (evaluation.candidates().stream().flatMap(candidate -> candidate.failures().stream())
+                .anyMatch(reason -> reason.startsWith("INVALID_HARD_CONSTRAINT:"))) {
+            throw new IllegalStateException("invalid canonical eligibility input");
+        }
         ProcurementDecisionEngine.CandidateResult selected = evaluation.candidates().stream()
                 .filter(candidate -> candidate.candidate().supplierId().equals(draft.selectedSupplierId()))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("selected supplier does not exist in current Provider snapshot"));
-        if (!selected.eligible()) {
-            throw new IllegalArgumentException("selected supplier is not eligible: " + draft.selectedSupplierId());
+                .findFirst().orElse(null);
+        Reason rejection = evaluation.candidates().stream().noneMatch(ProcurementDecisionEngine.CandidateResult::eligible)
+                ? Reason.NO_ELIGIBLE_SUPPLIER : selected == null ? Reason.NO_MATCHING_OFFER
+                : !selected.eligible() ? Reason.SELECTED_SUPPLIER_INELIGIBLE : Reason.NONE;
+        // Preserve Legacy's reject-before-evidence validation order. This cannot authorize a recommendation.
+        if (legacyRecommendationOnly && rejection != Reason.NONE) {
+            return new Finalization(current, null, evaluation, List.of(), Status.REJECTED, rejection);
         }
 
         Map<String, SupplierEvidence> evidenceById = new LinkedHashMap<>();
@@ -70,6 +108,14 @@ public class ProcurementRecommendationFinalizer {
                     .forEach(evidence -> evidenceById.putIfAbsent(evidence.evidenceId(), evidence));
         }
         List<SupplierEvidence> currentEvidence = List.copyOf(evidenceById.values());
+        var availableRefs = new java.util.HashSet<>(observedEvidenceRefs);
+        currentEvidence.forEach(evidence -> availableRefs.add(evidence.evidenceId()));
+        if (!availableRefs.containsAll(draft.evidenceRefs())) {
+            throw new IllegalArgumentException("recommendation references evidence outside the current ToolResult/stage ledger");
+        }
+        if (rejection != Reason.NONE) {
+            return new Finalization(current, null, evaluation, currentEvidence, Status.REJECTED, rejection);
+        }
         Map<String, List<String>> evidenceRefsBySupplier = new LinkedHashMap<>();
         currentEvidence.forEach(evidence -> evidenceRefsBySupplier
                 .computeIfAbsent(evidence.supplierId(), ignored -> new java.util.ArrayList<>())
@@ -111,11 +157,23 @@ public class ProcurementRecommendationFinalizer {
         if (draft.evidenceRefs().stream().anyMatch(String::isBlank)) throw new IllegalArgumentException("evidenceRefs must not be blank");
     }
 
+    public enum Status { FINALIZED, REJECTED }
+    public enum Reason { NONE, NO_ELIGIBLE_SUPPLIER, NO_MATCHING_OFFER, SELECTED_SUPPLIER_INELIGIBLE }
+
     public record Finalization(ProcurementCase procurementCase,
                                SourcingRecommendation recommendation,
                                ProcurementDecisionEngine.Evaluation evaluation,
-                               List<SupplierEvidence> evidence) {
+                               List<SupplierEvidence> evidence,
+                               Status status, Reason reason) {
+        public Finalization(ProcurementCase procurementCase, SourcingRecommendation recommendation,
+                            ProcurementDecisionEngine.Evaluation evaluation, List<SupplierEvidence> evidence) {
+            this(procurementCase, recommendation, evaluation, evidence, Status.FINALIZED, Reason.NONE);
+        }
         public Finalization {
+            if (status == null || reason == null
+                    || (status == Status.FINALIZED && (recommendation == null || reason != Reason.NONE))
+                    || (status == Status.REJECTED && (recommendation != null || reason == Reason.NONE)))
+                throw new IllegalArgumentException("inconsistent Finalization outcome");
             evidence = evidence == null ? List.of() : List.copyOf(evidence);
         }
     }

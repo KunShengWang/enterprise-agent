@@ -1,0 +1,20 @@
+{
+  "branch": "feat/procurement-workflow",
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "production_fingerprint": "b5f91b46ac4c2e394f77652e4a7bacfae191a19e24bf763afbde577e4b8aa668",
+  "full_freeze_equal": true,
+  "existing_files": 1347,
+  "existing_file_bytes_unchanged": true,
+  "handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "handler_unstaged": true,
+  "index_empty": true,
+  "git_diff_check_pass": true,
+  "production_edits": 0,
+  "eval_contract_edits": 0,
+  "commit_push_tag": false,
+  "new_authored_paths": [
+    "docs/harness/workflow-mcp-final-source-smoke-report.md",
+    "evals/procurement-workflow/reports/mcp-final-source-smoke/",
+    "target/workflow-mcp-final-smoke-20261005/"
+  ]
+}

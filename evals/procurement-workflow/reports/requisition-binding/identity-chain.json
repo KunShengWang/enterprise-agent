@@ -1,0 +1,517 @@
+{
+  "authoritative_workflow_requisition": {
+    "canonicalRequisitionId": "V2-REQ-001",
+    "caseId": "06a195e8-77b2-4f26-8a2f-1894edfbd786",
+    "caseVersion": 1,
+    "itemId": "V2-WS-001",
+    "quantity": 20,
+    "requisitionBacked": true
+  },
+  "finalized_recommendation": {
+    "caseId": "06a195e8-77b2-4f26-8a2f-1894edfbd786",
+    "recommendation": {
+      "recommendedSupplier": {
+        "supplierId": "V2-SUP-001",
+        "supplierName": "Nebula Forge Fictional",
+        "source": "mcp:erpnext"
+      },
+      "selectedOffer": {
+        "supplierId": "V2-SUP-001",
+        "productId": "V2-WS-001",
+        "productName": "AI Workstation 01",
+        "unitPrice": 12800.0,
+        "currency": "CNY",
+        "quantity": 20,
+        "totalPrice": 256000.0,
+        "leadTimeDays": 12,
+        "warranty": "36 months",
+        "specifications": {
+          "qualityScore": 96.0,
+          "priceBasis": "ERP_REFERENCE_PRICE",
+          "gpuMemoryGb": 24,
+          "budgetId": "V2-BUD-001",
+          "supplierVersion": "2026-10-04T10:31:46.257331Z",
+          "capacityUnits": 80,
+          "onTimeRate": 0.98,
+          "itemActive": true,
+          "budgetVersion": "2026-10-04T10:31:46.858226Z",
+          "transactionCount": 6,
+          "performanceVersion": "2026-10-04T10:31:46.799688Z",
+          "departmentId": "V2-ALG",
+          "budgetAvailable": 420000.0,
+          "performanceEntity": "Procurement Supplier Performance:V2-SUP-001",
+          "itemSource": {
+            "backend": "ERPNext",
+            "entityId": "V2-WS-001",
+            "entityType": "Item",
+            "version": "2026-10-04T10:31:46.468329Z"
+          }
+        },
+        "source": "mcp:erpnext",
+        "fetchedAt": "2026-10-04T10:32:15.690752100Z",
+        "sourceRecordId": "ERPNext:Procurement Item Supplier:V2-REL-01-01:2026-10-04T10:31:46.652820Z",
+        "sourceSnapshot": "ERPNext:Item:V2-WS-001:2026-10-04T10:31:46.468329Z",
+        "sourceAsOf": "2026-10-04T10:31:46.468329Z",
+        "sourceDigest": "be0f905c921c844910b8c72c693d0a88ea102d08fb2e7b6559ebcc65b4428ac7"
+      },
+      "eligibleAlternatives": [
+        {
+          "supplierId": "V2-SUP-002",
+          "supplierName": "Cobalt Finch Fictional",
+          "source": "mcp:erpnext"
+        },
+        {
+          "supplierId": "V2-SUP-003",
+          "supplierName": "Amber Circuit Fictional",
+          "source": "mcp:erpnext"
+        },
+        {
+          "supplierId": "V2-SUP-005",
+          "supplierName": "Violet Harbor Fictional",
+          "source": "mcp:erpnext"
+        }
+      ],
+      "alternativeOffers": [
+        {
+          "supplierId": "V2-SUP-002",
+          "productId": "V2-WS-001",
+          "productName": "AI Workstation 01",
+          "unitPrice": 10900.0,
+          "currency": "CNY",
+          "quantity": 20,
+          "totalPrice": 218000.0,
+          "leadTimeDays": 20,
+          "warranty": "36 months",
+          "specifications": {
+            "qualityScore": 97.0,
+            "priceBasis": "ERP_REFERENCE_PRICE",
+            "gpuMemoryGb": 24,
+            "budgetId": "V2-BUD-001",
+            "supplierVersion": "2026-10-04T10:31:46.343564Z",
+            "capacityUnits": 35,
+            "onTimeRate": 0.65,
+            "itemActive": true,
+            "budgetVersion": "2026-10-04T10:31:46.858226Z",
+            "transactionCount": 5,
+            "performanceVersion": "2026-10-04T10:31:46.809861Z",
+            "departmentId": "V2-ALG",
+            "budgetAvailable": 420000.0,
+            "performanceEntity": "Procurement Supplier Performance:V2-SUP-002",
+            "itemSource": {
+              "backend": "ERPNext",
+              "entityId": "V2-WS-001",
+              "entityType": "Item",
+              "version": "2026-10-04T10:31:46.468329Z"
+            }
+          },
+          "source": "mcp:erpnext",
+          "fetchedAt": "2026-10-04T10:32:15.691449Z",
+          "sourceRecordId": "ERPNext:Procurement Item Supplier:V2-REL-02-01:2026-10-04T10:31:46.671557Z",
+          "sourceSnapshot": "ERPNext:Item:V2-WS-001:2026-10-04T10:31:46.468329Z",
+          "sourceAsOf": "2026-10-04T10:31:46.468329Z",
+          "sourceDigest": "1b5c0e17331572463c4409a19b1fc9a428dfbff7a3149facee34fe36c6850fd5"
+        },
+        {
+          "supplierId": "V2-SUP-003",
+          "productId": "V2-WS-001",
+          "productName": "AI Workstation 01",
+          "unitPrice": 13700.0,
+          "currency": "CNY",
+          "quantity": 20,
+          "totalPrice": 274000.0,
+          "leadTimeDays": 10,
+          "warranty": "36 months",
+          "specifications": {
+            "qualityScore": 95.0,
+            "priceBasis": "ERP_REFERENCE_PRICE",
+            "gpuMemoryGb": 24,
+            "budgetId": "V2-BUD-001",
+            "supplierVersion": "2026-10-04T10:31:46.351044Z",
+            "capacityUnits": 100,
+            "onTimeRate": 0.96,
+            "itemActive": true,
+            "budgetVersion": "2026-10-04T10:31:46.858226Z",
+            "transactionCount": 4,
+            "performanceVersion": "2026-10-04T10:31:46.812020Z",
+            "departmentId": "V2-ALG",
+            "budgetAvailable": 420000.0,
+            "performanceEntity": "Procurement Supplier Performance:V2-SUP-003",
+            "itemSource": {
+              "backend": "ERPNext",
+              "entityId": "V2-WS-001",
+              "entityType": "Item",
+              "version": "2026-10-04T10:31:46.468329Z"
+            }
+          },
+          "source": "mcp:erpnext",
+          "fetchedAt": "2026-10-04T10:32:15.692509300Z",
+          "sourceRecordId": "ERPNext:Procurement Item Supplier:V2-REL-03-01:2026-10-04T10:31:46.678672Z",
+          "sourceSnapshot": "ERPNext:Item:V2-WS-001:2026-10-04T10:31:46.468329Z",
+          "sourceAsOf": "2026-10-04T10:31:46.468329Z",
+          "sourceDigest": "1418acc0cae41189f8911871b7ac24a8babc009a4d2edbd76a74ad571826f2c4"
+        },
+        {
+          "supplierId": "V2-SUP-005",
+          "productId": "V2-WS-001",
+          "productName": "AI Workstation 01",
+          "unitPrice": 12500.0,
+          "currency": "CNY",
+          "quantity": 20,
+          "totalPrice": 250000.0,
+          "leadTimeDays": 16,
+          "warranty": "36 months",
+          "specifications": {
+            "qualityScore": 90.0,
+            "priceBasis": "ERP_REFERENCE_PRICE",
+            "gpuMemoryGb": 24,
+            "budgetId": "V2-BUD-001",
+            "supplierVersion": "2026-10-04T10:31:46.361478Z",
+            "capacityUnits": 45,
+            "onTimeRate": 0.88,
+            "itemActive": true,
+            "budgetVersion": "2026-10-04T10:31:46.858226Z",
+            "transactionCount": 4,
+            "performanceVersion": "2026-10-04T10:31:46.816451Z",
+            "departmentId": "V2-ALG",
+            "budgetAvailable": 420000.0,
+            "performanceEntity": "Procurement Supplier Performance:V2-SUP-005",
+            "itemSource": {
+              "backend": "ERPNext",
+              "entityId": "V2-WS-001",
+              "entityType": "Item",
+              "version": "2026-10-04T10:31:46.468329Z"
+            }
+          },
+          "source": "mcp:erpnext",
+          "fetchedAt": "2026-10-04T10:32:15.692509300Z",
+          "sourceRecordId": "ERPNext:Procurement Item Supplier:V2-REL-05-01:2026-10-04T10:31:46.694721Z",
+          "sourceSnapshot": "ERPNext:Item:V2-WS-001:2026-10-04T10:31:46.468329Z",
+          "sourceAsOf": "2026-10-04T10:31:46.468329Z",
+          "sourceDigest": "f68d25a763b6d054de40aefc96e24d89bd69b7aec0852df0a9851795296d8180"
+        }
+      ],
+      "matchedConstraints": [
+        "BUDGET",
+        "DELIVERY",
+        "gpuMemoryMinGb"
+      ],
+      "rejectedCandidates": [],
+      "evidenceRefs": [
+        "evidence-3727ad0c4aab62f48086fe4e",
+        "evidence-2f026750a876de0385a0c510",
+        "evidence-cf83826ffc06d0ead5375983",
+        "evidence-eb1c4c1472b526cdf7a90870",
+        "evidence-b431d28601cede65cdaad943",
+        "evidence-961a31b53040c027d8ddb8c9",
+        "evidence-7a88d1e80881c9e259c4e40d",
+        "evidence-540e46ed07a11e4b28f87bea"
+      ],
+      "tradeoffDimensions": [
+        "PRICE",
+        "DELIVERY",
+        "WARRANTY",
+        "SPECIFICATION"
+      ],
+      "confidence": 0.82
+    },
+    "caseVersion": 2,
+    "evidence": [
+      {
+        "evidenceId": "evidence-3727ad0c4aab62f48086fe4e",
+        "supplierId": "V2-SUP-001",
+        "evidenceType": "OFFER",
+        "source": "mcp:erpnext",
+        "fact": "商品 AI Workstation 01 单价 12800.0 CNY，总价 256000.0，交期 12 天，规格 {\"budgetAvailable\":420000.0,\"budgetId\":\"V2-BUD-001\",\"budgetVersion\":\"2026-10-04T10:31:46.858226Z\",\"capacityUnits\":80,\"departmentId\":\"V2-ALG\",\"gpuMemoryGb\":24,\"itemActive\":true,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-04T10:31:46.468329Z\"},\"onTimeRate\":0.98,\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-001\",\"performanceVersion\":\"2026-10-04T10:31:46.799688Z\",\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":96.0,\"supplierVersion\":\"2026-10-04T10:31:46.257331Z\",\"transactionCount\":6}",
+        "collectedAt": "2026-10-04T10:32:15.868765900Z",
+        "sourceRecordId": "ERPNext:Procurement Item Supplier:V2-REL-01-01:2026-10-04T10:31:46.652820Z",
+        "sourceSnapshot": "ERPNext:Item:V2-WS-001:2026-10-04T10:31:46.468329Z",
+        "sourceAsOf": "2026-10-04T10:31:46.468329Z",
+        "sourceDigest": "be0f905c921c844910b8c72c693d0a88ea102d08fb2e7b6559ebcc65b4428ac7"
+      },
+      {
+        "evidenceId": "evidence-2f026750a876de0385a0c510",
+        "supplierId": "V2-SUP-001",
+        "evidenceType": "WARRANTY",
+        "source": "mcp:erpnext",
+        "fact": "质保：36 months",
+        "collectedAt": "2026-10-04T10:32:15.868765900Z",
+        "sourceRecordId": "ERPNext:Procurement Item Supplier:V2-REL-01-01:2026-10-04T10:31:46.652820Z",
+        "sourceSnapshot": "ERPNext:Item:V2-WS-001:2026-10-04T10:31:46.468329Z",
+        "sourceAsOf": "2026-10-04T10:31:46.468329Z",
+        "sourceDigest": "be0f905c921c844910b8c72c693d0a88ea102d08fb2e7b6559ebcc65b4428ac7"
+      },
+      {
+        "evidenceId": "evidence-cf83826ffc06d0ead5375983",
+        "supplierId": "V2-SUP-002",
+        "evidenceType": "OFFER",
+        "source": "mcp:erpnext",
+        "fact": "商品 AI Workstation 01 单价 10900.0 CNY，总价 218000.0，交期 20 天，规格 {\"budgetAvailable\":420000.0,\"budgetId\":\"V2-BUD-001\",\"budgetVersion\":\"2026-10-04T10:31:46.858226Z\",\"capacityUnits\":35,\"departmentId\":\"V2-ALG\",\"gpuMemoryGb\":24,\"itemActive\":true,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-04T10:31:46.468329Z\"},\"onTimeRate\":0.65,\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-002\",\"performanceVersion\":\"2026-10-04T10:31:46.809861Z\",\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":97.0,\"supplierVersion\":\"2026-10-04T10:31:46.343564Z\",\"transactionCount\":5}",
+        "collectedAt": "2026-10-04T10:32:16.074887800Z",
+        "sourceRecordId": "ERPNext:Procurement Item Supplier:V2-REL-02-01:2026-10-04T10:31:46.671557Z",
+        "sourceSnapshot": "ERPNext:Item:V2-WS-001:2026-10-04T10:31:46.468329Z",
+        "sourceAsOf": "2026-10-04T10:31:46.468329Z",
+        "sourceDigest": "1b5c0e17331572463c4409a19b1fc9a428dfbff7a3149facee34fe36c6850fd5"
+      },
+      {
+        "evidenceId": "evidence-eb1c4c1472b526cdf7a90870",
+        "supplierId": "V2-SUP-002",
+        "evidenceType": "WARRANTY",
+        "source": "mcp:erpnext",
+        "fact": "质保：36 months",
+        "collectedAt": "2026-10-04T10:32:16.074887800Z",
+        "sourceRecordId": "ERPNext:Procurement Item Supplier:V2-REL-02-01:2026-10-04T10:31:46.671557Z",
+        "sourceSnapshot": "ERPNext:Item:V2-WS-001:2026-10-04T10:31:46.468329Z",
+        "sourceAsOf": "2026-10-04T10:31:46.468329Z",
+        "sourceDigest": "1b5c0e17331572463c4409a19b1fc9a428dfbff7a3149facee34fe36c6850fd5"
+      },
+      {
+        "evidenceId": "evidence-b431d28601cede65cdaad943",
+        "supplierId": "V2-SUP-003",
+        "evidenceType": "OFFER",
+        "source": "mcp:erpnext",
+        "fact": "商品 AI Workstation 01 单价 13700.0 CNY，总价 274000.0，交期 10 天，规格 {\"budgetAvailable\":420000.0,\"budgetId\":\"V2-BUD-001\",\"budgetVersion\":\"2026-10-04T10:31:46.858226Z\",\"capacityUnits\":100,\"departmentId\":\"V2-ALG\",\"gpuMemoryGb\":24,\"itemActive\":true,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-04T10:31:46.468329Z\"},\"onTimeRate\":0.96,\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-003\",\"performanceVersion\":\"2026-10-04T10:31:46.812020Z\",\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":95.0,\"supplierVersion\":\"2026-10-04T10:31:46.351044Z\",\"transactionCount\":4}",
+        "collectedAt": "2026-10-04T10:32:16.273349400Z",
+        "sourceRecordId": "ERPNext:Procurement Item Supplier:V2-REL-03-01:2026-10-04T10:31:46.678672Z",
+        "sourceSnapshot": "ERPNext:Item:V2-WS-001:2026-10-04T10:31:46.468329Z",
+        "sourceAsOf": "2026-10-04T10:31:46.468329Z",
+        "sourceDigest": "1418acc0cae41189f8911871b7ac24a8babc009a4d2edbd76a74ad571826f2c4"
+      },
+      {
+        "evidenceId": "evidence-961a31b53040c027d8ddb8c9",
+        "supplierId": "V2-SUP-003",
+        "evidenceType": "WARRANTY",
+        "source": "mcp:erpnext",
+        "fact": "质保：36 months",
+        "collectedAt": "2026-10-04T10:32:16.273349400Z",
+        "sourceRecordId": "ERPNext:Procurement Item Supplier:V2-REL-03-01:2026-10-04T10:31:46.678672Z",
+        "sourceSnapshot": "ERPNext:Item:V2-WS-001:2026-10-04T10:31:46.468329Z",
+        "sourceAsOf": "2026-10-04T10:31:46.468329Z",
+        "sourceDigest": "1418acc0cae41189f8911871b7ac24a8babc009a4d2edbd76a74ad571826f2c4"
+      },
+      {
+        "evidenceId": "evidence-7a88d1e80881c9e259c4e40d",
+        "supplierId": "V2-SUP-005",
+        "evidenceType": "OFFER",
+        "source": "mcp:erpnext",
+        "fact": "商品 AI Workstation 01 单价 12500.0 CNY，总价 250000.0，交期 16 天，规格 {\"budgetAvailable\":420000.0,\"budgetId\":\"V2-BUD-001\",\"budgetVersion\":\"2026-10-04T10:31:46.858226Z\",\"capacityUnits\":45,\"departmentId\":\"V2-ALG\",\"gpuMemoryGb\":24,\"itemActive\":true,\"itemSource\":{\"backend\":\"ERPNext\",\"entityId\":\"V2-WS-001\",\"entityType\":\"Item\",\"version\":\"2026-10-04T10:31:46.468329Z\"},\"onTimeRate\":0.88,\"performanceEntity\":\"Procurement Supplier Performance:V2-SUP-005\",\"performanceVersion\":\"2026-10-04T10:31:46.816451Z\",\"priceBasis\":\"ERP_REFERENCE_PRICE\",\"qualityScore\":90.0,\"supplierVersion\":\"2026-10-04T10:31:46.361478Z\",\"transactionCount\":4}",
+        "collectedAt": "2026-10-04T10:32:16.476569100Z",
+        "sourceRecordId": "ERPNext:Procurement Item Supplier:V2-REL-05-01:2026-10-04T10:31:46.694721Z",
+        "sourceSnapshot": "ERPNext:Item:V2-WS-001:2026-10-04T10:31:46.468329Z",
+        "sourceAsOf": "2026-10-04T10:31:46.468329Z",
+        "sourceDigest": "f68d25a763b6d054de40aefc96e24d89bd69b7aec0852df0a9851795296d8180"
+      },
+      {
+        "evidenceId": "evidence-540e46ed07a11e4b28f87bea",
+        "supplierId": "V2-SUP-005",
+        "evidenceType": "WARRANTY",
+        "source": "mcp:erpnext",
+        "fact": "质保：36 months",
+        "collectedAt": "2026-10-04T10:32:16.476569100Z",
+        "sourceRecordId": "ERPNext:Procurement Item Supplier:V2-REL-05-01:2026-10-04T10:31:46.694721Z",
+        "sourceSnapshot": "ERPNext:Item:V2-WS-001:2026-10-04T10:31:46.468329Z",
+        "sourceAsOf": "2026-10-04T10:31:46.468329Z",
+        "sourceDigest": "f68d25a763b6d054de40aefc96e24d89bd69b7aec0852df0a9851795296d8180"
+      }
+    ],
+    "source": "verified-provider-snapshot",
+    "workflowRequisitionRunId": "4faa5583-a22d-4ca5-9482-ed9a7303774a",
+    "canonicalRequisitionId": "V2-REQ-001",
+    "requisitionBacked": true,
+    "recommendationEvidenceManifest": {
+      "recommendationId": "67fc7e15-0722-495a-9fea-f6cfb8ce31ff:workflow-finalize",
+      "recommendationVersion": 2,
+      "caseId": "06a195e8-77b2-4f26-8a2f-1894edfbd786",
+      "caseVersion": 2,
+      "selectedSupplierId": "V2-SUP-001",
+      "validatedEvidenceRefs": [
+        "evidence-3727ad0c4aab62f48086fe4e",
+        "evidence-2f026750a876de0385a0c510",
+        "evidence-cf83826ffc06d0ead5375983",
+        "evidence-eb1c4c1472b526cdf7a90870",
+        "evidence-b431d28601cede65cdaad943",
+        "evidence-961a31b53040c027d8ddb8c9",
+        "evidence-7a88d1e80881c9e259c4e40d",
+        "evidence-540e46ed07a11e4b28f87bea"
+      ],
+      "createdAt": "2026-10-04T10:32:16.490538Z",
+      "authorizationSource": "verified-provider-snapshot"
+    }
+  },
+  "rfq_typed_proposal": {
+    "evidenceRefs": [],
+    "explanation": "基于已 Finalize 的推荐（recommendationRef=67fc7e15-0722-495a-9fea-f6cfb8ce31ff:workflow-finalize，caseVersion=2）为算法部门申请 V2-REQ-001 创建关联 RFQ 意图：商品 AI Workstation / V2-WS-001，数量 20，预算 300000 CNY，要求 21 天交付，硬约束 GPU 显存 ≥24GB，优先历史交付稳定性（deliveryPriority=HIGH），选定供应商 V2-SUP-001（Nebula Forge Fictional）。当前 Run 已对 carried requisition.subjectRequisitionId=V2-REQ-001 执行 exact-read 以绑定 ERP material request。本阶段仅提出 RFQ 意图，不填写执行 ID、签名或自批；由 Java 在 Run 完成后重建 canonical RFQ 并请求人工审批，当前无外部写入权限。",
+    "recommendationRef": "67fc7e15-0722-495a-9fea-f6cfb8ce31ff:workflow-finalize",
+    "requestRfq": true
+  },
+  "canonical_rfq_requests": [
+    {
+      "arguments": {
+        "caseId": "06a195e8-77b2-4f26-8a2f-1894edfbd786",
+        "caseVersion": 2,
+        "currency": "CNY",
+        "hardConstraints": {
+          "gpuMemoryMinGb": "24"
+        },
+        "idempotencyKey": "rfq:23b36040-f3f7-443b-9b3f-494000c11687:2fb6b819a2ca940e08deaa4976f546d2c4f0f88ed796618a809c755412b2b592",
+        "productCategory": "AI Workstation",
+        "productDescription": "V2-WS-001",
+        "quantity": 20,
+        "requiredDeliveryDays": 21,
+        "requisitionId": "V2-REQ-001",
+        "sourceRecommendationToolCallId": "67fc7e15-0722-495a-9fea-f6cfb8ce31ff:workflow-finalize",
+        "supplierId": "V2-SUP-001"
+      },
+      "requestId": "5eb8f679-feed-4458-8e0d-26a5f1104e8f:workflow:procurement_create_rfq",
+      "toolName": "procurement_create_rfq"
+    }
+  ],
+  "approval_requests": [
+    {
+      "approvalId": "23b36040-f3f7-443b-9b3f-494000c11687",
+      "conversationId": "eval-workflow-71b06872-0a91-4e18-9ef4-84de404bc743",
+      "createdAt": "2026-10-04T10:32:18.716019800Z",
+      "decidedAt": "2026-10-04T10:32:18.721020900Z",
+      "decisionReason": "approve",
+      "expiresAt": "2026-10-05T10:32:18.716019800Z",
+      "reason": "high risk capability requires approval: procurement_create_rfq",
+      "reviewer": "eval-human",
+      "runId": "5eb8f679-feed-4458-8e0d-26a5f1104e8f",
+      "status": "APPROVED",
+      "toolCallRequest": {
+        "arguments": {
+          "caseId": "06a195e8-77b2-4f26-8a2f-1894edfbd786",
+          "caseVersion": 2,
+          "currency": "CNY",
+          "hardConstraints": {
+            "gpuMemoryMinGb": "24"
+          },
+          "idempotencyKey": "rfq:23b36040-f3f7-443b-9b3f-494000c11687:2fb6b819a2ca940e08deaa4976f546d2c4f0f88ed796618a809c755412b2b592",
+          "productCategory": "AI Workstation",
+          "productDescription": "V2-WS-001",
+          "quantity": 20,
+          "requiredDeliveryDays": 21,
+          "requisitionId": "V2-REQ-001",
+          "sourceRecommendationToolCallId": "67fc7e15-0722-495a-9fea-f6cfb8ce31ff:workflow-finalize",
+          "supplierId": "V2-SUP-001"
+        },
+        "requestId": "5eb8f679-feed-4458-8e0d-26a5f1104e8f:workflow:procurement_create_rfq",
+        "toolName": "procurement_create_rfq"
+      }
+    }
+  ],
+  "approval_binding": "Persisted exact ToolCallRequest equality; server canonical reconstruction; requisition included in idempotency suffix and signed ERP request digest",
+  "approval_payload_audit_sha256": [
+    "5ee62cbdc3d4ad76c3c8a6306f5ec49a16e214fb0db4a9be990a1f9dbd4b76b7"
+  ],
+  "audit_hash_note": "Offline sorted-JSON audit hash; not a separate production approval digest",
+  "erp_request_dtos": [
+    {
+      "currency": "CNY",
+      "deliveryDays": 21,
+      "idempotencyKey": "rfq:23b36040-f3f7-443b-9b3f-494000c11687:2fb6b819a2ca940e08deaa4976f546d2c4f0f88ed796618a809c755412b2b592",
+      "itemId": "V2-WS-001",
+      "quantity": 20,
+      "requisitionId": "V2-REQ-001",
+      "supplierId": "V2-SUP-001"
+    }
+  ],
+  "erp_rfqs": [
+    {
+      "amended_from": null,
+      "billing_address": null,
+      "billing_address_display": null,
+      "company": "Synthetic AI Labs",
+      "creation": "2026-10-04 10:32:18.980273",
+      "custom_procurement_key": "rfq:23b36040-f3f7-443b-9b3f-494000c11687:2fb6b819a2ca940e08deaa4976f546d2c4f0f88ed796618a809c755412b2b592",
+      "custom_procurement_seed": "v2-workstations",
+      "custom_request_digest": "6068123a4e787b62fdcf859215b1e8a5ba701ef8d00dfe5f3fd44c4b3eb1a7f7",
+      "docstatus": 0,
+      "doctype": "Request for Quotation",
+      "email_template": null,
+      "has_unit_price_items": 0,
+      "idx": 0,
+      "incoterm": null,
+      "items": [
+        {
+          "brand": null,
+          "conversion_factor": 1.0,
+          "creation": "2026-10-04 10:32:18.980273",
+          "description": null,
+          "docstatus": 0,
+          "doctype": "Request for Quotation Item",
+          "idx": 1,
+          "image": null,
+          "item_code": "V2-WS-001",
+          "item_group": null,
+          "item_name": null,
+          "material_request": "V2-REQ-001",
+          "material_request_item": "blt9t6sh4h",
+          "modified": "2026-10-04 10:32:18.980273",
+          "modified_by": "procurement-demo@example.invalid",
+          "name": "bvu1o2gcfs",
+          "owner": "procurement-demo@example.invalid",
+          "page_break": 0,
+          "parent": "PUR-RFQ-2026-00001",
+          "parentfield": "items",
+          "parenttype": "Request for Quotation",
+          "project_name": null,
+          "qty": 20.0,
+          "schedule_date": "2026-10-25",
+          "stock_qty": 20.0,
+          "stock_uom": "Nos",
+          "supplier_part_no": null,
+          "uom": "Nos",
+          "warehouse": null
+        }
+      ],
+      "letter_head": "Company Letterhead - Grey",
+      "message_for_supplier": "Please supply the specified items at the best possible rates",
+      "mfs_html": null,
+      "modified": "2026-10-04 10:32:19.036064",
+      "modified_by": "procurement-demo@example.invalid",
+      "name": "PUR-RFQ-2026-00001",
+      "named_place": null,
+      "naming_series": "PUR-RFQ-.YYYY.-",
+      "opportunity": null,
+      "owner": "procurement-demo@example.invalid",
+      "schedule_date": null,
+      "select_print_heading": null,
+      "send_attached_files": 1,
+      "send_document_print": 0,
+      "shipping_address": null,
+      "shipping_address_display": null,
+      "status": "Draft",
+      "subject": "AI workstation inquiry",
+      "suppliers": [
+        {
+          "contact": null,
+          "creation": "2026-10-04 10:32:18.980273",
+          "docstatus": 0,
+          "doctype": "Request for Quotation Supplier",
+          "email_id": null,
+          "email_sent": 0,
+          "idx": 1,
+          "modified": "2026-10-04 10:32:18.980273",
+          "modified_by": "procurement-demo@example.invalid",
+          "name": "bvuf55s7jf",
+          "owner": "procurement-demo@example.invalid",
+          "parent": "PUR-RFQ-2026-00001",
+          "parentfield": "suppliers",
+          "parenttype": "Request for Quotation",
+          "quote_status": "Pending",
+          "send_email": 0,
+          "supplier": "V2-SUP-001",
+          "supplier_name": "Nebula Forge Fictional"
+        }
+      ],
+      "tc_name": null,
+      "terms": null,
+      "title": null,
+      "transaction_date": "2026-10-04",
+      "use_html": 0,
+      "vendor": null
+    }
+  ],
+  "rfq_requisition_tool_reads": 0,
+  "no_extra_requisition_tool_read": true
+}

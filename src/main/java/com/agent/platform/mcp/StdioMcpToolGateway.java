@@ -273,6 +273,21 @@ public class StdioMcpToolGateway implements McpToolGateway {
         metadata.put("mcpToolName", originalName);
         metadata.put("mcpSessionGeneration", generation);
         metadata.put("mcpBindingId", server.serverId() + "/" + generation + "/" + originalName);
+        // Remote hints cannot establish trust or overwrite canonical runtime metadata.
+        Map<String, Object> annotations = new LinkedHashMap<>();
+        if (tool.get("annotations") instanceof Map<?, ?> hints) {
+            for (String key : List.of("readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint")) {
+                if (hints.get(key) instanceof Boolean value) annotations.put(key, value);
+            }
+        }
+        boolean trusted = server.trustedProcurement()
+                && "erpnext".equals(server.serverId()) && "erpnext".equals(server.serverName())
+                && "mcp.erpnext.".equals(server.toolNamePrefix());
+        metadata.put("mcpToolAnnotations", Map.copyOf(annotations));
+        metadata.put("mcpTrustedProcurement", trusted);
+        if (trusted && Boolean.TRUE.equals(annotations.get("readOnlyHint"))) {
+            metadata.put("effect", "READ_ONLY");
+        }
         return new ToolDefinition(unifiedName, description, inputSchema, ToolRiskLevel.MEDIUM, metadata);
     }
 
@@ -835,7 +850,8 @@ public class StdioMcpToolGateway implements McpToolGateway {
             String protocolVersion,
             String command,
             List<String> args,
-            String workingDirectory
+            String workingDirectory,
+            boolean trustedProcurement
     ) {
 
         private static ServerSpec from(McpProperties.Server server, int index, java.util.Set<String> usedIds) {
@@ -857,7 +873,8 @@ public class StdioMcpToolGateway implements McpToolGateway {
                     valueOrDefault(server == null ? null : server.getProtocolVersion(), "2025-11-25"),
                     valueOrEmpty(server == null ? null : server.getCommand()),
                     List.copyOf(args),
-                    valueOrEmpty(server == null ? null : server.getWorkingDirectory())
+                    valueOrEmpty(server == null ? null : server.getWorkingDirectory()),
+                    server != null && server.isTrustedProcurement()
             );
         }
 

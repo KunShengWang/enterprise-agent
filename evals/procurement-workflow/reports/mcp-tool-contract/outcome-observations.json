@@ -1,0 +1,61 @@
+[
+  {
+    "task": "ROB-01",
+    "classification": {
+      "normal_business_terminal_count": 1,
+      "business_rejection_count": 0,
+      "canonical_finalize_rejection_count": 0,
+      "validation_rejection": 4,
+      "policy_denial": 0,
+      "stale_version_conflict": 0,
+      "runtime_infrastructure_error": 0,
+      "unclassified_error": 0,
+      "normal_business_outcome_misclassified": 0,
+      "finalize_consistent": true,
+      "outcome": "COMPLETE",
+      "state": "COMPLETED",
+      "stop_reason": "COMPLETED",
+      "failures": [
+        {
+          "id": "d3168be9-5d9d-44f4-bf9e-1df9a4502477",
+          "source": "tool ledger",
+          "text": "",
+          "category": "VALIDATION_ERROR",
+          "diagnostic_bucket": "validation_rejection"
+        },
+        {
+          "id": "a49cf888-ef9a-4faf-be5b-5c9ec1923f3b",
+          "source": "tool ledger",
+          "text": "",
+          "category": "VALIDATION_ERROR",
+          "diagnostic_bucket": "validation_rejection"
+        },
+        {
+          "id": "938534c9-1c3a-4c07-ba2e-7d80f14be9e6",
+          "source": "tool ledger",
+          "text": "",
+          "category": "VALIDATION_ERROR",
+          "diagnostic_bucket": "validation_rejection"
+        },
+        {
+          "id": "16d87ce0-b2e6-4d4f-a221-d7feb03eea25",
+          "source": "tool ledger",
+          "text": "",
+          "category": "VALIDATION_ERROR",
+          "diagnostic_bucket": "validation_rejection"
+        }
+      ],
+      "denominator": "Unique failed tool-call IDs; terminal-only failure when no failed tool receipt. Error-message bucket is offline diagnosis, not a new runtime taxonomy; unclassified retained."
+    },
+    "invalid": {
+      "InvalidRecommendationProposal": 0,
+      "proposals": [],
+      "scope": "Java typed business rejections; observation only, not frozen grading",
+      "proposal_count": 1
+    },
+    "terminal_tokens": {
+      "applicable": false,
+      "reason": "No timestamped canonical empty-eligibility receipt; do not infer earlier terminal knowledge from model narrative."
+    }
+  }
+]

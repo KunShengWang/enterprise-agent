@@ -35,6 +35,10 @@ public class ProcurementRfqApprovalPreparer implements ApprovalToolCallRequestPr
         this.objectMapper = objectMapper;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.agent.platform.procurement.workflow.WorkflowFinalizeBinding workflowBinding;
+    public void setWorkflowBinding(com.agent.platform.procurement.workflow.WorkflowFinalizeBinding binding){this.workflowBinding=binding;}
+
     @Override
     public boolean supports(String toolName) {
         return ProcurementToolCatalog.CREATE_RFQ.equals(toolName);
@@ -77,11 +81,20 @@ public class ProcurementRfqApprovalPreparer implements ApprovalToolCallRequestPr
         authoritative.put("currency", state.currency());
         authoritative.put("requiredDeliveryDays", state.requiredDeliveryDays());
         authoritative.put("hardConstraints", state.hardConstraints());
-        String requisitionId = com.agent.platform.procurement.erp.CanonicalRequisitionBinding.resolve(
-                toolExecutionStore.findByRun(trusted.runId()), state, objectMapper);
+        boolean workflow = workflowBinding!=null && workflowBinding.permits(trusted.runId(),finalizeExecution.toolCallId());
+        String requisitionId = workflow ? workflowBinding.requisitionId(trusted.runId())
+                : com.agent.platform.procurement.erp.CanonicalRequisitionBinding.resolve(
+                    toolExecutionStore.findByRun(trusted.runId()), state, objectMapper);
         if (requisitionId != null) authoritative.put("requisitionId", requisitionId);
         authoritative.put("sourceRecommendationToolCallId", finalizeExecution.toolCallId());
         authoritative.put("idempotencyKey", "rfq:" + approvalId.trim());
+        if(workflow) {
+            // Bind the recommendation identity/version into the signed ERP payload and ERP idempotency digest.
+            authoritative.put("idempotencyKey", "rfq:" + approvalId.trim() + ":" +
+                    com.agent.platform.procurement.workflow.WorkflowEvidenceCarry.hash(
+                            current.caseId()+"\n"+current.version()+"\n"+finalizeExecution.toolCallId()+"\n"+
+                            java.util.Objects.toString(requisitionId,"")));
+        }
         return new ToolCallRequest(request.toolName(), request.requestId(), authoritative);
     }
 
@@ -94,6 +107,7 @@ public class ProcurementRfqApprovalPreparer implements ApprovalToolCallRequestPr
     }
 
     private ToolExecutionRecord latestSuccessfulFinalize(String runId) {
+        if(workflowBinding!=null){var bound=workflowBinding.find(runId);if(bound.isPresent())return bound.get();}
         List<ToolExecutionRecord> executions = toolExecutionStore.findByRun(runId);
         return executions.stream()
                 .filter(record -> record != null

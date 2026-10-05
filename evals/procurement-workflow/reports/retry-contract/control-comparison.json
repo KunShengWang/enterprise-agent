@@ -1,0 +1,5 @@
+{
+  "semantic_equal": true,
+  "raw_equal": false,
+  "normalization": "Sort Set toolScope and parse schema JSON object keys, using existing gate semantics. No source/schema/prompt edits."
+}

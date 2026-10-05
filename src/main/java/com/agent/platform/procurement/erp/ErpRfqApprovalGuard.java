@@ -27,6 +27,8 @@ public final class ErpRfqApprovalGuard {
         try {
             if (!request.idempotencyKey().startsWith("rfq:")) reject();
             String id=request.idempotencyKey().substring(4);
+            int suffix=id.lastIndexOf(':');
+            if(suffix>0 && id.substring(suffix+1).matches("[0-9a-f]{64}"))id=id.substring(0,suffix);
             var approval=approvals.find(id).orElseThrow();
             if (!id.equals(approval.approvalId()) || approval.status()!=ApprovalStatus.APPROVED
                     || approval.decidedAt()==null || !approval.expiresAt().isAfter(Instant.now())) reject();

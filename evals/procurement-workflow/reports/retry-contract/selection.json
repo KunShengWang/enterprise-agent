@@ -1,0 +1,8 @@
+{
+  "tasks": [
+    "ROB-01"
+  ],
+  "trials": 1,
+  "retry": false,
+  "stop_after": "PASS_OR_FAIL"
+}

@@ -46,6 +46,12 @@ public class ProcurementCaseService {
      */
     public ProcurementCase applyPatch(String tenantId, String conversationId, String userId,
                                       ProcurementCasePatch patch, String sourceInputId) {
+        return applyPatch(tenantId,conversationId,userId,patch,sourceInputId,null);
+    }
+
+    /** Workflow binds a proposal to the Case version observed before its model Run. */
+    public ProcurementCase applyPatch(String tenantId,String conversationId,String userId,
+                                     ProcurementCasePatch patch,String sourceInputId,Long expectedVersion) {
         String tenant = required(tenantId, "tenantId");
         String conversation = required(conversationId, "conversationId");
         String user = required(userId, "userId");
@@ -53,6 +59,9 @@ public class ProcurementCaseService {
         patchMerger.validate(patch);
         ProcurementCase current = ensureCase(tenant, conversation, user);
         if (current.appliedInputIds().contains(inputId)) return current;
+        if(expectedVersion!=null && current.version()!=expectedVersion) {
+            throw new ProcurementCaseVersionConflictException("stage proposal observed a different Case version");
+        }
 
         ProcurementCaseState nextState = patchMerger.merge(current.state(), patch);
         ProcurementCase next = new ProcurementCase(current.caseId(), current.tenantId(), current.conversationId(),

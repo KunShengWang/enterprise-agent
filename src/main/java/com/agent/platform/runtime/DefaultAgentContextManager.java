@@ -82,6 +82,10 @@ public class DefaultAgentContextManager implements AgentContextManager {
                                     AgentExecutionProfile profile) {
         // 从数据库加载有限的历史消息；canonical context 不依赖时间线是否为空。
         List<AgentMessage> timeline = timelineStore.loadMessages(sessionId, MAX_TIMELINE_MESSAGES);
+        if (profile != null && profile.contextPolicy().isolatedRun() && !timeline.isEmpty()) {
+            String currentRun = timeline.get(timeline.size() - 1).runId();
+            timeline = timeline.stream().filter(message -> currentRun.equals(message.runId())).toList();
+        }
         long budget = Math.max(1, maxTokens);
         List<AgentMessage> canonicalContexts = freshCanonicalContexts(
                 sessionId, userId, tenantId, profile);
@@ -206,7 +210,7 @@ public class DefaultAgentContextManager implements AgentContextManager {
         CompactionStats stats;
         AgentContextView projected;
         synchronized (lock) {
-            stats = compactTimeline(sessionId, userId, runId, maxTokens, reason);
+            stats = compactTimeline(sessionId, userId, runId, maxTokens, reason, profile);
             projected = project(sessionId, userId, tenantId, query, maxTokens, profile);
         }
         Map<String, Object> metadata = new LinkedHashMap<>(projected.metadata());
@@ -223,8 +227,12 @@ public class DefaultAgentContextManager implements AgentContextManager {
                                             String userId,
                                             String runId,
                                             long maxTokens,
-                                            String reason) {
+                                            String reason,
+                                            AgentExecutionProfile profile) {
         List<AgentMessage> timeline = timelineStore.loadMessages(sessionId, MAX_TIMELINE_MESSAGES);
+        if (profile != null && profile.contextPolicy().isolatedRun()) {
+            timeline = timeline.stream().filter(message -> runId.equals(message.runId())).toList();
+        }
         AgentMessage previousSummary = latestSummary(timeline);
         long previousCoveredThrough = coveredThrough(previousSummary);
         List<AgentMessage> active = timeline.stream()

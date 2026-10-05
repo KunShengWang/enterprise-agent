@@ -1,0 +1,51 @@
+[
+  {
+    "name": "ProcurementWorkflowEvidenceCarryTests",
+    "tests": 23,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "ProcurementWorkflowTests",
+    "tests": 30,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "ProcurementStructuredOutputTests",
+    "tests": 27,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "ProcurementRfqHitlTests",
+    "tests": 22,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "ErpNextRfqGatewayTests",
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "DefaultAgentToolRuntimeApprovalBindingTests",
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  {
+    "name": "NativeToolCallingAgentModelGatewayTests",
+    "tests": 11,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+]

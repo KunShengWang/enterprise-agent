@@ -1,0 +1,12 @@
+[
+  {
+    "task": "RFQ-02",
+    "stage": "RFQ",
+    "claim": "当前 Run 已对 carried requisition.subjectRequisitionId=V2-REQ-001 执行 exact-read 以绑定 ERP material request",
+    "operation": "procurement_get_requisition",
+    "model_turn": 1,
+    "claimed_at": "2026-10-04T10:32:18.680771Z",
+    "matching_tool_receipt": [],
+    "supported": false
+  }
+]

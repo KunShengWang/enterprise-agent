@@ -1,0 +1,52 @@
+{
+  "task": "E2E-01",
+  "architecture_stop_condition": false,
+  "classification": "MODEL_VIOLATION_OF_EXISTING_EXACT_READ_CONTRACT",
+  "root_cause": "Model set subjectRequisitionId=V2-REQ-001 after list_requisitions, without any successful get_requisition exact-read. Existing validator rejects subject binding without exact canonical demand.",
+  "direct_error": "subject must match exact canonical demand",
+  "stage": "REQUISITION",
+  "model_calls": 2,
+  "logical_tool_calls": 3,
+  "physical_model_attempts": 3,
+  "tool_errors": 0,
+  "reads": [
+    "procurement_list_requisitions",
+    "procurement_get_item",
+    "procurement_get_budget_status"
+  ],
+  "all_reads_succeeded": true,
+  "missing_operation": "procurement_get_requisition",
+  "user_explicit_requisition_id": false,
+  "task_expected_requisition": null,
+  "subject_proposed": "V2-REQ-001",
+  "schema_valid": true,
+  "repair_count": 0,
+  "evidence_scope_passed": true,
+  "canonical_case_created": false,
+  "approval_count": 0,
+  "erp_rfq_count": 0,
+  "business": "FAIL",
+  "workflow": "FAIL",
+  "stop_reason": "TOOL_ERROR",
+  "outcome": "WORKFLOW_ERROR",
+  "existing_contract_sources": [
+    {
+      "path": "src/main/java/com/agent/platform/procurement/workflow/ProcurementStageProfiles.java",
+      "line": 21,
+      "rule": "subjectRequisitionId only after exact-read; otherwise blank"
+    },
+    {
+      "path": "src/main/java/com/agent/platform/procurement/workflow/WorkflowRequisitionValidator.java",
+      "line": 35,
+      "rule": "Nonblank subject must have matching get_requisition evidence plus department/item/quantity"
+    },
+    {
+      "path": "src/main/java/com/agent/platform/procurement/workflow/ProcurementWorkflowService.java",
+      "line": 152,
+      "rule": "Existing exception boundary retains WORKFLOW_ERROR"
+    }
+  ],
+  "why_not_new_core_contract": "The prompt and canonical validator already express and enforce this contract on the frozen source. No new business-state/cross-stage/runtime/evidence/identity abstraction is required to explain this failure. Any repair or recovery-policy change requires human decision; none made.",
+  "metric_limit": "ToolArgumentValidationError=0, InvalidRecommendationProposal=0 and UnsupportedExecutionClaim=0 for this task do not imply error-free model output; this is a StageResult semantic contract violation, not a tool argument error or a sourcing recommendation.",
+  "action": "STOP; no source change, no rerun, no Dev"
+}

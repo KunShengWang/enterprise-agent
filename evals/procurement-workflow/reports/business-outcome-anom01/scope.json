@@ -1,0 +1,16 @@
+{
+  "branch": "feat/procurement-workflow",
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "existing_files": 1238,
+  "changed_existing": [
+    "evals/procurement-workflow/acceptance.py",
+    "src/main/java/com/agent/platform/procurement/application/ProcurementRecommendationFinalizer.java",
+    "src/main/java/com/agent/platform/procurement/workflow/ProcurementWorkflowService.java",
+    "src/test/java/com/agent/platform/procurement/ProcurementWorkflowTests.java"
+  ],
+  "unchanged_existing": 1234,
+  "protected_handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "protected_handler_unchanged": true,
+  "no_source_change_during_trial": true,
+  "configured_secrets_not_found": true
+}

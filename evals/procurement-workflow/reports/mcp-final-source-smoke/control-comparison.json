@@ -1,0 +1,5 @@
+{
+  "semantic_equal": true,
+  "raw_equal": false,
+  "normalization": "Sort toolScope sets; parse input/output schema JSON; retain and compare ALL MCP annotation, trust, effect metadata. Prompt and input/output schemas unchanged."
+}

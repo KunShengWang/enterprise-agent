@@ -1,0 +1,17 @@
+{
+  "docs/harness/workflow-retry-contract-report.md": "48b78766de165ec8ff3da3cdbe26a59031f077693aa1af79cec5fe42dfa9cf93",
+  "evals/procurement-workflow/acceptance.py": "26e5680bd916b3ab4db088ef66ea62ea395f063740f3c83d562c2cf67c57dd9c",
+  "evals/procurement-workflow/run.py": "18851d614e85eba3bf7ccb052fc3cfedd113a5676dacee29e60834f2a13b4ea8",
+  "evals/procurement-workflow/test_retry_causality.py": "bdc2a1a44e20824eca70e9b6413a2fe6ea8218ff5ba62fcd575effb3bdefb2f8",
+  "src/main/java/com/agent/platform/procurement/workflow/ProcurementWorkflowService.java": "364f95a65e4896acda3900c63c5d7b87b9217d221c58fce5ee0c56567ab46db2",
+  "src/main/java/com/agent/platform/procurement/workflow/WorkflowEvidence.java": "5b0b982fd903f3e1eb303fb638f145d3e69adffe55c886ac64a4e940dd04763a",
+  "src/main/java/com/agent/platform/procurement/workflow/WorkflowRequisitionValidator.java": "524f1c7874df0207d5518b47f0ff7b9535c522540211cdf59fa5e7f42c522968",
+  "src/main/java/com/agent/platform/runtime/DefaultAgentRuntime.java": "1b989f038ffd750b819079bd324548337d90c7c3f93b3f42fb28de6de67e8db1",
+  "src/main/java/com/agent/platform/runtime/DefaultAgentToolRuntime.java": "bc2e22dfc56dce1bd99291eeca93e958afd8e35d1d31ae138365dde1a0e64766",
+  "src/main/java/com/agent/platform/runtime/ToolExecutionDeadline.java": "ac80aa3cdf73715018a814d3dfbfc996d7cd14b3de2995886e20dfd7763db278",
+  "src/main/java/com/agent/platform/runtime/ToolRetryPolicy.java": "e54a425579e4d0881ad21635e93369043818cdd664463e9e5602cb1161e3971e",
+  "src/test/java/com/agent/platform/procurement/ProcurementWorkflowRetryTests.java": "1c571b0a40d928988b17df160e8fcd95e0cce5e8332bae57e1c894f547a51224",
+  "src/test/java/com/agent/platform/procurement/ProcurementWorkflowTests.java": "ddc980186a265e30439d180c2a1e9555de59c633f940c4477d28def6015555aa",
+  "src/test/java/com/agent/platform/runtime/HarnessCoreTests.java": "0abef385a9e6ca03f3816cb1dcfb535775108a9ef0d24ce3b85ca60318e1c100",
+  "src/test/java/com/agent/platform/runtime/ToolRetryPolicyTests.java": "5ecf267cff78a44c62433fb0a6a2a5f9bf8024d4944e0ab22777e88a0b762008"
+}

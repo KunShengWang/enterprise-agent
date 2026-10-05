@@ -1,0 +1,8 @@
+{
+  "tasks": [
+    "REQ-01"
+  ],
+  "trials_per_task": 1,
+  "resume": false,
+  "holdout": false
+}

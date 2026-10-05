@@ -1,0 +1,8 @@
+warning: in the working copy of 'src/main/java/com/agent/platform/procurement/application/ProcurementRecommendationFinalizer.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/procurement/erp/ErpNextProcurementAdapter.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/procurement/erp/ErpRfqApprovalGuard.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/procurement/tool/ProcurementRfqApprovalPreparer.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/procurement/tool/ProcurementRfqToolHandler.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/com/agent/platform/runtime/DefaultAgentToolRuntime.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/test/java/com/agent/platform/runtime/HarnessCoreTests.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/test/java/com/agent/platform/runtime/NativeToolCallingAgentModelGatewayTests.java', LF will be replaced by CRLF the next time Git touches it

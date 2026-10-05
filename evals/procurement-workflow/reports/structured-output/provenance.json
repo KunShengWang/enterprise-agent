@@ -1,0 +1,12 @@
+{
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "branch": "feat/procurement-workflow",
+  "working_tree": "dirty",
+  "report_sha256": "46158eb68f2676e555cf94112219ddffe2779806fe80fa4ddeba5d38c1d47c93",
+  "legacy_directory": "target/procurement-v0/v0-20261004-142323-68e8afec",
+  "model_run": "workflow-structured-req01-20261004-r1",
+  "model_trials": 1,
+  "source_unchanged_after_model": true,
+  "historic_artifacts_unchanged": true,
+  "diff_check_exit_code": 0
+}

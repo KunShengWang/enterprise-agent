@@ -40,6 +40,42 @@ import static org.mockito.Mockito.when;
 class NativeToolCallingAgentModelGatewayTests {
 
     @Test
+    void structuredStageUsesJsonObjectAndPreservesEmptyResponseUsage() {
+        NativeChatModelClient client = mock(NativeChatModelClient.class);
+        ChatResponse response = response(new AssistantMessage(""), "stop");
+        var usage = mock(org.springframework.ai.chat.metadata.Usage.class);
+        when(usage.getPromptTokens()).thenReturn(100);
+        when(usage.getCompletionTokens()).thenReturn(10);
+        when(usage.getTotalTokens()).thenReturn(110);
+        when(response.getMetadata().getUsage()).thenReturn(usage);
+        when(client.streamNative(any(Prompt.class))).thenReturn(Flux.just(response));
+        var request = new AgentModelRequest("r", "s", "JSON schema", List.of(), List.of(),
+                Map.of(StructuredOutputSpec.JSON_MODE, true));
+        var turn = gateway(client).nextTurn(request, ignored -> {});
+        assertEquals("", turn.assistantText());
+        assertEquals(110, turn.usage().totalTokens());
+        var captor = ArgumentCaptor.forClass(Prompt.class);
+        verify(client).streamNative(captor.capture());
+        var options = assertInstanceOf(DeepSeekChatOptions.class, captor.getValue().getOptions());
+        assertEquals(org.springframework.ai.deepseek.api.ResponseFormat.Type.JSON_OBJECT, options.getResponseFormat().getType());
+    }
+
+    @Test
+    void correctionDisablesToolChoiceWithoutChangingToolSchema() {
+        NativeChatModelClient client = mock(NativeChatModelClient.class);
+        var finalResponse = response(new AssistantMessage("{}"), "stop");
+        when(client.streamNative(any(Prompt.class))).thenReturn(Flux.just(finalResponse));
+        var base = requestWithTool(List.of());
+        gateway(client).nextTurn(new AgentModelRequest(base.runId(), base.sessionId(), base.systemPrompt(), base.messages(), base.tools(),
+                Map.of(StructuredOutputSpec.JSON_MODE, true, StructuredOutputSpec.CORRECTION, true)), ignored -> {});
+        var captor = ArgumentCaptor.forClass(Prompt.class);
+        verify(client).streamNative(captor.capture());
+        var options = assertInstanceOf(DeepSeekChatOptions.class, captor.getValue().getOptions());
+        assertEquals("none", options.getToolChoice());
+        assertEquals(1, options.getToolCallbacks().size());
+    }
+
+    @Test
     void sendsNativeToolSchemaAndReturnsStructuredToolCallWithoutPublishingIt() {
         NativeChatModelClient client = mock(NativeChatModelClient.class);
         AssistantMessage.ToolCall nativeCall = new AssistantMessage.ToolCall(

@@ -1,0 +1,107 @@
+{
+  "procurement": [
+    {
+      "test_class": "com.agent.platform.procurement.JdbcProcurementCaseStorePostgresIT(v0-20261004-133149-62cf1529-procurement)",
+      "test": "schemaMigrationAlignsLegacyJsonVersionAndRejectsStaleCasWriter",
+      "reason": "Environment variable [PROCUREMENT_POSTGRES_IT] with value [false] does not match regular expression [true]"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.JdbcProcurementCaseStorePostgresIT(v0-20261004-133149-62cf1529-procurement)",
+      "test": "onlyOneConcurrentWriterCanUpdateTheSameCaseVersion",
+      "reason": "Environment variable [PROCUREMENT_POSTGRES_IT] with value [false] does not match regular expression [true]"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementAnswerAggregationTests(v0-20261004-133149-62cf1529-procurement)",
+      "test": "actualSavedScriptedRuntimeAnswerIsReportedHonestly",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementAnswerCompletenessTests(v0-20261004-133149-62cf1529-procurement)",
+      "test": "actualHistoricalArtifactReplay",
+      "reason": "System property [completeness.artifact] does not exist"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementAnswerPolicyTests(v0-20261004-133149-62cf1529-procurement)",
+      "test": "explicitHistoricalArtifactReplay",
+      "reason": "System property [answer.v2.artifact] does not exist"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementAnswerRelationTests(v0-20261004-133149-62cf1529-procurement)",
+      "test": "replayActualHistoricalArtifactWithoutExecutingAnything",
+      "reason": "System property [relation.artifact] does not exist"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementAnswerReplayTests(v0-20261004-133149-62cf1529-procurement)",
+      "test": "regradesSavedAnswerTwiceWithoutExecution",
+      "reason": "System property [answer.artifact] does not exist"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementAnswerV3ReplayTests(v0-20261004-133149-62cf1529-procurement)",
+      "test": "savedRuntimeDiskReplayMatchesStep2WithoutChangingInputs",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementArtifactReplayTests(v0-20261004-133149-62cf1529-procurement)",
+      "test": "regradesExistingArtifactFile",
+      "reason": "System property [evaluation.artifact] does not exist"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementComparisonMetricsTests(v0-20261004-133149-62cf1529-procurement)",
+      "test": "savedScriptedRuntimeIsSeparateFromSyntheticPass",
+      "reason": ""
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementComparisonReportsTests(v0-20261004-133149-62cf1529-procurement)",
+      "test": "savedRuntimeFailAndDiagnosticsMatchStep2",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    }
+  ],
+  "replay": [],
+  "full": [
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementAnswerAggregationTests(v0-20261004-133149-62cf1529-full)",
+      "test": "actualSavedScriptedRuntimeAnswerIsReportedHonestly",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementAnswerCompletenessTests(v0-20261004-133149-62cf1529-full)",
+      "test": "actualHistoricalArtifactReplay",
+      "reason": "System property [completeness.artifact] does not exist"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementAnswerPolicyTests(v0-20261004-133149-62cf1529-full)",
+      "test": "explicitHistoricalArtifactReplay",
+      "reason": "System property [answer.v2.artifact] does not exist"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementAnswerRelationTests(v0-20261004-133149-62cf1529-full)",
+      "test": "replayActualHistoricalArtifactWithoutExecutingAnything",
+      "reason": "System property [relation.artifact] does not exist"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementAnswerReplayTests(v0-20261004-133149-62cf1529-full)",
+      "test": "regradesSavedAnswerTwiceWithoutExecution",
+      "reason": "System property [answer.artifact] does not exist"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementAnswerV3ReplayTests(v0-20261004-133149-62cf1529-full)",
+      "test": "savedRuntimeDiskReplayMatchesStep2WithoutChangingInputs",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementArtifactReplayTests(v0-20261004-133149-62cf1529-full)",
+      "test": "regradesExistingArtifactFile",
+      "reason": "System property [evaluation.artifact] does not exist"
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementComparisonMetricsTests(v0-20261004-133149-62cf1529-full)",
+      "test": "savedScriptedRuntimeIsSeparateFromSyntheticPass",
+      "reason": ""
+    },
+    {
+      "test_class": "com.agent.platform.procurement.ProcurementComparisonReportsTests(v0-20261004-133149-62cf1529-full)",
+      "test": "savedRuntimeFailAndDiagnosticsMatchStep2",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    }
+  ]
+}

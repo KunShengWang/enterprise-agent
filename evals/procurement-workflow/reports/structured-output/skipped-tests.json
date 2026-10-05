@@ -1,0 +1,142 @@
+[
+  {
+    "phase": "full-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementAnswerAggregationTests",
+    "test": "actualSavedScriptedRuntimeAnswerIsReportedHonestly",
+    "reason": "System property [answer.v3.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "full-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementAnswerCompletenessTests",
+    "test": "actualHistoricalArtifactReplay",
+    "reason": "System property [completeness.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "full-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementAnswerPolicyTests",
+    "test": "explicitHistoricalArtifactReplay",
+    "reason": "System property [answer.v2.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "full-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementAnswerRelationTests",
+    "test": "replayActualHistoricalArtifactWithoutExecutingAnything",
+    "reason": "System property [relation.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "full-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementAnswerReplayTests",
+    "test": "regradesSavedAnswerTwiceWithoutExecution",
+    "reason": "System property [answer.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "full-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementAnswerV3ReplayTests",
+    "test": "savedRuntimeDiskReplayMatchesStep2WithoutChangingInputs",
+    "reason": "System property [answer.v3.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "full-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementArtifactReplayTests",
+    "test": "regradesExistingArtifactFile",
+    "reason": "System property [evaluation.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "full-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementComparisonMetricsTests",
+    "test": "savedScriptedRuntimeIsSeparateFromSyntheticPass",
+    "reason": "",
+    "detail": "org.opentest4j.TestAbortedException: Assumption failed: Saved Runtime artifact path is opt-in\n\tat org.junit.jupiter.api.Assumptions.throwAssumptionFailed(Assumptions.java:340)\n\tat org.junit.jupiter.api.Assumptions.assumeTrue(Assumptions.java:127)\n\tat com.agent.platform.procurement.ProcurementComparisonMetricsTests.savedScriptedRuntimeIsSeparateFromSyntheticPass(ProcurementComparisonMetricsTests.java:174)\n"
+  },
+  {
+    "phase": "full-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementComparisonReportsTests",
+    "test": "savedRuntimeFailAndDiagnosticsMatchStep2",
+    "reason": "System property [answer.v3.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "procurement-surefire",
+    "test_class": "com.agent.platform.procurement.JdbcProcurementCaseStorePostgresIT",
+    "test": "schemaMigrationAlignsLegacyJsonVersionAndRejectsStaleCasWriter",
+    "reason": "Environment variable [PROCUREMENT_POSTGRES_IT] with value [false] does not match regular expression [true]",
+    "detail": null
+  },
+  {
+    "phase": "procurement-surefire",
+    "test_class": "com.agent.platform.procurement.JdbcProcurementCaseStorePostgresIT",
+    "test": "onlyOneConcurrentWriterCanUpdateTheSameCaseVersion",
+    "reason": "Environment variable [PROCUREMENT_POSTGRES_IT] with value [false] does not match regular expression [true]",
+    "detail": null
+  },
+  {
+    "phase": "procurement-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementAnswerAggregationTests",
+    "test": "actualSavedScriptedRuntimeAnswerIsReportedHonestly",
+    "reason": "System property [answer.v3.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "procurement-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementAnswerCompletenessTests",
+    "test": "actualHistoricalArtifactReplay",
+    "reason": "System property [completeness.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "procurement-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementAnswerPolicyTests",
+    "test": "explicitHistoricalArtifactReplay",
+    "reason": "System property [answer.v2.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "procurement-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementAnswerRelationTests",
+    "test": "replayActualHistoricalArtifactWithoutExecutingAnything",
+    "reason": "System property [relation.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "procurement-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementAnswerReplayTests",
+    "test": "regradesSavedAnswerTwiceWithoutExecution",
+    "reason": "System property [answer.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "procurement-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementAnswerV3ReplayTests",
+    "test": "savedRuntimeDiskReplayMatchesStep2WithoutChangingInputs",
+    "reason": "System property [answer.v3.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "procurement-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementArtifactReplayTests",
+    "test": "regradesExistingArtifactFile",
+    "reason": "System property [evaluation.artifact] does not exist",
+    "detail": null
+  },
+  {
+    "phase": "procurement-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementComparisonMetricsTests",
+    "test": "savedScriptedRuntimeIsSeparateFromSyntheticPass",
+    "reason": "",
+    "detail": "org.opentest4j.TestAbortedException: Assumption failed: Saved Runtime artifact path is opt-in\n\tat org.junit.jupiter.api.Assumptions.throwAssumptionFailed(Assumptions.java:340)\n\tat org.junit.jupiter.api.Assumptions.assumeTrue(Assumptions.java:127)\n\tat com.agent.platform.procurement.ProcurementComparisonMetricsTests.savedScriptedRuntimeIsSeparateFromSyntheticPass(ProcurementComparisonMetricsTests.java:174)\n"
+  },
+  {
+    "phase": "procurement-surefire",
+    "test_class": "com.agent.platform.procurement.ProcurementComparisonReportsTests",
+    "test": "savedRuntimeFailAndDiagnosticsMatchStep2",
+    "reason": "System property [answer.v3.artifact] does not exist",
+    "detail": null
+  }
+]

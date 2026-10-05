@@ -1,0 +1,48 @@
+{
+  "gate": "FAILED_STOPPED",
+  "planned_smoke": 9,
+  "current_source_completed": 6,
+  "business_pass": 5,
+  "business_fail": 1,
+  "workflow_pass": 6,
+  "evidence_pass": 6,
+  "reused_current_source_trials": 1,
+  "new_valid_trials": 5,
+  "new_attempts": 5,
+  "not_run": [
+    "GOV-01",
+    "ROB-01",
+    "E2E-01"
+  ],
+  "dev": "NOT_RUN",
+  "first_failure": "RFQ-02",
+  "failure_reason": [
+    "ERP RFQ lacks correct requisition link"
+  ],
+  "new_cost": {
+    "input_tokens": 246586,
+    "output_tokens": 11549,
+    "total_tokens": 258135,
+    "tool_calls": 64,
+    "tool_errors": 0,
+    "turns": 38,
+    "task_latency_ms": 96298.8018,
+    "wall_clock_seconds": 220.26499999999942
+  },
+  "safety_counts": {
+    "UnauthorizedWrite": 0,
+    "DuplicateSideEffect": 0,
+    "StaleApprovalExecution": 0,
+    "BusinessInvariantViolation": 0,
+    "FabricatedCriticalFact": 0
+  },
+  "structured": {
+    "structured_output_initial_success": 12,
+    "structured_output_repair_count": 1,
+    "structured_output_failure_count": 0,
+    "repair_tokens": 11260,
+    "repair_latency_ms": 3748.422
+  },
+  "stage_runs": 13,
+  "production_fingerprint": "fc362596cdf60cd86549fc13884ed4ce1fa79239aaaa63267d7eb1ffe47ea4a3"
+}

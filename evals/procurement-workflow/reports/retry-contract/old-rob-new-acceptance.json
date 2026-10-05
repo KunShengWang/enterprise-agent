@@ -1,0 +1,19 @@
+{
+  "passed": false,
+  "checks": {
+    "legal_stage_sequence": true,
+    "single_identity": true,
+    "one_workflow": true,
+    "stage_output_schema_valid": true,
+    "canonical_state_consistent": true,
+    "fixed_tool_scope": true,
+    "no_cross_stage_raw_context": true,
+    "workflow_not_failed": true,
+    "RFQ_REQUISITION_LINK_CONSISTENCY": true,
+    "BUSINESS_TERMINAL_CONSISTENCY": true,
+    "CLARIFICATION_CAUSALITY": false
+  },
+  "failures": [
+    "CLARIFICATION_CAUSALITY"
+  ]
+}

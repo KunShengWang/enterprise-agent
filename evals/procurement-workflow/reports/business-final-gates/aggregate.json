@@ -1,0 +1,74 @@
+{
+  "cost": {
+    "including_reuse_8": {
+      "input_tokens": 316619,
+      "output_tokens": 15007,
+      "total_tokens": 331626,
+      "tool_calls": 85,
+      "tool_errors": 5,
+      "turns": 52,
+      "model_calls": 52,
+      "task_latency_ms": 176484.8774,
+      "wall_clock_seconds": 401.8899999999994
+    },
+    "new_7": {
+      "input_tokens": 242128,
+      "output_tokens": 12466,
+      "total_tokens": 254594,
+      "tool_calls": 68,
+      "tool_errors": 5,
+      "turns": 40,
+      "model_calls": 40,
+      "task_latency_ms": 152668.1114,
+      "wall_clock_seconds": 353.18700000000536
+    }
+  },
+  "stage_distribution": {
+    "REQUISITION": 8,
+    "SOURCING": 6,
+    "RFQ": 3
+  },
+  "stage_runs": 17,
+  "structured": {
+    "structured_output_initial_success": 17,
+    "structured_output_repair_count": 0,
+    "structured_output_failure_count": 0,
+    "repair_tokens": 0,
+    "repair_latency_ms": 0
+  },
+  "evidence": {
+    "current_stage_available": 280,
+    "current_stage_evidence_count": 94,
+    "workflow_carried_available": 34,
+    "workflow_carried_evidence_count": 24,
+    "rejected_carried_evidence_count": 0,
+    "avoidable_upstream_requery_count": 0
+  },
+  "stop_reasons": {
+    "COMPLETED": 6,
+    "WAITING_APPROVAL": 2
+  },
+  "outcomes": {
+    "NO_ELIGIBLE_SUPPLIER": 1,
+    "COMPLETE": 3,
+    "NEEDS_USER_INPUT": 2,
+    "WAITING_APPROVAL": 2
+  },
+  "invalid_proposal_count": 0,
+  "proposal_count": 5,
+  "unsupported_claim_count": 1,
+  "detected_claim_count": 1,
+  "identity_applicable": 3,
+  "identity_pass": 3,
+  "normal_terminal_automated": 6,
+  "normal_to_runtime_misclassified": 0,
+  "runtime_to_clarification_reviewed": 1,
+  "unauthorized_accepted": 0,
+  "stale_carried_evidence_rejections_observed": 0,
+  "notes": [
+    "Evidence counts are unique references per stage, summed across stages/tasks; not globally unique.",
+    "GOV stale Case guard rejection is not proof of a stale carried-evidence rejection.",
+    "Automated normal terminal count includes ROB-01; reviewed semantic gap retained separately.",
+    "No additional trials or grading modifications."
+  ]
+}

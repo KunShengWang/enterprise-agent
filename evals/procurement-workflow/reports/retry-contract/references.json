@@ -1,0 +1,50 @@
+[
+  {
+    "name": "pi-types",
+    "url": "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/agent/src/types.ts",
+    "matches": [
+      [
+        488,
+        "\treplay?: \"never\" | \"safe\";"
+      ]
+    ]
+  },
+  {
+    "name": "spring-toolcalling",
+    "url": "https://docs.spring.io/spring-ai/reference/api/tools.html",
+    "matches": [
+      [
+        2037,
+        "<p>When a tool throws, the exception is wrapped in <code>ToolExecutionException</code> and handed to the <code>ToolExecutionExceptionProcessor</code>:</p>"
+      ],
+      [
+        2042,
+        "public interface ToolExecutionExceptionProcessor {"
+      ],
+      [
+        2043,
+        "    String process(ToolExecutionException exception);"
+      ],
+      [
+        2051,
+        "<p>The default <code>DefaultToolExecutionExceptionProcessor</code>:</p>"
+      ],
+      [
+        2091,
+        "ToolExecutionExceptionProcessor toolExecutionExceptionProcessor() {"
+      ],
+      [
+        2092,
+        "    return new DefaultToolExecutionExceptionProcessor(true);"
+      ],
+      [
+        2103,
+        "If you implement your own <code>ToolCallback</code>, throw <code>ToolExecutionException</code> from <code>call()</code> when execution fails \u2014 that&#8217;s what the processor expects."
+      ],
+      [
+        2140,
+        "<p>With <code>onLimitExceeded(ToolCallLimitBehavior.RETURN_ERROR_RESPONSE)</code>, the manager instead skips the call and synthesizes an error <code>ToolResponse</code> \u2014 the same mechanism used for <code>ToolExecutionException</code> \u2014 so the model is told the limit was reached and the conversation"
+      ]
+    ]
+  }
+]

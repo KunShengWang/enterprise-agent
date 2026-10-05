@@ -1,0 +1,14 @@
+ M src/main/java/com/agent/platform/procurement/application/ProcurementCaseContextRenderer.java
+ M src/main/java/com/agent/platform/procurement/application/ProcurementCaseService.java
+ M src/main/java/com/agent/platform/procurement/tool/ProcurementRfqApprovalPreparer.java
+ M src/main/java/com/agent/platform/procurement/tool/ProcurementRfqToolHandler.java
+ M src/main/java/com/agent/platform/procurement/tool/ProcurementToolHandler.java
+ M src/main/java/com/agent/platform/runtime/ContextPolicy.java
+ M src/main/java/com/agent/platform/runtime/DefaultAgentContextManager.java
+?? docs/adr/
+?? docs/harness/procurement-workflow.md
+?? docs/harness/workflow-phase-report.md
+?? evals/procurement-workflow/
+?? src/main/java/com/agent/platform/procurement/workflow/
+?? src/test/java/com/agent/platform/procurement/ProcurementWorkflowTests.java
+?? src/test/java/com/agent/platform/procurement/ProcurementWorkflowTrialDriver.java

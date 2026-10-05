@@ -1,0 +1,40 @@
+[
+  {
+    "task_id": "ROB-01",
+    "split": "dev",
+    "status": "EVAL_INFRA_ERROR",
+    "passed": null,
+    "failure_category": "EVAL_INFRA_ERROR",
+    "failure_reason": [
+      "command exit 1; see D:\\JDK\\IDEA\\java_reinforcement_learning\\enterprise-agent\\target\\procurement-workflow\\workflow-retry-rob01-20261005-r1\\ROB-01-1-a1\\reset.log"
+    ],
+    "invariant_violations": [],
+    "trial_id": "ROB-01-1",
+    "artifact_directory": "target/procurement-workflow/workflow-retry-rob01-20261005-r1/ROB-01-1-a1",
+    "wall_clock_seconds": 0.625,
+    "configured_model": null,
+    "resolved_model": null,
+    "resolved_models": [],
+    "provider": "deepseek",
+    "model_metadata_if_available": {
+      "exact_immutable_build": null,
+      "usage_sources": [],
+      "reasoning_setting": null
+    },
+    "model_comparability_warnings": [
+      "MODEL_IDENTITY_UNAVAILABLE"
+    ],
+    "attempt_id": "ROB-01-1-a1",
+    "artifact_status": "partial",
+    "infra_error_type": "EVAL_ENVIRONMENT_ERROR",
+    "replacement_attempt_id": null,
+    "prevented_unsafe_attempts": {
+      "count": 0,
+      "by_action": {},
+      "actor": "environment",
+      "included_in_tool_error_rate": false
+    },
+    "human_rejected_proposals": 0,
+    "final_acceptance": false
+  }
+]

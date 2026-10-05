@@ -1,0 +1,106 @@
+{
+  "procurement": [
+    {
+      "classname": "com.agent.platform.procurement.JdbcProcurementCaseStorePostgresIT",
+      "name": "schemaMigrationAlignsLegacyJsonVersionAndRejectsStaleCasWriter",
+      "reason": "Environment variable [PROCUREMENT_POSTGRES_IT] with value [false] does not match regular expression [true]"
+    },
+    {
+      "classname": "com.agent.platform.procurement.JdbcProcurementCaseStorePostgresIT",
+      "name": "onlyOneConcurrentWriterCanUpdateTheSameCaseVersion",
+      "reason": "Environment variable [PROCUREMENT_POSTGRES_IT] with value [false] does not match regular expression [true]"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementAnswerAggregationTests",
+      "name": "actualSavedScriptedRuntimeAnswerIsReportedHonestly",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementAnswerCompletenessTests",
+      "name": "actualHistoricalArtifactReplay",
+      "reason": "System property [completeness.artifact] does not exist"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementAnswerPolicyTests",
+      "name": "explicitHistoricalArtifactReplay",
+      "reason": "System property [answer.v2.artifact] does not exist"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementAnswerRelationTests",
+      "name": "replayActualHistoricalArtifactWithoutExecutingAnything",
+      "reason": "System property [relation.artifact] does not exist"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementAnswerReplayTests",
+      "name": "regradesSavedAnswerTwiceWithoutExecution",
+      "reason": "System property [answer.artifact] does not exist"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementAnswerV3ReplayTests",
+      "name": "savedRuntimeDiskReplayMatchesStep2WithoutChangingInputs",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementArtifactReplayTests",
+      "name": "regradesExistingArtifactFile",
+      "reason": "System property [evaluation.artifact] does not exist"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementComparisonMetricsTests",
+      "name": "savedScriptedRuntimeIsSeparateFromSyntheticPass",
+      "reason": "org.opentest4j.TestAbortedException: Assumption failed: Saved Runtime artifact path is opt-in\n\tat org.junit.jupiter.api.Assumptions.throwAssumptionFailed(Assumptions.java:340)\n\tat org.junit.jupiter.api.Assumptions.assumeTrue(Assumptions.java:127)\n\tat com.agent.platform.procurement.ProcurementComparisonMetricsTests.savedScriptedRuntimeIsSeparateFromSyntheticPass(ProcurementComparisonMetricsTests.java:174)\n"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementComparisonReportsTests",
+      "name": "savedRuntimeFailAndDiagnosticsMatchStep2",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    }
+  ],
+  "full": [
+    {
+      "classname": "com.agent.platform.procurement.ProcurementAnswerAggregationTests",
+      "name": "actualSavedScriptedRuntimeAnswerIsReportedHonestly",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementAnswerCompletenessTests",
+      "name": "actualHistoricalArtifactReplay",
+      "reason": "System property [completeness.artifact] does not exist"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementAnswerPolicyTests",
+      "name": "explicitHistoricalArtifactReplay",
+      "reason": "System property [answer.v2.artifact] does not exist"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementAnswerRelationTests",
+      "name": "replayActualHistoricalArtifactWithoutExecutingAnything",
+      "reason": "System property [relation.artifact] does not exist"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementAnswerReplayTests",
+      "name": "regradesSavedAnswerTwiceWithoutExecution",
+      "reason": "System property [answer.artifact] does not exist"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementAnswerV3ReplayTests",
+      "name": "savedRuntimeDiskReplayMatchesStep2WithoutChangingInputs",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementArtifactReplayTests",
+      "name": "regradesExistingArtifactFile",
+      "reason": "System property [evaluation.artifact] does not exist"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementComparisonMetricsTests",
+      "name": "savedScriptedRuntimeIsSeparateFromSyntheticPass",
+      "reason": "org.opentest4j.TestAbortedException: Assumption failed: Saved Runtime artifact path is opt-in\n\tat org.junit.jupiter.api.Assumptions.throwAssumptionFailed(Assumptions.java:340)\n\tat org.junit.jupiter.api.Assumptions.assumeTrue(Assumptions.java:127)\n\tat com.agent.platform.procurement.ProcurementComparisonMetricsTests.savedScriptedRuntimeIsSeparateFromSyntheticPass(ProcurementComparisonMetricsTests.java:174)\n"
+    },
+    {
+      "classname": "com.agent.platform.procurement.ProcurementComparisonReportsTests",
+      "name": "savedRuntimeFailAndDiagnosticsMatchStep2",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    }
+  ]
+}

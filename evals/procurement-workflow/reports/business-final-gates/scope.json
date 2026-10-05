@@ -1,0 +1,17 @@
+{
+  "branch": "feat/procurement-workflow",
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "preexisting_file_count": 1255,
+  "changed_preexisting_files": [],
+  "source_freeze_unchanged": true,
+  "index_empty": true,
+  "handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d",
+  "configured_secret_scan_pass": true,
+  "final_preexisting_bytes_verified": 1255,
+  "final_freeze_unchanged": true,
+  "git_diff_check_pass": true,
+  "final_index_empty": true,
+  "archive_integrity_pass": true,
+  "handler_status": "M src/main/java/com/agent/platform/procurement/tool/ProcurementToolHandler.java",
+  "report_sha256": "96315fa1e18040308271388789ce01a5ee0111a9c022fd149a33166fbf8604e2"
+}

@@ -1,0 +1,29 @@
+{
+  "head": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+  "branch": "feat/procurement-workflow",
+  "working_tree": "dirty",
+  "uncommitted_implementation": true,
+  "files": {
+    "evals/procurement-workflow/acceptance.py": "a86f6e390801c9c6522b90a5adc5e4555097eb8d87f5d0799b6289886148d2f6",
+    "evals/procurement-workflow/run.py": "549334048c34669730c32e8319ec990346adc4b869d8b0baa78f0787d161f789",
+    "evals/procurement-workflow/test_acceptance.py": "73ac25512f8392b6368493d9a6f6923f40df906c49615fa3ce96257ed974a1d5",
+    "src/main/java/com/agent/platform/procurement/application/ProcurementCaseContextRenderer.java": "cddb4a8aa0b902bdd9194e5be9451f7debb0adf3f9c0727f185cbf342ef8db0c",
+    "src/main/java/com/agent/platform/procurement/application/ProcurementCaseService.java": "c7fb52ea3c24f502734b8cf32edc5efbffafd27b10f1bec52359b90db88d5f21",
+    "src/main/java/com/agent/platform/procurement/tool/ProcurementRfqApprovalPreparer.java": "c1bba2b15a477767c5ff3a0f40769111abb6a7b44470693bd13e16f9426c481c",
+    "src/main/java/com/agent/platform/procurement/tool/ProcurementRfqToolHandler.java": "adc882b0d05df9936a07cb9f6cdbd1f803faa38c1dfcefcb6baf0d02877e0c3e",
+    "src/main/java/com/agent/platform/procurement/workflow/ProcurementStage.java": "1ceaeafb4da7ce0beda994ea69a791350f72081f7e87c02abff66d48888b5555",
+    "src/main/java/com/agent/platform/procurement/workflow/ProcurementStageProfile.java": "1f40bb05cde9503b334eaa6526310588d4b49c2c1bf73ba5501b846802ddc010",
+    "src/main/java/com/agent/platform/procurement/workflow/ProcurementStageProfiles.java": "197789d6d6886c08eeea676bb80ea590f7227be44a52a30fcfbed881ad5d6782",
+    "src/main/java/com/agent/platform/procurement/workflow/ProcurementWorkflowRuntime.java": "fc41d8d4bfb48d4790130627ccc75db8149c157dce8e3bc733b7776653ebf679",
+    "src/main/java/com/agent/platform/procurement/workflow/ProcurementWorkflowService.java": "74dbb23bd2b0ac7c2be838506f19562db850078ec827d446d594f725f4017a33",
+    "src/main/java/com/agent/platform/procurement/workflow/StageOutputValidator.java": "2aab0190a7f8881ecff3929852483e2760a769ad2e938ffe2f05e8dbb5f4d45c",
+    "src/main/java/com/agent/platform/procurement/workflow/WorkflowEvidence.java": "bd4879f98291a4e48c797f7a3d46789f1f938d36d4a2a9fda4876236c587f2ae",
+    "src/main/java/com/agent/platform/procurement/workflow/WorkflowFinalizeBinding.java": "dbd5c63198eee49e0758af0009ebc3b0840cb0d41844aee7693204ed787d7bda",
+    "src/main/java/com/agent/platform/procurement/workflow/WorkflowRequisitionValidator.java": "18f0a84d425b7e70353bd326ffd60c0dad6677d191713e3c4ede0cdd594ba1bf",
+    "src/main/java/com/agent/platform/runtime/ContextPolicy.java": "8f86a54a4bf90697fe9a19e2326e363f4fe15798a8af5ce57e2e4f996cfd556b",
+    "src/main/java/com/agent/platform/runtime/DefaultAgentContextManager.java": "56a5e4c711a027f518191dea8363a7989166e98e67a13488ae3f66a40c704bf9",
+    "src/test/java/com/agent/platform/procurement/ProcurementWorkflowTests.java": "a64ffc507264a176fdb084d6281996105cf1186cf3822fac7b3acc4db982794f",
+    "src/test/java/com/agent/platform/procurement/ProcurementWorkflowTrialDriver.java": "4df357d43fde14451527f4b3054f97bd11910ccbe0085c1509d53ab38bb1c1ba"
+  },
+  "protected_handler_sha256": "8f3eea10df78f9e8f5010a4d2ce72ee049962fdc4e3b4d98cfcd7518ce2e7f6d"
+}
