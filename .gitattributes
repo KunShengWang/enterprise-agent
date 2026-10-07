@@ -1,3 +1,7 @@
 # Frozen procurement resources are hashed as bytes by the existing Eval policy.
 /data/procurement/** text eol=lf
 /src/test/resources/procurement/** text eol=lf
+
+# Keep archived evidence byte-identical to its SHA-256 manifests on every OS.
+/evals/context-reliability/reports/delivery-20261007/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/evals/harness-reliability/reports/acceptance-20261005/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

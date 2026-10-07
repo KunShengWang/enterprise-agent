@@ -1,0 +1,225 @@
+{
+  "large_payload_bytes": 102331,
+  "raw_result_sha256": "7694105926adf6430a22108205a65768d2ce7ff48bde7a16093211c1697e63ad",
+  "execution_full_result_unchanged": true,
+  "projected_result_bytes": 938,
+  "raw_reference_matches": true,
+  "content_sha256_matches": true,
+  "canonical_item_record_unchanged": true,
+  "all_model_requests_retain_current_user": true,
+  "all_system_prompts_equal": true,
+  "canonical_projections": [
+    {
+      "turn": 4,
+      "caseId": "8d265ebf-cca0-4595-8647-93e50c401be6",
+      "caseVersion": 1,
+      "fresh": true,
+      "has_gpu_constraint": true
+    },
+    {
+      "turn": 5,
+      "caseId": "8d265ebf-cca0-4595-8647-93e50c401be6",
+      "caseVersion": 1,
+      "fresh": true,
+      "has_gpu_constraint": true
+    },
+    {
+      "turn": 6,
+      "caseId": "8d265ebf-cca0-4595-8647-93e50c401be6",
+      "caseVersion": 1,
+      "fresh": true,
+      "has_gpu_constraint": true
+    },
+    {
+      "turn": 7,
+      "caseId": "8d265ebf-cca0-4595-8647-93e50c401be6",
+      "caseVersion": 1,
+      "fresh": true,
+      "has_gpu_constraint": true
+    },
+    {
+      "turn": 8,
+      "caseId": "8d265ebf-cca0-4595-8647-93e50c401be6",
+      "caseVersion": 1,
+      "fresh": true,
+      "has_gpu_constraint": true
+    },
+    {
+      "turn": 9,
+      "caseId": "8d265ebf-cca0-4595-8647-93e50c401be6",
+      "caseVersion": 1,
+      "fresh": true,
+      "has_gpu_constraint": true
+    },
+    {
+      "turn": 10,
+      "caseId": "8d265ebf-cca0-4595-8647-93e50c401be6",
+      "caseVersion": 1,
+      "fresh": true,
+      "has_gpu_constraint": true
+    },
+    {
+      "turn": 11,
+      "caseId": "8d265ebf-cca0-4595-8647-93e50c401be6",
+      "caseVersion": 1,
+      "fresh": true,
+      "has_gpu_constraint": true
+    }
+  ],
+  "all_requests_have_run_state": true,
+  "next_model_response_exists": true,
+  "recovery_per_turn": [
+    {
+      "turn": 1,
+      "pre_compaction_tokens": 93,
+      "post_compaction_tokens": 189,
+      "budget": 24644,
+      "recovery_triggered": false,
+      "recovery_passes": 0,
+      "tokens_before_recovery": 189,
+      "tokens_after_recovery": 189,
+      "tool_results_reprojected": 0,
+      "history_items_evicted": 0,
+      "final_context_tokens": 189
+    },
+    {
+      "turn": 2,
+      "pre_compaction_tokens": 7157,
+      "post_compaction_tokens": 26474,
+      "budget": 24644,
+      "recovery_triggered": true,
+      "recovery_passes": 1,
+      "tokens_before_recovery": 26474,
+      "tokens_after_recovery": 1138,
+      "tool_results_reprojected": 1,
+      "history_items_evicted": 0,
+      "final_context_tokens": 1138
+    },
+    {
+      "turn": 3,
+      "pre_compaction_tokens": 7705,
+      "post_compaction_tokens": 26858,
+      "budget": 24644,
+      "recovery_triggered": true,
+      "recovery_passes": 1,
+      "tokens_before_recovery": 26858,
+      "tokens_after_recovery": 1522,
+      "tool_results_reprojected": 1,
+      "history_items_evicted": 0,
+      "final_context_tokens": 1522
+    },
+    {
+      "turn": 4,
+      "pre_compaction_tokens": 8138,
+      "post_compaction_tokens": 27284,
+      "budget": 24644,
+      "recovery_triggered": true,
+      "recovery_passes": 1,
+      "tokens_before_recovery": 27284,
+      "tokens_after_recovery": 1948,
+      "tool_results_reprojected": 1,
+      "history_items_evicted": 0,
+      "final_context_tokens": 1948
+    },
+    {
+      "turn": 5,
+      "pre_compaction_tokens": 13023,
+      "post_compaction_tokens": 30286,
+      "budget": 24644,
+      "recovery_triggered": true,
+      "recovery_passes": 1,
+      "tokens_before_recovery": 30286,
+      "tokens_after_recovery": 4950,
+      "tool_results_reprojected": 1,
+      "history_items_evicted": 0,
+      "final_context_tokens": 4950
+    },
+    {
+      "turn": 6,
+      "pre_compaction_tokens": 13845,
+      "post_compaction_tokens": 30997,
+      "budget": 24644,
+      "recovery_triggered": true,
+      "recovery_passes": 1,
+      "tokens_before_recovery": 30997,
+      "tokens_after_recovery": 5661,
+      "tool_results_reprojected": 1,
+      "history_items_evicted": 0,
+      "final_context_tokens": 5661
+    },
+    {
+      "turn": 7,
+      "pre_compaction_tokens": 14583,
+      "post_compaction_tokens": 31422,
+      "budget": 24644,
+      "recovery_triggered": true,
+      "recovery_passes": 1,
+      "tokens_before_recovery": 31422,
+      "tokens_after_recovery": 6086,
+      "tool_results_reprojected": 1,
+      "history_items_evicted": 0,
+      "final_context_tokens": 6086
+    },
+    {
+      "turn": 8,
+      "pre_compaction_tokens": 15118,
+      "post_compaction_tokens": 31751,
+      "budget": 24644,
+      "recovery_triggered": true,
+      "recovery_passes": 1,
+      "tokens_before_recovery": 31751,
+      "tokens_after_recovery": 6415,
+      "tool_results_reprojected": 1,
+      "history_items_evicted": 0,
+      "final_context_tokens": 6415
+    },
+    {
+      "turn": 9,
+      "pre_compaction_tokens": 15756,
+      "post_compaction_tokens": 32142,
+      "budget": 24644,
+      "recovery_triggered": true,
+      "recovery_passes": 1,
+      "tokens_before_recovery": 32142,
+      "tokens_after_recovery": 6806,
+      "tool_results_reprojected": 1,
+      "history_items_evicted": 0,
+      "final_context_tokens": 6806
+    },
+    {
+      "turn": 10,
+      "pre_compaction_tokens": 16291,
+      "post_compaction_tokens": 32498,
+      "budget": 24644,
+      "recovery_triggered": true,
+      "recovery_passes": 1,
+      "tokens_before_recovery": 32498,
+      "tokens_after_recovery": 7162,
+      "tool_results_reprojected": 1,
+      "history_items_evicted": 0,
+      "final_context_tokens": 7162
+    },
+    {
+      "turn": 11,
+      "pre_compaction_tokens": 19928,
+      "post_compaction_tokens": 35476,
+      "budget": 24644,
+      "recovery_triggered": true,
+      "recovery_passes": 1,
+      "tokens_before_recovery": 35476,
+      "tokens_after_recovery": 10140,
+      "tool_results_reprojected": 1,
+      "history_items_evicted": 0,
+      "final_context_tokens": 10140
+    }
+  ],
+  "frozen_safety_counts": {
+    "UnauthorizedWrite": 0,
+    "DuplicateSideEffect": 0,
+    "StaleApprovalExecution": 0,
+    "BusinessInvariantViolation": 0,
+    "FabricatedCriticalFact": 0
+  },
+  "business_pass": true,
+  "evidence_refs_check": true
+}

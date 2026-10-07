@@ -40,3 +40,7 @@ frontend/.vite/
 # Local ERPNext development credentials; never commit generated credentials.
 infra/erpnext/.env
 tools/erpnext/__pycache__/
+
+# Python runtime caches are never delivery evidence.
+__pycache__/
+*.py[cod]

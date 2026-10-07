@@ -68,6 +68,46 @@ public class ToolResultProjector {
         );
     }
 
+    /** Single overflow-only pass. Unknown text and protected fact subtrees remain whole. */
+    ToolCallResult recoverForContext(String toolCallId, ToolCallResult projected, ContextPolicy policy) {
+        try {
+            var json = new tools.jackson.databind.ObjectMapper();
+            Object value = json.readValue(projected.content(), Object.class);
+            if (!(value instanceof Map<?, ?>)) return projected;
+            Object reduced = boundedContextValue(value, "", policy);
+            String content = json.writeValueAsString(reduced);
+            if (content.length() >= projected.content().length()) return projected;
+            var metadata = new LinkedHashMap<>(projected.metadata());
+            metadata.put("projection", "BOUNDED_CONTEXT_RECOVERY");
+            metadata.put("truncated", true);
+            metadata.put("rawReference", "tool-execution:" + toolCallId);
+            // contentSha256 still identifies the complete persisted result, not the preview.
+            return new ToolCallResult(projected.toolName(), projected.success(), content, projected.errorMessage(), metadata);
+        } catch (RuntimeException ignored) { return projected; }
+    }
+
+    private Object boundedContextValue(Object value, String pointer, ContextPolicy policy) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> out = new LinkedHashMap<>();
+            map.forEach((key, item) -> {
+                String field = String.valueOf(key);
+                out.put(field, policy.protectedResultField(field) ? item : boundedContextValue(item,
+                        pointer + "/" + field.replace("~", "~0").replace("/", "~1"), policy));
+            });
+            return out;
+        }
+        if (value instanceof java.util.List<?> list) {
+            java.util.List<Object> out = new java.util.ArrayList<>();
+            for (int i = 0; i < list.size(); i++) out.add(boundedContextValue(list.get(i), pointer + "/" + i, policy));
+            return out; // Never drop rows or critical tail identities/evidence to force a fit.
+        }
+        if (value instanceof String text && text.length() > 512) {
+            return Map.of("preview", text.substring(0, 256) + " … " + text.substring(text.length() - 256),
+                    "truncated", true, "originalChars", text.length(), "rawJsonPointer", pointer);
+        }
+        return value;
+    }
+
     private LinkedHashMap<String, Object> boundedMetadata(Map<String, Object> rawMetadata) {
         LinkedHashMap<String, Object> bounded = new LinkedHashMap<>();
         Map<String, Object> visible = new LinkedHashMap<>(rawMetadata);

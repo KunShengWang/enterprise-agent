@@ -31,6 +31,7 @@ public final class ContextAssembler {
         tools.stream().filter(t -> Boolean.TRUE.equals(t.metadata().get("readOnly"))
                 && !Boolean.TRUE.equals(t.metadata().get("sideEffect"))).forEach(t -> readOnlyTools.add(t.name()));
         Map<String, String> callArguments = new HashMap<>();
+        Set<String> recoverableIds = new HashSet<>();
         messages.stream().filter(AgentMessage::isToolCall).forEach(m -> callArguments.put(m.toolCallId(), encode(m.arguments())));
         for (int i = 0; i < messages.size(); i++) {
             AgentMessage message = messages.get(i);
@@ -48,6 +49,11 @@ public final class ContextAssembler {
             metadata.put("success", projected.success()); metadata.put("error", projected.errorMessage() == null ? "" : projected.errorMessage());
             AgentMessage transformed = copy(message, projected.content(), metadata);
             messages.set(i, transformed);
+            if (raw.success() && execution.state() == ToolExecutionState.SUCCEEDED
+                    && !Boolean.TRUE.equals(raw.metadata().get("manualReview"))
+                    && tools.stream().anyMatch(t -> t.name().equals(message.toolName())
+                    && t.runtimeContract().effect() == com.agent.platform.tool.ToolRuntimeContract.Effect.READ_ONLY))
+                recoverableIds.add(message.toolCallId());
             rawBytes += raw.content().getBytes(StandardCharsets.UTF_8).length;
             projectedBytes += projected.content().getBytes(StandardCharsets.UTF_8).length;
             rawToolTokens += estimator.estimate(raw.content()); projectedToolTokens += estimator.estimate(projected.content());
@@ -86,6 +92,29 @@ public final class ContextAssembler {
                     AgentMessageType.CANONICAL_CONTEXT, encode(state), "", "", Map.of(),
                     Map.of("contextKind", "run_state", "trustedInstructions", false), 0, Instant.now()));
         }
+        long postCompaction = messages.stream().mapToLong(this::tokens).sum();
+        boolean recovery = postCompaction > messageBudget;
+        int reprojected = 0, evicted = 0;
+        if (recovery) {
+            // Exactly one deterministic pass; no LLM, store mutation or recursive assemble.
+            for (int i = 0; i < messages.size(); i++) {
+                AgentMessage m = messages.get(i);
+                if (!m.isToolResult() || !recoverableIds.contains(m.toolCallId())) continue;
+                ToolCallResult current = new ToolCallResult(m.toolName(), true, m.content(),
+                        String.valueOf(m.metadata().getOrDefault("error", "")), m.metadata());
+                ToolCallResult smaller = projector.recoverForContext(m.toolCallId(), current, policy);
+                AgentMessage candidate = copy(m, smaller.content(), smaller.metadata());
+                if (tokens(candidate) < tokens(m)) { messages.set(i, candidate); reprojected++; }
+            }
+            long remaining = messages.stream().mapToLong(this::tokens).sum();
+            List<AgentMessage> oldest = messages.stream()
+                    .filter(m -> policy.disposableHistory(m, keepFrom, run == null ? "" : run.runId()))
+                    .sorted(Comparator.comparingLong(AgentMessage::sequence)).toList();
+            for (AgentMessage m : oldest) {
+                if (remaining <= messageBudget) break;
+                messages.remove(m); remaining -= tokens(m); evicted++;
+            }
+        }
         Map<String, Long> composition = new LinkedHashMap<>();
         composition.put("instructions", estimator.estimate(profile.systemPrompt()));
         composition.put("toolSchema", tools.stream().mapToLong(t -> estimator.estimate(t.name())+estimator.estimate(t.description())+estimator.estimate(t.inputSchema())).sum());
@@ -105,10 +134,15 @@ public final class ContextAssembler {
         metrics.put("contextEngineering", true); metrics.put("tokenAccounting", "estimated; ConservativeTokenEstimator; excludes provider framing");
         metrics.put("estimatedComposition", composition); metrics.put("estimatedWorkingContextTokens",composition.values().stream().mapToLong(Long::longValue).sum());
         metrics.put("contextTokensBefore", before); metrics.put("contextTokensAfter", after);
+        metrics.put("pre_compaction_tokens", before); metrics.put("post_compaction_tokens", postCompaction);
+        metrics.put("recovery_triggered", recovery); metrics.put("recovery_passes", recovery ? 1 : 0);
+        metrics.put("tokens_before_recovery", postCompaction); metrics.put("tokens_after_recovery", after);
+        metrics.put("history_items_evicted", evicted); metrics.put("tool_results_reprojected", reprojected);
+        metrics.put("final_context_tokens", after); metrics.put("budget", messageBudget);
         metrics.put("conversationMessagesRemoved", removedConversation); metrics.put("duplicateToolPairsRemoved", duplicateIds.size());
         metrics.put("rawToolResultBytes", rawBytes); metrics.put("projectedToolResultBytes", projectedBytes);
         metrics.put("rawToolResultEstimatedTokens", rawToolTokens); metrics.put("projectedToolResultEstimatedTokens", projectedToolTokens);
-        boolean compacted = removedConversation > 0 || !duplicateIds.isEmpty() || projectedBytes < rawBytes;
+        boolean compacted = removedConversation > 0 || !duplicateIds.isEmpty() || projectedBytes < rawBytes || reprojected > 0 || evicted > 0;
         metrics.put("compactionPerformed", compacted); metrics.put("budgetExceeded", after > messageBudget);
         // Mandatory business facts/current tool evidence are never silently dropped to manufacture budget compliance.
         return new AgentContextView(messages, after, 0, compacted, metrics);
