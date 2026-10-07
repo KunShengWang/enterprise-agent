@@ -1,0 +1,2090 @@
+{
+  "historical/classpath.log": {
+    "sha256": "ebb8ae25a66429e30501ff2607ec66f309e27f61fd873c4dd9d89883f472d8f1",
+    "bytes": 6761
+  },
+  "historical/EvalPreflight.java": {
+    "sha256": "a79ebc8af90f7d9f6ef7a3656aabc4048c2afe8c1ae6bc749e8d99d7cb4bf4f9",
+    "bytes": 4559
+  },
+  "historical/final-source-manifest.json": {
+    "sha256": "3bc0466db9f35cb395e3dc31b61ff692d01d7f85c1af6ddc0e3d9cd65f90b5c8",
+    "bytes": 675
+  },
+  "historical/final-verification.json": {
+    "sha256": "195bbc88b7d5dfef967b9d53b010524858f87ea6739e81c336243cf8240c42d6",
+    "bytes": 2556
+  },
+  "historical/focused-final.log": {
+    "sha256": "2a888a39498573ac3509dcf1ba0acabbabb9223fc6ac7bf41b008f6b9a1a4ef0",
+    "bytes": 56280
+  },
+  "historical/focused.log": {
+    "sha256": "75dc1d6cedb363b6e2109b31955498a0add3531c6b642d5ebcc611aa8ba6ff4f",
+    "bytes": 6870
+  },
+  "historical/legacy.log": {
+    "sha256": "7bae98f68bcf00d4d10a048688fcd203b39b76f1ec03478695943df48c7dde86",
+    "bytes": 1039
+  },
+  "historical/mcp-check.log": {
+    "sha256": "936649030970cd7a6ecac17b0738f4d6b6178b2d0199302dad5d7d885c5dd39e",
+    "bytes": 4154
+  },
+  "historical/observations.py": {
+    "sha256": "3e25b433724e7e89dc1dedfa7ddf8faa394d1edb09e362e5131898cbada08d77",
+    "bytes": 6627
+  },
+  "historical/protected.json": {
+    "sha256": "73e97892c71096b8e01f69e08f36b31ed5afb8d51476dd57b2c1148ba2dee263",
+    "bytes": 35641
+  },
+  "historical/run_regression.py": {
+    "sha256": "06eb26255861e6e43f0821d3f1663649e5cc831af757b5147a2d00b62b7cd41a",
+    "bytes": 5482
+  },
+  "historical/skips.json": {
+    "sha256": "b1830d38bc69b5a566715a3c3c028bbb1495ac1f67297d4e9a34dd7e1171e6a0",
+    "bytes": 3338
+  },
+  "historical/source.patch": {
+    "sha256": "84e778c3a0fba874e47fa897d2855b6c06fe4ccfb8c89213a15e28927f515a2a",
+    "bytes": 10756
+  },
+  "historical/mcp-ab-20261006/baseline-before.json": {
+    "sha256": "2cea2644295a42fffe8fa7b2b810d5b1e49d73c09c0597fbfe1b401d75bf9fcd",
+    "bytes": 204407
+  },
+  "historical/mcp-ab-20261006/baseline-jvm.json": {
+    "sha256": "2c19b5fd33a02a465db4b26bdcf3b450bb5f3e4c044d8ae836bcbbab30daa3fb",
+    "bytes": 337
+  },
+  "historical/mcp-ab-20261006/baseline-result.json": {
+    "sha256": "3ad96634b1cb14800b0500ecf9adcd4eb8577262befbbda65a41fb48177522fe",
+    "bytes": 2150
+  },
+  "historical/mcp-ab-20261006/baseline.log": {
+    "sha256": "bfa869492dab0f88b11ffbcb26af3db21e56687824f22a988b3e8b302e65c8c9",
+    "bytes": 5091
+  },
+  "historical/mcp-ab-20261006/context-jvm.json": {
+    "sha256": "86b2048022bc7145ba68c61dda5053ef6175ce2c6ae772e964e1716b03193fbe",
+    "bytes": 331
+  },
+  "historical/mcp-ab-20261006/context-result.json": {
+    "sha256": "b811b2d653030ed46c45de27469da6a8ce56fe574c92b182e8d77fec52feec83",
+    "bytes": 2158
+  },
+  "historical/mcp-ab-20261006/context.log": {
+    "sha256": "d496522804f15f012480c2d1688d4e19f928e705c2f895fd7a20c9a2b5ec65d7",
+    "bytes": 3027
+  },
+  "historical/mcp-ab-20261006/dependency-equality.json": {
+    "sha256": "d1155011aec155a084c503aa5d907edc2ecba3c9c0bf88718a77525b65630e0a",
+    "bytes": 691
+  },
+  "historical/mcp-ab-20261006/diagnose.py": {
+    "sha256": "88738c39d3fc67b6360aafb98a4e6025e53605a283549ce1ef843dd7ada3f079",
+    "bytes": 3255
+  },
+  "historical/mcp-ab-20261006/environment.json": {
+    "sha256": "d72529e7449b52d30ddeda776fcefda8f5a6d43c11c773f4fb1296181892638d",
+    "bytes": 14340
+  },
+  "historical/mcp-ab-20261006/final-verification.json": {
+    "sha256": "05eda10750dbb0804f1c18554060a304e06aa341358fe1b2cb0d5c840d8f05dd",
+    "bytes": 515
+  },
+  "historical/mcp-ab-20261006/full-exit.txt": {
+    "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+    "bytes": 3
+  },
+  "historical/mcp-ab-20261006/full-results.json": {
+    "sha256": "0a2f7b875e91b4ae10e75568a6cf25f333d12e0bb50946da8b830838c7600e89",
+    "bytes": 2136
+  },
+  "historical/mcp-ab-20261006/full.log": {
+    "sha256": "0c2831978a85726378142c1980cab4d63f2eaed0e134e820137335d5ec360e7f",
+    "bytes": 166741
+  },
+  "historical/mcp-ab-20261006/original-error.json": {
+    "sha256": "06b0d73361538ed655a1cd3f0343b0808839eb948bcbccfe9a24e68ab3df4ad8",
+    "bytes": 1707
+  },
+  "historical/mcp-ab-20261006/source-before.json": {
+    "sha256": "ba14dadef39072181cc8f21a8a3bb10c507d01fef1d0674a476bd3da5c04bb27",
+    "bytes": 204556
+  },
+  "historical/mcp-ab-20261006/timings.json": {
+    "sha256": "f35a2f74d08d357f1a61087b63c7d1c694bbbddad6d78e5eb5a048c1a2e9caab",
+    "bytes": 654
+  },
+  "historical/rob04-regression-20261006-r1/complete.json": {
+    "sha256": "e926f76c0a1ed3d6fa7fe54f051e40de784f5d0a753478686eed2bdc7b51b7e9",
+    "bytes": 142
+  },
+  "historical/rob04-regression-20261006-r1/controls.json": {
+    "sha256": "d3a874ae0f47539aabcf632f6c4d487e6fb945f8bb57d76f6b579a3c7e94321f",
+    "bytes": 33434
+  },
+  "historical/rob04-regression-20261006-r1/freeze.json": {
+    "sha256": "1d624f5f372e19b74a4137b49f9a0f51f7b9ca19b8e9212f84b916d963eaa7f3",
+    "bytes": 310845
+  },
+  "historical/rob04-regression-20261006-r1/observations.json": {
+    "sha256": "9965c9df83e6e421aa54ccf21f62fe0891c43b3c558faeaac39923f13903cc08",
+    "bytes": 9210
+  },
+  "historical/rob04-regression-20261006-r1/preflight.args": {
+    "sha256": "5feaa0934cb5931f602c4d2d802bf0ca54435a186d2af70630f0a2c878bf92ed",
+    "bytes": 14581
+  },
+  "historical/rob04-regression-20261006-r1/preflight.log": {
+    "sha256": "762e374efc96eb193d172284bf5dcf5d34e3be0c3f564c774bd7694e07824370",
+    "bytes": 1618
+  },
+  "historical/rob04-regression-20261006-r1/preservation-verification.json": {
+    "sha256": "e24498fbcdb7f1ad1c3db055a6287843ecd442ecace18776e256fcfa44834a7b",
+    "bytes": 6431
+  },
+  "historical/rob04-regression-20261006-r1/readiness.json": {
+    "sha256": "3c00b6da7c6615de2b534dd68c8c6e24427c1ea38dd4e9ec90b0f242de5c31a5",
+    "bytes": 369
+  },
+  "historical/rob04-regression-20261006-r1/recovery-events.json": {
+    "sha256": "d62fa1b244a871a5d0175615d3f2eb4b8505b331e8c2d3ecefed293d38bec721",
+    "bytes": 22872
+  },
+  "historical/rob04-regression-20261006-r1/result.json": {
+    "sha256": "876384df6ae327a950507114748aff0f7374c48324239c8b6816a6277c23373e",
+    "bytes": 15098
+  },
+  "historical/rob04-regression-20261006-r1/readiness/reset.json": {
+    "sha256": "e238d84820a8ed8689ccf82ebda90a9330e6dff13ff7b20f4e9e4c7d16cd5f68",
+    "bytes": 97870
+  },
+  "historical/rob04-regression-20261006-r1/readiness/reset.log": {
+    "sha256": "66b4fe7ce757dd56bfa5f9c357464605eb74b3ec57c4159a561bed954d177eee",
+    "bytes": 161
+  },
+  "historical/rob04-regression-20261006-r1/ROB-04-1-a1/agent.log": {
+    "sha256": "92b59abb25b1d71ccda60e40f21c6d5a231a13617ed8fdb4937938b71b303cc5",
+    "bytes": 434104
+  },
+  "historical/rob04-regression-20261006-r1/ROB-04-1-a1/artifact.json.gz": {
+    "sha256": "a69ed822f320fe254c87044619617e8da17f8ceef3a54982a9e1386b7644b3dc",
+    "bytes": 163927
+  },
+  "historical/rob04-regression-20261006-r1/ROB-04-1-a1/java.args": {
+    "sha256": "28a0877252c7f3321eac7c1f8f5c51aaaafcadc379eddb43ea61eae0f779d198",
+    "bytes": 14649
+  },
+  "historical/rob04-regression-20261006-r1/ROB-04-1-a1/raw.json": {
+    "sha256": "bbb265d6228411b32eda4f244689a2ceceb4a6a244db12ae7254a2827c7a1222",
+    "bytes": 1489336
+  },
+  "historical/rob04-regression-20261006-r1/ROB-04-1-a1/raw.json.trace.jsonl": {
+    "sha256": "5fc8159691020ba8eb3c1c8220f2fec804d77b8639763183045b6d78dfd0063d",
+    "bytes": 941294
+  },
+  "historical/rob04-regression-20261006-r1/ROB-04-1-a1/reset.json": {
+    "sha256": "eb4df767f2d98d7b0357f290c38924a8fe718c6107da46a12d4c009c85091c89",
+    "bytes": 97870
+  },
+  "historical/rob04-regression-20261006-r1/ROB-04-1-a1/reset.log": {
+    "sha256": "66b4fe7ce757dd56bfa5f9c357464605eb74b3ec57c4159a561bed954d177eee",
+    "bytes": 161
+  },
+  "historical/rob04-regression-20261006-r1/ROB-04-1-a1/result.json": {
+    "sha256": "876384df6ae327a950507114748aff0f7374c48324239c8b6816a6277c23373e",
+    "bytes": 15098
+  },
+  "historical/rob04-regression-20261006-r1/ROB-04-1-a1/snapshot.json": {
+    "sha256": "1c14c7b3fc00d94a7eb5b6062f87b6df94b57cd537834c2774a481d2ef343313",
+    "bytes": 97771
+  },
+  "historical/rob04-regression-20261006-r1/ROB-04-1-a1/snapshot.log": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "delivery/archive-preflight-scan.json": {
+    "sha256": "af35bc3421153eaf975ae0371f213c780e64f1c5964919c7e32acd92ac3fc544",
+    "bytes": 87
+  },
+  "delivery/archive.py": {
+    "sha256": "d0c2fc013d26bcf8609dba134eedaf87e30d54d72580e153759eaee36d2b91d5",
+    "bytes": 8817
+  },
+  "delivery/com.agent.platform.mcp.StdioMcpToolGatewayTests-delivery-20261007-mcp-baseline.txt": {
+    "sha256": "682f22aabf2228b487f9a834c08deb7f8e00e797de90966c50f660189f73684c",
+    "bytes": 4754
+  },
+  "delivery/focused.log": {
+    "sha256": "f73a03d6d24dc92aca64e3bcd4ec528ebc53b2537ebb7471d857550ec79f1767",
+    "bytes": 57495
+  },
+  "delivery/legacy.log": {
+    "sha256": "6dade7cccbb3d00078c9c0f753b2f5a7d2e3a6442e733e00163db381f4e28048",
+    "bytes": 1039
+  },
+  "delivery/mcp-baseline.log": {
+    "sha256": "e82e7a34c2ee7c72779b9e59ae53a9b5ed141effd13d5359dafe1aaab9f880c3",
+    "bytes": 18965
+  },
+  "delivery/mcp-patch.log": {
+    "sha256": "b2d36e1afc49f0409828794b731b34d7e2c9f44b28650041f21207fe3210ba2e",
+    "bytes": 17488
+  },
+  "delivery/production-start.json": {
+    "sha256": "b0c4f0694cd000b3934544bd45f4ac71f2d1f06a1bce6e8c1a86ad01675c11f9",
+    "bytes": 73211
+  },
+  "delivery/protected-start.json": {
+    "sha256": "72fefb1f4d5e48b42dc4c1bea8155f2c7e02bb86d72bc84cc790a34abd8e9bdf",
+    "bytes": 52583
+  },
+  "delivery/summarize.py": {
+    "sha256": "e271cc45b6a9b42bd9d5d6eec07556723ab886a1bc5cc29262f809578449559f",
+    "bytes": 3295
+  },
+  "delivery/TEST-com.agent.platform.mcp.StdioMcpToolGatewayTests-delivery-20261007-mcp-baseline.xml": {
+    "sha256": "ba06ca0aea7373de462e1524544a7aeab44cacb9c96e96f63d84ad18a9c8bb7f",
+    "bytes": 54440
+  },
+  "delivery/validation.json": {
+    "sha256": "d8d731bbc6366f7e7f2b0e4c507e3fed7ca2a7c97c9f63eb36868cc1b15ac192",
+    "bytes": 36348
+  },
+  "delivery/legacy/build-command.txt": {
+    "sha256": "590caecbc277387859f88badf8f0c23af8e92f9cb2c6b61154b1475dd5337a51",
+    "bytes": 167
+  },
+  "delivery/legacy/build.log": {
+    "sha256": "da4710c9f20588d64587d9b2ab4573bc0d488674cde54ac91723d60fec5a912a",
+    "bytes": 2114
+  },
+  "delivery/legacy/environment.json": {
+    "sha256": "b76bb09328f9f4489da540f386d06a5fca73b189865d4b149443c440530de140",
+    "bytes": 2586
+  },
+  "delivery/legacy/full-command.txt": {
+    "sha256": "07bb876d40f353031e68a1a666f6a8f9a6505628459aee5c6c85a322d769a614",
+    "bytes": 149
+  },
+  "delivery/legacy/full.log": {
+    "sha256": "1d81dfa16628b7254aa8a77e82e41725939ae9791b59b0c93275af651f355998",
+    "bytes": 170713
+  },
+  "delivery/legacy/git-status-after.txt": {
+    "sha256": "78f1a6021f5a04f9c9dee9c29ddb80e37982fa883ba24d2a210777b57d2fb660",
+    "bytes": 461
+  },
+  "delivery/legacy/procurement-command.txt": {
+    "sha256": "78d82ba036c34cd7d685dddca8f24606df8ec73fac383f6600620e95f96344a0",
+    "bytes": 219
+  },
+  "delivery/legacy/procurement.log": {
+    "sha256": "d331bdf4399f552af357f4b79e05df3f3f093a9eb05aca7ffe7b9073c0787be7",
+    "bytes": 16279
+  },
+  "delivery/legacy/replay-command.txt": {
+    "sha256": "3dd592f5e489a5f2a0a6d7b18c1ad643bac56eb99725dc0c5bee289d1029f8c9",
+    "bytes": 898
+  },
+  "delivery/legacy/replay.log": {
+    "sha256": "b3b3ee4e5c87774f5c131051ab480e5f758aa08d25fa2b493bcae36cb26f8875",
+    "bytes": 5257
+  },
+  "delivery/legacy/results.json": {
+    "sha256": "0ccdca049b1ae51f98ef4864c5b5b9156684ce2f457e35d598dd91dfeedf147a",
+    "bytes": 33173
+  },
+  "delivery/legacy/full-evaluation/answer-replay-report.json": {
+    "sha256": "ea2999b7a1668fd2ab904b718534501ee7d0954ae5540d6367f61dc9b4e89327",
+    "bytes": 6243
+  },
+  "delivery/legacy/full-evaluation/answer-sidecar.json": {
+    "sha256": "1438567e196e5ac3688510400141db57ea464a6f954fc597c0df460724d67745",
+    "bytes": 6243
+  },
+  "delivery/legacy/full-evaluation/handcrafted-report.json": {
+    "sha256": "651ec1ae95e673874539c0c608d9f22016def08d0a09ad2b975457257deffd83",
+    "bytes": 20193
+  },
+  "delivery/legacy/full-evaluation/replay-report.json": {
+    "sha256": "f2f725724662abd92dc182dadbaf914ebf7c269a1c6a0932fd8484c917fa5b61",
+    "bytes": 5543
+  },
+  "delivery/legacy/full-evaluation/runtime-artifact.json": {
+    "sha256": "3641860791a8cb79d7fbe83488708696ed2841da809277913bfae8090872ab15",
+    "bytes": 74030
+  },
+  "delivery/legacy/full-evaluation/runtime-report.json": {
+    "sha256": "453e6c04f6d0239d0abc46073c2fec42b722118572999b7bb0fa724f355238eb",
+    "bytes": 5543
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.agent.RuntimeAgentExecutorScenarioTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "0dbcdf50c489f143b8126bf438ceb2197334dc28485944d7c2b26a333653dc37",
+    "bytes": 36922
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.approval.JdbcApprovalStoreTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "b1b2c6d61aaf4cf6a09850847980a58128d78ab93da047a7a17fda9533680abd",
+    "bytes": 36700
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.approval.LocalApprovalServiceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "137ae43dee5d1b365cc06742c22335512f91fd682f88ee82c90531393b544804",
+    "bytes": 37158
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.common.BusinessRetirementBoundaryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "4825c9a1d6e086fd441cf4085ebc0f6ab3a56e430733db81a60ae629cc37429c",
+    "bytes": 38647
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.config.AgentScenarioProfileResolverTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "2f7b1d96311c548d94221c1422167279e44ff70552e371afb8bbbadffbb2b434",
+    "bytes": 37210
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.config.HttpLoggingConfigTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "46d0ef172208a242af34a55b182bd05f8301e3e4ecf5ba985154b19531788efe",
+    "bytes": 39237
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.EnterpriseAgentApplicationTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "a962dcae0dc2982c83c7d7c60a3e71bf00db11995857e196b6f19c63c9766e6b",
+    "bytes": 39823
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.eval.DefaultAgentEvalRunnerRuntimeEvidenceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "a4fef39ca59cc5072d5f030f5d8e0ee0b53f999cf694a80bb8cc9c4dee9983da",
+    "bytes": 37647
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.eval.LlmAsJudgeAnswerJudgeTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "47ac1dff7a40587ef54acdb0b0093e4fb84f8804843623e37b4f79f4dbc38dc1",
+    "bytes": 37107
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.guardrail.DeterministicPromptInjectionSignalDetectorTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "d1792044833bf90f2de30caf85923d1d526b00e8f9b4e6712ff822337c3266e7",
+    "bytes": 37411
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.guardrail.RegexSensitiveDataFilterTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "26fd2a85281e3a6643a3f4c5493e93c82445ff4d8f4105fe80f50e8dff98a98a",
+    "bytes": 36956
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.llm.SpringAiLlmServiceStreamingTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "788b51e6264c84f1d3f3e7bcc873e7ea0b25eef314439b1c2d01192178db3021",
+    "bytes": 37392
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.mcp.StdioMcpToolGatewayTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "935c2842fdfd6927a461ca519d61e350ffa6bd97d6a25c5b5e882fea89302ba0",
+    "bytes": 56472
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.memory.JdbcMemoryServiceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "37c31de99215e5583cc14264f0231b2e253ffe2e42454e7301858dbf644085ec",
+    "bytes": 39293
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.memory.LlmMemoryExtractorTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "9d7bcacaec445386d81bd5185c85e5b867aca06695569e242c26772dfd555918",
+    "bytes": 39192
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.erp.CanonicalRequisitionBindingTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "a9caa0196f397e414df9770c8de6ee87c50c6ae2ef709d1226feaf7a9cf23a1c",
+    "bytes": 37139
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.erp.ErpNextAdapterTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "1c275a1a7a31c5b1426e16545fbc8660b012b59e375a8d4515c92ccd22e14975",
+    "bytes": 37955
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.erp.ErpNextRfqGatewayTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "67e75e26f644a1026e3acf94eed897ee5882a886a1b6a5c959c8edb515a8a535",
+    "bytes": 37421
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.erp.ProcurementBackendBoundaryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "ed02bd2c9dd587ac3a8348c075d030b7b0d02b47e4bab05cfa3258b1d54360c8",
+    "bytes": 38621
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.erp.ProcurementErpMcpTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "6690935ada18361c2bf714ec47e9bf94a3f35dcf032f047174d036fdd741136f",
+    "bytes": 37917
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.erp.ProcurementItemContractTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "6a6c1a2016e38d5421c137d2e9c24ed4e74a384887db610321a300626f9bb9b0",
+    "bytes": 37299
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.McpProcurementDataProviderTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "bd713a4694cf0d4a31c41bbfe6622216b47204b8cc237adae1e2303f19bb6ab0",
+    "bytes": 38449
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementAdaptiveMultiAgentTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "3ede02d47f455d57fa8f4b32070fbe84e2784b51a75556d35f2336570ed7fcc5",
+    "bytes": 38318
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementAgentRuntimeE2ETests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "cd99ef95dea07e2541f15752cb263d57b523fe8eb7e7489a951c0306476a0d77",
+    "bytes": 38468
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerAggregationTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "8e69e9501c2ccd536d76d5cf27f62c7a9cb71f4a831f861a10118e113203b27e",
+    "bytes": 48078
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerCompletenessTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "91e4e764f77eb1986a33994f782666d36cb379001a2f16c9d1a3632c55f9e558",
+    "bytes": 47795
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerCoverageTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "c827abe47547bc46a7eb3fb2eafda57e1b7ed7f81f7b1ffc2ee4ea65ddbcc91a",
+    "bytes": 42878
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerEvaluationV3Tests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "dffc5cd1b04ce542137d3b094468567d5d1e0c96c0b67d68e582b56a7290b8c8",
+    "bytes": 50898
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerGraderTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "1052b0e14ee752d5549c5ab6229892515a27f9f7e145ae0dc29cf5c641e26d06",
+    "bytes": 49572
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerPolicyTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "c17255c0ffaf695f407f0c006864553cb9f5701e87256bd3fb16137659d308c0",
+    "bytes": 46876
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerRelationTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "bc23b7c6be25ed77a84a1ccd9fd7fbac51d948511c963071f561100683995c8a",
+    "bytes": 50012
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerReplayTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "205ad2829e6c71547777e92f9ae58b56604c261767fca6e66f58716de0e26007",
+    "bytes": 37033
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerV3ReplayTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "9c9d28ce373332d18f8a18220d52ec7df8a97add563c863461b8998c811c2f4d",
+    "bytes": 41369
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementArtifactReplayTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "e05821f074429493b21f33dde8005049ba3fcdda6ff924fa3ba303759b575d77",
+    "bytes": 37029
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementBenchmarkContractTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "05e826814a7d4bbc189539a84bc7f1c91acf7561a2311e84a5c1aad4e8c71d7c",
+    "bytes": 37294
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementCaseContextRendererTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "41bd48f8fc2bfa4b963ad76f40c7a0d9ebd35b621f0022f6c9d9623be367c8af",
+    "bytes": 37707
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementCasePatchTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "431173efe043673b83f1ddeac00e40116eeb5953dd1b5c9518284da81f132aa4",
+    "bytes": 38842
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementComparisonInputsTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "1bcf1cc2e897a0d1a527e060a5bf067656d9fe6baec258c40b698f7a30e0e73f",
+    "bytes": 44123
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementComparisonMetricsTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "411f0984c3a0e743eba455edec4fae1242834a12a8581545e55633b412482cef",
+    "bytes": 41475
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementComparisonReportsTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "e29c336a50396c0dc8c6380addbb44485ddf82d0df1c3c9c301be21e5403e1a3",
+    "bytes": 44553
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementDeterministicGraderTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "7f16f7a19a699118c8d8fe5b880a09c1e61e5f87783b3b3128847cd3915e5371",
+    "bytes": 44184
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementEvidenceTrustTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "c7955774536ad7bc7840643f4798e659e28b7a292d4d846c9d026a9b8acc5220",
+    "bytes": 37257
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementRecommendationFinalizeTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "17585eb139705a80adda4bcf6a8bc34e4cb8da49e1cf42862bba2f80374ecb51",
+    "bytes": 37854
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementRfqHitlTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "ba5604997395b9eb91ba8b92735c804df74f9b5cc8485cbd53f003b67e5c710f",
+    "bytes": 40351
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementSourcingMvpTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "016088330936d0e92309364cd39cdaa7c2813bd2e8a7810f4eed0bb3afbb7701",
+    "bytes": 39251
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.procurement.ProcurementV2EvalStoresTest-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "0ed78d13e5bf4ee4eed2cce005873cf5a687c9a245ac80dbe2a3df7cd269a7e2",
+    "bytes": 37089
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.rag.CurrentKnowledgeCorpusTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "78306216ff59ee8cfe1b968cbe3322886aca1634a5fc3fde687a97cdba82d94b",
+    "bytes": 37299
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.AgentCapabilityVisibilityPolicyTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "a4b0e83cb892fc6326e63aabc807758c88b3d0560c64400d6940d32226123c44",
+    "bytes": 37423
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.AgentModelGatewayConfigurationTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "8c283e994c90f12233abcdd6c8b610ae7c7f71eb606d92911a987c90c93e6431",
+    "bytes": 37237
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.AgentRunBudgetTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "07c5ed2a562c05380ce5f58faeb068be61ad6012788992cb9d248db0c9a116a0",
+    "bytes": 37374
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.ContextBudgetRecoveryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "58acb4898e062024229666e54f769ee8e12b157f305945b4f46b9a621f48960c",
+    "bytes": 38254
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.ContextEngineeringTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "483e50eb4dad16449f8c16003d76677627f4a24147c939d3a4c1f94c7bd0f50a",
+    "bytes": 38381
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.DefaultAgentCapabilityRegistryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "eb5991c725f1d5ed94f966098502bc998a006e4b2a77230e8233b13c4e709328",
+    "bytes": 37295
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.DefaultAgentContextManagerTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "64525576f73f374c622509cd84ba35cc9ea6df54f5bb7281da1b34f9c8321f98",
+    "bytes": 38499
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.DefaultAgentRuntimeStateTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "aa89cc2de09005f7601f66f7e9657f708a4547137f9d5b13f766dbefe924d2ac",
+    "bytes": 110221
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.DefaultAgentToolRuntimeApprovalBindingTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "0d96cb232e6699ba235166587856735aa4694d09f6d41155ca13cb7a329423b3",
+    "bytes": 36991
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.DefaultAgentToolRuntimeReconciliationTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "9ce4b2a11c417307d29f7339133d0e093b9ce35064df7bf97e440106de622dae",
+    "bytes": 37159
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.HarnessCoreTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "f1fbf40cd4b1a169365dc1984c6cef9d93626409fa95efd92ee2e49aa1c481dd",
+    "bytes": 38779
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.McpToolEffectContractTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "bb8dd407ee81bc47cce121171242e1d9fb18a9d7d88d04e3b0d40b3da6c19a2c",
+    "bytes": 43620
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.NativeToolCallingAgentModelGatewayTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "24ef1069bb80267beb9fe7efad9fd07708cfe529485eec9dda853cd3ea89e37e",
+    "bytes": 38304
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.ToolResultBoundaryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "ab177704ed89da885a336ffd2c7894078783956f49a0442265c35ac8c0d63f1f",
+    "bytes": 39816
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.runtime.ToolRetryPolicyTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "3fa5e1720e81709441233928cf9ae4c797ddf21bbfff0b8574b9180c2b2a8b8b",
+    "bytes": 38037
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.stream.DefaultStreamingAgentExecutorTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "cf0e5ed661ff475e5bf267de6aaadcb88297cb1c14777636d7e0224dbb38cca9",
+    "bytes": 37674
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.tool.LocalToolExecutorTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "8aebe789c8cd8e4369bdc3a4be221e04b4fe40f1e1d2afc501c8ff1d2c7362af",
+    "bytes": 37351
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.tool.LocalToolRegistryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "61fb9295afd0477c9faad1290f8ce2658618c6cadb951a6e47b08e33d925f564",
+    "bytes": 37367
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.web.AgentControllerConversationTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "07c56b92f2f5153df8516434309ad6a266dc32fe2745a0696c71b55a91b3171f",
+    "bytes": 37262
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.web.ConversationIsolationHttpTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "b44303c8439230ff50bd4124dbfd75b74a4a06e2fa889183c9d28bcf6d0813f8",
+    "bytes": 37510
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.web.EvalControllerTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "42c1b4b055cbca522882462b4fbe7eb382b9ae6d356b137be242748ac69e044c",
+    "bytes": 37479
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.web.GuardrailControllerTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "2c4695dd78470276b79608d34a006ec6de3f1c5c066aa2d6be6a5a6aaa8bfa16",
+    "bytes": 36927
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.web.PublicProcurementRunTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "d2a6302c8e53a9b98c78b83a1a2bbcbfe2d98dbb3b421bc3876b4390bbc95f2c",
+    "bytes": 46109
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.application.AgentRunWorkCommandAdapterTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "ff962c1ae7cd227d7ca50fde1f192c02f964b859c17526f5dcd9f4fac1fcbc7d",
+    "bytes": 37913
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.application.ExecutionTargetCandidateResolverTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "459f42122f3d301732fd1479116ae2d36873354ca4e1a5a2c196ff826bb76829",
+    "bytes": 37536
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.application.M1BRoutingUnitTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "c6aac246dbde225e774ba4f7180404d6482f62e5c0db8ee62c045252b206c9c2",
+    "bytes": 37789
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.application.ProcurementOnlyWorkbenchRoutingTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "a88752df43855ca194bea507ab33c66d66a437fbd1fa5f270f4c9c46a580b9a2",
+    "bytes": 38352
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.application.RouteConfirmationScopeBindingTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "313030d15c516364a91b462dfd5ccb7d9a596244fca21dfb7125c49feb3bae59",
+    "bytes": 37574
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.application.RoutingCoordinatorCandidatePolicyTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "ab401a7779c0586a5b8a1813ed62578a470241a875f11ce42df55eeb13ef8d4a",
+    "bytes": 37000
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.application.RunProjectionIsolationTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "f15f1e592e062f22ddfd81c6c97b786fc5777d4663a2887ee36cc2d41849ae1d",
+    "bytes": 65983
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.application.RunWorkExecutionTreeTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "5b3bfb3bf8e7754c811bb1df05f64da43bd6f96890086752b6c773941e20ce19",
+    "bytes": 38144
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.application.UnifiedWorkEventProjectorTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "4c966a80f53a5ad6edeef39f4994afc756c0c054affd4fa4410fdaf5d32230cd",
+    "bytes": 50533
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.application.UnifiedWorkExecutionTreeServiceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "fd5667629a7ebcc4277488a0a8e6645aa64e07b1c5e1ddd105d1c1f773e14e95",
+    "bytes": 37554
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.application.WorkbenchModelAndServiceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "7f3653be89c50d1818337b45adf64cdcd9a6179ecc00ab56c0b32cc86807c738",
+    "bytes": 37358
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.application.WorkbenchSchemaInitializerTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "3151570eac39307b7bbba7f824f1072860c184560176b797a4382d9d6e126f72",
+    "bytes": 36988
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.budget.BudgetAdmissionCoordinatorTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "aa8566af233e3a901b3252ec70b74913ca229cc58a197a9dc6718e8352b1104b",
+    "bytes": 37128
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.budget.WorkbenchBudgetEvalSuiteTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "545f2deb0a989a98435e996396fc5ae3d78b20a396f08e40a8f9a0f0065173ec",
+    "bytes": 39279
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.budget.WorkbenchBudgetPolicyTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "4ff1eb37a75d733bd9295f2ba2fb4992a8f043edceb77e8af2439b52870db3b4",
+    "bytes": 37409
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.dispatch.ExecutionAdapterUnitTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "137eeb5f991349a86f1c33a2c50b63230df0d7af5b2afb5f52f45a5e80a37dd9",
+    "bytes": 37876
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.eval.WorkbenchM3DPolicyEvalTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "f76da133e323de408d4ba88d8cff3e377c4c361819db56b2375fb71a3a76c4a3",
+    "bytes": 46498
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.eval.WorkbenchRoutingEvalSuiteTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "8e1a2169f0c3a106819489b172096cf6fc2b7561657d718e3a664d5cee48e3c2",
+    "bytes": 37085
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.eval.WorkbenchRoutingSafetyGateTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "cf194c1202970595506cc8185af1554c3d7287ce55bd8230987778cf24c3a7b7",
+    "bytes": 37792
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.persistence.RetiredProjectionWriteBoundaryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "1e00cea29f147ca373ba2db28e94c63c428bc6c9dcf8105a765698abb8b019bd",
+    "bytes": 37218
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.presentation.PublicPresentationServiceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "00723daf14e2d1ca45b0fe3ea66c740bd83e421746891395ce0dd9f7df423c3c",
+    "bytes": 39338
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.presentation.PublicPresentationStreamServiceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "87bf5d396d9deaf44463e928cbdf1ed8e98a5896e96ad74146d4620a2f3941d8",
+    "bytes": 37001
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.security.JdbcConversationOwnershipStoreTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "8d687a2c6a553925ded9988b4931d75223ccf06549cd88c23f88fdb4655dc645",
+    "bytes": 38172
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.target.ExecutionCommandCapabilityRegistryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "8c1f452f0e1e507ab0617236ba30dd86a5ea1f795d3fec60c02aa84a2d84771d",
+    "bytes": 36996
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.web.UnifiedWorkControllerTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "b4f587e19a3e98854080e09b5e8c0abda0d42b45e9453c6d49c36db5b0e1a715",
+    "bytes": 38148
+  },
+  "delivery/legacy/full-surefire/TEST-com.agent.platform.workbench.web.UnifiedWorkEventStreamServiceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "efced7288782dbad47fe7de5bd8db924379f0ef57bd2d4d8c68b86574ce28f64",
+    "bytes": 37783
+  },
+  "delivery/legacy/previous-procurement-evaluation/answer-replay-report.json": {
+    "sha256": "5da29f1f5abcdaf689619b5ec2294b616d91e8f48d60cfa879217fc5a416e758",
+    "bytes": 6243
+  },
+  "delivery/legacy/previous-procurement-evaluation/answer-sidecar.json": {
+    "sha256": "93fe9fcfa86f0528cd90e4864d7f73f9e7709f8cd900c0591087f5cb6e03366d",
+    "bytes": 6243
+  },
+  "delivery/legacy/previous-procurement-evaluation/handcrafted-report.json": {
+    "sha256": "e732cb6c7ead34f9a9a0aa0fddcc4deac2fb2b0e9f48a5e8d05e168c079f1f19",
+    "bytes": 20193
+  },
+  "delivery/legacy/previous-procurement-evaluation/replay-report.json": {
+    "sha256": "ac77226e24fd3ca9c923eb7b6c76bb23ceeb4dd225e00feb1adcb19d6a1650a3",
+    "bytes": 5543
+  },
+  "delivery/legacy/previous-procurement-evaluation/runtime-artifact.json": {
+    "sha256": "85fd5c7cb6bb19899097984b2f81c39bd515534507c00521a085e9c5ad555c29",
+    "bytes": 73999
+  },
+  "delivery/legacy/previous-procurement-evaluation/runtime-report.json": {
+    "sha256": "26c40dc8700121de2491d94e3e5438c5abf96348ffbc901ef7eba35b113c9850",
+    "bytes": 5543
+  },
+  "delivery/legacy/procurement-evaluation/answer-replay-report.json": {
+    "sha256": "5da29f1f5abcdaf689619b5ec2294b616d91e8f48d60cfa879217fc5a416e758",
+    "bytes": 6243
+  },
+  "delivery/legacy/procurement-evaluation/answer-sidecar.json": {
+    "sha256": "93fe9fcfa86f0528cd90e4864d7f73f9e7709f8cd900c0591087f5cb6e03366d",
+    "bytes": 6243
+  },
+  "delivery/legacy/procurement-evaluation/handcrafted-report.json": {
+    "sha256": "e732cb6c7ead34f9a9a0aa0fddcc4deac2fb2b0e9f48a5e8d05e168c079f1f19",
+    "bytes": 20193
+  },
+  "delivery/legacy/procurement-evaluation/replay-report.json": {
+    "sha256": "ac77226e24fd3ca9c923eb7b6c76bb23ceeb4dd225e00feb1adcb19d6a1650a3",
+    "bytes": 5543
+  },
+  "delivery/legacy/procurement-evaluation/runtime-artifact.json": {
+    "sha256": "62715b8719c8a1c2db4cef4fe5da434ed79bd7105f73505f2261944554afa0ad",
+    "bytes": 74052
+  },
+  "delivery/legacy/procurement-evaluation/runtime-report.json": {
+    "sha256": "f2f725724662abd92dc182dadbaf914ebf7c269a1c6a0932fd8484c917fa5b61",
+    "bytes": 5543
+  },
+  "delivery/legacy/procurement-evaluation/procurement-evaluation/answer-replay-report.json": {
+    "sha256": "ea2999b7a1668fd2ab904b718534501ee7d0954ae5540d6367f61dc9b4e89327",
+    "bytes": 6243
+  },
+  "delivery/legacy/procurement-evaluation/procurement-evaluation/answer-sidecar.json": {
+    "sha256": "1438567e196e5ac3688510400141db57ea464a6f954fc597c0df460724d67745",
+    "bytes": 6243
+  },
+  "delivery/legacy/procurement-evaluation/procurement-evaluation/handcrafted-report.json": {
+    "sha256": "651ec1ae95e673874539c0c608d9f22016def08d0a09ad2b975457257deffd83",
+    "bytes": 20193
+  },
+  "delivery/legacy/procurement-evaluation/procurement-evaluation/replay-report.json": {
+    "sha256": "f2f725724662abd92dc182dadbaf914ebf7c269a1c6a0932fd8484c917fa5b61",
+    "bytes": 5543
+  },
+  "delivery/legacy/procurement-evaluation/procurement-evaluation/runtime-artifact.json": {
+    "sha256": "3641860791a8cb79d7fbe83488708696ed2841da809277913bfae8090872ab15",
+    "bytes": 74030
+  },
+  "delivery/legacy/procurement-evaluation/procurement-evaluation/runtime-report.json": {
+    "sha256": "453e6c04f6d0239d0abc46073c2fec42b722118572999b7bb0fa724f355238eb",
+    "bytes": 5543
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.erp.ProcurementBackendBoundaryTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "de588b6a6a33a6ef4e3d4d65a162594822736b2f009bd01d3d1c386f0c3522ff",
+    "bytes": 38720
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.erp.ProcurementErpMcpTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "44608824755447b20a616fc6f302c21e4d14db439ddc0eb1637f157bc4e2c987",
+    "bytes": 38018
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.erp.ProcurementItemContractTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "7ab1130692c64f28f9fb1ce60526beda0a07906748031f485899a141a6b06048",
+    "bytes": 37399
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.JdbcProcurementCaseStorePostgresIT-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "736f2c63a27c61a174112068388aaf609dfa25b29b43e09e33f427ae4dd0e3bb",
+    "bytes": 37534
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.McpProcurementDataProviderTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "1da0fcf38237f94f7922327a4d12749a60f60dd3687acde7bf00aa207b021648",
+    "bytes": 38549
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementAdaptiveMultiAgentTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "a035c9805e776e8829edf10488002a90c364ac3f1a0ae01abb23fb347be021eb",
+    "bytes": 38422
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementAgentRuntimeE2ETests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "46eb2e14b6002445d8fd035e10aef0a31e997ed4e6a624c0cb975a03b2de9691",
+    "bytes": 38570
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerAggregationTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "bbbd0336bd266bca8567ce512798b1de60c51819f61db4dc80d55b28160c8de8",
+    "bytes": 48174
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerCompletenessTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "9a004771e66a125081941aa9d9c19586c9338112d213ea556d30ec42fb502c17",
+    "bytes": 47886
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerCoverageTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "dcd52647fa0b66ae85fdf67f4f4176728132b7d92041c1c047b644a7af121535",
+    "bytes": 43006
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerEvaluationV3Tests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "a06477d7585d6d45802b7687aeb2bc43c3eb2ca7b7a5fd00a901c9d467aed504",
+    "bytes": 51002
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerGraderTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "eed06e2f9eaa7650957afb67948440aa93569610ceb1407bdafc5d52b55c513d",
+    "bytes": 49688
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerPolicyTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "f9c6d14d3f17e53437c73abaf499fa41ba8fcbb38d4b59beba095eac7e72d7cb",
+    "bytes": 46990
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerRelationTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "a68fcbb0b408347c12b39068bdb6ac8cb734088eda069d42741d1a18898c7d27",
+    "bytes": 50114
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerReplayTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "f6619b995514989acb5e13f2198a42008ad40b08df22339a2048d20ea9f0c641",
+    "bytes": 37136
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerV3ReplayTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "1bc4a0344db7b0f9bfcad7b174560ca77601b424630417aba333d6981e85182b",
+    "bytes": 41467
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementArtifactReplayTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "6b7fd25bd449f1b8c109deca8ed06ede5a5e4fdc1526b8a683cf876ac3c2b804",
+    "bytes": 37132
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementBenchmarkContractTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "1bfbded6ddd7a683ed89fb8c1f383ccbf6fb12ace598844f04bf68fb7ec1a854",
+    "bytes": 37395
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementCaseContextRendererTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "9362826df3d6c303cd10bbf5b4ddfbeeb5ac1577dd1c3053aa5a914d03f9f499",
+    "bytes": 37808
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementCasePatchTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "1ba26b355d7d89703d7a1f3d73e68bff131037868eb36df3a1546a13c686c9ec",
+    "bytes": 38947
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementComparisonInputsTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "7755ae51fcfa2cb28e4c3518d167ad5a13cf9aa4fcde5d0e16dae488e6a9282c",
+    "bytes": 44230
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementComparisonMetricsTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "e6c6df410453772ba751bff4881cd488ccc7011e0fe8f64b307d737477482d32",
+    "bytes": 41574
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementComparisonReportsTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "deb57630a6d8d86feaeaa36f6cff208b7ef5fe281012e5cfed8c8ffd27d50dcb",
+    "bytes": 44649
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementDeterministicGraderTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "8e301b87746c5a1b3e19e45941a70d55ddfa9c53d822f5421febd2ad242bf0af",
+    "bytes": 44286
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementEvidenceTrustTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "db407ed08427fbe704832cf544d761e6edf8bc519e67ad98bd882ffb7a9b8a96",
+    "bytes": 37360
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementRecommendationFinalizeTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "5de536c0fabad7e971072ad380d5fd3a39b38ed1cb484d9c2f00ee33c9c6dff3",
+    "bytes": 37955
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementRfqHitlTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "455b018fb613c39bfeade313ec1616a7fb3e2fa27f6f4b1f02e1d616634d8958",
+    "bytes": 40457
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.procurement.ProcurementSourcingMvpTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "b3821a0c0c73a531ae29fc79b6df9fc549c4d13577f8385fa2e66c83b8275e23",
+    "bytes": 39350
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.web.PublicProcurementRunTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "013c06f9c5ed1058c50d6256698e288a4e3b84f5c522beb5cb4d7fa3a4886eed",
+    "bytes": 46210
+  },
+  "delivery/legacy/procurement-surefire/TEST-com.agent.platform.workbench.application.ProcurementOnlyWorkbenchRoutingTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "6037c09a36643d23c722d705eb141e6a66aa2747b865243415f633807af52674",
+    "bytes": 38451
+  },
+  "delivery/legacy/replay-evaluation/answer-replay-report.json": {
+    "sha256": "5da29f1f5abcdaf689619b5ec2294b616d91e8f48d60cfa879217fc5a416e758",
+    "bytes": 6243
+  },
+  "delivery/legacy/replay-evaluation/answer-sidecar.json": {
+    "sha256": "1438567e196e5ac3688510400141db57ea464a6f954fc597c0df460724d67745",
+    "bytes": 6243
+  },
+  "delivery/legacy/replay-evaluation/handcrafted-report.json": {
+    "sha256": "e732cb6c7ead34f9a9a0aa0fddcc4deac2fb2b0e9f48a5e8d05e168c079f1f19",
+    "bytes": 20193
+  },
+  "delivery/legacy/replay-evaluation/replay-report.json": {
+    "sha256": "f2f725724662abd92dc182dadbaf914ebf7c269a1c6a0932fd8484c917fa5b61",
+    "bytes": 5543
+  },
+  "delivery/legacy/replay-evaluation/runtime-artifact.json": {
+    "sha256": "62715b8719c8a1c2db4cef4fe5da434ed79bd7105f73505f2261944554afa0ad",
+    "bytes": 74052
+  },
+  "delivery/legacy/replay-evaluation/runtime-report.json": {
+    "sha256": "f2f725724662abd92dc182dadbaf914ebf7c269a1c6a0932fd8484c917fa5b61",
+    "bytes": 5543
+  },
+  "delivery/legacy/replay-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerAggregationTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "5658de359124f83c1ca91ac52e5af6ba1765ebe36a758e0669f5228538dfa29c",
+    "bytes": 50017
+  },
+  "delivery/legacy/replay-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerCompletenessTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "f437ccff5bdc3503333d166a420fe309eb0808a3d52c1d901e3b25d4ea3b7e42",
+    "bytes": 48229
+  },
+  "delivery/legacy/replay-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerPolicyTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "79a25faff0325f4fb4329810449f3e67162b6cbe5a2c7592214f5a7658d24764",
+    "bytes": 47329
+  },
+  "delivery/legacy/replay-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerRelationTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "7fe74cc84c6d5df84ed99e78648318c6e5d7fcedc7004949d7a90539d4c288a7",
+    "bytes": 50456
+  },
+  "delivery/legacy/replay-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerReplayTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "54df83333a368063eefc10debdd5c570ab624867931b9c971c8499d0ffc653b0",
+    "bytes": 37479
+  },
+  "delivery/legacy/replay-surefire/TEST-com.agent.platform.procurement.ProcurementAnswerV3ReplayTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "6ff78462ec16b9b3c22e856992698533ff7e369c8db3ee3a165f6a7dda8b7274",
+    "bytes": 41808
+  },
+  "delivery/legacy/replay-surefire/TEST-com.agent.platform.procurement.ProcurementArtifactReplayTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "1e4c819791bda9d1ad9e2b039d5c7251abb0342ebafc73bb5cb78199c70ac267",
+    "bytes": 37471
+  },
+  "delivery/legacy/replay-surefire/TEST-com.agent.platform.procurement.ProcurementComparisonMetricsTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "b0da2e5ebf56e1b3e19eff7a5103a842157c7c93f294cd77ca341c5109d56e88",
+    "bytes": 41503
+  },
+  "delivery/legacy/replay-surefire/TEST-com.agent.platform.procurement.ProcurementComparisonReportsTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "8df874870d5ed1b86a478c069a927e78f2377082df9fdfa40f8e21164052984c",
+    "bytes": 44998
+  },
+  "delivery/surefire/com.agent.platform.runtime.ContextBudgetRecoveryTests-delivery-20261007-focused.txt": {
+    "sha256": "9573c57f4184c325e6fe3603167125bac108c3c6c13f2923228fe945bb7cbe95",
+    "bytes": 360
+  },
+  "delivery/surefire/com.agent.platform.runtime.ContextEngineeringTests-delivery-20261007-focused.txt": {
+    "sha256": "e577dbaa1bfbf70498f984ee5fa1f4c38601fcda90dc8d650e5c5215b4d671b4",
+    "bytes": 355
+  },
+  "delivery/surefire/com.agent.platform.runtime.DefaultAgentContextManagerTests-delivery-20261007-focused.txt": {
+    "sha256": "395bb744d6c69eb2631aa8232d8e776f238c9462f65cca616d890440a7013669",
+    "bytes": 371
+  },
+  "delivery/surefire/com.agent.platform.runtime.DefaultAgentRuntimeStateTests-delivery-20261007-focused.txt": {
+    "sha256": "ddee41613b462a8840eaa7f336b0b3579a9ddb607f944d6bc9c2ebcd83358345",
+    "bytes": 367
+  },
+  "delivery/surefire/com.agent.platform.runtime.HarnessCoreTests-delivery-20261007-focused.txt": {
+    "sha256": "3ee9e1bc3c7eb8c4386393e8863ff1338f0ce9ef57391e0590ca787eaa9067a1",
+    "bytes": 341
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.ContextBudgetRecoveryTests-delivery-20261007-focused.xml": {
+    "sha256": "0152272f58381c7d8c4b3dc104e946c8fb16f80c755cddb8790efc2f0e7d7344",
+    "bytes": 37904
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.ContextEngineeringTests-delivery-20261007-focused.xml": {
+    "sha256": "9240f0d8215a68657c25f139b7926aa057538c28974bd9d0b08f2c7f59f004e4",
+    "bytes": 38029
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.DefaultAgentContextManagerTests-delivery-20261007-focused.xml": {
+    "sha256": "5bfa19300ca992b98936e75fad80618121b64f5aaef508ce6e7af94f870780a5",
+    "bytes": 38155
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.DefaultAgentRuntimeStateTests-delivery-20261007-focused.xml": {
+    "sha256": "3fa6273a1e755a591728c90174e31ff4ad11f112d883f16550bdf5f5e28faaf1",
+    "bytes": 92648
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.HarnessCoreTests-delivery-20261007-focused.xml": {
+    "sha256": "8ea707896dac8866f48f51e7154108923c122318419138d5b731744796f272fd",
+    "bytes": 38437
+  },
+  "delivery/surefire/com.agent.platform.agent.RuntimeAgentExecutorScenarioTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "ef7b922007ca06ec5ff88de6049c880af29b88d2459a9576a5cdf70becf0ec6b",
+    "bytes": 370
+  },
+  "delivery/surefire/com.agent.platform.approval.JdbcApprovalStoreTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "4238a49e1f80be32aa982cfd1286bd95df626a2a457ca8f27685523693193546",
+    "bytes": 354
+  },
+  "delivery/surefire/com.agent.platform.approval.LocalApprovalServiceTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "f093d2a05ed85e2b50d1be120dab86b5bb1c8c0c3e7098a4964eeede5156c721",
+    "bytes": 360
+  },
+  "delivery/surefire/com.agent.platform.common.BusinessRetirementBoundaryTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "80e2892dfbed1d214bcd642f06174231a15eb3163b02413a45bce4f68ae6eed7",
+    "bytes": 369
+  },
+  "delivery/surefire/com.agent.platform.config.AgentScenarioProfileResolverTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "c9629116622fd19a6b5eb9f1de655b7b85fea21ef1ab09e2feebd0271bbdc598",
+    "bytes": 372
+  },
+  "delivery/surefire/com.agent.platform.config.HttpLoggingConfigTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "5ad706bf6ceee0a3d408532946f1b3b161007f28d2cd8057d8add09f38979fca",
+    "bytes": 350
+  },
+  "delivery/surefire/com.agent.platform.EnterpriseAgentApplicationTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "d53ca298cb3d26ead67b21189da61ec4a3347c73e9ef5c07b5d9259a088b15b8",
+    "bytes": 354
+  },
+  "delivery/surefire/com.agent.platform.eval.DefaultAgentEvalRunnerRuntimeEvidenceTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "23397d359c91af1c47f94688c8109f1c9258f49f8d0519f0d2770126c5d627e5",
+    "bytes": 386
+  },
+  "delivery/surefire/com.agent.platform.eval.LlmAsJudgeAnswerJudgeTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "03d7474742cdd5c132db749f9242904b8e8728130469d309125ade9820a05b9e",
+    "bytes": 354
+  },
+  "delivery/surefire/com.agent.platform.guardrail.DeterministicPromptInjectionSignalDetectorTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "f288cd951b1308af1eff76ec5c129938b1fbaabd433e44793a7e4310f4794dea",
+    "bytes": 406
+  },
+  "delivery/surefire/com.agent.platform.guardrail.RegexSensitiveDataFilterTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "5286bbf4d97900893f14e81f4b6155bf8d25dc96a78e57ce1ba2a5dcf79b5f7f",
+    "bytes": 370
+  },
+  "delivery/surefire/com.agent.platform.llm.SpringAiLlmServiceStreamingTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "ce0e9ac8999f85c36b6fa90f3d5bc32e74db811700ea434f8dcade73ac17ab25",
+    "bytes": 364
+  },
+  "delivery/surefire/com.agent.platform.mcp.StdioMcpToolGatewayTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "d31005b93e4f92ead76c54accb736388248e2f227921b01a3eb60ec1a169a953",
+    "bytes": 2811
+  },
+  "delivery/surefire/com.agent.platform.memory.JdbcMemoryServiceTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "695e087c9f36278f1ca63c4a403bf4604032bf14bf0241704b9682e052fe7754",
+    "bytes": 351
+  },
+  "delivery/surefire/com.agent.platform.memory.LlmMemoryExtractorTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "4aa40f8156984d33721a617dff888585f2373febe0d86ee6a53200706dc13862",
+    "bytes": 353
+  },
+  "delivery/surefire/com.agent.platform.procurement.erp.CanonicalRequisitionBindingTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "d81b3b0242e14a9f17a51733bbadef766a81d6e61b0721e253182ecb5eeff82d",
+    "bytes": 388
+  },
+  "delivery/surefire/com.agent.platform.procurement.erp.ErpNextAdapterTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "9290adee64e019bbcae822379152ff4b72e1d23552b99a6e60f60d3428c12c0b",
+    "bytes": 362
+  },
+  "delivery/surefire/com.agent.platform.procurement.erp.ErpNextRfqGatewayTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "c609a92977da81e12c7728f8a0d8180efe451fc9495e7f942c4fd7cc2c4a6b07",
+    "bytes": 368
+  },
+  "delivery/surefire/com.agent.platform.procurement.erp.ProcurementBackendBoundaryTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "353bf8cce119330190289b082bddfb610d390e131fd50265d27996b98a897402",
+    "bytes": 386
+  },
+  "delivery/surefire/com.agent.platform.procurement.erp.ProcurementBackendBoundaryTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "f3aa7b03ec04af47da0d1ad5511e64c37d5131294d68aba423de4290a97e6267",
+    "bytes": 386
+  },
+  "delivery/surefire/com.agent.platform.procurement.erp.ProcurementErpMcpTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "fe857d372f946522a06d9af95593d2df0b37e46c0910bcafbcaa817100857091",
+    "bytes": 368
+  },
+  "delivery/surefire/com.agent.platform.procurement.erp.ProcurementErpMcpTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "8a78450f2a99df3fb0f59ec4d2d150827e6abf2fc0f52a357a4bfa0fcb4556c1",
+    "bytes": 368
+  },
+  "delivery/surefire/com.agent.platform.procurement.erp.ProcurementItemContractTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "dd9e607210b6daa86ee1c6b6dfbd507cd977b3b4600f58312859ac9b1333ddcf",
+    "bytes": 380
+  },
+  "delivery/surefire/com.agent.platform.procurement.erp.ProcurementItemContractTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "eb998eae796617e989e6e16065b4e31d5d4592ce8c3959fb644f1df44dd353fa",
+    "bytes": 380
+  },
+  "delivery/surefire/com.agent.platform.procurement.JdbcProcurementCaseStorePostgresIT-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "c91a4107ca68452ca1e2b6946a1d1e7830aad83ada9472d0c22563cfde239b67",
+    "bytes": 384
+  },
+  "delivery/surefire/com.agent.platform.procurement.McpProcurementDataProviderTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "767ff580d6e0b91b2479124d09114858ccb08e4d15baae3d7527f13f449bda9c",
+    "bytes": 378
+  },
+  "delivery/surefire/com.agent.platform.procurement.McpProcurementDataProviderTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "5eb5454f2352c13ea2367f4b58a5ef1e3c4a82ded92f8f969705a36f5f4c691a",
+    "bytes": 378
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAdaptiveMultiAgentTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "82c4b95e920ececb787af96b94d968a1fe18453155646ee4ae35a3dc7364e608",
+    "bytes": 384
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAdaptiveMultiAgentTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "be4ae09f57e59eb00066744fd05b2df20010d14c1e1e27299fdf8a8cb9c6c267",
+    "bytes": 384
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAgentRuntimeE2ETests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "eaf811db90477182d3caef6151c6113fbb17ac9d4b031bf22de57817cde0e408",
+    "bytes": 378
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAgentRuntimeE2ETests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "7920ad725bbdc03fca1c54277c965889ab015c4d475630cbbaa03b4275064d83",
+    "bytes": 378
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerAggregationTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "7ee0794ad3e206c6f11d6301d22b46cd98a47842cfda345cda3c9533864cb364",
+    "bytes": 383
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerAggregationTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "5ad1f5f8e31b66dc8ec48a60e748d8dbd8ab86e6690b7798e784b8bf0f2be7a9",
+    "bytes": 383
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerAggregationTests-v0-20261007-224923-05d9edff-replay.txt": {
+    "sha256": "30491b1f8cb5653a11fc2988a35a4d377bb4a05092edc03bfebed4212e54014d",
+    "bytes": 383
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerCompletenessTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "c90ce3297cbf47eff3a2d5b80e3f09e5a1e85fc18eec98a3d0c0a65c7410b19f",
+    "bytes": 385
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerCompletenessTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "e415413403ed6016b3ba019ac66072a7b4bcd611408f48c39a825e2d8659c20a",
+    "bytes": 385
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerCompletenessTests-v0-20261007-224923-05d9edff-replay.txt": {
+    "sha256": "455c015d263ffbecb80bf9fc7c913ba116d1a635dc3d1e546ed9169f656aabfc",
+    "bytes": 385
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerCoverageTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "163bf88da331b6f6a9dbf86e0f9c322331d701d35e388d512849c5c2592e69b7",
+    "bytes": 377
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerCoverageTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "ae11287e33ca773b7ceb2339dd567bb8333ca45072736ffc590f6399797d262f",
+    "bytes": 377
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerEvaluationV3Tests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "4b11d68f7c312cc34a9f2fdc8092b1055897988f561591299c0dedf84032ada4",
+    "bytes": 385
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerEvaluationV3Tests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "ccd89c92d725959bdc78280a066f190d58fbc617a8a61e92e1cc32af99836d1f",
+    "bytes": 385
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerGraderTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "3d691f15012dc4318e5b79e0189633be9d1f8c19801fe96315892a7713e96cea",
+    "bytes": 373
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerGraderTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "5ec4b42ea436330df919bc4b4e8a3509a3fe1747f5c3217463fb2dd3ccfcb52a",
+    "bytes": 373
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerPolicyTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "ec5f573ce118d7de9eddae2303b26375dbb9c78f01988b561c808e3941b23f82",
+    "bytes": 373
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerPolicyTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "e850ee93a1a13d93582d236b0517d7aa177dc9963a80c169703e2b3394b206df",
+    "bytes": 373
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerPolicyTests-v0-20261007-224923-05d9edff-replay.txt": {
+    "sha256": "26583eadbf21d3a98e289cb81afbb63da6f868b1f97218e01d34ac1a5a99d225",
+    "bytes": 373
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerRelationTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "9ed126d457afe3e9004a9c6dc3e474e9f8fa63755f98a86c54efe5dd5ee4dead",
+    "bytes": 377
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerRelationTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "663022917624037bc2c2345e50a223f3b69684bca2927b77d302fbac992f2fb7",
+    "bytes": 377
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerRelationTests-v0-20261007-224923-05d9edff-replay.txt": {
+    "sha256": "e4f91caba74f14faafe7dc576cfac92b049aed9cbffac9751f206d9fff7b9b45",
+    "bytes": 377
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerReplayTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "bb56454592c699746ac68d14f3d7b006cf666fa8d39af3515a96a255d2b0cab2",
+    "bytes": 368
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerReplayTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "eaeebc59f62cbc52f6c59ed27dc9e8d506e21673d91dfe0c4f957fae85bb4e5b",
+    "bytes": 372
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerReplayTests-v0-20261007-224923-05d9edff-replay.txt": {
+    "sha256": "ca051eee5fedb7b50f607328ae7d4f905176b132ef013191362ac33a1d9207a0",
+    "bytes": 372
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerV3ReplayTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "d831adbda050846932652a69c550016dde91a4ccc35705c8be3e9a1bde449041",
+    "bytes": 377
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerV3ReplayTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "5a94e539e973c952ca8d30e059e839fd23b0b05ab2d3e2b7abfac2b1ce7aa2aa",
+    "bytes": 377
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementAnswerV3ReplayTests-v0-20261007-224923-05d9edff-replay.txt": {
+    "sha256": "227e92143cc708fd5690db71fd224a81758b3221be73f661c3a9b54373f92d9f",
+    "bytes": 377
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementArtifactReplayTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "f8db41b029bc8f42fdd400a20a022bac4ee572bb80b585065c8437bd2b110f35",
+    "bytes": 372
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementArtifactReplayTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "9934267132da36222e05ed9568acd202a1bf9f36ee16bf56225cf9fe05ef3454",
+    "bytes": 376
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementArtifactReplayTests-v0-20261007-224923-05d9edff-replay.txt": {
+    "sha256": "48c95c15dbd0147b1fe42010fb7faca6d8a65b9474e340a73302baaed2ab48da",
+    "bytes": 376
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementBenchmarkContractTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "bca3c3d9c1da3c6c56fad17af070abb15b7066c6fecb7cf97fb2d1b564766ba0",
+    "bytes": 382
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementBenchmarkContractTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "de3b6cbb502c8ba37c4b95cd2c17a551062bf156ebd8ff4a461ac4e9995e3349",
+    "bytes": 382
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementCaseContextRendererTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "5b78b4c8d3a38ad04ace501d4a386dc85896e8c98e4ecc253f91e6b6ba55179b",
+    "bytes": 386
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementCaseContextRendererTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "34885b8d114add432ddfccdfc5be158da7f7377f55cee7860c769a19973d02f9",
+    "bytes": 386
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementCasePatchTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "abc3036fbc8d3f7f3c4ac406462f84abb08d854de1454bcda063c7aeaf0392a5",
+    "bytes": 367
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementCasePatchTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "6e33aea1d3873dcd109b22fa57ad90f3f571ba75a61b8e1bf2497be31744672d",
+    "bytes": 367
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementComparisonInputsTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "15f523fdc07c3e547962799d653906272b5d819a2a2fa580a52750f621aba7a8",
+    "bytes": 381
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementComparisonInputsTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "1a66a459deb7c8d568fc7e3e044842145898039383dc9007e33efac6cc5311b1",
+    "bytes": 381
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementComparisonMetricsTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "f5bc646f12cf5a8ddefe8c150dac2fa0e41db0bfbf785bc68ba208d817cdc3af",
+    "bytes": 383
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementComparisonMetricsTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "19a4feba8f0dbe14d0836c772774cc64dd438ba4128f15266a2703da4618c5ef",
+    "bytes": 383
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementComparisonMetricsTests-v0-20261007-224923-05d9edff-replay.txt": {
+    "sha256": "016e1a46c891c7d44ea3f1e7e226c279e323f7c354fe15704a833a981a8064e1",
+    "bytes": 383
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementComparisonReportsTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "b338d17e2cea331882aef478289021bcb795e9f16cbf21edb38ef71f95c1cc2e",
+    "bytes": 383
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementComparisonReportsTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "6de13c0c111e86763262690a51be414ea3d7784f84f8bbae16094cdc66d409e5",
+    "bytes": 383
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementComparisonReportsTests-v0-20261007-224923-05d9edff-replay.txt": {
+    "sha256": "4f1d43e68127de7c4776c2b9249eff691f81ef716c91d664f688a13ee0611ae9",
+    "bytes": 383
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementDeterministicGraderTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "1d91b66e45f53414aeda127a0795c584a03c99606e33e8b5d733399e4bdcd9c3",
+    "bytes": 387
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementDeterministicGraderTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "0590e1000943163102bd091653c88c0ffd758c08a850212e7b5d8d9dd6289bbf",
+    "bytes": 387
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementEvidenceTrustTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "93a1902740e1c4e6f9b4a221c83b01ac68d6024bbdddd53d4fb62622f64bf296",
+    "bytes": 374
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementEvidenceTrustTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "a6b96f3d49096fb92ce9d1d7d57e6bd6006a6f536025be6b98806b2353e79b5f",
+    "bytes": 374
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementRecommendationFinalizeTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "e1eca2d1725f514617ac9463ade4f0eab85ab07ae7d1be7e356e536bdb4f7c9e",
+    "bytes": 392
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementRecommendationFinalizeTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "d49ea7c2528221a59b354bef04377d6c43331c95598efe0f9121994a1ce91d69",
+    "bytes": 392
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementRfqHitlTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "c12c09639ba5ff14416ec8b1c5ce1a2f5461861fca476cb347076041719a812a",
+    "bytes": 363
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementRfqHitlTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "3fb46bf5ed2ee35f2b7f8e920c0d21b6db0ae5c23e786c2640f3eb181043094c",
+    "bytes": 363
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementSourcingMvpTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "0e4ea525b58cbaaceb5c0630067468e6bd57c117ed7f49aebb6f948f9bb8a39a",
+    "bytes": 371
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementSourcingMvpTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "74952f1891d58e9cf2a6d28c9ce2821987e2895a06abf06b391df8983550a39e",
+    "bytes": 371
+  },
+  "delivery/surefire/com.agent.platform.procurement.ProcurementV2EvalStoresTest-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "d3cec983f65ce78c41c9ae208637dd086265c83dc6f4d0e921e4a11a03945952",
+    "bytes": 370
+  },
+  "delivery/surefire/com.agent.platform.rag.CurrentKnowledgeCorpusTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "2720960ec77d06082c7e25a7d4135e65d41d149b444356e64eda54031e1063b8",
+    "bytes": 354
+  },
+  "delivery/surefire/com.agent.platform.runtime.AgentCapabilityVisibilityPolicyTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "550ec8cbaa74265f1efd5f8f20d155f1c7a73c23b815a988fd732b5dec1ba274",
+    "bytes": 380
+  },
+  "delivery/surefire/com.agent.platform.runtime.AgentModelGatewayConfigurationTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "1a90298adeb7e92ea82eb6829485494ea70698e01d64eed14e5ff62500e51e2c",
+    "bytes": 378
+  },
+  "delivery/surefire/com.agent.platform.runtime.AgentRunBudgetTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "14667c276376bd9a9025e990e05f72c598d0df9f148c209cb339a31709f26cb4",
+    "bytes": 346
+  },
+  "delivery/surefire/com.agent.platform.runtime.ContextBudgetRecoveryTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "0e6d9906384d45f23fc52c6b929d41d9188b05d9a39bb03eac48be2b686f6634",
+    "bytes": 360
+  },
+  "delivery/surefire/com.agent.platform.runtime.ContextEngineeringTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "efb9b07889e389de917237262e598569f4752e2a8ad67248708b5f20ea5caf0c",
+    "bytes": 355
+  },
+  "delivery/surefire/com.agent.platform.runtime.DefaultAgentCapabilityRegistryTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "fccb831b51041c2102d343739b7722c8f67451ae60e06200b47cd1b7e3cab800",
+    "bytes": 378
+  },
+  "delivery/surefire/com.agent.platform.runtime.DefaultAgentContextManagerTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "175238add088cdecbdf3c7c9e289f85180d1792b70af453f8e9bb1b377be3bd0",
+    "bytes": 371
+  },
+  "delivery/surefire/com.agent.platform.runtime.DefaultAgentRuntimeStateTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "3bf0c04c4e622dd81152136b36495e368af78ff9fd8db7abdeeae647e65c9965",
+    "bytes": 367
+  },
+  "delivery/surefire/com.agent.platform.runtime.DefaultAgentToolRuntimeApprovalBindingTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "b8da6b988c0a1eeed20bbcefa153cf09f4d54e77127659baf84f7026995a9e35",
+    "bytes": 394
+  },
+  "delivery/surefire/com.agent.platform.runtime.DefaultAgentToolRuntimeReconciliationTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "78903195c035e0a2273f7e75368a50fd583d4adb282e72ca7c44b194610b3343",
+    "bytes": 392
+  },
+  "delivery/surefire/com.agent.platform.runtime.HarnessCoreTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "5d46ca036775b056fe57abbec046e3406cbefb9f1a5f28f91a0d0e56436c0d22",
+    "bytes": 341
+  },
+  "delivery/surefire/com.agent.platform.runtime.McpToolEffectContractTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "a4e803746a06cc87871c0fca3f86f4e0127b66333b0090499a1a49237a44261a",
+    "bytes": 360
+  },
+  "delivery/surefire/com.agent.platform.runtime.NativeToolCallingAgentModelGatewayTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "823621b9eeb798563c53a9d8e675891e6f6539cc87baa6f8569620e179008435",
+    "bytes": 386
+  },
+  "delivery/surefire/com.agent.platform.runtime.ToolResultBoundaryTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "f6891590d69803ee6a5efcb25874fec709a1d3ddc960bc1de14d2c803e5e59c8",
+    "bytes": 355
+  },
+  "delivery/surefire/com.agent.platform.runtime.ToolRetryPolicyTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "466cd8bd872a3b09288d05021b1de5933edad9f204e694f8e2649b8d1683bf7b",
+    "bytes": 348
+  },
+  "delivery/surefire/com.agent.platform.stream.DefaultStreamingAgentExecutorTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "80055a3082a41e4d5cae2a6136fae1d5f8eadf855adda12e6f4e98b786f6b3d3",
+    "bytes": 374
+  },
+  "delivery/surefire/com.agent.platform.tool.LocalToolExecutorTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "c077328dc139443778f17356f92a7091ec4d6ec77d3173419e05c22f7c6eba46",
+    "bytes": 346
+  },
+  "delivery/surefire/com.agent.platform.tool.LocalToolRegistryTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "81c19f54e573ca781f71ccf3646ec6c0cda9e0f05a974ab2d10b9e5f1ce9b7e5",
+    "bytes": 346
+  },
+  "delivery/surefire/com.agent.platform.web.AgentControllerConversationTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "4016d9b265a3427f48b98d5b2c125db32cd071299e0e6ca81eedf950039f4aa6",
+    "bytes": 364
+  },
+  "delivery/surefire/com.agent.platform.web.ConversationIsolationHttpTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "ca1580ebb259696afaccc69e742e9d6794c904888104cbf84067e125acdf2815",
+    "bytes": 360
+  },
+  "delivery/surefire/com.agent.platform.web.EvalControllerTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "3a36539d86863a6584386dcbe5c5c800bffb8fb50e97a6afe48e074dbae57055",
+    "bytes": 338
+  },
+  "delivery/surefire/com.agent.platform.web.GuardrailControllerTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "12544d65bd3e72f2f91b1e67d568b91ea34ddb5d0bd789dddebd32b5cfbf2cab",
+    "bytes": 348
+  },
+  "delivery/surefire/com.agent.platform.web.PublicProcurementRunTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "27ef790cbce49b0b0893a206c50725adf5dc82347b2d1109fc964a85ebb13e32",
+    "bytes": 351
+  },
+  "delivery/surefire/com.agent.platform.web.PublicProcurementRunTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "7c683e306a49efd02eb03059f37ddcb09c3f916c8dc784870214aa50eabaccd6",
+    "bytes": 351
+  },
+  "delivery/surefire/com.agent.platform.workbench.application.AgentRunWorkCommandAdapterTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "14b071c2fdc145693f4a1302cee2de2020890b878a0d1c135cc1dbdd8cf7863b",
+    "bytes": 398
+  },
+  "delivery/surefire/com.agent.platform.workbench.application.ExecutionTargetCandidateResolverTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "b02f2b987130b4b1329fbdd6829f6d0fd6d5e6db9d3b9af50d77dafdefa3b20a",
+    "bytes": 410
+  },
+  "delivery/surefire/com.agent.platform.workbench.application.M1BRoutingUnitTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "16d9e562be98201baec498c869786aeaea4e3aed937dc3a3d6f39a18d307de7e",
+    "bytes": 374
+  },
+  "delivery/surefire/com.agent.platform.workbench.application.ProcurementOnlyWorkbenchRoutingTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "877b85f86d7818602cff73a11965827729c607c481f815460974502a6db77df0",
+    "bytes": 408
+  },
+  "delivery/surefire/com.agent.platform.workbench.application.ProcurementOnlyWorkbenchRoutingTests-v0-20261007-224923-05d9edff-procurement.txt": {
+    "sha256": "c26e5e1e60e0b29cb6e1429eb4785d6e4a928c27b95c964e174c5c920c9c1680",
+    "bytes": 408
+  },
+  "delivery/surefire/com.agent.platform.workbench.application.RouteConfirmationScopeBindingTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "2fe140b008ef3a7275f73a0323c0270b0a73364ee4410a58bf42474358e11847",
+    "bytes": 404
+  },
+  "delivery/surefire/com.agent.platform.workbench.application.RoutingCoordinatorCandidatePolicyTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "629899716ed6d645da9973b659642586d7cb793437665ad114e7bb2fc43f16f1",
+    "bytes": 412
+  },
+  "delivery/surefire/com.agent.platform.workbench.application.RunProjectionIsolationTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "883babf6eec70824c50d2bb448d20567e6d189a77f91b8dfffd881dd5c67396a",
+    "bytes": 390
+  },
+  "delivery/surefire/com.agent.platform.workbench.application.RunWorkExecutionTreeTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "aa26acd93700d7974738443d3254c036192ccd103cb188aab4b29eea8af5e0a5",
+    "bytes": 386
+  },
+  "delivery/surefire/com.agent.platform.workbench.application.UnifiedWorkEventProjectorTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "0761119f3af1eff7e318b6a02383ed7771c93848da50ff5a7ca430e75e62b24d",
+    "bytes": 396
+  },
+  "delivery/surefire/com.agent.platform.workbench.application.UnifiedWorkExecutionTreeServiceTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "5cd50a8b439d8f56c8e1240ab52f7f22c5fe82aa200c5e08754e948f7aa54b81",
+    "bytes": 408
+  },
+  "delivery/surefire/com.agent.platform.workbench.application.WorkbenchModelAndServiceTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "b07b0d924d47e9193323e5654765d22ba0b296b3b503522bf701ae9079342d98",
+    "bytes": 394
+  },
+  "delivery/surefire/com.agent.platform.workbench.application.WorkbenchSchemaInitializerTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "8ddc7e1a73d61a2d0e5c49683d4c53462ee4082597045ebd0dc16fe67131e19a",
+    "bytes": 398
+  },
+  "delivery/surefire/com.agent.platform.workbench.budget.BudgetAdmissionCoordinatorTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "55dd3dddc7305b8328509982cc9cd68929f1ee36f10cb30cd03aeb31a3623f0f",
+    "bytes": 388
+  },
+  "delivery/surefire/com.agent.platform.workbench.budget.WorkbenchBudgetEvalSuiteTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "debdcdcac7a831aa33c1e77a705bb57dfc299b68082e4186f5916b4dc89885fb",
+    "bytes": 385
+  },
+  "delivery/surefire/com.agent.platform.workbench.budget.WorkbenchBudgetPolicyTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "1b15a4755e25bc72f86efe345289c154c05d171e76ee9474eb5bdc87464fac45",
+    "bytes": 378
+  },
+  "delivery/surefire/com.agent.platform.workbench.dispatch.ExecutionAdapterUnitTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "f99545a8b344ba23ca8ba37b159d3fade0403d24b031cee7a17707b63c0162c3",
+    "bytes": 380
+  },
+  "delivery/surefire/com.agent.platform.workbench.eval.WorkbenchM3DPolicyEvalTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "36bbeca1fb292f1028f00e891f1213ef5f8e59c16d9affb9fb7380967d0b3a05",
+    "bytes": 377
+  },
+  "delivery/surefire/com.agent.platform.workbench.eval.WorkbenchRoutingEvalSuiteTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "2e3b789d3fde18e2db6c2f9350e7f59e736bff42213e30c3c6b489a1f02394a3",
+    "bytes": 382
+  },
+  "delivery/surefire/com.agent.platform.workbench.eval.WorkbenchRoutingSafetyGateTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "6ef80a2b8bffce6d53b5a50f1a5bf7637d77e13984e1f351fd85e6a0691c1486",
+    "bytes": 384
+  },
+  "delivery/surefire/com.agent.platform.workbench.persistence.RetiredProjectionWriteBoundaryTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "4de6efe823291c33aa2ea90a38daf8820e23e928746d8897cd94495fe7ee6863",
+    "bytes": 406
+  },
+  "delivery/surefire/com.agent.platform.workbench.presentation.PublicPresentationServiceTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "849bba0c9cdbd9143ff4475883f8be404c1d9482285868d88fe1caf6828ebf8c",
+    "bytes": 399
+  },
+  "delivery/surefire/com.agent.platform.workbench.presentation.PublicPresentationStreamServiceTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "f628ce72ef29fee444569948ca9b6958b1348a61c674c55c2b09fd0a5b3f35ef",
+    "bytes": 410
+  },
+  "delivery/surefire/com.agent.platform.workbench.security.JdbcConversationOwnershipStoreTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "daaba0d90f96b37ff3241a5af28a071804df81174b161dde04563a44a03f8f29",
+    "bytes": 400
+  },
+  "delivery/surefire/com.agent.platform.workbench.target.ExecutionCommandCapabilityRegistryTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "4c15d632e628a99c2a5637e7659ef9da1a4dc76d018431741aba51263dac5c2c",
+    "bytes": 404
+  },
+  "delivery/surefire/com.agent.platform.workbench.web.UnifiedWorkControllerTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "45a2dafe19104bdae8cdef521d22e669876c4665d3725d96ab4339602162be24",
+    "bytes": 372
+  },
+  "delivery/surefire/com.agent.platform.workbench.web.UnifiedWorkEventStreamServiceTests-v0-20261007-224923-05d9edff-full.txt": {
+    "sha256": "b876eb1898d031b4092285bb76ea6fc04d5129374f3646f3fbcefcc0148b06eb",
+    "bytes": 388
+  },
+  "delivery/surefire/TEST-com.agent.platform.agent.RuntimeAgentExecutorScenarioTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "0dbcdf50c489f143b8126bf438ceb2197334dc28485944d7c2b26a333653dc37",
+    "bytes": 36922
+  },
+  "delivery/surefire/TEST-com.agent.platform.approval.JdbcApprovalStoreTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "b1b2c6d61aaf4cf6a09850847980a58128d78ab93da047a7a17fda9533680abd",
+    "bytes": 36700
+  },
+  "delivery/surefire/TEST-com.agent.platform.approval.LocalApprovalServiceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "137ae43dee5d1b365cc06742c22335512f91fd682f88ee82c90531393b544804",
+    "bytes": 37158
+  },
+  "delivery/surefire/TEST-com.agent.platform.common.BusinessRetirementBoundaryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "4825c9a1d6e086fd441cf4085ebc0f6ab3a56e430733db81a60ae629cc37429c",
+    "bytes": 38647
+  },
+  "delivery/surefire/TEST-com.agent.platform.config.AgentScenarioProfileResolverTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "2f7b1d96311c548d94221c1422167279e44ff70552e371afb8bbbadffbb2b434",
+    "bytes": 37210
+  },
+  "delivery/surefire/TEST-com.agent.platform.config.HttpLoggingConfigTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "46d0ef172208a242af34a55b182bd05f8301e3e4ecf5ba985154b19531788efe",
+    "bytes": 39237
+  },
+  "delivery/surefire/TEST-com.agent.platform.EnterpriseAgentApplicationTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "a962dcae0dc2982c83c7d7c60a3e71bf00db11995857e196b6f19c63c9766e6b",
+    "bytes": 39823
+  },
+  "delivery/surefire/TEST-com.agent.platform.eval.DefaultAgentEvalRunnerRuntimeEvidenceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "a4fef39ca59cc5072d5f030f5d8e0ee0b53f999cf694a80bb8cc9c4dee9983da",
+    "bytes": 37647
+  },
+  "delivery/surefire/TEST-com.agent.platform.eval.LlmAsJudgeAnswerJudgeTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "47ac1dff7a40587ef54acdb0b0093e4fb84f8804843623e37b4f79f4dbc38dc1",
+    "bytes": 37107
+  },
+  "delivery/surefire/TEST-com.agent.platform.guardrail.DeterministicPromptInjectionSignalDetectorTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "d1792044833bf90f2de30caf85923d1d526b00e8f9b4e6712ff822337c3266e7",
+    "bytes": 37411
+  },
+  "delivery/surefire/TEST-com.agent.platform.guardrail.RegexSensitiveDataFilterTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "26fd2a85281e3a6643a3f4c5493e93c82445ff4d8f4105fe80f50e8dff98a98a",
+    "bytes": 36956
+  },
+  "delivery/surefire/TEST-com.agent.platform.llm.SpringAiLlmServiceStreamingTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "788b51e6264c84f1d3f3e7bcc873e7ea0b25eef314439b1c2d01192178db3021",
+    "bytes": 37392
+  },
+  "delivery/surefire/TEST-com.agent.platform.mcp.StdioMcpToolGatewayTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "935c2842fdfd6927a461ca519d61e350ffa6bd97d6a25c5b5e882fea89302ba0",
+    "bytes": 56472
+  },
+  "delivery/surefire/TEST-com.agent.platform.memory.JdbcMemoryServiceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "37c31de99215e5583cc14264f0231b2e253ffe2e42454e7301858dbf644085ec",
+    "bytes": 39293
+  },
+  "delivery/surefire/TEST-com.agent.platform.memory.LlmMemoryExtractorTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "9d7bcacaec445386d81bd5185c85e5b867aca06695569e242c26772dfd555918",
+    "bytes": 39192
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.erp.CanonicalRequisitionBindingTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "a9caa0196f397e414df9770c8de6ee87c50c6ae2ef709d1226feaf7a9cf23a1c",
+    "bytes": 37139
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.erp.ErpNextAdapterTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "1c275a1a7a31c5b1426e16545fbc8660b012b59e375a8d4515c92ccd22e14975",
+    "bytes": 37955
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.erp.ErpNextRfqGatewayTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "67e75e26f644a1026e3acf94eed897ee5882a886a1b6a5c959c8edb515a8a535",
+    "bytes": 37421
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.erp.ProcurementBackendBoundaryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "ed02bd2c9dd587ac3a8348c075d030b7b0d02b47e4bab05cfa3258b1d54360c8",
+    "bytes": 38621
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.erp.ProcurementBackendBoundaryTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "de588b6a6a33a6ef4e3d4d65a162594822736b2f009bd01d3d1c386f0c3522ff",
+    "bytes": 38720
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.erp.ProcurementErpMcpTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "6690935ada18361c2bf714ec47e9bf94a3f35dcf032f047174d036fdd741136f",
+    "bytes": 37917
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.erp.ProcurementErpMcpTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "44608824755447b20a616fc6f302c21e4d14db439ddc0eb1637f157bc4e2c987",
+    "bytes": 38018
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.erp.ProcurementItemContractTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "6a6c1a2016e38d5421c137d2e9c24ed4e74a384887db610321a300626f9bb9b0",
+    "bytes": 37299
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.erp.ProcurementItemContractTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "7ab1130692c64f28f9fb1ce60526beda0a07906748031f485899a141a6b06048",
+    "bytes": 37399
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.JdbcProcurementCaseStorePostgresIT-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "736f2c63a27c61a174112068388aaf609dfa25b29b43e09e33f427ae4dd0e3bb",
+    "bytes": 37534
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.McpProcurementDataProviderTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "bd713a4694cf0d4a31c41bbfe6622216b47204b8cc237adae1e2303f19bb6ab0",
+    "bytes": 38449
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.McpProcurementDataProviderTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "1da0fcf38237f94f7922327a4d12749a60f60dd3687acde7bf00aa207b021648",
+    "bytes": 38549
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAdaptiveMultiAgentTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "3ede02d47f455d57fa8f4b32070fbe84e2784b51a75556d35f2336570ed7fcc5",
+    "bytes": 38318
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAdaptiveMultiAgentTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "a035c9805e776e8829edf10488002a90c364ac3f1a0ae01abb23fb347be021eb",
+    "bytes": 38422
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAgentRuntimeE2ETests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "cd99ef95dea07e2541f15752cb263d57b523fe8eb7e7489a951c0306476a0d77",
+    "bytes": 38468
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAgentRuntimeE2ETests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "46eb2e14b6002445d8fd035e10aef0a31e997ed4e6a624c0cb975a03b2de9691",
+    "bytes": 38570
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerAggregationTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "8e69e9501c2ccd536d76d5cf27f62c7a9cb71f4a831f861a10118e113203b27e",
+    "bytes": 48078
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerAggregationTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "bbbd0336bd266bca8567ce512798b1de60c51819f61db4dc80d55b28160c8de8",
+    "bytes": 48174
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerAggregationTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "5658de359124f83c1ca91ac52e5af6ba1765ebe36a758e0669f5228538dfa29c",
+    "bytes": 50017
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerCompletenessTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "91e4e764f77eb1986a33994f782666d36cb379001a2f16c9d1a3632c55f9e558",
+    "bytes": 47795
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerCompletenessTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "9a004771e66a125081941aa9d9c19586c9338112d213ea556d30ec42fb502c17",
+    "bytes": 47886
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerCompletenessTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "f437ccff5bdc3503333d166a420fe309eb0808a3d52c1d901e3b25d4ea3b7e42",
+    "bytes": 48229
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerCoverageTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "c827abe47547bc46a7eb3fb2eafda57e1b7ed7f81f7b1ffc2ee4ea65ddbcc91a",
+    "bytes": 42878
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerCoverageTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "dcd52647fa0b66ae85fdf67f4f4176728132b7d92041c1c047b644a7af121535",
+    "bytes": 43006
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerEvaluationV3Tests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "dffc5cd1b04ce542137d3b094468567d5d1e0c96c0b67d68e582b56a7290b8c8",
+    "bytes": 50898
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerEvaluationV3Tests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "a06477d7585d6d45802b7687aeb2bc43c3eb2ca7b7a5fd00a901c9d467aed504",
+    "bytes": 51002
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerGraderTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "1052b0e14ee752d5549c5ab6229892515a27f9f7e145ae0dc29cf5c641e26d06",
+    "bytes": 49572
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerGraderTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "eed06e2f9eaa7650957afb67948440aa93569610ceb1407bdafc5d52b55c513d",
+    "bytes": 49688
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerPolicyTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "c17255c0ffaf695f407f0c006864553cb9f5701e87256bd3fb16137659d308c0",
+    "bytes": 46876
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerPolicyTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "f9c6d14d3f17e53437c73abaf499fa41ba8fcbb38d4b59beba095eac7e72d7cb",
+    "bytes": 46990
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerPolicyTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "79a25faff0325f4fb4329810449f3e67162b6cbe5a2c7592214f5a7658d24764",
+    "bytes": 47329
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerRelationTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "bc23b7c6be25ed77a84a1ccd9fd7fbac51d948511c963071f561100683995c8a",
+    "bytes": 50012
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerRelationTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "a68fcbb0b408347c12b39068bdb6ac8cb734088eda069d42741d1a18898c7d27",
+    "bytes": 50114
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerRelationTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "7fe74cc84c6d5df84ed99e78648318c6e5d7fcedc7004949d7a90539d4c288a7",
+    "bytes": 50456
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerReplayTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "205ad2829e6c71547777e92f9ae58b56604c261767fca6e66f58716de0e26007",
+    "bytes": 37033
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerReplayTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "f6619b995514989acb5e13f2198a42008ad40b08df22339a2048d20ea9f0c641",
+    "bytes": 37136
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerReplayTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "54df83333a368063eefc10debdd5c570ab624867931b9c971c8499d0ffc653b0",
+    "bytes": 37479
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerV3ReplayTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "9c9d28ce373332d18f8a18220d52ec7df8a97add563c863461b8998c811c2f4d",
+    "bytes": 41369
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerV3ReplayTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "1bc4a0344db7b0f9bfcad7b174560ca77601b424630417aba333d6981e85182b",
+    "bytes": 41467
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementAnswerV3ReplayTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "6ff78462ec16b9b3c22e856992698533ff7e369c8db3ee3a165f6a7dda8b7274",
+    "bytes": 41808
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementArtifactReplayTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "e05821f074429493b21f33dde8005049ba3fcdda6ff924fa3ba303759b575d77",
+    "bytes": 37029
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementArtifactReplayTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "6b7fd25bd449f1b8c109deca8ed06ede5a5e4fdc1526b8a683cf876ac3c2b804",
+    "bytes": 37132
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementArtifactReplayTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "1e4c819791bda9d1ad9e2b039d5c7251abb0342ebafc73bb5cb78199c70ac267",
+    "bytes": 37471
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementBenchmarkContractTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "05e826814a7d4bbc189539a84bc7f1c91acf7561a2311e84a5c1aad4e8c71d7c",
+    "bytes": 37294
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementBenchmarkContractTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "1bfbded6ddd7a683ed89fb8c1f383ccbf6fb12ace598844f04bf68fb7ec1a854",
+    "bytes": 37395
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementCaseContextRendererTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "41bd48f8fc2bfa4b963ad76f40c7a0d9ebd35b621f0022f6c9d9623be367c8af",
+    "bytes": 37707
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementCaseContextRendererTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "9362826df3d6c303cd10bbf5b4ddfbeeb5ac1577dd1c3053aa5a914d03f9f499",
+    "bytes": 37808
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementCasePatchTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "431173efe043673b83f1ddeac00e40116eeb5953dd1b5c9518284da81f132aa4",
+    "bytes": 38842
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementCasePatchTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "1ba26b355d7d89703d7a1f3d73e68bff131037868eb36df3a1546a13c686c9ec",
+    "bytes": 38947
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementComparisonInputsTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "1bcf1cc2e897a0d1a527e060a5bf067656d9fe6baec258c40b698f7a30e0e73f",
+    "bytes": 44123
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementComparisonInputsTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "7755ae51fcfa2cb28e4c3518d167ad5a13cf9aa4fcde5d0e16dae488e6a9282c",
+    "bytes": 44230
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementComparisonMetricsTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "411f0984c3a0e743eba455edec4fae1242834a12a8581545e55633b412482cef",
+    "bytes": 41475
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementComparisonMetricsTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "e6c6df410453772ba751bff4881cd488ccc7011e0fe8f64b307d737477482d32",
+    "bytes": 41574
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementComparisonMetricsTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "b0da2e5ebf56e1b3e19eff7a5103a842157c7c93f294cd77ca341c5109d56e88",
+    "bytes": 41503
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementComparisonReportsTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "e29c336a50396c0dc8c6380addbb44485ddf82d0df1c3c9c301be21e5403e1a3",
+    "bytes": 44553
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementComparisonReportsTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "deb57630a6d8d86feaeaa36f6cff208b7ef5fe281012e5cfed8c8ffd27d50dcb",
+    "bytes": 44649
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementComparisonReportsTests-v0-20261007-224923-05d9edff-replay.xml": {
+    "sha256": "8df874870d5ed1b86a478c069a927e78f2377082df9fdfa40f8e21164052984c",
+    "bytes": 44998
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementDeterministicGraderTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "7f16f7a19a699118c8d8fe5b880a09c1e61e5f87783b3b3128847cd3915e5371",
+    "bytes": 44184
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementDeterministicGraderTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "8e301b87746c5a1b3e19e45941a70d55ddfa9c53d822f5421febd2ad242bf0af",
+    "bytes": 44286
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementEvidenceTrustTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "c7955774536ad7bc7840643f4798e659e28b7a292d4d846c9d026a9b8acc5220",
+    "bytes": 37257
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementEvidenceTrustTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "db407ed08427fbe704832cf544d761e6edf8bc519e67ad98bd882ffb7a9b8a96",
+    "bytes": 37360
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementRecommendationFinalizeTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "17585eb139705a80adda4bcf6a8bc34e4cb8da49e1cf42862bba2f80374ecb51",
+    "bytes": 37854
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementRecommendationFinalizeTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "5de536c0fabad7e971072ad380d5fd3a39b38ed1cb484d9c2f00ee33c9c6dff3",
+    "bytes": 37955
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementRfqHitlTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "ba5604997395b9eb91ba8b92735c804df74f9b5cc8485cbd53f003b67e5c710f",
+    "bytes": 40351
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementRfqHitlTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "455b018fb613c39bfeade313ec1616a7fb3e2fa27f6f4b1f02e1d616634d8958",
+    "bytes": 40457
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementSourcingMvpTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "016088330936d0e92309364cd39cdaa7c2813bd2e8a7810f4eed0bb3afbb7701",
+    "bytes": 39251
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementSourcingMvpTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "b3821a0c0c73a531ae29fc79b6df9fc549c4d13577f8385fa2e66c83b8275e23",
+    "bytes": 39350
+  },
+  "delivery/surefire/TEST-com.agent.platform.procurement.ProcurementV2EvalStoresTest-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "0ed78d13e5bf4ee4eed2cce005873cf5a687c9a245ac80dbe2a3df7cd269a7e2",
+    "bytes": 37089
+  },
+  "delivery/surefire/TEST-com.agent.platform.rag.CurrentKnowledgeCorpusTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "78306216ff59ee8cfe1b968cbe3322886aca1634a5fc3fde687a97cdba82d94b",
+    "bytes": 37299
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.AgentCapabilityVisibilityPolicyTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "a4b0e83cb892fc6326e63aabc807758c88b3d0560c64400d6940d32226123c44",
+    "bytes": 37423
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.AgentModelGatewayConfigurationTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "8c283e994c90f12233abcdd6c8b610ae7c7f71eb606d92911a987c90c93e6431",
+    "bytes": 37237
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.AgentRunBudgetTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "07c5ed2a562c05380ce5f58faeb068be61ad6012788992cb9d248db0c9a116a0",
+    "bytes": 37374
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.ContextBudgetRecoveryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "58acb4898e062024229666e54f769ee8e12b157f305945b4f46b9a621f48960c",
+    "bytes": 38254
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.ContextEngineeringTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "483e50eb4dad16449f8c16003d76677627f4a24147c939d3a4c1f94c7bd0f50a",
+    "bytes": 38381
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.DefaultAgentCapabilityRegistryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "eb5991c725f1d5ed94f966098502bc998a006e4b2a77230e8233b13c4e709328",
+    "bytes": 37295
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.DefaultAgentContextManagerTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "64525576f73f374c622509cd84ba35cc9ea6df54f5bb7281da1b34f9c8321f98",
+    "bytes": 38499
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.DefaultAgentRuntimeStateTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "aa89cc2de09005f7601f66f7e9657f708a4547137f9d5b13f766dbefe924d2ac",
+    "bytes": 110221
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.DefaultAgentToolRuntimeApprovalBindingTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "0d96cb232e6699ba235166587856735aa4694d09f6d41155ca13cb7a329423b3",
+    "bytes": 36991
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.DefaultAgentToolRuntimeReconciliationTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "9ce4b2a11c417307d29f7339133d0e093b9ce35064df7bf97e440106de622dae",
+    "bytes": 37159
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.HarnessCoreTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "f1fbf40cd4b1a169365dc1984c6cef9d93626409fa95efd92ee2e49aa1c481dd",
+    "bytes": 38779
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.McpToolEffectContractTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "bb8dd407ee81bc47cce121171242e1d9fb18a9d7d88d04e3b0d40b3da6c19a2c",
+    "bytes": 43620
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.NativeToolCallingAgentModelGatewayTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "24ef1069bb80267beb9fe7efad9fd07708cfe529485eec9dda853cd3ea89e37e",
+    "bytes": 38304
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.ToolResultBoundaryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "ab177704ed89da885a336ffd2c7894078783956f49a0442265c35ac8c0d63f1f",
+    "bytes": 39816
+  },
+  "delivery/surefire/TEST-com.agent.platform.runtime.ToolRetryPolicyTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "3fa5e1720e81709441233928cf9ae4c797ddf21bbfff0b8574b9180c2b2a8b8b",
+    "bytes": 38037
+  },
+  "delivery/surefire/TEST-com.agent.platform.stream.DefaultStreamingAgentExecutorTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "cf0e5ed661ff475e5bf267de6aaadcb88297cb1c14777636d7e0224dbb38cca9",
+    "bytes": 37674
+  },
+  "delivery/surefire/TEST-com.agent.platform.tool.LocalToolExecutorTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "8aebe789c8cd8e4369bdc3a4be221e04b4fe40f1e1d2afc501c8ff1d2c7362af",
+    "bytes": 37351
+  },
+  "delivery/surefire/TEST-com.agent.platform.tool.LocalToolRegistryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "61fb9295afd0477c9faad1290f8ce2658618c6cadb951a6e47b08e33d925f564",
+    "bytes": 37367
+  },
+  "delivery/surefire/TEST-com.agent.platform.web.AgentControllerConversationTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "07c56b92f2f5153df8516434309ad6a266dc32fe2745a0696c71b55a91b3171f",
+    "bytes": 37262
+  },
+  "delivery/surefire/TEST-com.agent.platform.web.ConversationIsolationHttpTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "b44303c8439230ff50bd4124dbfd75b74a4a06e2fa889183c9d28bcf6d0813f8",
+    "bytes": 37510
+  },
+  "delivery/surefire/TEST-com.agent.platform.web.EvalControllerTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "42c1b4b055cbca522882462b4fbe7eb382b9ae6d356b137be242748ac69e044c",
+    "bytes": 37479
+  },
+  "delivery/surefire/TEST-com.agent.platform.web.GuardrailControllerTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "2c4695dd78470276b79608d34a006ec6de3f1c5c066aa2d6be6a5a6aaa8bfa16",
+    "bytes": 36927
+  },
+  "delivery/surefire/TEST-com.agent.platform.web.PublicProcurementRunTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "d2a6302c8e53a9b98c78b83a1a2bbcbfe2d98dbb3b421bc3876b4390bbc95f2c",
+    "bytes": 46109
+  },
+  "delivery/surefire/TEST-com.agent.platform.web.PublicProcurementRunTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "013c06f9c5ed1058c50d6256698e288a4e3b84f5c522beb5cb4d7fa3a4886eed",
+    "bytes": 46210
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.application.AgentRunWorkCommandAdapterTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "ff962c1ae7cd227d7ca50fde1f192c02f964b859c17526f5dcd9f4fac1fcbc7d",
+    "bytes": 37913
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.application.ExecutionTargetCandidateResolverTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "459f42122f3d301732fd1479116ae2d36873354ca4e1a5a2c196ff826bb76829",
+    "bytes": 37536
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.application.M1BRoutingUnitTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "c6aac246dbde225e774ba4f7180404d6482f62e5c0db8ee62c045252b206c9c2",
+    "bytes": 37789
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.application.ProcurementOnlyWorkbenchRoutingTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "a88752df43855ca194bea507ab33c66d66a437fbd1fa5f270f4c9c46a580b9a2",
+    "bytes": 38352
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.application.ProcurementOnlyWorkbenchRoutingTests-v0-20261007-224923-05d9edff-procurement.xml": {
+    "sha256": "6037c09a36643d23c722d705eb141e6a66aa2747b865243415f633807af52674",
+    "bytes": 38451
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.application.RouteConfirmationScopeBindingTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "313030d15c516364a91b462dfd5ccb7d9a596244fca21dfb7125c49feb3bae59",
+    "bytes": 37574
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.application.RoutingCoordinatorCandidatePolicyTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "ab401a7779c0586a5b8a1813ed62578a470241a875f11ce42df55eeb13ef8d4a",
+    "bytes": 37000
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.application.RunProjectionIsolationTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "f15f1e592e062f22ddfd81c6c97b786fc5777d4663a2887ee36cc2d41849ae1d",
+    "bytes": 65983
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.application.RunWorkExecutionTreeTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "5b3bfb3bf8e7754c811bb1df05f64da43bd6f96890086752b6c773941e20ce19",
+    "bytes": 38144
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.application.UnifiedWorkEventProjectorTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "4c966a80f53a5ad6edeef39f4994afc756c0c054affd4fa4410fdaf5d32230cd",
+    "bytes": 50533
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.application.UnifiedWorkExecutionTreeServiceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "fd5667629a7ebcc4277488a0a8e6645aa64e07b1c5e1ddd105d1c1f773e14e95",
+    "bytes": 37554
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.application.WorkbenchModelAndServiceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "7f3653be89c50d1818337b45adf64cdcd9a6179ecc00ab56c0b32cc86807c738",
+    "bytes": 37358
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.application.WorkbenchSchemaInitializerTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "3151570eac39307b7bbba7f824f1072860c184560176b797a4382d9d6e126f72",
+    "bytes": 36988
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.budget.BudgetAdmissionCoordinatorTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "aa8566af233e3a901b3252ec70b74913ca229cc58a197a9dc6718e8352b1104b",
+    "bytes": 37128
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.budget.WorkbenchBudgetEvalSuiteTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "545f2deb0a989a98435e996396fc5ae3d78b20a396f08e40a8f9a0f0065173ec",
+    "bytes": 39279
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.budget.WorkbenchBudgetPolicyTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "4ff1eb37a75d733bd9295f2ba2fb4992a8f043edceb77e8af2439b52870db3b4",
+    "bytes": 37409
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.dispatch.ExecutionAdapterUnitTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "137eeb5f991349a86f1c33a2c50b63230df0d7af5b2afb5f52f45a5e80a37dd9",
+    "bytes": 37876
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.eval.WorkbenchM3DPolicyEvalTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "f76da133e323de408d4ba88d8cff3e377c4c361819db56b2375fb71a3a76c4a3",
+    "bytes": 46498
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.eval.WorkbenchRoutingEvalSuiteTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "8e1a2169f0c3a106819489b172096cf6fc2b7561657d718e3a664d5cee48e3c2",
+    "bytes": 37085
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.eval.WorkbenchRoutingSafetyGateTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "cf194c1202970595506cc8185af1554c3d7287ce55bd8230987778cf24c3a7b7",
+    "bytes": 37792
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.persistence.RetiredProjectionWriteBoundaryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "1e00cea29f147ca373ba2db28e94c63c428bc6c9dcf8105a765698abb8b019bd",
+    "bytes": 37218
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.presentation.PublicPresentationServiceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "00723daf14e2d1ca45b0fe3ea66c740bd83e421746891395ce0dd9f7df423c3c",
+    "bytes": 39338
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.presentation.PublicPresentationStreamServiceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "87bf5d396d9deaf44463e928cbdf1ed8e98a5896e96ad74146d4620a2f3941d8",
+    "bytes": 37001
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.security.JdbcConversationOwnershipStoreTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "8d687a2c6a553925ded9988b4931d75223ccf06549cd88c23f88fdb4655dc645",
+    "bytes": 38172
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.target.ExecutionCommandCapabilityRegistryTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "8c1f452f0e1e507ab0617236ba30dd86a5ea1f795d3fec60c02aa84a2d84771d",
+    "bytes": 36996
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.web.UnifiedWorkControllerTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "b4f587e19a3e98854080e09b5e8c0abda0d42b45e9453c6d49c36db5b0e1a715",
+    "bytes": 38148
+  },
+  "delivery/surefire/TEST-com.agent.platform.workbench.web.UnifiedWorkEventStreamServiceTests-v0-20261007-224923-05d9edff-full.xml": {
+    "sha256": "efced7288782dbad47fe7de5bd8db924379f0ef57bd2d4d8c68b86574ce28f64",
+    "bytes": 37783
+  },
+  "delivery/surefire/com.agent.platform.mcp.StdioMcpToolGatewayTests-delivery-20261007-mcp-patch.txt": {
+    "sha256": "7d336bdc2d4783fee12df8e530e249bd01b9eee19266a5f55f63c7645f81e990",
+    "bytes": 2977
+  },
+  "delivery/surefire/TEST-com.agent.platform.mcp.StdioMcpToolGatewayTests-delivery-20261007-mcp-patch.xml": {
+    "sha256": "6cfc09d6e439deef8d427e599c3ff2ded0fde007c9c37230a4e7f0dfa0df8752",
+    "bytes": 53874
+  }
+}

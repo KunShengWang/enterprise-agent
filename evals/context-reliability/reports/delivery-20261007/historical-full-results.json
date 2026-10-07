@@ -1,0 +1,55 @@
+{
+  "tests": 1255,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 9,
+  "pass": 1246,
+  "exitCode": 0,
+  "skips": [
+    {
+      "class": "com.agent.platform.procurement.ProcurementAnswerAggregationTests",
+      "test": "actualSavedScriptedRuntimeAnswerIsReportedHonestly",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementAnswerCompletenessTests",
+      "test": "actualHistoricalArtifactReplay",
+      "reason": "System property [completeness.artifact] does not exist"
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementAnswerPolicyTests",
+      "test": "explicitHistoricalArtifactReplay",
+      "reason": "System property [answer.v2.artifact] does not exist"
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementAnswerRelationTests",
+      "test": "replayActualHistoricalArtifactWithoutExecutingAnything",
+      "reason": "System property [relation.artifact] does not exist"
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementAnswerReplayTests",
+      "test": "regradesSavedAnswerTwiceWithoutExecution",
+      "reason": "System property [answer.artifact] does not exist"
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementAnswerV3ReplayTests",
+      "test": "savedRuntimeDiskReplayMatchesStep2WithoutChangingInputs",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementArtifactReplayTests",
+      "test": "regradesExistingArtifactFile",
+      "reason": "System property [evaluation.artifact] does not exist"
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementComparisonMetricsTests",
+      "test": "savedScriptedRuntimeIsSeparateFromSyntheticPass",
+      "reason": null
+    },
+    {
+      "class": "com.agent.platform.procurement.ProcurementComparisonReportsTests",
+      "test": "savedRuntimeFailAndDiagnosticsMatchStep2",
+      "reason": "System property [answer.v3.artifact] does not exist"
+    }
+  ]
+}

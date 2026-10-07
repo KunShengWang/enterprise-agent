@@ -1,0 +1,11 @@
+{
+  "archive-manifest.json": "ad02917422f422d938a429c563a189f5334e0c240c1975c2044210e50b858648",
+  "delivery-validation.json": "d8d731bbc6366f7e7f2b0e4c507e3fed7ca2a7c97c9f63eb36868cc1b15ac192",
+  "evidence-scan.json": "8bffd3d9942b636d3cd0b2df5d39b6f4ad284d3b621b01e9f460696a3542a04d",
+  "evidence.zip": "697832ca84261c6862aaf6be160b03d821474d61c6683af2730be7f0594cb1d7",
+  "historical-full-results.json": "0a2f7b875e91b4ae10e75568a6cf25f333d12e0bb50946da8b830838c7600e89",
+  "historical-preservation.json": "e24498fbcdb7f1ad1c3db055a6287843ecd442ecace18776e256fcfa44834a7b",
+  "historical-rob04-result.json": "876384df6ae327a950507114748aff0f7374c48324239c8b6816a6277c23373e",
+  "initial-legacy-results.json": "0ccdca049b1ae51f98ef4864c5b5b9156684ce2f457e35d598dd91dfeedf147a",
+  "source-provenance.json": "8ec534e05f4b9f7276ae9d12a98a7df523865525644a70f8f203645b559675b5"
+}
