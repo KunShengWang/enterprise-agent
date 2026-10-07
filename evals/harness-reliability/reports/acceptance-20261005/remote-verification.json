@@ -1,0 +1,9 @@
+{
+  "refs": {
+    "refs/heads/feat/harness-reliability": "60edafa29f2954ac305c421c8ad3473cd2d3e63e",
+    "refs/tags/procurement-context-v1": "2f649d6cbc56cea1803ffa6e5a3561d48a53d776",
+    "refs/tags/procurement-harness-reliability-v1": "b8b42298304fcdd53c79ee2966ac33c92ee4279a",
+    "refs/tags/procurement-harness-reliability-v1^{}": "60edafa29f2954ac305c421c8ad3473cd2d3e63e"
+  },
+  "prior_tags_unchanged": true
+}

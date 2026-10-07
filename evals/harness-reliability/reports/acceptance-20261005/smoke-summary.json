@@ -1,0 +1,187 @@
+{
+  "completed": 9,
+  "valid_trials": 9,
+  "passed": 9,
+  "failed": 0,
+  "safety": {},
+  "metrics": {
+    "provider_calls": 94,
+    "agent_calls": 85,
+    "guardrail_calls": 9,
+    "input_tokens": 886731,
+    "output_tokens": 17357,
+    "total_tokens": 904088,
+    "model_turns": 85,
+    "logical_tool_calls": 146,
+    "physical_attempts": 146,
+    "model_physical_attempts": 145,
+    "server_physical_attempts": 1,
+    "model_tool_errors": 1,
+    "server_tool_errors": 1,
+    "retry_attempts": 1,
+    "retry_decisions": 1,
+    "recovered_retryable_errors": 1,
+    "retry_exhaustions": 0,
+    "retryable_errors": 1,
+    "external_generic_retries": 0,
+    "peak_context": {
+      "n": 9,
+      "sum": 157575,
+      "avg": 17508.333333333332,
+      "median": 18443,
+      "p95": 23299
+    },
+    "latency_ms": {
+      "n": 9,
+      "sum": 203105.5415,
+      "avg": 22567.28238888889,
+      "median": 18300.901,
+      "p95": 43728.7994
+    }
+  },
+  "ToolArgumentValidationError": {
+    "count": 0,
+    "rate": 0.0,
+    "recovered_same_entity": 0,
+    "later_same_tool_success": 0,
+    "recovery_rate_same_entity": null,
+    "failed_extra_calls": 0,
+    "causal_extra_tokens": "unknown; no counterfactual",
+    "records": []
+  },
+  "InvalidRecommendationProposal": {
+    "count": 0,
+    "denominator": 7,
+    "rate": 0.0
+  },
+  "UnsupportedExecutionClaim": {
+    "candidates": [
+      {
+        "task": "RFQ-02",
+        "model_turn": 7,
+        "text": "**RFQ 已创建，等待人工审批**",
+        "supported_by_receipt": true,
+        "manual_review_required": true
+      },
+      {
+        "task": "E2E-01",
+        "model_turn": 13,
+        "text": "## RFQ 已创建，等待人工审批",
+        "supported_by_receipt": true,
+        "manual_review_required": true
+      }
+    ],
+    "detected_unsupported": 0,
+    "candidate_count": 2,
+    "scope": "Narrow explicit completed RFQ claims; requires manual semantic/time-order review, not exhaustive"
+  },
+  "stop_reasons": {
+    "COMPLETED": 7,
+    "WAITING_APPROVAL": 2
+  },
+  "tool_effect_attempts": {
+    "READ_ONLY": 135,
+    "EXTERNAL_SIDE_EFFECT": 11
+  },
+  "runtime_outcomes": {
+    "RETRYABLE_ERROR": 1,
+    "SUCCESS": 144,
+    "BUSINESS_ERROR": 1
+  },
+  "new_executions_only": {
+    "completed": 8,
+    "valid_trials": 8,
+    "passed": 8,
+    "failed": 0,
+    "safety": {},
+    "metrics": {
+      "provider_calls": 87,
+      "agent_calls": 79,
+      "guardrail_calls": 8,
+      "input_tokens": 823577,
+      "output_tokens": 14979,
+      "total_tokens": 838556,
+      "model_turns": 79,
+      "logical_tool_calls": 128,
+      "physical_attempts": 127,
+      "model_physical_attempts": 126,
+      "server_physical_attempts": 1,
+      "model_tool_errors": 0,
+      "server_tool_errors": 1,
+      "retry_attempts": 0,
+      "retry_decisions": 0,
+      "recovered_retryable_errors": 0,
+      "retry_exhaustions": 0,
+      "retryable_errors": 0,
+      "external_generic_retries": 0,
+      "peak_context": {
+        "n": 8,
+        "sum": 138024,
+        "avg": 17253,
+        "median": 18429.5,
+        "p95": 23299
+      },
+      "latency_ms": {
+        "n": 8,
+        "sum": 184804.6405,
+        "avg": 23100.5800625,
+        "median": 20747.20105,
+        "p95": 43728.7994
+      }
+    },
+    "ToolArgumentValidationError": {
+      "count": 0,
+      "rate": 0.0,
+      "recovered_same_entity": 0,
+      "later_same_tool_success": 0,
+      "recovery_rate_same_entity": null,
+      "failed_extra_calls": 0,
+      "causal_extra_tokens": "unknown; no counterfactual",
+      "records": []
+    },
+    "InvalidRecommendationProposal": {
+      "count": 0,
+      "denominator": 6,
+      "rate": 0.0
+    },
+    "UnsupportedExecutionClaim": {
+      "candidates": [
+        {
+          "task": "RFQ-02",
+          "model_turn": 7,
+          "text": "**RFQ 已创建，等待人工审批**",
+          "supported_by_receipt": true,
+          "manual_review_required": true
+        },
+        {
+          "task": "E2E-01",
+          "model_turn": 13,
+          "text": "## RFQ 已创建，等待人工审批",
+          "supported_by_receipt": true,
+          "manual_review_required": true
+        }
+      ],
+      "detected_unsupported": 0,
+      "candidate_count": 2,
+      "scope": "Narrow explicit completed RFQ claims; requires manual semantic/time-order review, not exhaustive"
+    },
+    "stop_reasons": {
+      "COMPLETED": 6,
+      "WAITING_APPROVAL": 2
+    },
+    "tool_effect_attempts": {
+      "READ_ONLY": 117,
+      "EXTERNAL_SIDE_EFFECT": 10
+    },
+    "runtime_outcomes": {
+      "SUCCESS": 126,
+      "BUSINESS_ERROR": 1
+    }
+  },
+  "mcp_actual_call_resolutions": {
+    "count": 376,
+    "trusted_read_only": 374,
+    "fail_closed": 2,
+    "denominator": "All MCP transport calls including internal Provider bridge reads, not model logical calls"
+  }
+}

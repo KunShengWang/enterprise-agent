@@ -1,0 +1,47 @@
+[
+  {
+    "mode": "smoke",
+    "task": "RFQ-02",
+    "model_turn": 7,
+    "text": "**RFQ 已创建，等待人工审批**",
+    "supported_by_receipt": true,
+    "manual_review_required": true,
+    "prior_successful_rfq_receipt": true
+  },
+  {
+    "mode": "smoke",
+    "task": "E2E-01",
+    "model_turn": 13,
+    "text": "## RFQ 已创建，等待人工审批",
+    "supported_by_receipt": true,
+    "manual_review_required": true,
+    "prior_successful_rfq_receipt": true
+  },
+  {
+    "mode": "dev",
+    "task": "E2E-01",
+    "model_turn": 12,
+    "text": "## RFQ 已创建，等待人工审批",
+    "supported_by_receipt": true,
+    "manual_review_required": true,
+    "prior_successful_rfq_receipt": true
+  },
+  {
+    "mode": "dev",
+    "task": "E2E-03",
+    "model_turn": 9,
+    "text": "## 四、RFQ 已创建，等待人工审批",
+    "supported_by_receipt": true,
+    "manual_review_required": true,
+    "prior_successful_rfq_receipt": true
+  },
+  {
+    "mode": "dev",
+    "task": "RFQ-02",
+    "model_turn": 7,
+    "text": "- 已创建 RFQ：**PUR-RFQ-2026-00001**（ERPNext Request for Quotation，Draft），关联 Case 8bba442d…、供应商 V2-SUP-001、数量 20",
+    "supported_by_receipt": true,
+    "manual_review_required": true,
+    "prior_successful_rfq_receipt": true
+  }
+]

@@ -1,0 +1,182 @@
+[
+  {
+    "mode": "smoke",
+    "task": "ROB-01",
+    "reused": true,
+    "tool": "mcp.erpnext.procurement_get_item",
+    "history": [
+      {
+        "attempt": 1,
+        "backoffMillis": 150,
+        "effect": "READ_ONLY",
+        "outcome": "RETRYABLE_ERROR",
+        "retryDecision": true,
+        "retryReason": "TRANSIENT_REPLAY_SAFE_WITHIN_BUDGET",
+        "retryable": true,
+        "toolCallId": "ef0daeaa-93e9-4382-82ee-5dace4e765f3",
+        "toolName": "mcp.erpnext.procurement_get_item"
+      },
+      {
+        "attempt": 2,
+        "backoffMillis": 0,
+        "effect": "READ_ONLY",
+        "outcome": "SUCCESS",
+        "retryDecision": false,
+        "retryReason": "OUTCOME_NOT_RETRYABLE",
+        "retryable": false,
+        "toolCallId": "ef0daeaa-93e9-4382-82ee-5dace4e765f3",
+        "toolName": "mcp.erpnext.procurement_get_item"
+      }
+    ],
+    "physical_attempt_latencies_ms": [
+      4.375699,
+      366.1132
+    ],
+    "backoff_ms": 150,
+    "causally_attributed_provider_tokens": "unknown; no extra model call is made by this retry loop"
+  },
+  {
+    "mode": "dev",
+    "task": "ROB-01",
+    "reused": false,
+    "tool": "mcp.erpnext.procurement_get_item",
+    "history": [
+      {
+        "attempt": 1,
+        "backoffMillis": 150,
+        "effect": "READ_ONLY",
+        "outcome": "RETRYABLE_ERROR",
+        "retryDecision": true,
+        "retryReason": "TRANSIENT_REPLAY_SAFE_WITHIN_BUDGET",
+        "retryable": true,
+        "toolCallId": "188f41be-21b8-4a55-b609-0fac2e7e02df",
+        "toolName": "mcp.erpnext.procurement_get_item"
+      },
+      {
+        "attempt": 2,
+        "backoffMillis": 0,
+        "effect": "READ_ONLY",
+        "outcome": "SUCCESS",
+        "retryDecision": false,
+        "retryReason": "OUTCOME_NOT_RETRYABLE",
+        "retryable": false,
+        "toolCallId": "188f41be-21b8-4a55-b609-0fac2e7e02df",
+        "toolName": "mcp.erpnext.procurement_get_item"
+      }
+    ],
+    "physical_attempt_latencies_ms": [
+      6.5021,
+      363.9238
+    ],
+    "backoff_ms": 150,
+    "causally_attributed_provider_tokens": "unknown; no extra model call is made by this retry loop"
+  },
+  {
+    "mode": "dev",
+    "task": "ROB-02",
+    "reused": false,
+    "tool": "mcp.erpnext.procurement_get_item",
+    "history": [
+      {
+        "attempt": 1,
+        "backoffMillis": 150,
+        "effect": "READ_ONLY",
+        "outcome": "RETRYABLE_ERROR",
+        "retryDecision": true,
+        "retryReason": "TRANSIENT_REPLAY_SAFE_WITHIN_BUDGET",
+        "retryable": true,
+        "toolCallId": "3890fef4-5e3a-4c20-b654-58b75ff5e3c7",
+        "toolName": "mcp.erpnext.procurement_get_item"
+      },
+      {
+        "attempt": 2,
+        "backoffMillis": 0,
+        "effect": "READ_ONLY",
+        "outcome": "RETRYABLE_ERROR",
+        "retryDecision": false,
+        "retryReason": "RETRY_BUDGET_EXHAUSTED",
+        "retryable": true,
+        "toolCallId": "3890fef4-5e3a-4c20-b654-58b75ff5e3c7",
+        "toolName": "mcp.erpnext.procurement_get_item"
+      }
+    ],
+    "physical_attempt_latencies_ms": [
+      4.4656,
+      2.2058
+    ],
+    "backoff_ms": 150,
+    "causally_attributed_provider_tokens": "unknown; no extra model call is made by this retry loop"
+  },
+  {
+    "mode": "dev",
+    "task": "ROB-02",
+    "reused": false,
+    "tool": "mcp.erpnext.procurement_get_budget_status",
+    "history": [
+      {
+        "attempt": 1,
+        "backoffMillis": 150,
+        "effect": "READ_ONLY",
+        "outcome": "RETRYABLE_ERROR",
+        "retryDecision": true,
+        "retryReason": "TRANSIENT_REPLAY_SAFE_WITHIN_BUDGET",
+        "retryable": true,
+        "toolCallId": "ea37164e-b781-423a-afe7-27dc346433d8",
+        "toolName": "mcp.erpnext.procurement_get_budget_status"
+      },
+      {
+        "attempt": 2,
+        "backoffMillis": 0,
+        "effect": "READ_ONLY",
+        "outcome": "RETRYABLE_ERROR",
+        "retryDecision": false,
+        "retryReason": "RETRY_BUDGET_EXHAUSTED",
+        "retryable": true,
+        "toolCallId": "ea37164e-b781-423a-afe7-27dc346433d8",
+        "toolName": "mcp.erpnext.procurement_get_budget_status"
+      }
+    ],
+    "physical_attempt_latencies_ms": [
+      1.9228,
+      1.9994
+    ],
+    "backoff_ms": 150,
+    "causally_attributed_provider_tokens": "unknown; no extra model call is made by this retry loop"
+  },
+  {
+    "mode": "dev",
+    "task": "ROB-02",
+    "reused": false,
+    "tool": "mcp.erpnext.procurement_list_item_suppliers",
+    "history": [
+      {
+        "attempt": 1,
+        "backoffMillis": 150,
+        "effect": "READ_ONLY",
+        "outcome": "RETRYABLE_ERROR",
+        "retryDecision": true,
+        "retryReason": "TRANSIENT_REPLAY_SAFE_WITHIN_BUDGET",
+        "retryable": true,
+        "toolCallId": "995ce547-5ac7-4a1a-942a-3915e52fea3c",
+        "toolName": "mcp.erpnext.procurement_list_item_suppliers"
+      },
+      {
+        "attempt": 2,
+        "backoffMillis": 0,
+        "effect": "READ_ONLY",
+        "outcome": "RETRYABLE_ERROR",
+        "retryDecision": false,
+        "retryReason": "RETRY_BUDGET_EXHAUSTED",
+        "retryable": true,
+        "toolCallId": "995ce547-5ac7-4a1a-942a-3915e52fea3c",
+        "toolName": "mcp.erpnext.procurement_list_item_suppliers"
+      }
+    ],
+    "physical_attempt_latencies_ms": [
+      1.471,
+      2.2182
+    ],
+    "backoff_ms": 150,
+    "causally_attributed_provider_tokens": "unknown; no extra model call is made by this retry loop"
+  }
+]

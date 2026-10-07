@@ -1,0 +1,17 @@
+{
+  "claim-temporal-review.json": "04bd4d5327d08c881020d477227251e4ee10c4667546ead68a425507c1052f4a",
+  "dev-mcp-call-contracts.json": "90aa319a0aee2adecd1e6fbd35bc919597ea4da74b5cf60e6e27a874ab815912",
+  "dev-quality-review.json": "2ee7ecdbafd6298a56d01b478f9054d0ceaa6a59fb293fdadff632ba5bf31e20",
+  "dev-summary.json": "77abf1e9ebe469c2f5a0f83f038e1f7e29d56b6c3a91434905b8e1ece352a1b7",
+  "evidence-scan.json": "9397fb8aa29e4f1cefa4880ca147ac2bce322e063e51dfac1bb5bc195925774b",
+  "evidence.zip": "93564b320dbaf5a10647a1c16d387f6ddfdf936951f0071ae6b00e605b803eaa",
+  "freeze-scope.json": "79acf7f42960d7934a23eccdbc9864cf4ea174a958bb98bc806553a9e93ea3e0",
+  "git-status.txt": "2338569594f7a14867a4efb973a0de8ef84a48f9f24382f5c8616b7459193edc",
+  "phase4-comparison.json": "7b7490009d3036476259d89a06fe2741bf6a990ba1eaabd27213a2b33a6bf397",
+  "remote-verification.json": "f0b101e52bfa5ffce047d92eca1a5a347407cccaf473f9a9d6e37cb79f82cfdd",
+  "retry-latency-observations.json": "5c28c94545f9e9516f1bac19d4ada96af2a96fcd6c56aa90b7fa83ee1fee6511",
+  "smoke-mcp-call-contracts.json": "3c7f9bb9a8617838a90aa02754d55a747bb7fce02d2a51a3e00a9ada97884a3d",
+  "smoke-quality-review.json": "f11085912641fe66e75d72a6be8cfb4738f18281bcffa3a406f4d4ca18afb4de",
+  "smoke-summary.json": "074c8dd7d97540dedb1e84a3c4fc459d6a544b958fd3976d0430f94782f98b02",
+  "tag-vs-working-tree.json": "38a1992779da842423dd99a1d826497eef7141e912de4946ea4e742259e31ff5"
+}

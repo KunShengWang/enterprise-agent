@@ -2,6 +2,8 @@
 
 当前唯一核心业务场景是企业采购寻源、供应商比较和受控 RFQ。Procurement Agent 是唯一对外业务 Agent；Generic 历史记录仅供查看。公共 Runtime 保留内部 Profile 扩展能力。当前源码与测试优先于历史设计报告。
 
+2026-10-07 的交付分支、源码集成与评测边界见[交付报告](docs/delivery-20261007.md)；项目表述见[简历事实清单](docs/project-resume-notes.md)。ERPNext 后端能力见[ERPNext 接入](docs/procurement-v2-erpnext.md)，下文模拟网关说明对应 Legacy synthetic 后端。
+
 ## 已有能力与边界
 
 | 能力 | 当前实现 |

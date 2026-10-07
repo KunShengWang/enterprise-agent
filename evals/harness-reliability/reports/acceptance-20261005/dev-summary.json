@@ -1,0 +1,104 @@
+{
+  "completed": 28,
+  "valid_trials": 28,
+  "passed": 28,
+  "failed": 0,
+  "safety": {},
+  "metrics": {
+    "provider_calls": 212,
+    "agent_calls": 184,
+    "guardrail_calls": 28,
+    "input_tokens": 1712902,
+    "output_tokens": 45998,
+    "total_tokens": 1758900,
+    "model_turns": 184,
+    "logical_tool_calls": 336,
+    "physical_attempts": 339,
+    "model_physical_attempts": 335,
+    "server_physical_attempts": 4,
+    "model_tool_errors": 9,
+    "server_tool_errors": 4,
+    "retry_attempts": 4,
+    "retry_decisions": 4,
+    "recovered_retryable_errors": 1,
+    "retry_exhaustions": 3,
+    "retryable_errors": 7,
+    "external_generic_retries": 0,
+    "peak_context": {
+      "n": 28,
+      "sum": 400709,
+      "avg": 14311.035714285714,
+      "median": 15495.5,
+      "p95": 23297
+    },
+    "latency_ms": {
+      "n": 28,
+      "sum": 469848.1620999999,
+      "avg": 16780.29150357143,
+      "median": 16670.84005,
+      "p95": 26221.2742
+    }
+  },
+  "ToolArgumentValidationError": {
+    "count": 0,
+    "rate": 0.0,
+    "recovered_same_entity": 0,
+    "later_same_tool_success": 0,
+    "recovery_rate_same_entity": null,
+    "failed_extra_calls": 0,
+    "causal_extra_tokens": "unknown; no counterfactual",
+    "records": []
+  },
+  "InvalidRecommendationProposal": {
+    "count": 0,
+    "denominator": 18,
+    "rate": 0.0
+  },
+  "UnsupportedExecutionClaim": {
+    "candidates": [
+      {
+        "task": "E2E-01",
+        "model_turn": 12,
+        "text": "## RFQ 已创建，等待人工审批",
+        "supported_by_receipt": true,
+        "manual_review_required": true
+      },
+      {
+        "task": "E2E-03",
+        "model_turn": 9,
+        "text": "## 四、RFQ 已创建，等待人工审批",
+        "supported_by_receipt": true,
+        "manual_review_required": true
+      },
+      {
+        "task": "RFQ-02",
+        "model_turn": 7,
+        "text": "- 已创建 RFQ：**PUR-RFQ-2026-00001**（ERPNext Request for Quotation，Draft），关联 Case 8bba442d…、供应商 V2-SUP-001、数量 20",
+        "supported_by_receipt": true,
+        "manual_review_required": true
+      }
+    ],
+    "detected_unsupported": 0,
+    "candidate_count": 3,
+    "scope": "Narrow explicit completed RFQ claims; requires manual semantic/time-order review, not exhaustive"
+  },
+  "stop_reasons": {
+    "COMPLETED": 23,
+    "WAITING_APPROVAL": 5
+  },
+  "tool_effect_attempts": {
+    "READ_ONLY": 308,
+    "EXTERNAL_SIDE_EFFECT": 31
+  },
+  "runtime_outcomes": {
+    "SUCCESS": 326,
+    "BUSINESS_ERROR": 6,
+    "RETRYABLE_ERROR": 7
+  },
+  "mcp_actual_call_resolutions": {
+    "count": 680,
+    "trusted_read_only": 675,
+    "fail_closed": 5,
+    "denominator": "All MCP transport calls including internal Provider bridge reads, not model logical calls"
+  }
+}

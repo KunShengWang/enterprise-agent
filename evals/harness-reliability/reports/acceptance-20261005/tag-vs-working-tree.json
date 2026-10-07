@@ -1,0 +1,8 @@
+{
+  "tag_production_fingerprint": "e2da95052a743567b70f74bfc809d5a1a454cd588697195b4e6a05fe60a21ee4",
+  "tested_working_tree_fingerprint": "23ccdfb58f455cb29c4817206efaccabe285d4a9a9d0866d7dd5147c05547d28",
+  "differences": [
+    "src/main/java/com/agent/platform/procurement/tool/ProcurementToolHandler.java"
+  ],
+  "difference_kind": "Pre-existing protected user comments, byte-identical across prior ROB and all current trials; not staged or committed"
+}
