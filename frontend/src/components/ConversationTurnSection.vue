@@ -30,8 +30,10 @@ const emit = defineEmits<{
 const terminal = computed(() => ['COMPLETED', 'FAILED', 'CANCELLED', 'UNKNOWN']
   .includes(props.view.turn.executionState.toUpperCase())
   || ['CLOSED', 'ABANDONED'].includes(props.view.turn.controlState.toUpperCase()))
-const expanded = ref(false)
-watch(() => props.view.turn.turnId, () => { expanded.value = false })
+// 运行中默认展开：任务执行时就能看到工具调用与阶段活动，不必每次点开；
+// 进入终态后默认收起（历史记录保持紧凑，需要时手动展开）。
+const expanded = ref(!terminal.value)
+watch(() => props.view.turn.turnId, () => { expanded.value = !terminal.value })
 const phase = computed(() => deriveExecutionPhase(props.view.turn, props.view.entries))
 const tools = computed(() => props.view.entries.filter(item => item.tool))
 const recentToolIds = computed(() => new Set(tools.value.slice(-3).map(item => item.id)))
