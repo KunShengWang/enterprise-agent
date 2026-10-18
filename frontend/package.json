@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "test": "node scripts/conversation-items-smoke.mjs && node scripts/workbench-p3-smoke.mjs && node scripts/workbench-p4-smoke.mjs && node scripts/workbench-p5-smoke.mjs && node scripts/workbench-p6-smoke.mjs && node scripts/workbench-turn-history-smoke.mjs && node scripts/retired-history-smoke.mjs && node scripts/observability-contract-smoke.mjs",
+    "test": "node src/__tests__/theme.test.mjs && node src/__tests__/navigation.test.mjs && node scripts/conversation-items-smoke.mjs && node scripts/workbench-p3-smoke.mjs && node scripts/workbench-p4-smoke.mjs && node scripts/workbench-p5-smoke.mjs && node scripts/workbench-p6-smoke.mjs && node scripts/workbench-turn-history-smoke.mjs && node scripts/retired-history-smoke.mjs && node scripts/observability-contract-smoke.mjs && node scripts/workbench-redesign-smoke.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@lucide/vue": "^1.53.0",
     "dompurify": "^3.4.12",
     "highlight.js": "^11.11.1",
     "marked": "^18.0.6",

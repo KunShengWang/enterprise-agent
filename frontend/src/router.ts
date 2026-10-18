@@ -7,6 +7,7 @@ import ObservabilityView from './views/ObservabilityView.vue'
 import ApiLabView from './views/ApiLabView.vue'
 import RetiredBusinessView from './views/RetiredBusinessView.vue'
 import UnifiedWorkbench from './views/UnifiedWorkbench.vue'
+import SettingsView from './views/SettingsView.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -21,6 +22,7 @@ const router = createRouter({
     { path: '/knowledge', name: 'knowledge', component: KnowledgeMemoryView, meta: { title: 'RAG 与 Memory 实验室' } },
     { path: '/observability', name: 'observability', component: ObservabilityView, meta: { title: 'Trace · Eval · AgentOps' } },
     { path: '/api-lab', name: 'api-lab', component: ApiLabView, meta: { title: '后端接口实验室' } },
+    { path: '/settings', name: 'settings', component: SettingsView, meta: { title: '设置与偏好' } },
   ],
 })
 

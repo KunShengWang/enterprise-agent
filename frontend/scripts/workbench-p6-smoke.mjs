@@ -4,8 +4,14 @@ import { fileURLToPath } from 'node:url'
 
 const read = relative => readFile(fileURLToPath(new URL(relative, import.meta.url)), 'utf8')
 const css = await read('../src/styles.css')
-for (const token of ['--font-sans', '--font-mono', '--font-caption: 12px', '--font-meta: 13px', '--font-body: 15px', '--space-1: 4px', '--space-6: 32px', '--radius-xs: 4px', '--radius-lg: 12px', '--status-info', '--status-success', '--status-warning', '--status-danger', '--status-neutral']) assert.ok(css.includes(token), token)
-assert.ok(css.includes('grid-template-columns: 240px minmax(520px, 1fr) 400px'))
+const tokensCss = await read('../src/styles/tokens.css')
+const workbenchCss = await read('../src/styles/workbench.css')
+// 设计 token 的唯一事实来源是 tokens.css（W1 起从 styles.css 迁出），
+// 所以 token 断言查 tokensCss；页面级规则（断点、布局）仍断言 styles.css。
+for (const token of ['--font-sans', '--font-mono', '--font-caption: 12px', '--font-meta: 13px', '--font-body: 15px', '--space-1: 4px', '--space-6: 32px', '--radius-xs: 4px', '--radius-lg: 12px', '--status-info', '--status-success', '--status-warning', '--status-danger', '--status-neutral']) assert.ok(tokensCss.includes(token), token)
+assert.ok(workbenchCss.includes('grid-template-columns: 248px minmax(0, 1fr)'))
+assert.ok(!css.includes('minmax(520px, 1fr) 400px'))
+assert.ok(workbenchCss.includes('.inspector-dialog'))
 assert.ok(css.includes('@media (max-width: 1200px)'))
 assert.ok(css.includes('@media (max-width: 900px)'))
 assert.ok(css.includes('@media (max-width: 620px)'))

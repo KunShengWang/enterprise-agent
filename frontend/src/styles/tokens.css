@@ -1,0 +1,116 @@
+/* ============================================================================
+   设计 token —— 双主题的单一事实来源
+   ----------------------------------------------------------------------------
+   规则：
+   1. 本文件只声明变量与 color-scheme，不写任何选择器的视觉样式。
+   2. 浅色是默认值（:root），深色是显式覆盖（:root[data-theme='dark']）。
+      浅色默认由产品决定（2026-10-18 用户确认「暗色手感不佳，改为浅色」）；
+      深色能力保留，用 ?theme=dark 或切换按钮进入。
+   3. 组件与页面 CSS 只引用这里的变量，不再写死颜色。
+   4. 颜色只承担状态语义（info/success/warning/danger），不引入品牌 accent 色——
+      工作台里颜色已经承载「成功/失败/等待/审批」信号，再加品牌色会与状态抢注意力。
+   5. --wb-* 是历史别名（workbench.css 内有 79 处引用）。W1 让别名指向通用 token，
+      工作台重做（W2）时再彻底移除。
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* ---- 表面层级：从应用底到最靠前的面板 ---- */
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --panel-soft: #f7f7f5;
+  --panel-strong: #eeeeec;
+
+  /* ---- 描边 ---- */
+  --line: #dededb;
+  --line-soft: #ececea;
+
+  /* ---- 文字 ---- */
+  --text: #202123;
+  --muted: #666866;
+  --faint: #92938f;
+
+  /* ---- 交互 ---- */
+  --accent: #111111;
+  --accent-strong: #000000;
+  --accent-contrast: #ffffff;
+
+  /* ---- 状态语义 ---- */
+  --status-info: #2563eb;
+  --status-success: #24824f;
+  --status-warning: #9a5b0b;
+  --status-danger: #b7352d;
+  --status-neutral: #6b6e69;
+
+  /* ---- 业务色（保留旧名，供现有规则继续引用）---- */
+  --blue: #2563eb;
+  --amber: #a15c05;
+  --red: #c9362b;
+  --violet: #6d4fd3;
+
+  /* ---- 结构：与主题无关 ---- */
+  --radius: 14px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+  --font-sans: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+  --font-caption: 12px;
+  --font-meta: 13px;
+  --font-body: 15px;
+  --font-section: 17px;
+  --font-page: 21px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* ---- 历史别名 → 通用 token ---- */
+  --wb-ink: var(--text);
+  --wb-muted: var(--muted);
+  --wb-accent: var(--accent);
+  --wb-accent-soft: var(--panel-soft);
+  --wb-line: var(--line);
+  --wb-surface: var(--panel);
+  --wb-sidebar: var(--panel-soft);
+  --wb-radius: var(--radius);
+}
+
+/* 深色为可选项。注意：styles.css 里仍有 252 处硬编码背景色尚未迁移到这些变量，
+   深色主题下它们会显示为浅色块（见 docs/screenshots/w1-check/contrast-dark.json）。
+   深色要在 W1-8 颜色迁移完成后才算真正可用。 */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #0e0e0f;
+  --panel: #171719;
+  --panel-soft: #1e1e21;
+  --panel-strong: #26262a;
+
+  --line: #2e2e33;
+  --line-soft: #232327;
+
+  --text: #e6e6e8;
+  --muted: #9b9ba1;
+  --faint: #6b6b72;
+
+  --accent: #e6e6e8;
+  --accent-strong: #ffffff;
+  --accent-contrast: #0e0e0f;
+
+  --status-info: #6ea8fe;
+  --status-success: #4ec98a;
+  --status-warning: #e0a855;
+  --status-danger: #f0736a;
+  --status-neutral: #9b9ba1;
+
+  --blue: #6ea8fe;
+  --amber: #e0a855;
+  --red: #f0736a;
+  --violet: #ab8df5;
+}
