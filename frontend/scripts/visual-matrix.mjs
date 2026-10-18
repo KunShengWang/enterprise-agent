@@ -84,6 +84,9 @@ function shoot(browser, url, outPath, viewport, budget) {
     '--disable-gpu',
     '--no-sandbox',
     '--hide-scrollbars',
+    // 不指定 --user-data-dir 时 Chrome 会复用默认 profile，可能命中磁盘缓存
+    // 而截到改动前的页面；incognito 保证每次都是干净会话。
+    '--incognito',
     '--force-device-scale-factor=1',
     '--disable-lcd-text',
     `--window-size=${viewport.width},${viewport.height}`,

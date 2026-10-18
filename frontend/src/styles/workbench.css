@@ -188,3 +188,23 @@
 @media (prefers-reduced-motion: reduce) {
   .task-workbench-shell *, .task-workbench-shell *::after { animation: none !important; transition: none !important; scroll-behavior: auto; }
 }
+
+/* 左栏底部：更多菜单 / 设置 / 主题切换（与 AppSidebar 同一套信息架构，w1-5 目视一致） */
+.task-product-nav .task-nav-fixed {
+  min-height: 39px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wb-muted);
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 13px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.task-product-nav .task-nav-fixed:hover { background: #e9eee7; color: var(--wb-ink); }
+.task-product-nav .nav-more-toggle { min-height: 39px; border-radius: 8px; font-size: 13px; }
+.task-product-nav .nav-more-toggle small { font-size: 11px; }

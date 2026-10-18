@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { executionTargetLabel } from '../utils/retiredBusiness'
 import { RouterLink } from 'vue-router'
+import { ref } from 'vue'
+import {
+  Activity, Blocks, BookOpen, ChevronDown, FlaskConical, History,
+  Moon, PanelLeftClose, Plus, Search, Settings, ShieldCheck, ShoppingBag, Sun,
+} from '@lucide/vue'
 import type { ConversationHistoryItem, WorkItem } from '../types/workbench'
+import { moreNav, settingsNav } from '../navigation'
+import { applyTheme, currentTheme, type Theme } from '../theme'
 
 defineProps<{ items: ConversationHistoryItem[]; selectedId: string; search: string }>()
 const emit = defineEmits<{
@@ -28,13 +35,34 @@ function relativeTime(value: string) {
   if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小时前`
   return new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' }).format(new Date(value))
 }
+
+/* ---- 导航收拢与主题（与 AppSidebar 共用 navigation.ts / theme.ts）---- */
+const moreOpen = ref(false)
+const theme = ref<Theme>(currentTheme())
+
+const iconMap: Record<string, unknown> = {
+  '/approvals': ShieldCheck,
+  '/capabilities': Blocks,
+  '/knowledge': BookOpen,
+  '/observability': Activity,
+  '/api-lab': FlaskConical,
+  '/runs': History,
+}
+
+function iconFor(to: string) { return iconMap[to] ?? ShoppingBag }
+
+function toggleTheme() {
+  const next: Theme = theme.value === 'dark' ? 'light' : 'dark'
+  theme.value = next
+  applyTheme(next)
+}
 </script>
 
 <template>
   <aside class="task-sidebar">
-    <header class="task-sidebar-brand"><span>A</span><div><strong>Agent Workbench</strong><small>Enterprise Agent</small></div><button type="button" aria-label="关闭任务栏" @click="emit('close')">×</button></header>
-    <button class="task-new-button" type="button" @click="emit('newTask')"><span>＋</span>新建对话</button>
-    <label class="task-search"><span>⌕</span><input :value="search" aria-label="搜索对话" placeholder="搜索对话" @input="emit('update:search', ($event.target as HTMLInputElement).value)" /></label>
+    <header class="task-sidebar-brand"><span><ShoppingBag :size="18" /></span><div><strong>Enterprise-Agent</strong><small>采购决策工作台</small></div><button type="button" aria-label="关闭任务栏" @click="emit('close')"><PanelLeftClose :size="18" /></button></header>
+    <button class="task-new-button" type="button" @click="emit('newTask')"><Plus :size="18" />新建对话</button>
+    <label class="task-search"><Search :size="16" /><input :value="search" aria-label="搜索对话" placeholder="搜索对话" @input="emit('update:search', ($event.target as HTMLInputElement).value)" /></label>
     <section class="task-history">
       <h2>最近对话</h2>
       <button v-for="item in items" :key="item.conversationId" type="button" :class="{ selected: item.conversationId === selectedId }" @click="emit('select', item)">
@@ -42,11 +70,36 @@ function relativeTime(value: string) {
       </button>
       <p v-if="!items.length">还没有对话</p>
     </section>
-    <nav class="task-product-nav" aria-label="产品导航">
-      <RouterLink to="/approvals"><span>✓</span>审批中心</RouterLink>
-      <RouterLink to="/capabilities"><span>⌘</span>能力地图</RouterLink>
-      <RouterLink to="/knowledge"><span>◇</span>知识与记忆</RouterLink>
-      <RouterLink to="/observability"><span>⌁</span>可观测性</RouterLink>
-    </nav>
+    <div class="task-product-nav">
+      <button
+        class="nav-more-toggle"
+        type="button"
+        :aria-expanded="moreOpen"
+        aria-controls="task-sidebar-more"
+        @click="moreOpen = !moreOpen"
+      >
+        <ChevronDown :size="15" class="nav-more-chevron" :class="{ 'is-open': moreOpen }" />
+        <span>更多</span>
+        <small>{{ moreNav.length }}</small>
+      </button>
+      <nav v-if="moreOpen" id="task-sidebar-more" class="task-nav-more" aria-label="更多页面">
+        <RouterLink v-for="item in moreNav" :key="item.to" :to="item.to">
+          <component :is="iconFor(item.to)" :size="17" />{{ item.label }}
+        </RouterLink>
+      </nav>
+      <RouterLink :to="settingsNav.to" class="task-nav-fixed">
+        <Settings :size="17" />{{ settingsNav.label }}
+      </RouterLink>
+      <button
+        class="task-nav-fixed"
+        type="button"
+        :aria-label="theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'"
+        @click="toggleTheme"
+      >
+        <Moon v-if="theme === 'dark'" :size="17" />
+        <Sun v-else :size="17" />
+        {{ theme === 'dark' ? '深色' : '浅色' }}
+      </button>
+    </div>
   </aside>
 </template>
