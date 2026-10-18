@@ -110,9 +110,27 @@ export function aggregateExecutionNarrative(turn: ConversationTurn,
       findings: [],
     })
   }
-  const items = [...merged.values()]
+  const terminal = ['COMPLETED', 'FAILED', 'CANCELLED', 'UNKNOWN'].includes(turn.executionState)
+    || ['CLOSED', 'ABANDONED'].includes(turn.controlState)
+  const ordered = [...merged.values()]
+  const items = ordered.map((item, index) => {
+    if (!['active', 'waiting', 'pending'].includes(item.status)) return item
+    // 运行中：活动步骤就该保持活动，不做任何推断。
+    if (!terminal) return item
+    // 终态下，如果这一步之后还存在已完成步骤，说明它其实已经过去——
+    // 后端只是没有为这种瞬时阶段推送完成事件。据此推断为已完成，
+    // 而不是一律报「未收到该活动完成记录」（那会让已完成的任务看起来有错）。
+    const hasLaterCompleted = ordered.slice(index + 1).some(later => later.status === 'completed')
+    if (hasLaterCompleted) {
+      return { ...item, status: 'completed' as const,
+        metadata: item.metadata.map(field => field.label === '状态' ? { ...field, value: '已完成' } : field) }
+    }
+    return { ...item, status: 'unresolved' as const, detail: '任务已结束，未收到该活动完成记录。',
+      metadata: item.metadata.map(field => field.label === '状态' ? { ...field, value: '结果待核对' } : field) }
+  })
   if (!items.length) return []
   const groupStatus: ConversationItemStatus = items.some(item => item.status === 'failed') ? 'failed'
+    : items.some(item => item.status === 'unresolved') ? 'unresolved'
     : items.some(item => item.status === 'waiting') ? 'waiting'
       : items.some(item => item.status === 'active') ? 'active' : 'completed'
   const sourcePresentationIds = items.flatMap(item => item.sourcePresentationIds)
