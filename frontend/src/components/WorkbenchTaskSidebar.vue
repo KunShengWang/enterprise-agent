@@ -1,14 +1,8 @@
 <script setup lang="ts">
 import { executionTargetLabel } from '../utils/retiredBusiness'
-import { RouterLink } from 'vue-router'
-import { ref } from 'vue'
-import {
-  Activity, Blocks, BookOpen, ChevronDown, FlaskConical, History,
-  Moon, PanelLeftClose, Plus, Search, Settings, ShieldCheck, ShoppingBag, Sun,
-} from '@lucide/vue'
+import { PanelLeftClose, Plus, Search, ShoppingBag } from '@lucide/vue'
 import type { ConversationHistoryItem, WorkItem } from '../types/workbench'
-import { moreNav, settingsNav } from '../navigation'
-import { applyTheme, currentTheme, type Theme } from '../theme'
+import SidebarNav from './SidebarNav.vue'
 
 defineProps<{ items: ConversationHistoryItem[]; selectedId: string; search: string }>()
 const emit = defineEmits<{
@@ -35,27 +29,6 @@ function relativeTime(value: string) {
   if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小时前`
   return new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' }).format(new Date(value))
 }
-
-/* ---- 导航收拢与主题（与 AppSidebar 共用 navigation.ts / theme.ts）---- */
-const moreOpen = ref(false)
-const theme = ref<Theme>(currentTheme())
-
-const iconMap: Record<string, unknown> = {
-  '/approvals': ShieldCheck,
-  '/capabilities': Blocks,
-  '/knowledge': BookOpen,
-  '/observability': Activity,
-  '/api-lab': FlaskConical,
-  '/runs': History,
-}
-
-function iconFor(to: string) { return iconMap[to] ?? ShoppingBag }
-
-function toggleTheme() {
-  const next: Theme = theme.value === 'dark' ? 'light' : 'dark'
-  theme.value = next
-  applyTheme(next)
-}
 </script>
 
 <template>
@@ -71,35 +44,8 @@ function toggleTheme() {
       <p v-if="!items.length">还没有对话</p>
     </section>
     <div class="task-product-nav">
-      <button
-        class="nav-more-toggle"
-        type="button"
-        :aria-expanded="moreOpen"
-        aria-controls="task-sidebar-more"
-        @click="moreOpen = !moreOpen"
-      >
-        <ChevronDown :size="15" class="nav-more-chevron" :class="{ 'is-open': moreOpen }" />
-        <span>更多</span>
-        <small>{{ moreNav.length }}</small>
-      </button>
-      <nav v-if="moreOpen" id="task-sidebar-more" class="task-nav-more" aria-label="更多页面">
-        <RouterLink v-for="item in moreNav" :key="item.to" :to="item.to">
-          <component :is="iconFor(item.to)" :size="17" />{{ item.label }}
-        </RouterLink>
-      </nav>
-      <RouterLink :to="settingsNav.to" class="task-nav-fixed">
-        <Settings :size="17" />{{ settingsNav.label }}
-      </RouterLink>
-      <button
-        class="task-nav-fixed"
-        type="button"
-        :aria-label="theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'"
-        @click="toggleTheme"
-      >
-        <Moon v-if="theme === 'dark'" :size="17" />
-        <Sun v-else :size="17" />
-        {{ theme === 'dark' ? '深色' : '浅色' }}
-      </button>
+      <!-- 「更多」+ 设置 + 主题切换与次级页共用 SidebarNav，避免两处模板漂移 -->
+      <SidebarNav />
     </div>
   </aside>
 </template>

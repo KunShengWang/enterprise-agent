@@ -1035,7 +1035,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 
 /* 左栏：折叠的「更多」菜单与底部固定入口（w1-6） */
-.nav-more { margin-top: 12px; }
+.nav-more { margin-top: 12px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+/* SidebarNav 内部也是 flex 列，才能让 .sidebar-footer 的 margin-top:auto 把底部入口推到底 */
+.sidebar-nav { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .nav-more-toggle {
   width: 100%;
   min-height: 40px;
