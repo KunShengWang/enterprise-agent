@@ -13,8 +13,13 @@ async function load(relative, component = false) {
   const contents = component ? compileScript(parse(source).descriptor,
     { id: 'retirement-test', inlineTemplate: true }).content : source
   const result = await build({ stdin: { contents, resolveDir: dirname(filename), loader: 'ts' },
-    bundle: true, format: 'esm', platform: 'node', write: false,
+    bundle: true, format: 'esm', platform: 'node', write: false, mainFields: ['module', 'main'],
     plugins: [{ name: 'shared-vue-and-markdown-stub', setup(builder) {
+      builder.onLoad({ filter: /\.vue$/ }, async args => {
+        const source = await readFile(args.path, 'utf8')
+        return { contents: compileScript(parse(source).descriptor,
+          { id: args.path, inlineTemplate: true }).content, loader: 'ts', resolveDir: dirname(args.path) }
+      })
       builder.onResolve({ filter: /^vue$/ }, () => ({ path: import.meta.resolve('vue'), external: true }))
       builder.onResolve({ filter: /utils\/markdown$/ }, () => ({ path: 'markdown', namespace: 'test' }))
       builder.onLoad({ filter: /.*/, namespace: 'test' }, () => ({ contents: 'export const renderMarkdown = value => value' }))
@@ -91,10 +96,12 @@ assert.ok(!/api\/|router\.(push|replace)|onMounted|submit|PROCUREMENT_SOURCING/.
 assert.ok(retiredPage.includes('to="/runs"'))
 const trace = await readFile(new URL('../src/types/trace.ts', import.meta.url), 'utf8')
 assert.ok(!trace.includes('incident'))
-const runtime = await readFile(new URL('../src/views/RuntimeWorkbench.vue', import.meta.url), 'utf8')
-assert.ok(runtime.includes("ref('procurement-sourcing-rfq-v1')"))
-assert.ok(!runtime.includes('floworder_recovery'))
-assert.ok(runtime.includes('v-if="!retiredHistory" class="composer-area"'))
+// RuntimeWorkbench.vue 已删除（零路由引用，W1）。原来这三条断言只保护一个
+// 不渲染的文件；现在改到真实渲染路径 UnifiedWorkbench 上，是有效保护。
+const workbench = await readFile(new URL('../src/views/UnifiedWorkbench.vue', import.meta.url), 'utf8')
+assert.ok(workbench.includes('v-if="!retiredHistory"'), '工作台必须在退役状态下隐藏输入区')
+assert.ok(workbench.includes('业务已退役'), '工作台必须向用户说明退役状态')
+assert.ok(!workbench.includes('floworder_recovery'), '工作台不得引用已退役的 floworder_recovery')
 const approvalCenter = await readFile(new URL('../src/views/ApprovalCenterView.vue', import.meta.url), 'utf8')
 assert.ok(approvalCenter.includes('v-if="isRetiredTool(selected.toolCallRequest?.toolName)"'))
 assert.ok(approvalCenter.includes('v-else-if="selected.status === \'REQUESTED\'"'))
@@ -104,4 +111,4 @@ console.log('retired history smoke passed: 16 historical states, RETIRED tree, s
 assert.equal(policy.isRetiredRun({ scenarioId: 'main-agent' }), true)
 assert.equal(policy.isRetiredRun({}), true)
 assert.equal(policy.isRetiredRun({ scenarioId: 'procurement-sourcing-rfq-v1' }), false)
-assert.ok(!runtime.includes('general-agent-v1'))
+assert.ok(!workbench.includes('general-agent-v1'))
