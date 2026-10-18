@@ -1098,3 +1098,18 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .execution-narrative-list > li { padding: 3px 0; }
 .execution-narrative-lead { margin: 0 0 9px; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
 .execution-narrative-detail .execution-inspector-link { display: inline-block; margin-top: 8px; }
+
+/* 执行记录的 unresolved（结果待核对）此前没有专属样式，落回默认空心圈，
+   与 pending 无法区分——任务结束后用户会误以为这些步骤还没跑。 */
+.execution-narrative-list > li[data-status="unresolved"] > i {
+  border-color: var(--status-warning);
+  background: transparent;
+}
+.execution-narrative-list > li[data-status="unresolved"] > i::after {
+  content: '?';
+  position: relative;
+  left: -2px;
+  top: -8px;
+  color: var(--status-warning);
+  font: 8px var(--font-sans);
+}

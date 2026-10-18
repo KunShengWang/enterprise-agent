@@ -15,6 +15,8 @@ assert.ok(workbenchCss.includes('.inspector-dialog'))
 assert.ok(css.includes('@media (max-width: 1200px)'))
 assert.ok(css.includes('@media (max-width: 900px)'))
 assert.ok(css.includes('@media (max-width: 620px)'))
+// unresolved 若没有专属样式会落回默认空心圈，与 pending 无法区分（任务结束后看起来像没执行）
+assert.ok(css.includes('[data-status="unresolved"]'), 'unresolved 状态需要专属样式')
 assert.ok(css.includes('@media (prefers-reduced-motion: reduce)'))
 assert.ok(css.includes('.copy-code-button'))
 assert.ok(css.includes('.conversation-markdown .hljs-keyword'))
