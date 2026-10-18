@@ -7,12 +7,15 @@
   min-height: 0;
   display: grid;
   overflow: hidden;
-  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-columns: 248px minmax(0, 1fr) 44px;
   color: var(--wb-ink);
   background: var(--wb-surface);
   font-family: var(--font-sans);
 }
-.task-workbench-shell.sidebar-collapsed { grid-template-columns: 0 minmax(0, 1fr); }
+.task-workbench-shell.sidebar-collapsed { grid-template-columns: 0 minmax(0, 1fr) 44px; }
+/* 右栏展开时占用真实网格列，而不是浮层遮挡正文 */
+.task-workbench-shell.inspector-open { grid-template-columns: 248px minmax(0, 1fr) minmax(320px, 420px); }
+.task-workbench-shell.sidebar-collapsed.inspector-open { grid-template-columns: 0 minmax(0, 1fr) minmax(320px, 420px); }
 .task-workbench-shell.sidebar-collapsed:not(.left-open) > .task-sidebar { visibility: hidden; padding: 0; overflow: hidden; }
 .task-sidebar { padding: 20px 14px 16px; background: var(--wb-sidebar); border-color: var(--wb-line); }
 .task-sidebar-brand { gap: 10px; padding: 0 4px 22px; }
@@ -155,7 +158,9 @@
 .conversation-item[data-type="final_answer"] .conversation-item-icon { background: transparent; }
 @media (max-width: 1200px) { .task-workbench-shell { grid-template-columns: 240px minmax(0, 1fr); } }
 @media (max-width: 900px) {
-  .task-workbench-shell, .task-workbench-shell.sidebar-collapsed { grid-template-columns: minmax(0, 1fr); }
+  .task-workbench-shell, .task-workbench-shell.sidebar-collapsed,
+  .task-workbench-shell.inspector-open,
+  .task-workbench-shell.sidebar-collapsed.inspector-open { grid-template-columns: minmax(0, 1fr); }
   .task-sidebar { width: min(300px, 88vw); height: 100dvh; z-index: 60; }
   .task-workbench-shell:not(.left-open) > .task-sidebar { visibility: hidden; }
   .task-workbench-shell.left-open > .task-sidebar { visibility: visible; padding: 20px 14px 16px; }
@@ -233,3 +238,34 @@
   font-variant-numeric: tabular-nums;
 }
 .tool-row-chevron { flex: none; margin-left: 6px; }
+
+/* 右栏（W2-2）：常驻竖条 44px，展开后占真实网格列；移动端恢复为右侧抽屉 */
+.task-inspector-rail {
+  min-width: 0;
+  border-left: 1px solid var(--wb-line);
+  background: var(--wb-surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.rail-toggle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  min-height: 52px;
+  border: 0;
+  border-bottom: 1px solid var(--wb-line);
+  background: transparent;
+  color: var(--wb-muted);
+  cursor: pointer;
+}
+.rail-toggle:hover { background: var(--wb-sidebar); color: var(--wb-ink); }
+.rail-body { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+.rail-body .execution-inspector { width: 100%; height: auto; border-left: 0; }
+
+@media (max-width: 900px) {
+  /* 移动端：折叠态完全隐藏，展开态从右侧滑出 */
+  .task-inspector-rail { position: fixed; top: 0; right: 0; bottom: 0; z-index: 60; width: min(360px, 92vw); transform: translateX(100%); transition: transform .2s ease; }
+  .task-inspector-rail.expanded { transform: translateX(0); }
+  .task-inspector-rail:not(.expanded) { display: none; }
+}

@@ -2,6 +2,7 @@
 import { executionTargetLabel, isRetiredWork, isRetiredPreview, isRetiredTool } from '../utils/retiredBusiness'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { PanelLeft, ScanSearch } from '@lucide/vue'
 import ExecutionInspector from '../components/ExecutionInspector.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import WorkbenchComposer from '../components/WorkbenchComposer.vue'
@@ -17,6 +18,7 @@ import { useWorkbenchSelection } from '../composables/useWorkbenchSelection'
 import { useWorkbenchTurnHistory } from '../composables/useWorkbenchTurnHistory'
 import { useTurnSelection } from '../composables/useTurnSelection'
 import { projectTurnConversationItems } from '../utils/conversationItems'
+import { deriveComposerControlMode } from '../utils/procurementPresentation'
 import type { PresentationLocator } from '../types/conversation'
 import type { ComposerAttachment, ConversationHistoryItem, WorkItem } from '../types/workbench'
 
@@ -36,7 +38,7 @@ const conversation = useWorkbenchConversation({
 })
 const primaryStream = usePrimaryRunStream({
   expectedRunId: () => conversation.primaryRunId.value,
-  onDelta: event => conversation.applyDelta(event),
+  onDelta: (event, replay) => conversation.applyDelta(event, replay),
   onTerminal: (state, event) => { void handleTerminal(state, event.sourceId) },
   onSourceChanged: event => {
     if (['AGENT_RUN', 'INCIDENT', 'RECOVERY_PLAN'].includes(event.sourceType)) {
@@ -59,6 +61,7 @@ const decisionReason = ref('已核对工具参数、影响范围与恢复边界'
 const copied = ref(false)
 const leftDrawerOpen = ref(false)
 const rightDrawerOpen = ref(false)
+const sidebarCollapsed = ref(false)
 const shell = ref<HTMLElement | null>(null)
 const inspector = ref<InstanceType<typeof ExecutionInspector> | null>(null)
 const composer = ref<InstanceType<typeof WorkbenchComposer> | null>(null)
@@ -74,6 +77,10 @@ const retiredHistory = computed(() => isRetiredWork(data.detail.value?.workItem,
   || isRetiredPreview(data.detail.value?.preview) || isRetiredTool(data.approval.value?.toolCallRequest?.toolName))
 const turnViews = computed(() => turnHistory.orderedSnapshots.value.map(snapshot => {
   const active = snapshot.turn.turnId === data.detail.value?.workItem.sourceInputId
+    && snapshot.turn.workItemId === selection.selectedWorkItemId.value
+    && presentationStream.activeWorkItemId() === snapshot.turn.workItemId
+    && presentationStream.historyReady.value
+    && primaryStream.activeWorkItemId() === snapshot.turn.workItemId
   const answer = active ? conversation.answer.value : snapshot.answer
   const presentations = active ? presentationStream.publicPresentations.value : snapshot.publicPresentations
   const tree = active ? data.tree.value : snapshot.tree
@@ -93,20 +100,8 @@ const turnViews = computed(() => turnHistory.orderedSnapshots.value.map(snapshot
 const finalAnswerAt = computed(() => conversation.answer.value.state === 'COMPLETED'
   ? conversation.answer.value.createdAt : undefined)
 const waitingForInput = computed(() => data.detail.value?.workItem.controlState === 'WAITING_INPUT')
-const composerControlMode = computed<'idle' | 'running' | 'pausing' | 'paused' | 'cancelling' | 'waiting'>(() => {
-  if (terminationRequested.value) return 'cancelling'
-  if (launchPending.value) return 'running'
-  const work = data.detail.value?.workItem
-  if (!work) return 'idle'
-  if (work.controlState === 'PAUSE_REQUESTED') return 'pausing'
-  if (work.controlState === 'CANCEL_REQUESTED') return 'cancelling'
-  if (work.controlState === 'PAUSED' || work.executionState === 'PAUSED') return 'paused'
-  if (['STARTING', 'RUNNING'].includes(work.executionState)
-      || ['DISPATCHING', 'DISPATCHED'].includes(work.controlState)) return 'running'
-  if (['WAITING_INPUT', 'WAITING_CONFIRMATION', 'MANUAL_REVIEW'].includes(work.controlState)
-      || work.executionState === 'WAITING_APPROVAL') return 'waiting'
-  return 'idle'
-})
+const composerControlMode = computed(() => deriveComposerControlMode(
+  data.detail.value?.workItem ?? null, launchPending.value, terminationRequested.value))
 const stopAvailable = computed(() => {
   if (launchPending.value || terminationRequested.value) return true
   const work = data.detail.value?.workItem
@@ -156,7 +151,12 @@ function synchronizeAnswer() {
 
 function synchronizeActiveTurn() {
   const detail = data.detail.value
-  if (!detail) return
+  // Resource cleanup clears live buffers before the next detail arrives. Do not
+  // overwrite the saved previous turn with those temporary empty buffers.
+  if (!detail || detail.workItem.workItemId !== selection.selectedWorkItemId.value
+      || presentationStream.activeWorkItemId() !== detail.workItem.workItemId
+      || !presentationStream.historyReady.value
+      || primaryStream.activeWorkItemId() !== detail.workItem.workItemId) return
   turnHistory.mergeActive(detail.workItem.sourceInputId, detail,
     presentationStream.publicPresentations.value,
     presentationStream.inspectorPresentations.value,
@@ -170,7 +170,7 @@ function ensureStreams() {
   if (!detail) return
   const workItemId = detail.workItem.workItemId
   if (presentationStream.activeWorkItemId() !== workItemId) void presentationStream.start(workItemId)
-  if (primaryStream.activeWorkItemId() !== workItemId) primaryStream.start(detail)
+  if (primaryStream.activeWorkItemId() !== workItemId) void primaryStream.start(detail)
 }
 
 function isTerminalExecutionState(state: string) {
@@ -320,7 +320,7 @@ async function locatePresentations(locator: PresentationLocator) {
   if (locator.turnId && locator.turnId !== turnSelection.selectedTurnId.value) {
     await selectTurn(locator.turnId)
   }
-  rightDrawerOpen.value = true
+  await openDrawer('right')
   synchronizeActiveTurn()
   await nextTick()
   inspector.value?.locatePresentations(locator.presentationIds)
@@ -394,7 +394,7 @@ async function retryTask() {
 }
 
 async function showDiagnostics() {
-  rightDrawerOpen.value = true
+  await openDrawer('right')
   await nextTick()
   inspector.value?.showDiagnostics()
 }
@@ -445,11 +445,16 @@ async function focusClarificationInput() {
 
 async function openDrawer(side: 'left' | 'right') {
   drawerReturnFocus = document.activeElement as HTMLElement | null
-  if (side === 'left') leftDrawerOpen.value = true
-  else rightDrawerOpen.value = true
+  if (side === 'left') { rightDrawerOpen.value = false; leftDrawerOpen.value = true }
+  else { leftDrawerOpen.value = false; rightDrawerOpen.value = true }
   await nextTick()
-  const selector = side === 'left' ? '.task-sidebar' : '.execution-inspector'
+  const selector = side === 'left' ? '.task-sidebar' : '.inspector-dialog'
   shell.value?.querySelector<HTMLElement>(`${selector} button, ${selector} input`)?.focus()
+}
+
+function toggleNavigation() {
+  if (window.matchMedia('(max-width: 900px)').matches) void openDrawer('left')
+  else sidebarCollapsed.value = !sidebarCollapsed.value
 }
 
 function closeDrawers() {
@@ -463,7 +468,7 @@ function trapDrawerFocus(event: KeyboardEvent) {
   if (!leftDrawerOpen.value && !rightDrawerOpen.value) return
   if (event.key === 'Escape') { closeDrawers(); return }
   if (event.key !== 'Tab') return
-  const selector = leftDrawerOpen.value ? '.task-sidebar' : '.execution-inspector'
+  const selector = leftDrawerOpen.value ? '.task-sidebar' : '.inspector-dialog'
   const focusable = [...(shell.value?.querySelectorAll<HTMLElement>(`${selector} button:not(:disabled), ${selector} input, ${selector} textarea, ${selector} [href], ${selector} summary`) ?? [])]
   if (!focusable.length) return
   const first = focusable[0]
@@ -482,6 +487,7 @@ watch(() => presentationStream.publicPresentations.value.length, () => {
 })
 
 watch(() => [presentationStream.publicPresentations.value.length,
+  presentationStream.historyReady.value,
   presentationStream.inspectorPresentations.value.length,
   primaryStream.rawEvents.value.length,
   conversation.answer.value.content.length,
@@ -492,30 +498,40 @@ onBeforeUnmount(() => {
   window.clearInterval(timer)
   presentationStream.stop()
   primaryStream.stop()
+  conversation.reset()
   data.invalidate()
   window.removeEventListener('keydown', trapDrawerFocus)
 })
 </script>
 
 <template>
-  <div ref="shell" class="task-workbench-shell" :class="{ 'left-open': leftDrawerOpen, 'right-open': rightDrawerOpen }">
-    <div v-if="leftDrawerOpen || rightDrawerOpen" class="workbench-scrim" @click="closeDrawers" />
+  <div ref="shell" class="task-workbench-shell" :class="{ 'left-open': leftDrawerOpen, 'inspector-open': rightDrawerOpen, 'sidebar-collapsed': sidebarCollapsed }">
+    <!-- 右栏已是网格列，不再需要遮罩；遮罩只服务左栏抽屉 -->
+    <div v-if="leftDrawerOpen" class="workbench-scrim" @click="closeDrawers" />
 
-      <WorkbenchTaskSidebar :items="selection.filteredHistory.value" :selected-id="selection.conversationId.value" :search="selection.search.value" @update:search="selection.search.value = $event" @new-task="newTask" @select="choose" @close="closeDrawers" />
+      <WorkbenchTaskSidebar :inert="rightDrawerOpen || sidebarCollapsed && !leftDrawerOpen" :items="selection.filteredHistory.value" :selected-id="selection.conversationId.value" :search="selection.search.value" @update:search="selection.search.value = $event" @new-task="newTask" @select="choose" @close="leftDrawerOpen ? closeDrawers() : sidebarCollapsed = true" />
 
-    <main class="task-conversation-column">
+    <main class="task-conversation-column" :inert="leftDrawerOpen">
       <header class="task-header">
-        <button class="task-mobile-toggle" type="button" aria-label="打开任务列表" @click="openDrawer('left')">☰</button>
-        <div><h1>{{ selected?.originalGoal || '新任务' }}</h1><span v-if="selected">{{ targetLabel(selected.activeExecutionTarget) }} · {{ selected.controlState }}</span><span v-else>描述目标，系统会选择合适的执行方式</span></div>
-        <div class="task-header-actions"><span v-if="copied" class="copy-confirmation">已复制</span><StatusBadge v-if="selected" :value="selected.executionState" compact /><button v-if="data.focus.value && selected && data.focus.value.focusedWorkItemId !== selected.workItemId" type="button" aria-label="设为当前任务" @click="makeFocus">聚焦</button><button class="inspector-mobile-toggle" type="button" aria-label="打开执行检查器" @click="openDrawer('right')">◎</button></div>
+        <button class="task-mobile-toggle" type="button" aria-label="打开任务列表" @click="toggleNavigation"><PanelLeft :size="19" /></button>
+        <div><h1>{{ selected?.originalGoal.split('<workbench_attachments>')[0] || '采购工作台' }}</h1><span>{{ selected ? targetLabel(selected.activeExecutionTarget) : 'Enterprise-Agent · 从采购需求到供应商决策' }}</span></div>
+        <div class="task-header-actions"><span v-if="copied" class="copy-confirmation">已复制</span><StatusBadge v-if="selected" :value="selected.executionState" compact /><button v-if="data.focus.value && selected && data.focus.value.focusedWorkItemId !== selected.workItemId" type="button" aria-label="设为当前任务" @click="makeFocus">聚焦</button><button class="inspector-mobile-toggle" type="button" aria-label="打开执行检查器" title="查看运行详情" @click="openDrawer('right')"><ScanSearch :size="19" /><span>查看运行详情</span></button></div>
       </header>
 
       <p v-if="retiredHistory" role="status">业务已退役、不能继续执行。当前仅展示已保存的历史记录；原任务状态保持不变。</p>
-      <WorkbenchConversationPanel :turns="turnViews" :selected-turn-id="turnSelection.selectedTurnId.value" :has-work="Boolean(data.workItems.value.length)" :busy="busy || controlBusy || retiredHistory" :reviewer="reviewer" :decision-reason="decisionReason" @select-turn="selectTurn" @update:reviewer="reviewer = $event" @update:decision-reason="decisionReason = $event" @confirm-preview="decidePreview" @decide-approval="decideApproval" @copy="copyAnswer" @retry="retryTask" @diagnostics="showDiagnostics" @supply-input="focusClarificationInput" @locate-presentations="locatePresentations" />
+      <WorkbenchConversationPanel :pending-submission="launchPending" :turns="turnViews" :selected-turn-id="turnSelection.selectedTurnId.value" :has-work="Boolean(data.workItems.value.length)" :busy="busy || controlBusy || retiredHistory" :reviewer="reviewer" :decision-reason="decisionReason" @select-turn="selectTurn" @update:reviewer="reviewer = $event" @update:decision-reason="decisionReason = $event" @confirm-preview="decidePreview" @decide-approval="decideApproval" @copy="copyAnswer" @retry="retryTask" @diagnostics="showDiagnostics" @supply-input="focusClarificationInput" @locate-presentations="locatePresentations" />
       <WorkbenchComposer v-if="!retiredHistory" ref="composer" v-model="content" v-model:attachments="attachments" :busy="busy" :stop-available="stopAvailable" :stopping="terminationBusy" :error="error" :waiting-for-input="waitingForInput" :control-mode="composerControlMode" @submit="submit" @stop="terminateTask" />
     </main>
 
+    <!-- 右栏：折叠竖条 / 展开诊断；移动端为右侧抽屉 -->
+    <aside class="task-inspector-rail" :class="{ expanded: rightDrawerOpen }">
+      <button class="rail-toggle" type="button" :aria-expanded="rightDrawerOpen" :aria-label="rightDrawerOpen ? '收起执行诊断' : '展开执行诊断'" @click="rightDrawerOpen = !rightDrawerOpen">
+        <ScanSearch :size="18" />
+      </button>
+      <div v-if="rightDrawerOpen" class="rail-body">
     <ExecutionInspector v-if="data.detail.value" ref="inspector" :detail="data.detail.value" :tree="data.tree.value" :events="primaryStream.rawEvents.value" :budget="data.budget.value" :approval="data.approval.value" :inspector-presentations="presentationStream.inspectorPresentations.value" :turn-snapshots="turnHistory.orderedSnapshots.value" :selected-turn-id="turnSelection.selectedTurnId.value" :follow-current="turnSelection.followCurrent.value" :delta-stream-state="primaryStream.connectionState.value" :presentation-stream-state="presentationStream.connectionState.value" :work-cursor="primaryStream.workCursor.value" :run-cursor="primaryStream.runCursor.value" :presentation-cursor="presentationStream.presentationCursor.value" :reconnect-count="primaryStream.reconnectCount.value + presentationStream.reconnectCount.value" :last-event-at="primaryStream.lastEventAt.value || presentationStream.lastEventAt.value" :gap="primaryStream.gap.value || presentationStream.gap.value" :sync-error="primaryStream.syncError.value || presentationStream.syncError.value" :final-answer-at="finalAnswerAt" @select-turn="selectTurn" @follow-current="followCurrentTurn" />
-    <aside v-else class="execution-inspector inspector-placeholder"><span>◎</span><strong>执行检查器</strong><p>任务开始后，这里会显示状态、活动、Agents 与证据。</p></aside>
+    <aside v-else class="execution-inspector inspector-placeholder"><ScanSearch :size="32" /><strong>执行诊断</strong><p>任务开始后，可查看执行轨迹、Agent、工具、证据和连接状态。</p></aside>
+      </div>
+    </aside>
   </div>
 </template>
