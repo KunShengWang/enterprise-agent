@@ -1113,3 +1113,28 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   color: var(--status-warning);
   font: 8px var(--font-sans);
 }
+
+/* 执行记录收起态：摘要 + 详情说明内联在一行（详情截断，完整内容在展开区） */
+.execution-narrative-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+}
+.execution-narrative-toggle strong {
+  flex: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+.execution-narrative-inline {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}

@@ -139,10 +139,10 @@ watch(() => props.item.narrative?.items.map(entry => entry.status).join(','), ()
               <div class="execution-narrative-heading">
                 <button class="execution-narrative-toggle" type="button" :aria-expanded="expandedNarrativeId === entry.id" @click="toggleNarrative(entry.id)">
                   <strong>{{ entry.summary }}</strong>
+                  <span v-if="entry.detail" class="execution-narrative-inline" :title="entry.detail">{{ entry.detail }}</span>
                 </button>
               </div>
               <section v-if="expandedNarrativeId === entry.id" class="execution-narrative-detail">
-                <p v-if="entry.detail" class="execution-narrative-lead">{{ entry.detail }}</p>
                 <dl>
                   <template v-for="field in entry.metadata" :key="`${entry.id}-${field.label}`">
                     <dt>{{ field.label }}</dt><dd :class="{ code: field.code }">{{ field.value }}</dd>
