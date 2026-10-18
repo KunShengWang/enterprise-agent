@@ -213,3 +213,23 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* 工具行（W2-2）：技术名移出常驻行，改为 title + 展开详情；
+   「已完成」不再重复文字，只有失败/等待才显示原因；耗时右对齐。 */
+.tool-row-summary {
+  flex: 0 1 auto;
+  max-width: 46%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.tool-row-duration {
+  flex: none;
+  margin-left: auto;
+  white-space: nowrap;
+  font: 12px/1.6 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.tool-row-chevron { flex: none; margin-left: 6px; }
