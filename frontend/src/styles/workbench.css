@@ -202,3 +202,14 @@
 .task-product-nav .sidebar-footer { border-top: 0; padding-top: 6px; }
 .task-product-nav .nav-more-toggle { min-height: 39px; border-radius: 8px; font-size: 13px; }
 .task-product-nav .nav-more-toggle small { font-size: 11px; }
+
+/* 首字延迟期间的时间计量：让「模型在思考」有可验证的证据，而不是干等 */
+.phase-timer {
+  margin-left: auto;
+  padding-left: 10px;
+  font: 12px/1 var(--font-mono);
+  color: var(--wb-muted);
+  /* 等宽数字，避免每秒刷新时宽度跳动 */
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
