@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { renderMarkdown } from '../utils/markdown'
+import { UserRound, Bot, ListChecks, Wrench, GitBranch, ShieldCheck, CircleAlert, ClipboardList, FileText, Copy } from '@lucide/vue'
+import StreamingAnswer from './StreamingAnswer.vue'
+import ToolCallRow from './ToolCallRow.vue'
+import { useAnswerPresentation } from '../composables/useAnswerPresentation'
+import { procurementTools, publicApprovalScope } from '../utils/procurementPresentation'
 import type { ConversationItem, PresentationLocator } from '../types/conversation'
 
 const props = defineProps<{
@@ -22,22 +26,29 @@ const emit = defineEmits<{
   'update:decisionReason': [value: string]
 }>()
 
-const markdown = computed(() => renderMarkdown(props.item.content))
+const { displayed, revealing } = useAnswerPresentation(
+  () => props.item.type === 'FINAL_ANSWER' ? props.item.content : '',
+  () => props.item.answerState === 'STREAMING' && props.item.animate !== false && !props.item.readOnly,
+  () => props.item.id,
+  undefined,
+  () => ['FINALIZING', 'COMPLETED'].includes(props.item.answerState ?? ''),
+)
+const streaming = computed(() => props.item.answerState === 'STREAMING' || revealing.value)
+const approvalScope = computed(() => publicApprovalScope(props.item.approval?.toolCallRequest.arguments ?? {}))
+const pendingApproval = computed(() => props.item.approval?.status === 'REQUESTED')
+const approvalRecordLabel = computed(() => pendingApproval.value
+  ? props.item.readOnly || props.item.status === 'unresolved'
+    ? '此审批请求已随任务结束，结果待核对。原始审批记录仍为 REQUESTED，可在运行诊断中核对。'
+    : '等待后端审批决定。批准后才会继续工具执行，RFQ 创建结果需单独确认。'
+  : `审批记录：${props.item.approval?.status === 'APPROVED' ? '已批准' : props.item.approval?.status === 'REJECTED' ? '已拒绝' : props.item.approval?.status}`)
 const itemIcon = computed(() => ({
-  USER_MESSAGE: '你', AGENT_STATUS: 'A', TASK_PLAN: '≡', ROUTE_SUMMARY: 'A',
-  TOOL_CALL: '⌘', TOOL_RESULT: '⌘', AGENT_DELEGATION: '↳', ROUTE_PREVIEW: '!',
-  APPROVAL_REQUEST: '✓', FINAL_ANSWER: 'A', ERROR: '!', EXECUTION_NARRATIVE: 'A',
+  USER_MESSAGE: UserRound, AGENT_STATUS: Bot, TASK_PLAN: ListChecks, ROUTE_SUMMARY: Bot,
+  TOOL_CALL: Wrench, TOOL_RESULT: Wrench, AGENT_DELEGATION: GitBranch, ROUTE_PREVIEW: CircleAlert,
+  APPROVAL_REQUEST: ShieldCheck, FINAL_ANSWER: Bot, ERROR: CircleAlert, EXECUTION_NARRATIVE: ClipboardList,
 }[props.item.type]))
 
-function shortValue(value: unknown) {
-  if (Array.isArray(value)) return value.join('、')
-  if (value && typeof value === 'object') return Object.entries(value as Record<string, unknown>)
-    .map(([key, nested]) => `${key}: ${String(nested)}`).join('；')
-  return String(value ?? '')
-}
-
 function statusLabel(status: string) {
-  return ({ pending: '未开始', active: '执行中', completed: '已完成', failed: '失败', waiting: '等待操作' } as Record<string, string>)[status] ?? status
+  return ({ pending: '未开始', active: '执行中', completed: '已完成', failed: '失败', waiting: '等待操作', unresolved: '结果待核对' } as Record<string, string>)[status] ?? status
 }
 
 function attachmentSize(size: number) {
@@ -78,7 +89,7 @@ async function decorateCodeBlocks() {
     pre.prepend(button)
   })
 }
-watch(markdown, decorateCodeBlocks, { immediate: true })
+watch(() => [displayed.value, streaming.value], decorateCodeBlocks, { immediate: true })
 watch(() => props.item.id, () => { expandedNarrativeId.value = defaultExpandedNarrative() }, { immediate: true })
 watch(() => props.item.narrative?.items.map(entry => entry.status).join(','), () => {
   if (!expandedNarrativeId.value) expandedNarrativeId.value = defaultExpandedNarrative()
@@ -86,11 +97,12 @@ watch(() => props.item.narrative?.items.map(entry => entry.status).join(','), ()
 </script>
 
 <template>
-  <article class="conversation-item" :data-type="item.type.toLowerCase()" :data-status="item.status" :data-presentation="item.presentationKind?.toLowerCase()">
-    <div class="conversation-item-icon">{{ itemIcon }}</div>
+  <ToolCallRow v-if="item.tool && ['TOOL_CALL', 'TOOL_RESULT'].includes(item.type)" :item="item" @diagnostics="emit('diagnostics')" />
+  <article v-else class="conversation-item" :data-type="item.type.toLowerCase()" :data-status="item.status" :data-presentation="item.presentationKind?.toLowerCase()">
+    <div class="conversation-item-icon"><component :is="itemIcon" :size="17" aria-hidden="true" /></div>
     <div class="conversation-item-body">
       <header v-if="item.type !== 'USER_MESSAGE' && !collapsibleSummary">
-        <div><strong>{{ item.title }}</strong><span v-if="item.live" class="live-label">{{ answerStatus || '正在生成' }}</span></div>
+        <div><strong>{{ item.type === 'FINAL_ANSWER' ? '采购助手' : item.title }}</strong><span v-if="item.live || revealing" class="live-label">{{ item.answerState === 'COMPLETED' && revealing ? '正在显示回答' : answerStatus || '正在生成' }}</span></div>
         <small v-if="!['FINAL_ANSWER', 'ROUTE_SUMMARY'].includes(item.type)" class="item-state"><i />{{ statusLabel(item.status) }}</small>
       </header>
 
@@ -98,7 +110,7 @@ watch(() => props.item.narrative?.items.map(entry => entry.status).join(','), ()
         <p class="user-message-text">{{ item.content }}</p>
         <div v-if="item.attachments?.length" class="message-attachments" aria-label="本次消息的附件">
           <span v-for="attachment in item.attachments" :key="`${attachment.name}-${attachment.size}`">
-            <i aria-hidden="true">▤</i><span><strong>{{ attachment.name }}</strong><small>{{ attachmentSize(attachment.size) }}</small></span>
+            <FileText :size="16" aria-hidden="true" /><span><strong>{{ attachment.name }}</strong><small>{{ attachmentSize(attachment.size) }}</small></span>
           </span>
         </div>
       </template>
@@ -113,24 +125,6 @@ watch(() => props.item.narrative?.items.map(entry => entry.status).join(','), ()
         <ol class="task-plan-list"><li v-for="(step, index) in item.steps" :key="step"><span>{{ index + 1 }}</span>{{ step }}</li></ol>
       </template>
 
-      <template v-else-if="item.type === 'TOOL_CALL' || item.type === 'TOOL_RESULT'">
-        <div class="tool-summary-row">
-          <div><span>工具</span><strong>{{ item.tool?.displayName }}</strong></div>
-          <div><span>状态</span><strong>{{ statusLabel(item.status) }}</strong></div>
-          <div v-if="item.tool?.durationMs !== undefined"><span>耗时</span><strong>{{ item.tool.durationMs }} ms</strong></div>
-          <div v-if="item.tool?.resultCount !== undefined"><span>结果</span><strong>{{ item.tool.resultCount }} 条</strong></div>
-          <div v-if="item.tool?.attemptLabel"><span>尝试</span><strong>{{ item.tool.attemptLabel }}</strong></div>
-        </div>
-        <p v-if="item.tool?.actionSummary" class="tool-action-summary">{{ item.tool.actionSummary }}</p>
-        <p class="tool-result-summary">{{ item.tool?.summary }}</p>
-        <details v-if="item.tool">
-          <summary>查看输入与结果</summary>
-          <div class="tool-detail-grid single">
-            <section><strong>输入参数</strong><dl><template v-for="(value, key) in item.tool.arguments" :key="key"><dt>{{ key }}</dt><dd>{{ shortValue(value) }}</dd></template></dl></section>
-          </div>
-        </details>
-      </template>
-
       <template v-else-if="item.type === 'AGENT_DELEGATION'">
         <p class="item-description">{{ item.content }}</p>
       </template>
@@ -140,14 +134,15 @@ watch(() => props.item.narrative?.items.map(entry => entry.status).join(','), ()
           <li v-for="entry in item.narrative.items" :key="entry.id" :data-status="entry.status">
             <i aria-hidden="true" />
             <div class="execution-narrative-entry">
+              <!-- 收起态只保留一行：状态点 + 摘要。detail 与操作入口都移入展开区，
+                   否则每条记录占 4 行，一屏放不下几次执行。 -->
               <div class="execution-narrative-heading">
                 <button class="execution-narrative-toggle" type="button" :aria-expanded="expandedNarrativeId === entry.id" @click="toggleNarrative(entry.id)">
-                  <strong>{{ entry.summary }}</strong><span v-if="entry.detail">{{ entry.detail }}</span>
-                  <small>{{ expandedNarrativeId === entry.id ? '收起详情' : '展开详情' }}</small>
+                  <strong>{{ entry.summary }}</strong>
                 </button>
-                <button class="execution-inspector-link" type="button" @click.stop="emit('locatePresentations', { turnId: item.narrative!.turnId, presentationIds: entry.sourcePresentationIds })">在检查器中打开</button>
               </div>
               <section v-if="expandedNarrativeId === entry.id" class="execution-narrative-detail">
+                <p v-if="entry.detail" class="execution-narrative-lead">{{ entry.detail }}</p>
                 <dl>
                   <template v-for="field in entry.metadata" :key="`${entry.id}-${field.label}`">
                     <dt>{{ field.label }}</dt><dd :class="{ code: field.code }">{{ field.value }}</dd>
@@ -157,6 +152,7 @@ watch(() => props.item.narrative?.items.map(entry => entry.status).join(','), ()
                   <strong>关键发现</strong><ul><li v-for="finding in entry.findings" :key="finding">{{ finding }}</li></ul>
                 </div>
                 <div v-if="entry.detail" class="execution-output-summary"><strong>公开输出摘要</strong><p>{{ entry.detail }}</p></div>
+                <button class="execution-inspector-link" type="button" @click.stop="emit('locatePresentations', { turnId: item.narrative!.turnId, presentationIds: entry.sourcePresentationIds })">在检查器中打开</button>
               </section>
             </div>
           </li>
@@ -179,21 +175,22 @@ watch(() => props.item.narrative?.items.map(entry => entry.status).join(','), ()
       </template>
 
       <template v-else-if="item.type === 'APPROVAL_REQUEST'">
-        <p class="item-description">{{ item.content }}</p>
-        <div class="approval-tool-name"><span>高风险工具</span><strong>{{ item.approval?.toolCallRequest.toolName }}</strong></div>
-        <div v-if="!item.readOnly" class="inline-form-grid">
+        <p class="item-description">{{ item.approval?.reason || item.content }}</p>
+        <div class="approval-tool-name"><span>申请操作</span><strong>{{ procurementTools[item.approval?.toolCallRequest.toolName ?? '']?.label || item.approval?.toolCallRequest.toolName }}</strong></div>
+        <section class="approval-scope"><strong>影响范围</strong><dl><template v-for="field in approvalScope" :key="field.label"><dt>{{ field.label }}</dt><dd>{{ field.value }}</dd></template></dl><p v-if="!approvalScope.length">审批记录未提供可公开的业务字段，可在诊断中核对。</p><p>{{ approvalRecordLabel }}</p></section>
+        <div v-if="!item.readOnly && pendingApproval" class="inline-form-grid">
           <label>审批人<input :value="reviewer" @input="emit('update:reviewer', ($event.target as HTMLInputElement).value)" /></label>
           <label>审批意见<input :value="decisionReason" @input="emit('update:decisionReason', ($event.target as HTMLInputElement).value)" /></label>
         </div>
-        <div v-if="!item.readOnly" class="inline-actions">
+        <div v-if="!item.readOnly && pendingApproval" class="inline-actions">
           <button class="primary-button" type="button" :disabled="busy" @click="emit('decideApproval', true)">批准并继续</button>
           <button class="secondary-button" type="button" :disabled="busy" @click="emit('decideApproval', false)">拒绝</button>
         </div>
       </template>
 
       <template v-else-if="item.type === 'FINAL_ANSWER'">
-        <button class="copy-answer-button" type="button" aria-label="复制回答" @click="emit('copy', item.content)">复制</button>
-        <div v-if="item.content" ref="markdownRoot" class="conversation-markdown" :class="{ streaming: item.answerState === 'STREAMING' }" v-html="markdown" />
+        <button class="copy-answer-button" type="button" aria-label="复制回答" @click="emit('copy', item.content)"><Copy :size="14" />复制</button>
+        <div v-if="item.content" ref="markdownRoot"><StreamingAnswer :content="displayed" :streaming="streaming" /></div>
         <div v-else class="answer-placeholder" :data-state="item.answerState">
           <i v-if="['WAITING', 'FINALIZING'].includes(item.answerState ?? '')" />
           <span>{{ answerStatus }}</span>

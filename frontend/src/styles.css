@@ -1086,3 +1086,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   cursor: pointer;
 }
 .sidebar-footer-link:hover { background: var(--panel-soft); color: var(--text); }
+
+/* 执行记录收起态压成一行：摘要单行省略，细节与操作入口进展开区（W2-2） */
+.execution-narrative-heading { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.execution-narrative-toggle strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.execution-narrative-list > li { padding: 3px 0; }
+.execution-narrative-lead { margin: 0 0 9px; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+.execution-narrative-detail .execution-inspector-link { display: inline-block; margin-top: 8px; }
