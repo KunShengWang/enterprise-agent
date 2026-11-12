@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="310" viewBox="0 0 1200 310" role="img" aria-labelledby="title desc">
+  <title id="title">Enterprise Agent</title>
+  <desc id="desc">从采购需求到有据可查的供应商决策。Understand, Compare, Approve.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#102e25"/><stop offset="1" stop-color="#24644e"/></linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity=".045"/></pattern>
+  </defs>
+  <rect width="1200" height="310" rx="20" fill="url(#bg)"/>
+  <rect width="1200" height="310" rx="20" fill="url(#grid)"/>
+  <circle cx="1138" cy="34" r="230" fill="none" stroke="#8fc8ac" stroke-opacity=".13"/>
+  <circle cx="1138" cy="34" r="170" fill="none" stroke="#8fc8ac" stroke-opacity=".13"/>
+  <g font-family="Segoe UI, Microsoft YaHei, Noto Sans CJK SC, sans-serif">
+    <text x="56" y="53" fill="#a7d5bd" font-size="13" letter-spacing="3">PROCUREMENT · EVIDENCE · HUMAN APPROVAL</text>
+    <text x="53" y="119" fill="#ffffff" font-size="53" font-weight="700" letter-spacing="-1.5">Enterprise Agent</text>
+    <text x="56" y="164" fill="#e0eee6" font-size="23">从采购需求到有据可查的供应商决策</text>
+    <text x="56" y="201" fill="#a7c9b6" font-size="15">Java / Spring AI · Agent Harness · MCP + ERPNext</text>
+    <g font-size="13" fill="#e4f1e9">
+      <rect x="56" y="241" width="151" height="32" rx="16" fill="#ffffff" fill-opacity=".08" stroke="#80b69a" stroke-opacity=".35"/>
+      <text x="76" y="262">01  UNDERSTAND</text>
+      <path d="M219 257h23m-5-4 5 4-5 4" fill="none" stroke="#8db9a0"/>
+      <rect x="254" y="241" width="139" height="32" rx="16" fill="#ffffff" fill-opacity=".08" stroke="#80b69a" stroke-opacity=".35"/>
+      <text x="277" y="262">02  COMPARE</text>
+      <path d="M405 257h23m-5-4 5 4-5 4" fill="none" stroke="#8db9a0"/>
+      <rect x="440" y="241" width="139" height="32" rx="16" fill="#c2e3cb"/>
+      <text x="463" y="262" fill="#163f2e">03  APPROVE</text>
+    </g>
+  </g>
+  <g transform="translate(905 105)" fill="none" stroke="#c1e2cd" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <rect width="112" height="112" rx="26" fill="#ffffff" fill-opacity=".04" stroke-opacity=".35"/>
+    <path d="M37 41v-6a19 19 0 0 1 38 0v6M29 41h54v43a6 6 0 0 1-6 6H35a6 6 0 0 1-6-6z"/>
+    <path d="m43 65 9 9 18-20"/>
+  </g>
+</svg>
