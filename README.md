@@ -239,5 +239,3 @@ npm --prefix frontend run build
 ## 交流与贡献
 
 欢迎通过 [Issues](https://github.com/KunShengWang/enterprise-agent/issues) 反馈可复现问题或提出改进建议。提交变更时，请注明对应分支、运行方式和验证结果；涉及业务行为时附上复现步骤。
-
-README 的信息组织参考了 [Dify](https://github.com/langgenius/dify)、[RAGFlow](https://github.com/infiniflow/ragflow) 与 [LangChain4j](https://github.com/langchain4j/langchain4j)。
